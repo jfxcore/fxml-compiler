@@ -22,14 +22,14 @@ public class PropertyAssignmentErrors {
             SourceInfo sourceInfo, PropertyInfo propertyInfo, TypeInstance assignType) {
         return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
             ErrorCode.INCOMPATIBLE_PROPERTY_TYPE, formatPropertyName(propertyInfo),
-            propertyInfo.getValueTypeInstance().getName(), assignType.getName()));
+            propertyInfo.getValueTypeInstance().getName(), assignType != null ? assignType.getName() : "'null'"));
     }
 
     public static MarkupException incompatiblePropertyType(
             SourceInfo sourceInfo, CtClass declaringClass, String propertyName, CtClass requiredType, TypeInstance assignType) {
         return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
             ErrorCode.INCOMPATIBLE_PROPERTY_TYPE, formatPropertyName(declaringClass, propertyName),
-            requiredType.getName(), assignType.getName()));
+            requiredType.getName(), assignType != null ? assignType.getName() : "'null'"));
     }
 
     public static MarkupException incompatiblePropertyItems(SourceInfo sourceInfo, PropertyInfo propertyInfo) {

@@ -20,7 +20,7 @@ import static org.jfxcore.compiler.util.Classes.*;
 import static org.jfxcore.compiler.util.Descriptors.*;
 
 /**
- * Loads a string, primitive constant or class literal, and places it on top of the operand stack.
+ * Loads a string, primitive constant, null, or class literal, and places it on top of the operand stack.
  * If a boxed representation of the constant is required, the valueOf(...) method will be invoked.
  */
 public class EmitLiteralNode extends ReferenceableNode {
@@ -32,7 +32,7 @@ public class EmitLiteralNode extends ReferenceableNode {
             @Nullable String fieldName, TypeInstance requestedType, Object literal, SourceInfo sourceInfo) {
         super(null, fieldName, sourceInfo);
         this.requestedType = new ResolvedTypeNode(checkNotNull(requestedType), sourceInfo);
-        this.literal = checkNotNull(literal);
+        this.literal = requestedType.isPrimitive() ? checkNotNull(literal) : literal;
     }
 
     public EmitLiteralNode(TypeInstance requestedType, Object literal, SourceInfo sourceInfo) {
@@ -95,6 +95,11 @@ public class EmitLiteralNode extends ReferenceableNode {
     }
 
     private void emitLiteral(Bytecode code, CtClass targetType) {
+        if (literal == null) {
+            code.aconst_null();
+            return;
+        }
+
         switch (targetType.getName()) {
             case "boolean":
                 code.iconst(getLiteral(Boolean.class) ? 1 : 0);

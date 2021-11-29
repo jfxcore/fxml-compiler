@@ -5,7 +5,6 @@ package org.jfxcore.compiler.transform.markup;
 
 import javassist.CtClass;
 import javassist.NotFoundException;
-import org.jfxcore.compiler.ast.DocumentNode;
 import org.jfxcore.compiler.ast.TemplateContentNode;
 import org.jfxcore.compiler.ast.emit.EmitInitializeRootNode;
 import org.jfxcore.compiler.ast.emit.EmitLiteralNode;
@@ -54,6 +53,7 @@ public class ObjectTransform implements Transform {
             DefaultPropertyTransform.class,
             DefineBlockTransform.class,
             StylesheetTransform.class,
+            NullIntrinsicTransform.class,
             TypeIntrinsicTransform.class,
             ConstantIntrinsicTransform.class,
             ValueIntrinsicTransform.class,

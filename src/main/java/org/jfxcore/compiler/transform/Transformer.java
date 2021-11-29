@@ -17,6 +17,7 @@ import org.jfxcore.compiler.transform.codebehind.FlattenClassTransform;
 import org.jfxcore.compiler.transform.markup.AddTemplateIdFields;
 import org.jfxcore.compiler.transform.markup.ConstantIntrinsicTransform;
 import org.jfxcore.compiler.transform.markup.DefineBlockTransform;
+import org.jfxcore.compiler.transform.markup.NullIntrinsicTransform;
 import org.jfxcore.compiler.transform.markup.RemoveIntrinsicsTransform;
 import org.jfxcore.compiler.transform.markup.TemplateContentTransform;
 import org.jfxcore.compiler.transform.markup.TopologyTransform;
@@ -100,6 +101,7 @@ public class Transformer {
             new DefaultPropertyTransform(),
             new IdPropertyTransform(),
             new ResolveTypeTransform(false),
+            new NullIntrinsicTransform(),
             new TypeIntrinsicTransform(),
             new ConstantIntrinsicTransform(),
             new ValueIntrinsicTransform(),
