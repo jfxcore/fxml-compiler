@@ -168,4 +168,30 @@ public class MarkupExtensionTest {
         assertEquals(ErrorCode.INCOMPATIBLE_PROPERTY_TYPE, ex.getDiagnostic().getCode());
     }
 
+    @Test
+    public void Null_Can_Be_Assigned_To_ReferenceType() {
+        Label root = TestCompiler.newInstance(
+                this, "Null_Can_Be_Assigned_To_ReferenceType", """
+                <?import javafx.fxml.*?>
+                <?import javafx.scene.control.*?>
+                <Label xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                       text="{fx:null}"/>
+            """);
+
+        assertNull(root.getText());
+    }
+
+    @Test
+    public void Null_Cannot_Be_Assigned_To_PrimitiveType() {
+        MarkupException ex = assertThrows(MarkupException.class, () -> TestCompiler.newInstance(
+                this, "Null_Cannot_Be_Assigned_To_PrimitiveType", """
+                <?import javafx.fxml.*?>
+                <?import javafx.scene.control.*?>
+                <Label xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                       prefWidth="{fx:null}"/>
+            """));
+
+        assertEquals(ErrorCode.INCOMPATIBLE_PROPERTY_TYPE, ex.getDiagnostic().getCode());
+    }
+
 }

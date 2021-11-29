@@ -16,7 +16,7 @@ public class MeToken extends AbstractToken<MeTokenType> {
         "abstract", "assert", "boolean", "break", "byte", "case", "catch", "char", "class", "const",
         "continue", "default", "do", "double", "else", "extends", "false", "final", "finally", "float",
         "for", "goto", "if", "implements", "import", "instanceof", "int", "interface", "long", "native",
-        "new", "null", "package", "private", "protected", "public", "return", "short", "static", "strictfp",
+        "new", "package", "private", "protected", "public", "return", "short", "static", "strictfp",
         "super", "switch", "synchronized", "throw", "throws", "transient", "true", "try", "void",
         "volatile", "while"));
 

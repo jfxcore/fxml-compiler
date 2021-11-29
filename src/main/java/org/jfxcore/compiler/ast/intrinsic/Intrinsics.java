@@ -10,6 +10,9 @@ import java.util.List;
 
 public class Intrinsics {
 
+    public static final Intrinsic NULL = new Intrinsic(
+        "null", () -> CtClass.voidType, Usage.ELEMENT);
+
     public static final Intrinsic CLASS = new Intrinsic(
         "class", Classes::StringType, Usage.ROOT_ATTRIBUTE);
 
@@ -69,8 +72,8 @@ public class Intrinsics {
         new IntrinsicProperty("inverseMethod", Classes::StringType));
 
     private static final List<Intrinsic> NODES = List.of(
-        CLASS, CLASS_MODIFIER, CLASS_PARAMETERS, ID, VALUE, CONSTANT, TYPE_ARGUMENTS, ITEM_TYPE, DEFINE, STYLESHEET,
-        REFERENCE, TYPE, URL, ONCE, BIND, BIND_BIDIRECTIONAL);
+        NULL, CLASS, CLASS_MODIFIER, CLASS_PARAMETERS, ID, VALUE, CONSTANT, TYPE_ARGUMENTS, ITEM_TYPE, DEFINE,
+        STYLESHEET, REFERENCE, TYPE, URL, ONCE, BIND, BIND_BIDIRECTIONAL);
 
     public static Intrinsic find(ObjectNode node) {
         if (node.getType().isIntrinsic()){
