@@ -1,0 +1,3 @@
+[submodule "jfx"]
+	path = deps/jfx
+	url = https://github.com/jfxcore/jfx.git
