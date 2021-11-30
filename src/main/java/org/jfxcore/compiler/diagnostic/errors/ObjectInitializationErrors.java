@@ -28,6 +28,11 @@ public class ObjectInitializationErrors {
             Diagnostic.newDiagnostic(ErrorCode.VALUEOF_METHOD_NOT_FOUND, type.getName()));
     }
 
+    public static MarkupException valueOfCannotHaveContent(SourceInfo sourceInfo, CtClass type, String valuePropertyName) {
+        return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
+            ErrorCode.VALUEOF_CANNOT_HAVE_CONTENT, type.getName(), valuePropertyName));
+    }
+
     public static MarkupException conflictingProperties(SourceInfo sourceInfo, String property1, String property2) {
         return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
             ErrorCode.CONFLICTING_PROPERTIES, property1, property2));

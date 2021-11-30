@@ -160,6 +160,13 @@ public class ObjectTransform implements Transform {
 
     private ValueNode createValueOfNode(
             TransformContext context, ObjectNode objectNode, PropertyNode propertyNode, String textValue) {
+        TypeInstance nodeType = TypeHelper.getTypeInstance(objectNode);
+
+        if (!objectNode.getChildren().isEmpty()) {
+            throw ObjectInitializationErrors.valueOfCannotHaveContent(
+                propertyNode.getSourceInfo(), nodeType.jvmType(), propertyNode.getMarkupName());
+        }
+
         PropertyNode constantNode = objectNode.getProperties().stream()
             .filter(p -> p.isIntrinsic(Intrinsics.CONSTANT)).findFirst().orElse(null);
 
@@ -168,7 +175,6 @@ public class ObjectTransform implements Transform {
                 propertyNode.getSourceInfo(), propertyNode.getMarkupName(), constantNode.getMarkupName());
         }
 
-        TypeInstance nodeType = TypeHelper.getTypeInstance(objectNode);
         Resolver resolver = new Resolver(propertyNode.getSourceInfo());
         boolean hasValueOfMethod = resolver.tryResolveValueOfMethod(nodeType.jvmType()) != null;
 
