@@ -4,7 +4,6 @@
 package org.jfxcore.compiler.util;
 
 import javassist.CtClass;
-import javassist.Modifier;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import java.util.Collections;
 import java.util.HashSet;
@@ -110,10 +109,6 @@ public class TypeInstance {
 
     public boolean isArray() {
         return dimensions > 0;
-    }
-
-    public boolean isVarArgs() {
-        return Modifier.isVarArgs(type.getModifiers());
     }
 
     public int getDimensions() {
