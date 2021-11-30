@@ -183,7 +183,8 @@ public class PropertyAssignmentTransform implements Transform {
         if (value == null) {
             value = createTemplateContentNode(node, propertyInfo.getValueTypeInstance());
             if (value == null) {
-                value = createValueNode(node, propertyInfo.getValueTypeInstance());
+                value = createValueNode(
+                    node, propertyInfo.getDeclaringTypeInstance(), propertyInfo.getValueTypeInstance());
             }
         }
 
@@ -374,12 +375,12 @@ public class PropertyAssignmentTransform implements Transform {
         return null;
     }
 
-    private ValueEmitterNode createValueNode(ValueNode node, TypeInstance targetType) {
+    private ValueEmitterNode createValueNode(ValueNode node, TypeInstance declaringType, TypeInstance targetType) {
         TypeInstance valueType = TypeHelper.getTypeInstance(node);
 
         if (node instanceof TextNode textNode) {
             ValueEmitterNode coercedValue = ValueEmitterFactory.newLiteralValue(
-                textNode.getText(), targetType, node.getSourceInfo());
+                textNode.getText(), List.of(targetType, declaringType), targetType, node.getSourceInfo());
 
             if (coercedValue != null) {
                 return coercedValue;
