@@ -6,6 +6,7 @@ package org.jfxcore.compiler.transform.markup.util;
 import javafx.scene.paint.Color;
 import javassist.CtClass;
 import javassist.CtConstructor;
+import javassist.CtField;
 import javassist.NotFoundException;
 import javassist.bytecode.ParameterAnnotationsAttribute;
 import javassist.bytecode.annotation.Annotation;
@@ -98,7 +99,13 @@ public class ValueEmitterFactory {
         }
 
         String text = ((TextNode)node.getChildren().get(0)).getText();
-        return newLiteralValue(findAndRemoveId(node), text, TypeHelper.getTypeInstance(node), node.getSourceInfo());
+
+        return newLiteralValue(
+            findAndRemoveId(node),
+            text,
+            Collections.emptyList(),
+            TypeHelper.getTypeInstance(node),
+            node.getSourceInfo());
     }
 
     /**
@@ -107,11 +114,21 @@ public class ValueEmitterFactory {
      * @return {@link EmitLiteralNode} if conversion was successful; <code>null</code> otherwise.
      */
     public static ValueEmitterNode newLiteralValue(String value, TypeInstance targetType, SourceInfo sourceInfo) {
-        return newLiteralValue(null, value, targetType, sourceInfo);
+        return newLiteralValue(null, value, Collections.emptyList(), targetType, sourceInfo);
+    }
+
+    /**
+     * Tries to convert the string value to the target type.
+     *
+     * @return {@link EmitLiteralNode} if conversion was successful; <code>null</code> otherwise.
+     */
+    public static ValueEmitterNode newLiteralValue(
+            String value, List<TypeInstance> declaringTypes, TypeInstance targetType, SourceInfo sourceInfo) {
+        return newLiteralValue(null, value, declaringTypes, targetType, sourceInfo);
     }
 
     private static ValueEmitterNode newLiteralValue(
-            String id, String value, TypeInstance targetType, SourceInfo sourceInfo) {
+            String id, String value, List<TypeInstance> declaringTypes, TypeInstance targetType, SourceInfo sourceInfo) {
         String trimmedValue = value.trim();
 
         switch (targetType.getName()) {
@@ -123,55 +140,55 @@ public class ValueEmitterFactory {
                 return new EmitLiteralNode(id, new TypeInstance(CtClass.booleanType), false, sourceInfo);
             }
 
-            return null;
+            break;
         case "char":
         case Classes.CharacterName:
             if (trimmedValue.length() == 1) {
                 return new EmitLiteralNode(id, new TypeInstance(CtClass.charType), trimmedValue.charAt(0), sourceInfo);
             }
 
-            return null;
+            break;
         case "byte":
         case Classes.ByteName:
             try {
                 return new EmitLiteralNode(id, new TypeInstance(CtClass.byteType), Byte.parseByte(trimmedValue), sourceInfo);
             } catch (NumberFormatException ex) {
-                return null;
+                break;
             }
         case "short":
         case Classes.ShortName:
             try {
                 return new EmitLiteralNode(id, new TypeInstance(CtClass.shortType), Short.parseShort(trimmedValue), sourceInfo);
             } catch (NumberFormatException ex) {
-                return null;
+                break;
             }
         case "int":
         case Classes.IntegerName:
             try {
                 return new EmitLiteralNode(id, new TypeInstance(CtClass.intType), Integer.parseInt(trimmedValue), sourceInfo);
             } catch (NumberFormatException ex) {
-                return null;
+                break;
             }
         case "long":
         case Classes.LongName:
             try {
                 return new EmitLiteralNode(id, new TypeInstance(CtClass.longType), Long.parseLong(trimmedValue), sourceInfo);
             } catch (NumberFormatException ex) {
-                return null;
+                break;
             }
         case "float":
         case Classes.FloatName:
             try {
                 return new EmitLiteralNode(id, new TypeInstance(CtClass.floatType), Float.parseFloat(trimmedValue), sourceInfo);
             } catch (NumberFormatException ex) {
-                return null;
+                break;
             }
         case "double":
         case Classes.DoubleName:
             try {
                 return new EmitLiteralNode(id, new TypeInstance(CtClass.doubleType), Double.parseDouble(trimmedValue), sourceInfo);
             } catch (NumberFormatException ex) {
-                return null;
+                break;
             }
         }
 
@@ -198,6 +215,21 @@ public class ValueEmitterFactory {
                     sourceInfo);
             } catch (IllegalArgumentException ex) {
                 return null;
+            }
+        }
+
+        for (TypeInstance declaringType : declaringTypes) {
+            // Always use boxed type to support static fields on primitive wrapper classes.
+            CtClass boxedDeclaringType = TypeHelper.getBoxedType(declaringType.jvmType());
+
+            var resolver = new Resolver(sourceInfo);
+            CtField field = resolver.tryResolveField(boxedDeclaringType, trimmedValue);
+
+            if (field != null) {
+                var fieldType = resolver.getTypeInstance(field, List.of(declaringType));
+                if (targetType.isAssignableFrom(fieldType)) {
+                    return new EmitClassConstantNode(id, targetType, boxedDeclaringType, field.getName(), sourceInfo);
+                }
             }
         }
 

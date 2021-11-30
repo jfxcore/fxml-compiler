@@ -11,6 +11,7 @@ import javafx.scene.layout.GridPane;
 import javafx.scene.layout.VBox;
 import org.jfxcore.compiler.diagnostic.ErrorCode;
 import org.jfxcore.compiler.diagnostic.MarkupException;
+import org.jfxcore.compiler.util.Supplier;
 import org.jfxcore.compiler.util.TestExtension;
 import org.junit.jupiter.api.Test;
 import org.jfxcore.compiler.util.TestCompiler;
@@ -93,6 +94,67 @@ public class CoercionTest {
                     selectionModel.selectionMode="MULTIPLE"/>
             """);
         assertEquals(SelectionMode.MULTIPLE, root.getSelectionModel().getSelectionMode());
+    }
+
+    @Test
+    public void AttributeValue_Is_Coerced_To_Static_Field_Of_TargetType() {
+        GridPane root = TestCompiler.newInstance(this, "AttributeValue_Is_Coerced_To_Static_Field_Of_TargetType", """
+                <?import javafx.scene.layout.*?>
+                <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                          prefWidth="POSITIVE_INFINITY"/>
+            """);
+
+        assertEquals(Double.POSITIVE_INFINITY, root.getPrefWidth());
+    }
+
+    @SuppressWarnings("unused")
+    public static class StaticFieldClass<T> extends GridPane {
+        public static final Supplier<String> SUPPLIER = () -> null;
+        private Supplier<T> supplier;
+        public Supplier<T> getSupplier() { return supplier; }
+        public void setSupplier(Supplier<T> supplier) { this.supplier = supplier; }
+    }
+
+    @Test
+    public void AttributeValue_Is_Coerced_To_Static_Field_Of_Raw_GenericClass() {
+        GridPane root = TestCompiler.newInstance(
+            this, "AttributeValue_Is_Coerced_To_Static_Field_Of_Raw_GenericClass", """
+                <?import javafx.scene.layout.*?>
+                <?import org.jfxcore.compiler.CoercionTest.*?>
+                <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                    <StaticFieldClass supplier="SUPPLIER"/>
+                </GridPane>
+            """);
+
+        assertSame(StaticFieldClass.SUPPLIER, ((StaticFieldClass<?>)root.getChildren().get(0)).getSupplier());
+    }
+
+    @Test
+    public void AttributeValue_Is_Coerced_To_Static_Field_Of_Typed_GenericClass() {
+        GridPane root = TestCompiler.newInstance(
+            this, "AttributeValue_Is_Coerced_To_Static_Field_Of_Typed_GenericClass", """
+                <?import javafx.scene.layout.*?>
+                <?import org.jfxcore.compiler.CoercionTest.*?>
+                <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                    <StaticFieldClass fx:typeArguments="String" supplier="SUPPLIER"/>
+                </GridPane>
+            """);
+
+        assertSame(StaticFieldClass.SUPPLIER, ((StaticFieldClass<?>)root.getChildren().get(0)).getSupplier());
+    }
+
+    @Test
+    public void AttributeValue_Cannot_Be_Coerced_To_Static_Field_Of_Incompatibly_Typed_GenericClass() {
+        MarkupException ex = assertThrows(MarkupException.class, () -> TestCompiler.newInstance(
+            this, "AttributeValue_Cannot_Be_Coerced_To_Static_Field_Of_Incompatibly_Typed_GenericClass", """
+                <?import javafx.scene.layout.*?>
+                <?import org.jfxcore.compiler.CoercionTest.*?>
+                <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                    <StaticFieldClass fx:typeArguments="Boolean" supplier="SUPPLIER"/>
+                </GridPane>
+            """));
+
+        assertEquals(ErrorCode.CANNOT_COERCE_PROPERTY_VALUE, ex.getDiagnostic().getCode());
     }
 
     @Test
