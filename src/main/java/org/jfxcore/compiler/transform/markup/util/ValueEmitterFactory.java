@@ -7,6 +7,7 @@ import javafx.scene.paint.Color;
 import javassist.CtClass;
 import javassist.CtConstructor;
 import javassist.CtField;
+import javassist.Modifier;
 import javassist.NotFoundException;
 import javassist.bytecode.ParameterAnnotationsAttribute;
 import javassist.bytecode.annotation.Annotation;
@@ -254,6 +255,9 @@ public class ValueEmitterFactory {
             for (NamedArgParam constructorParam : namedArgsConstructor.namedArgs()) {
                 argIndex++;
 
+                boolean vararg = argIndex == namedArgsConstructor.namedArgs().length - 1
+                        && Modifier.isVarArgs(namedArgsConstructor.constructor().getModifiers());
+
                 PropertyNode propertyNode = objectNode.getProperties().stream()
                     .filter(p -> p.getName().equals(constructorParam.name()))
                     .findFirst()
@@ -278,7 +282,7 @@ public class ValueEmitterFactory {
                 // corresponding formal parameter of the current constructor.
                 if (propertyNode.getValues().size() == 1) {
                     ValueNode argument = acceptArgument(
-                        propertyNode.getValues().get(0), constructorParam.type(), type);
+                        propertyNode.getValues().get(0), constructorParam.type(), type, vararg);
 
                     if (argument != null) {
                         arguments.add(argument);
@@ -531,7 +535,8 @@ public class ValueEmitterFactory {
      * Determines whether the input argument is acceptable for the target type and returns
      * a new node that will emit the input argument.
      */
-    private static ValueNode acceptArgument(Node argumentNode, TypeInstance targetType, TypeInstance invokingType) {
+    private static ValueNode acceptArgument(
+            Node argumentNode, TypeInstance targetType, TypeInstance invokingType, boolean vararg) {
         SourceInfo sourceInfo = argumentNode.getSourceInfo();
         ValueNode value;
 
@@ -550,8 +555,8 @@ public class ValueEmitterFactory {
         }
 
         var valueType = TypeHelper.getTypeInstance(value);
-        if (targetType.isConvertibleFrom(valueType) || targetType.isVarArgs()
-                && targetType.getComponentType().isConvertibleFrom(valueType)) {
+        if (targetType.isConvertibleFrom(valueType) ||
+                vararg && targetType.getComponentType().isConvertibleFrom(valueType)) {
             return value;
         }
 

@@ -282,7 +282,7 @@ public class InstantiationTest extends MethodReferencedSupport {
     public static class VarArgsConstructorClass extends Rectangle {
         public boolean varArgsConstructorCalled;
         public VarArgsConstructorClass() {}
-        public VarArgsConstructorClass(Node... nodes) { varArgsConstructorCalled = true; }
+        public VarArgsConstructorClass(@NamedArg("nodes") Node... nodes) { varArgsConstructorCalled = true; }
     }
 
     @Test
@@ -301,9 +301,25 @@ public class InstantiationTest extends MethodReferencedSupport {
         assertTrue(((VarArgsConstructorClass)root.getChildren().get(0)).varArgsConstructorCalled);
     }
 
+    @Test
+    public void Object_Is_Instantiated_With_NamedArg_Varargs_Constructor() {
+        GridPane root = TestCompiler.newInstance(
+                this, "Object_Is_Instantiated_With_NamedArg_Varargs_Constructor","""
+                <?import javafx.scene.layout.*?>
+                <?import org.jfxcore.compiler.InstantiationTest.*?>
+                <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                    <VarArgsConstructorClass>
+                        <nodes><GridPane/></nodes>
+                    </VarArgsConstructorClass>
+                </GridPane>
+            """);
+
+        assertTrue(((VarArgsConstructorClass)root.getChildren().get(0)).varArgsConstructorCalled);
+    }
+
     @SuppressWarnings("unused")
     public static class ArrayConstructorClass extends Rectangle {
-        public ArrayConstructorClass(Node[] nodes) {}
+        public ArrayConstructorClass(@NamedArg("nodes") Node[] nodes) {}
     }
 
     @Test
@@ -322,6 +338,25 @@ public class InstantiationTest extends MethodReferencedSupport {
         assertEquals(ErrorCode.CONSTRUCTOR_NOT_FOUND, ex.getDiagnostic().getCode());
         assertEquals(1, ex.getDiagnostic().getCauses().length);
         assertEquals(ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT, ex.getDiagnostic().getCauses()[0].getCode());
+    }
+
+    @Test
+    public void Object_Instantiation_Fails_With_NamedArg_NonVarargs_Constructor() {
+        MarkupException ex = assertThrows(MarkupException.class, () -> TestCompiler.newInstance(
+                this, "Object_Instantiation_Fails_With_NamedArg_NonVarargs_Constructor","""
+                <?import javafx.scene.layout.*?>
+                <?import org.jfxcore.compiler.InstantiationTest.*?>
+                <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                    <ArrayConstructorClass>
+                        <nodes><GridPane/></nodes>
+                    </ArrayConstructorClass>
+                </GridPane>
+            """));
+
+        assertEquals(ErrorCode.CONSTRUCTOR_NOT_FOUND, ex.getDiagnostic().getCode());
+        assertEquals(2, ex.getDiagnostic().getCauses().length);
+        assertEquals(ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT, ex.getDiagnostic().getCauses()[0].getCode());
+        assertEquals(ErrorCode.NUM_FUNCTION_ARGUMENTS_MISMATCH, ex.getDiagnostic().getCauses()[1].getCode());
     }
 
     @Test
