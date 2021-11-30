@@ -4,6 +4,7 @@
 package org.jfxcore.compiler.util;
 
 import javassist.CtClass;
+import javassist.Modifier;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import java.util.Collections;
 import java.util.HashSet;
@@ -111,6 +112,10 @@ public class TypeInstance {
         return dimensions > 0;
     }
 
+    public boolean isVarArgs() {
+        return Modifier.isVarArgs(type.getModifiers());
+    }
+
     public int getDimensions() {
         return dimensions;
     }
@@ -145,6 +150,14 @@ public class TypeInstance {
 
     public WildcardType getWildcardType() {
         return wildcard;
+    }
+
+    public TypeInstance getComponentType() {
+        if (!isArray()) {
+            return this;
+        }
+
+        return new TypeInstance(type, 0, arguments, superTypes, wildcard);
     }
 
     public boolean isConvertibleFrom(TypeInstance from) {
