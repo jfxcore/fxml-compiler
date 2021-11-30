@@ -494,6 +494,21 @@ public class InstantiationTest extends MethodReferencedSupport {
     }
 
     @Test
+    public void ValueOf_And_Child_Content_Cannot_Be_Used_At_Same_Time() {
+        MarkupException ex = assertThrows(MarkupException.class, () -> TestCompiler.newInstance(
+            this, "ValueOf_And_Child_Content_Cannot_Be_Used_At_Same_Time", """
+                <?import javafx.scene.control.*?>
+                <?import javafx.scene.paint.*?>
+                <Button xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                    <textFill>
+                        <Color fx:value="red"><Button/></Color>
+                    </textFill>
+                </Button>
+            """));
+        assertEquals(ErrorCode.VALUEOF_CANNOT_HAVE_CONTENT, ex.getDiagnostic().getCode());
+    }
+
+    @Test
     public void Object_Is_Instantiated_With_InContext_ValueOf_Method() {
         Button root = TestCompiler.newInstance(this, "Object_Is_Instantiated_With_InContext_ValueOf_Method", """
                 <?import javafx.scene.control.*?>
