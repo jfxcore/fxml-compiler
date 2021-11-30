@@ -3,18 +3,17 @@
 
 package org.jfxcore.compiler;
 
-//import javafx.scene.command.Command;
 import javafx.beans.NamedArg;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 import javafx.geometry.Insets;
+import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.TableView;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
-//import javafx.scene.command.KeyEventBinding;
-//import javafx.scene.command.MouseEventBinding;
+import javafx.scene.shape.Rectangle;
 import org.jfxcore.compiler.diagnostic.ErrorCode;
 import org.jfxcore.compiler.diagnostic.MarkupException;
 import org.jfxcore.compiler.util.TestExtension;
@@ -269,6 +268,52 @@ public class InstantiationTest extends MethodReferencedSupport {
             """));
 
         assertEquals(ErrorCode.CONSTRUCTOR_NOT_FOUND, ex.getDiagnostic().getCode());
+    }
+
+    @SuppressWarnings("unused")
+    public static class VarArgsConstructorClass extends Rectangle {
+        public boolean varArgsConstructorCalled;
+        public VarArgsConstructorClass() {}
+        public VarArgsConstructorClass(Node... nodes) { varArgsConstructorCalled = true; }
+    }
+
+    @Test
+    public void Object_Is_Instantiated_With_Varargs_Constructor() {
+        GridPane root = TestCompiler.newInstance(
+                this, "Object_Is_Instantiated_With_Varargs_Constructor","""
+                <?import javafx.scene.layout.*?>
+                <?import org.jfxcore.compiler.InstantiationTest.*?>
+                <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                    <VarArgsConstructorClass>
+                        <GridPane/>
+                    </VarArgsConstructorClass>
+                </GridPane>
+            """);
+
+        assertTrue(((VarArgsConstructorClass)root.getChildren().get(0)).varArgsConstructorCalled);
+    }
+
+    @SuppressWarnings("unused")
+    public static class ArrayConstructorClass extends Rectangle {
+        public ArrayConstructorClass(Node[] nodes) {}
+    }
+
+    @Test
+    public void Object_Instantiation_Fails_With_NonVarargs_Constructor() {
+        MarkupException ex = assertThrows(MarkupException.class, () -> TestCompiler.newInstance(
+            this, "Object_Instantiation_Fails_With_NonVarargs_Constructor","""
+                <?import javafx.scene.layout.*?>
+                <?import org.jfxcore.compiler.InstantiationTest.*?>
+                <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                    <ArrayConstructorClass>
+                        <GridPane/>
+                    </ArrayConstructorClass>
+                </GridPane>
+            """));
+
+        assertEquals(ErrorCode.CONSTRUCTOR_NOT_FOUND, ex.getDiagnostic().getCode());
+        assertEquals(1, ex.getDiagnostic().getCauses().length);
+        assertEquals(ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT, ex.getDiagnostic().getCauses()[0].getCode());
     }
 
     @Test
@@ -947,26 +992,6 @@ public class InstantiationTest extends MethodReferencedSupport {
         assertEquals(123.5, (Double)root.stringKeyMap.get("val0"), 0.001);
         assertEquals(3, root.stringKeyMap.size());
     }
-
-    /*@Test
-    public void EventBindings_Are_Added_To_Node() {
-        GridPane root = TestCompiler.newInstance(
-            this, "EventBindings_Are_Added_To_Node", """
-                <?import javafx.scene.layout.*?>
-                <?import javafx.scene.input.*?>
-                <?import javafx.scene.command.*?>
-                <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
-                    <Command.bindings>
-                        <KeyEventBinding keyCode="ENTER"/>
-                        <MouseEventBinding button="PRIMARY" eventType="{fx:constant MouseEvent.MOUSE_RELEASED}"/>
-                    </Command.bindings>
-                </GridPane>
-            """);
-
-        assertEquals(2, Command.getBindings(root).size());
-        assertTrue(Command.getBindings(root).get(0) instanceof KeyEventBinding);
-        assertTrue(Command.getBindings(root).get(1) instanceof MouseEventBinding);
-    }*/
 
     @Test
     public void Root_Intrinsic_Cannot_Be_Used_On_Child_Element() {

@@ -407,9 +407,7 @@ public class ValueEmitterFactory {
         TypeInstance itemType = typeArgs.size() > 0 ? typeArgs.get(0) : resolver.getTypeInstance(Classes.ObjectType());
 
         for (Node child : children) {
-            if (child instanceof TextNode) {
-                TextNode textNode = (TextNode)child;
-
+            if (child instanceof TextNode textNode) {
                 if (textNode.isRawText()) {
                     ValueEmitterNode value = ValueEmitterFactory.newLiteralValue(
                         textNode.getText(), itemType, child.getSourceInfo());
@@ -537,23 +535,23 @@ public class ValueEmitterFactory {
         SourceInfo sourceInfo = argumentNode.getSourceInfo();
         ValueNode value;
 
-        if (argumentNode instanceof BindingNode) {
-            BindingNode bindingNode = (BindingNode)argumentNode;
-
+        if (argumentNode instanceof BindingNode bindingNode) {
             if (bindingNode.getMode() == BindingMode.ONCE) {
                 value = bindingNode.toEmitter(invokingType).getValue();
             } else {
                 throw ObjectInitializationErrors.bindingExpressionNotApplicable(sourceInfo);
             }
-        } else if (argumentNode instanceof TextNode) {
-            return newLiteralValue(((TextNode)argumentNode).getText(), targetType, sourceInfo);
-        } else if (argumentNode instanceof ValueNode) {
-            value = (ValueNode)argumentNode;
+        } else if (argumentNode instanceof TextNode textNode) {
+            return newLiteralValue(textNode.getText(), targetType, sourceInfo);
+        } else if (argumentNode instanceof ValueNode valueNode) {
+            value = valueNode;
         } else {
             return null;
         }
 
-        if (targetType.isConvertibleFrom(TypeHelper.getTypeInstance(value))) {
+        var valueType = TypeHelper.getTypeInstance(value);
+        if (targetType.isConvertibleFrom(valueType) || targetType.isVarArgs()
+                && targetType.getComponentType().isConvertibleFrom(valueType)) {
             return value;
         }
 
