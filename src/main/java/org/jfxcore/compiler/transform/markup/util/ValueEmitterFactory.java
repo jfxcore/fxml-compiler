@@ -251,22 +251,22 @@ public class ValueEmitterFactory {
             List<ValueNode> arguments = new ArrayList<>();
             int argIndex = -1;
 
-            for (NamedArgParam constructorParam : namedArgsConstructor.getNamedArgs()) {
+            for (NamedArgParam constructorParam : namedArgsConstructor.namedArgs()) {
                 argIndex++;
 
                 PropertyNode propertyNode = objectNode.getProperties().stream()
-                    .filter(p -> p.getName().equals(constructorParam.getName()))
+                    .filter(p -> p.getName().equals(constructorParam.name()))
                     .findFirst()
                     .orElse(null);
 
                 // If a primitive-type property was not specified, we synthesize a literal node
                 // with the default value for the primitive type.
                 if (propertyNode == null) {
-                    if (constructorParam.getType().isPrimitive()) {
+                    if (constructorParam.type().isPrimitive()) {
                         arguments.add(
                             new EmitLiteralNode(
-                                constructorParam.getType(),
-                                TypeHelper.getDefaultValue(constructorParam.getType().jvmType()),
+                                constructorParam.type(),
+                                TypeHelper.getDefaultValue(constructorParam.type().jvmType()),
                                 objectNode.getSourceInfo()));
                         continue;
                     } else {
@@ -278,7 +278,7 @@ public class ValueEmitterFactory {
                 // corresponding formal parameter of the current constructor.
                 if (propertyNode.getValues().size() == 1) {
                     ValueNode argument = acceptArgument(
-                        propertyNode.getValues().get(0), constructorParam.getType(), type);
+                        propertyNode.getValues().get(0), constructorParam.type(), type);
 
                     if (argument != null) {
                         arguments.add(argument);
@@ -287,8 +287,8 @@ public class ValueEmitterFactory {
                             new DiagnosticInfo(
                                 Diagnostic.newDiagnostic(
                                     ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT,
-                                    type.getSimpleName(),
-                                    argIndex,
+                                    namedArgsConstructor.constructor().getLongName(),
+                                    argIndex + 1,
                                     TypeHelper.getTypeInstance(propertyNode.getValues().get(0)).getJavaName()),
                             propertyNode.getValues().get(0).getSourceInfo()));
 
@@ -300,12 +300,12 @@ public class ValueEmitterFactory {
             }
 
             // If we have arguments for all formal parameters, we can construct the object.
-            if (arguments.size() == namedArgsConstructor.getNamedArgs().length) {
+            if (arguments.size() == namedArgsConstructor.namedArgs().length) {
                 objectNode.getProperties().removeIf(p ->
-                    Arrays.stream(namedArgsConstructor.getNamedArgs())
-                        .anyMatch(p2 -> p2.getName().equals(p.getName())));
+                    Arrays.stream(namedArgsConstructor.namedArgs())
+                        .anyMatch(p2 -> p2.name().equals(p.getName())));
 
-                return createObjectNode(objectNode, namedArgsConstructor.getConstructor(), arguments);
+                return createObjectNode(objectNode, namedArgsConstructor.constructor(), arguments);
             }
         }
 
@@ -360,7 +360,7 @@ public class ValueEmitterFactory {
                             new DiagnosticInfo(
                                 Diagnostic.newDiagnostic(
                                     ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT,
-                                    type.getSimpleName(),
+                                    constructor.getLongName(),
                                     i + i,
                                     paramTypes[i].getJavaName()),
                                 argList.get(i).getSourceInfo()));
@@ -623,8 +623,8 @@ public class ValueEmitterFactory {
         return new EmitObjectNode(
             objectNode != null ? findAndRemoveId(objectNode) : null,
             targetType,
-            constructor.constructor,
-            constructor.params,
+            constructor.constructor(),
+            constructor.params(),
             children,
             EmitObjectNode.CreateKind.CONSTRUCTOR,
             textNode.getSourceInfo());
@@ -657,15 +657,7 @@ public class ValueEmitterFactory {
         return null;
     }
 
-    private static class ConstructorWithParams {
-        final CtConstructor constructor;
-        final List<ValueEmitterNode> params;
-
-        ConstructorWithParams(CtConstructor constructor, List<ValueEmitterNode> params) {
-            this.constructor = constructor;
-            this.params = params;
-        }
-    }
+    private record ConstructorWithParams(CtConstructor constructor, List<ValueEmitterNode> params) {}
 
     /**
      * Tries to find constructors for the specified type where all formal parameters are annotated with
@@ -723,13 +715,13 @@ public class ValueEmitterFactory {
         //
         Map<Integer, NamedArgsConstructor> constructorOrder = new TreeMap<>(Comparator.reverseOrder());
         outer: for (NamedArgsConstructor constructor : namedArgsConstructors) {
-            NamedArgParam[] namedArgs = constructor.getNamedArgs();
+            NamedArgParam[] namedArgs = constructor.namedArgs();
             int matches = 0;
 
             for (NamedArgParam param : namedArgs) {
-                if (objectNode.getProperties().stream().anyMatch(n -> n.getName().equals(param.getName()))) {
+                if (objectNode.getProperties().stream().anyMatch(n -> n.getName().equals(param.name()))) {
                     ++matches;
-                } else if (!param.getType().isPrimitive()) {
+                } else if (!param.type().isPrimitive()) {
                     continue outer;
                 }
             }
@@ -746,41 +738,9 @@ public class ValueEmitterFactory {
         return new NamedArgsConstructor[0];
     }
 
-    private static class NamedArgParam {
-        private final String name;
-        private final TypeInstance type;
+    private record NamedArgParam(String name, TypeInstance type) {}
 
-        public NamedArgParam(String name, TypeInstance type) {
-            this.name = name;
-            this.type = type;
-        }
-
-        public String getName() {
-            return name;
-        }
-
-        public TypeInstance getType() {
-            return type;
-        }
-    }
-
-    private static class NamedArgsConstructor {
-        private final CtConstructor constructor;
-        private final NamedArgParam[] namedArgs;
-
-        public NamedArgsConstructor(CtConstructor constructor, NamedArgParam[] namedArgs) {
-            this.constructor = constructor;
-            this.namedArgs = namedArgs;
-        }
-
-        public CtConstructor getConstructor() {
-            return constructor;
-        }
-
-        public NamedArgParam[] getNamedArgs() {
-            return namedArgs;
-        }
-    }
+    private record NamedArgsConstructor(CtConstructor constructor, NamedArgParam[] namedArgs) {}
 
     private static String findAndRemoveId(ObjectNode node) {
         PropertyNode propertyNode = node.findIntrinsicProperty(Intrinsics.ID);
