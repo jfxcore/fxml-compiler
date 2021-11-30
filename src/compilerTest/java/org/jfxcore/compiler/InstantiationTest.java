@@ -211,6 +211,9 @@ public class InstantiationTest extends MethodReferencedSupport {
             """));
 
         assertEquals(ErrorCode.CONSTRUCTOR_NOT_FOUND, ex.getDiagnostic().getCode());
+        assertEquals(2, ex.getDiagnostic().getCauses().length);
+        assertEquals(ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT, ex.getDiagnostic().getCauses()[0].getCode());
+        assertEquals(ErrorCode.NUM_FUNCTION_ARGUMENTS_MISMATCH, ex.getDiagnostic().getCauses()[1].getCode());
     }
 
     @SuppressWarnings("unused")
@@ -252,6 +255,8 @@ public class InstantiationTest extends MethodReferencedSupport {
             """));
 
         assertEquals(ErrorCode.CONSTRUCTOR_NOT_FOUND, ex.getDiagnostic().getCode());
+        assertEquals(1, ex.getDiagnostic().getCauses().length);
+        assertEquals(ErrorCode.NUM_FUNCTION_ARGUMENTS_MISMATCH, ex.getDiagnostic().getCauses()[0].getCode());
     }
 
     @Test
@@ -268,6 +273,9 @@ public class InstantiationTest extends MethodReferencedSupport {
             """));
 
         assertEquals(ErrorCode.CONSTRUCTOR_NOT_FOUND, ex.getDiagnostic().getCode());
+        assertEquals(2, ex.getDiagnostic().getCauses().length);
+        assertEquals(ErrorCode.NUM_FUNCTION_ARGUMENTS_MISMATCH, ex.getDiagnostic().getCauses()[0].getCode());
+        assertEquals(ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT, ex.getDiagnostic().getCauses()[1].getCode());
     }
 
     @SuppressWarnings("unused")
@@ -374,6 +382,9 @@ public class InstantiationTest extends MethodReferencedSupport {
             """));
 
         assertEquals(ErrorCode.CONSTRUCTOR_NOT_FOUND, ex.getDiagnostic().getCode());
+        assertEquals(2, ex.getDiagnostic().getCauses().length);
+        assertEquals(ErrorCode.NUM_FUNCTION_ARGUMENTS_MISMATCH, ex.getDiagnostic().getCauses()[0].getCode());
+        assertEquals(ErrorCode.NUM_FUNCTION_ARGUMENTS_MISMATCH, ex.getDiagnostic().getCauses()[1].getCode());
     }
 
     @SuppressWarnings({"unused", "rawtypes", "unchecked"})
