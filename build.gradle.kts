@@ -81,6 +81,28 @@ val compilerTest = task<Test>("compilerTest") {
 
 tasks.check { dependsOn(compilerTest) }
 
+tasks.shadowJar {
+    archiveClassifier.set("")
+    minimize()
+    include("*.jar")
+    include("org/**/*.*")
+    include("kotlinx/**/*.*")
+    include("javassist/**/*.*")
+    relocate("javassist", "org.jfxcore.javassist")
+    relocate("kotlinx", "org.jfxcore.kotlinx")
+    dependencies {
+        exclude(dependency("org.jetbrains.kotlin:kotlin-stdlib"))
+        exclude(dependency("org.jetbrains.kotlin:kotlin-stdlib-common"))
+        exclude(dependency("org.jetbrains.kotlin:kotlin-stdlib-jdk7"))
+        exclude(dependency("org.jetbrains.kotlin:kotlin-stdlib-jdk8"))
+        exclude(dependency("org.jetbrains.kotlin:kotlin-reflect"))
+    }
+}
+
+tasks.withType<GenerateModuleMetadata> {
+    enabled = false
+}
+
 publishing {
     publications {
         create<MavenPublication>("maven") {
@@ -130,21 +152,6 @@ publishing {
 
 signing {
     sign(publishing.publications["maven"])
-}
-
-tasks.withType<GenerateModuleMetadata> {
-    enabled = false
-}
-
-tasks.shadowJar {
-    archiveClassifier.set("")
-    dependencies {
-        exclude(dependency("org.jetbrains.kotlin:kotlin-stdlib"))
-        exclude(dependency("org.jetbrains.kotlin:kotlin-stdlib-common"))
-        exclude(dependency("org.jetbrains.kotlin:kotlin-stdlib-jdk7"))
-        exclude(dependency("org.jetbrains.kotlin:kotlin-stdlib-jdk8"))
-        exclude(dependency("org.jetbrains.kotlin:kotlin-reflect"))
-    }
 }
 
 dependencies {
