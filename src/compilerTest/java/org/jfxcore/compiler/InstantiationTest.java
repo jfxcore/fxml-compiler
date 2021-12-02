@@ -10,6 +10,7 @@ import javafx.geometry.Insets;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.TableView;
+import javafx.scene.layout.BackgroundFill;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
@@ -488,29 +489,41 @@ public class InstantiationTest extends MethodReferencedSupport {
     }
 
     @Test
-    public void Object_Is_Instantiated_By_Coercion() {
-        GridPane root = TestCompiler.newInstance(this, "Object_Is_Instantiated_By_Coercion", """
+    public void Object_Is_Instantiated_By_Coercion_To_Insets() {
+        GridPane root = TestCompiler.newInstance(
+            this, "Object_Is_Instantiated_By_Coercion_To_Insets", """
                 <?import javafx.scene.layout.*?>
-                <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml" padding="1"/>
+                <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                    <fx:define>
+                        <BackgroundFill fx:id="bf" fill="{fx:null}" radii="{fx:null}" insets="1"/>
+                    </fx:define>
+                </GridPane>
             """);
 
-        assertEquals(1, root.getPadding().getLeft(), 0.001);
-        assertEquals(1, root.getPadding().getTop(), 0.001);
-        assertEquals(1, root.getPadding().getRight(), 0.001);
-        assertEquals(1, root.getPadding().getBottom(), 0.001);
+        BackgroundFill fill = (BackgroundFill)root.getProperties().get("bf");
+        assertEquals(1, fill.getInsets().getLeft(), 0.001);
+        assertEquals(1, fill.getInsets().getTop(), 0.001);
+        assertEquals(1, fill.getInsets().getRight(), 0.001);
+        assertEquals(1, fill.getInsets().getBottom(), 0.001);
     }
 
     @Test
-    public void Object_Is_Instantiated_By_CommaSeparatedValues_Coercion() {
-        GridPane root = TestCompiler.newInstance(this, "Object_Is_Instantiated_By_CommaSeparatedValues_Coercion", """
+    public void Object_Is_Instantiated_By_CommaSeparatedValues_Coercion_To_Insets() {
+        GridPane root = TestCompiler.newInstance(
+            this, "Object_Is_Instantiated_By_CommaSeparatedValues_Coercion_To_Insets", """
                 <?import javafx.scene.layout.*?>
-                <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml" padding="1,2,3,4"/>
+                <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                    <fx:define>
+                        <BackgroundFill fx:id="bf" fill="{fx:null}" radii="{fx:null}" insets="1,2,3,4"/>
+                    </fx:define>
+                </GridPane>
             """);
 
-        assertEquals(1, root.getPadding().getTop(), 0.001);
-        assertEquals(2, root.getPadding().getRight(), 0.001);
-        assertEquals(3, root.getPadding().getBottom(), 0.001);
-        assertEquals(4, root.getPadding().getLeft(), 0.001);
+        BackgroundFill fill = (BackgroundFill)root.getProperties().get("bf");
+        assertEquals(1, fill.getInsets().getTop(), 0.001);
+        assertEquals(2, fill.getInsets().getRight(), 0.001);
+        assertEquals(3, fill.getInsets().getBottom(), 0.001);
+        assertEquals(4, fill.getInsets().getLeft(), 0.001);
     }
 
     @Test
