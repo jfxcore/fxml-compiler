@@ -370,13 +370,33 @@ public class CoercionTest {
     }
 
     @Test
-    public void ColorString_Is_Coerced_To_Paint() {
-        Button root = TestCompiler.newInstance(this, "ColorString_Is_Coerced_To_Paint", """
+    public void NamedColor_Is_Coerced_To_Paint() {
+        Button root = TestCompiler.newInstance(this, "NamedColor_Is_Coerced_To_Paint", """
                 <?import javafx.scene.control.*?>
                 <Button xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
                         textFill="red"/>
             """);
-        assertEquals(javafx.scene.paint.Color.RED, root.getTextFill());
+        assertSame(javafx.scene.paint.Color.RED, root.getTextFill());
+    }
+
+    @Test
+    public void WebColor_Is_Coerced_To_Paint() {
+        Button root = TestCompiler.newInstance(this, "WebColor_Is_Coerced_To_Paint", """
+                <?import javafx.scene.control.*?>
+                <Button xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                        textFill="#12345678"/>
+            """);
+        assertEquals(javafx.scene.paint.Color.valueOf("12345678"), root.getTextFill());
+    }
+
+    @Test
+    public void WebColor_Is_Coerced_To_Named_Color_Field() {
+        Button root = TestCompiler.newInstance(this, "WebColor_Is_Coerced_To_Named_Color_Field", """
+                <?import javafx.scene.control.*?>
+                <Button xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                        textFill="#ff0000"/>
+            """);
+        assertSame(javafx.scene.paint.Color.RED, root.getTextFill());
     }
 
 }
