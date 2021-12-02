@@ -560,8 +560,9 @@ public class ValueEmitterFactory {
                 throw ObjectInitializationErrors.bindingExpressionNotApplicable(sourceInfo);
             }
         } else if (argumentNode instanceof TextNode textNode) {
-            value = newLiteralValue(textNode.getText(), targetType, sourceInfo);
-            return value != null ? value : newObjectByCoercion(targetType, textNode);
+            value = newObjectByCoercion(targetType, textNode);
+            return value != null ? value :
+                newLiteralValue(textNode.getText(), List.of(targetType), targetType, sourceInfo);
         } else if (argumentNode instanceof ValueNode valueNode) {
             value = valueNode;
         } else {
@@ -628,6 +629,21 @@ public class ValueEmitterFactory {
         }
 
         String[] literals = new String[] {textNode.getText()};
+
+        if (textNode instanceof ListNode listNode) {
+            List<String> list = new ArrayList<>();
+
+            for (ValueNode node : listNode.getValues()) {
+                if (!(node instanceof TextNode listTextNode)) {
+                    return null;
+                }
+
+                list.add(listTextNode.getText());
+            }
+
+            literals = list.toArray(new String[0]);
+        }
+
         ConstructorWithParams constructor = findConstructor(targetType, literals, textNode.getSourceInfo());
 
         if (constructor == null) {
