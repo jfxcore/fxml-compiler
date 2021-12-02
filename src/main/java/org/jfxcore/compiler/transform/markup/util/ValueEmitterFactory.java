@@ -560,7 +560,8 @@ public class ValueEmitterFactory {
                 throw ObjectInitializationErrors.bindingExpressionNotApplicable(sourceInfo);
             }
         } else if (argumentNode instanceof TextNode textNode) {
-            return newLiteralValue(textNode.getText(), targetType, sourceInfo);
+            value = newLiteralValue(textNode.getText(), targetType, sourceInfo);
+            return value != null ? value : newObjectByCoercion(targetType, textNode);
         } else if (argumentNode instanceof ValueNode valueNode) {
             value = valueNode;
         } else {

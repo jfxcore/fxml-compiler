@@ -158,6 +158,32 @@ public class CoercionTest {
     }
 
     @Test
+    public void AttributeValue_Is_Coerced_To_Insets() {
+        GridPane root = TestCompiler.newInstance(this, "AttributeValue_Is_Coerced_To_Insets", """
+                <?import javafx.scene.layout.*?>
+                <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml" padding="1"/>
+            """);
+
+        assertEquals(1, root.getPadding().getLeft(), 0.001);
+        assertEquals(1, root.getPadding().getTop(), 0.001);
+        assertEquals(1, root.getPadding().getRight(), 0.001);
+        assertEquals(1, root.getPadding().getBottom(), 0.001);
+    }
+
+    @Test
+    public void AttributeValue_Comma_Separated_List_Is_Coerced_To_Insets() {
+        GridPane root = TestCompiler.newInstance(this, "AttributeValue_Comma_Separated_List_Is_Coerced_To_Insets", """
+                <?import javafx.scene.layout.*?>
+                <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml" padding="1,2,3,4"/>
+            """);
+
+        assertEquals(1, root.getPadding().getTop(), 0.001);
+        assertEquals(2, root.getPadding().getRight(), 0.001);
+        assertEquals(3, root.getPadding().getBottom(), 0.001);
+        assertEquals(4, root.getPadding().getLeft(), 0.001);
+    }
+
+    @Test
     public void ElementValue_Is_Coerced_To_String() {
         Button root = TestCompiler.newInstance(this, "ElementValue_Is_Coerced_To_String", """
                 <?import javafx.scene.control.*?>
