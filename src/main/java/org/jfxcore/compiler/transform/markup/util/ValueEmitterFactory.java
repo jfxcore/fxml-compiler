@@ -207,14 +207,27 @@ public class ValueEmitterFactory {
 
         if (unchecked(sourceInfo, () -> Classes.ColorType().subtypeOf(targetType.jvmType()))) {
             try {
-                Field colorField = findColorField(Color.valueOf(value));
+                Color color = Color.valueOf(value);
+                Field colorField = findColorField(color);
 
-                return new EmitClassConstantNode(
-                    id,
-                    new TypeInstance(Classes.ColorType()), Classes.ColorType(),
-                    colorField.getName(),
-                    sourceInfo);
-            } catch (IllegalArgumentException ex) {
+                if (colorField != null) {
+                    return new EmitClassConstantNode(
+                        id,
+                        new TypeInstance(Classes.ColorType()),
+                        Classes.ColorType(),
+                        colorField.getName(),
+                        sourceInfo);
+                } else {
+                    return new EmitObjectNode(
+                        null,
+                        new TypeInstance(Classes.ColorType()),
+                        null,
+                        List.of(new EmitLiteralNode(new TypeInstance(Classes.StringType()), value, sourceInfo)),
+                        Collections.emptyList(),
+                        EmitObjectNode.CreateKind.VALUE_OF,
+                        sourceInfo);
+                }
+            } catch (NullPointerException | IllegalArgumentException ex) {
                 return null;
             }
         }
@@ -687,10 +700,11 @@ public class ValueEmitterFactory {
             }
 
             TypeInstance[] constructorParamTypes = resolver.getParameterTypes(constructor, List.of(type));
+            Annotation[][] annotations = attr.getAnnotations();
 
-            for (int i = 0; i < attr.getAnnotations().length; ++i) {
+            for (int i = 0; i < annotations.length; ++i) {
                 Annotation namedArgAnnotation = null;
-                for (Annotation item : attr.getAnnotations()[i]) {
+                for (Annotation item : annotations[i]) {
                     if (item.getTypeName().equals(Classes.NamedArgAnnotationName)) {
                         namedArgAnnotation = item;
                         break;
