@@ -9,10 +9,10 @@ import javassist.CtClass;
 import javassist.NotFoundException;
 import javassist.bytecode.BadBytecode;
 import javassist.bytecode.MethodInfo;
-import org.jfxcore.compiler.ast.codebehind.JavaEmitContext;
-import org.jfxcore.compiler.ast.emit.BytecodeEmitContext;
 import org.jfxcore.compiler.ast.DocumentNode;
 import org.jfxcore.compiler.ast.codebehind.ClassNode;
+import org.jfxcore.compiler.ast.codebehind.JavaEmitContext;
+import org.jfxcore.compiler.ast.emit.BytecodeEmitContext;
 import org.jfxcore.compiler.ast.emit.EmitInitializeRootNode;
 import org.jfxcore.compiler.diagnostic.MarkupException;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
@@ -39,7 +39,6 @@ import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -48,81 +47,82 @@ public class Compiler extends AbstractCompiler {
 
     private static final String[] EXTENSIONS = new String[] {".fxml"};
 
+    private enum Stage {
+        PARSE,
+        GENERATE_SOURCES,
+        COMPILE,
+        FINISHED
+    }
+
     private final Logger logger;
-    private final Set<Path> skippedFiles = new HashSet<>();
+    private final Set<File> classpath;
     private final Map<Path, Compilation> compilations = new HashMap<>();
     private final Map<Path, DocumentNode> classDocuments = new HashMap<>();
     private final Map<String, List<ClassInfo>> generatedClasses = new HashMap<>();
+    private Stage stage = Stage.PARSE;
 
-    public Compiler(Logger logger) {
+    public Compiler(Set<File> classpath, Logger logger) {
+        this.classpath = classpath;
         this.logger = logger;
     }
 
-    /**
-     * First step of FXML compilation:
-     * Parse all FXML files in the specified source directory and generate supporting Java source files.
-     *
-     * @param sourceDir the source directory
-     * @param classpath the compile classpath
-     */
     @SuppressWarnings("unused")
-    public void preprocessFiles(File sourceDir, File generatedSourcesBaseDir, Set<File> classpath) throws IOException {
-        Transformer transformer = Transformer.getCodeTransformer(newClassPool(classpath));
-        Path baseDir = sourceDir.toPath();
+    public void parseFiles(File sourceDir) throws IOException {
+        if (stage != Stage.PARSE) {
+            throw new IllegalStateException("Cannot parse files in stage " + stage);
+        }
 
-        for (Path sourceFile : FileUtil.enumerateFiles(baseDir, this::fileFilter)) {
-            var context = new CompilationContext(new CompilationSource.FileSystem(sourceFile));
+        Transformer transformer = Transformer.getCodeTransformer(newClassPool(classpath));
+
+        for (Path sourceFile : FileUtil.enumerateFiles(sourceDir.toPath(), this::fileFilter)) {
+            CompilationContext context = new CompilationContext(new CompilationSource.FileSystem(sourceFile));
 
             try (var ignored = new CompilationScope(context)) {
-                DocumentNode document = new FxmlParser(baseDir, sourceFile).parseDocument();
+                DocumentNode document = new FxmlParser(sourceDir.toPath(), sourceFile).parseDocument();
                 compilations.put(sourceFile, new Compilation(document, context));
-                parseSingleFile(sourceFile, document, transformer, generatedClasses);
+                parseSingleFile(sourceFile, document, transformer);
             } catch (FxmlParseAbortException ex) {
-                skippedFiles.add(sourceFile);
-                logger.info("File skipped: " + sourceFile.toString());
+                logger.info(String.format("File skipped: %s (%s)", sourceFile, ex.getMessage()));
             } catch (MarkupException ex) {
                 ex.setSourceFile(sourceFile.toFile());
                 throw ex;
             }
         }
-
-        generateSources(generatedSourcesBaseDir);
     }
 
-    /**
-     * Second step in FXML compilation:
-     * Compiles all FXML files in the specified source directory.
-     *
-     * @param sourceDir the source directory
-     * @param classpath the compile classpath
-     */
     @SuppressWarnings("unused")
-    public void compileFiles(File sourceDir, Set<File> classpath) throws IOException {
-        Transformer transformer = null;
-
-        for (Path inputPath : FileUtil.enumerateFiles(sourceDir.toPath(), this::fileFilter)) {
-            if (skippedFiles.contains(inputPath)) {
-                continue;
-            }
-
-            if (transformer == null) {
-                transformer = Transformer.getBytecodeTransformer(newClassPool(classpath));
-            }
-
-            compileSingleFile(inputPath, transformer);
+    public void generateSources(File generatedSourcesDir) throws IOException {
+        if (stage != Stage.PARSE) {
+            throw new IllegalStateException("Cannot generate sources in stage " + stage);
         }
-    }
 
-    private void generateSources(File generatedSourcesBasePath) throws IOException {
+        stage = Stage.COMPILE;
+
         for (var entry : generatedClasses.entrySet()) {
             String packageName = entry.getKey();
-            Path outputDir = generatedSourcesBasePath.toPath().resolve(packageName.replace(".", "/"));
+            Path outputDir = generatedSourcesDir.toPath().resolve(packageName.replace(".", "/"));
             deleteFiles(outputDir);
             writeClasses(outputDir, entry.getValue());
             writeAccessorClass(outputDir, packageName, entry.getValue());
         }
+    }
 
-        generatedClasses.clear();
+    @SuppressWarnings("unused")
+    public void compileFiles() throws IOException {
+        if (stage != Stage.COMPILE) {
+            throw new IllegalStateException("Cannot compile in stage " + stage);
+        }
+
+        stage = Stage.FINISHED;
+        Transformer transformer = null;
+
+        for (Path sourceFile : classDocuments.keySet()) {
+            if (transformer == null) {
+                transformer = Transformer.getBytecodeTransformer(newClassPool(classpath));
+            }
+
+            compileSingleFile(sourceFile, transformer);
+        }
     }
 
     private boolean fileFilter(Path path) {
@@ -146,11 +146,8 @@ public class Compiler extends AbstractCompiler {
         });
     }
 
-    private void parseSingleFile(
-            Path inputFile,
-            DocumentNode document,
-            Transformer transformer,
-            Map<String, List<ClassInfo>> generatedClasses) {
+    private void parseSingleFile(Path inputFile, DocumentNode document, Transformer transformer) {
+        logger.debug("Parsing " + inputFile);
         StringBuilder stringBuilder = new StringBuilder();
         JavaEmitContext context = new JavaEmitContext(stringBuilder);
 
@@ -166,19 +163,23 @@ public class Compiler extends AbstractCompiler {
         ClassNode classNode = ((ClassNode)document.getRoot());
         String packageName = classNode.getPackageName();
         generatedClasses.putIfAbsent(packageName, new ArrayList<>());
-        generatedClasses.get(packageName).add(new ClassInfo(classNode, stringBuilder.toString()));
+        generatedClasses.get(packageName).add(new ClassInfo(classNode, inputFile, stringBuilder.toString()));
     }
 
     private void writeClasses(Path outputDir, List<ClassInfo> classes) throws IOException {
         Files.createDirectories(outputDir);
 
         for (ClassInfo classInfo : classes) {
+            Path outputFile = outputDir.resolve(
+                classInfo.classNode().hasCodeBehind() ?
+                classInfo.classNode().getMangledClassName() + ".java" :
+                classInfo.classNode().getClassName() + ".java");
+
+            logger.debug("Generating " + outputFile);
+
             Files.writeString(
-                outputDir.resolve(
-                    classInfo.classNode().hasCodeBehind() ?
-                        classInfo.classNode().getMangledClassName() + ".java" :
-                        classInfo.classNode().getClassName() + ".java"),
-                classInfo.source(),
+                outputFile,
+                classInfo.sourceText(),
                 StandardOpenOption.CREATE,
                 StandardOpenOption.TRUNCATE_EXISTING);
         }
@@ -213,7 +214,7 @@ public class Compiler extends AbstractCompiler {
 
             stringBuilder.append(
                 String.format(
-                    "\t%sstatic abstract class %s extends %s {",
+                    "\t%sstatic abstract class %s extends %s {\r\n",
                     getModifierString(List.of(classInfo)),
                     classInfo.classNode().getClassName(),
                     classInfo.classNode().getMangledClassName()));
@@ -231,13 +232,17 @@ public class Compiler extends AbstractCompiler {
                     .append("\t\t}\r\n\t");
             }
 
-            stringBuilder.append("}\r\n");
+            stringBuilder.append("\t}\r\n");
         }
 
         stringBuilder.append("}\r\n");
 
+        Path outputFile = outputDir.resolve("markup.java");
+
+        logger.debug("Generating " + outputFile);
+
         Files.writeString(
-            outputDir.resolve("markup.java"),
+            outputFile,
             stringBuilder.toString(),
             StandardOpenOption.CREATE,
             StandardOpenOption.TRUNCATE_EXISTING);
@@ -281,6 +286,7 @@ public class Compiler extends AbstractCompiler {
     }
 
     private void compileSingleFile(Path inputFile, Transformer transformer) throws IOException {
+        logger.debug("Compiling " + inputFile);
         Compilation compilation = compilations.get(inputFile);
 
         try (var ignored = new CompilationScope(compilation.context())) {
@@ -288,8 +294,8 @@ public class Compiler extends AbstractCompiler {
             boolean hasCodeBehind = classNode.hasCodeBehind();
             String packageName = classNode.getPackageName();
             String codeBehindClassName = packageName + "." + classNode.getClassName();
-            String markupClassName =
-                packageName + "." + (hasCodeBehind ? classNode.getMangledClassName() : classNode.getClassName());
+            String simpleMarkupClassName = hasCodeBehind ? classNode.getMangledClassName() : classNode.getClassName();
+            String markupClassName = packageName + "." + simpleMarkupClassName;
             URL classUrl = transformer.getClassPool().find(markupClassName);
 
             if (classUrl == null) {
@@ -303,10 +309,10 @@ public class Compiler extends AbstractCompiler {
             Bytecode bytecode = new Bytecode(markupClass, 1);
 
             EmitInitializeRootNode rootNode = (EmitInitializeRootNode)transformer.transform(
-                compilations.get(inputFile).document, codeBehindClass, markupClass);
+                compilations.get(inputFile).document(), codeBehindClass, markupClass);
 
             BytecodeEmitContext emitContext = new BytecodeEmitContext(
-                codeBehindClass, markupClass, rootNode, compilations.get(inputFile).document.getImports(), bytecode);
+                codeBehindClass, markupClass, rootNode, compilations.get(inputFile).document().getImports(), bytecode);
 
             emitContext.emitRootNode();
 
@@ -348,7 +354,7 @@ public class Compiler extends AbstractCompiler {
         return classPool;
     }
 
-    private record ClassInfo(ClassNode classNode, String source) {}
+    private record ClassInfo(ClassNode classNode, Path sourceFile, String sourceText) {}
     private record Compilation(DocumentNode document, CompilationContext context) {}
 
 }
