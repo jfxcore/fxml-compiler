@@ -576,6 +576,39 @@ public class InstantiationTest extends MethodReferencedSupport {
     }
 
     @Test
+    public void BindingExpression_Cannot_Be_Coerced_To_Constructor_Argument() {
+        MarkupException ex = assertThrows(MarkupException.class, () -> TestCompiler.newInstance(
+            this, "BindingExpression_Cannot_Be_Coerced_To_Constructor_Argument", """
+                <?import javafx.scene.layout.*?>
+                <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                    <fx:define>
+                        <BackgroundFill fx:id="bf" fill="{fx:bind test}" radii="EMPTY" insets="0"/>
+                    </fx:define>
+                </GridPane>
+            """));
+
+        assertEquals(ErrorCode.EXPRESSION_NOT_APPLICABLE, ex.getDiagnostic().getCode());
+    }
+
+    @Test
+    public void AssignmentExpression_Can_Be_Coerced_To_Constructor_Argument() {
+        GridPane root = TestCompiler.newInstance(
+            this, "AssignmentExpression_Can_Be_Coerced_To_Constructor_Argument", """
+                <?import javafx.scene.layout.*?>
+                <?import javafx.scene.paint.*?>
+                <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                    <fx:define>
+                        <Color fx:id="col">red</Color>
+                        <BackgroundFill fx:id="bf" fill="{fx:once col}" radii="EMPTY" insets="0"/>
+                    </fx:define>
+                </GridPane>
+            """);
+
+        var backgroundFill = (BackgroundFill)root.getProperties().get("bf");
+        assertEquals(Color.RED, backgroundFill.getFill());
+    }
+
+    @Test
     public void Object_Is_Instantiated_With_ValueOf_Method() {
         Button root = TestCompiler.newInstance(this, "Object_Is_Instantiated_With_ValueOf_Method", """
                 <?import javafx.scene.control.*?>

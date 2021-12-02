@@ -42,7 +42,7 @@ public class EmitObjectNode extends ReferenceableNode {
     private final CtConstructor constructor;
     private final List<ValueNode> arguments;
     private final List<Node> children;
-    private CreateKind createKind;
+    private final CreateKind createKind;
     private ResolvedTypeNode type;
 
     public EmitObjectNode(
@@ -73,10 +73,6 @@ public class EmitObjectNode extends ReferenceableNode {
         this.createKind = checkNotNull(createKind);
     }
 
-    public void setCreateKind(CreateKind createKind) {
-        this.createKind = createKind;
-    }
-
     @Override
     public ResolvedTypeNode getType() {
         return type;
@@ -95,7 +91,8 @@ public class EmitObjectNode extends ReferenceableNode {
     }
 
     public boolean addsToParentStack() {
-        return children.stream().anyMatch(ContextHelper::needsParentStack);
+        return children.stream().anyMatch(RuntimeContextHelper::needsParentStack)
+            || arguments.stream().anyMatch(RuntimeContextHelper::needsParentStack);
     }
 
     /**
@@ -135,24 +132,31 @@ public class EmitObjectNode extends ReferenceableNode {
         Bytecode code = context.getOutput();
 
         if (isEmitInPreamble()) {
+            boolean parentStack = addsToParentStack();
+
             code.aload(0);
-            emitCore(type.getJvmType(), context);
-            code.dup_x1()
-                .putfield(context.getLocalMarkupClass(), getId(), type.getJvmType());
-            storeLocal(code, type.getJvmType());
-        } else {
-            boolean parentStack = addsToParentStack() && type.getTypeInstance().subtypeOf(Classes.ObjectType());
+
+            if (parentStack) {
+                emitPushNode(context);
+            }
+
             emitCore(type.getJvmType(), context);
 
             if (parentStack) {
-                code.dup()
-                    .aload(context.getRuntimeContextLocal())
-                    .dup_x1()
-                    .pop()
-                    .invokevirtual(
-                        context.getRuntimeContextClass(),
-                        RuntimeContextGenerator.PUSH_PARENT_METHOD,
-                        function(CtClass.voidType, Classes.ObjectType()));
+                emitPopNode(context);
+            }
+
+            code.dup_x1()
+                .putfield(context.getLocalMarkupClass(), getId(), type.getJvmType());
+
+            storeLocal(code, type.getJvmType());
+        } else {
+            boolean parentStack = addsToParentStack() && type.getTypeInstance().subtypeOf(Classes.ObjectType());
+
+            emitCore(type.getJvmType(), context);
+
+            if (parentStack) {
+                emitPushNode(context);
             }
 
             for (Node child : children) {
@@ -160,13 +164,30 @@ public class EmitObjectNode extends ReferenceableNode {
             }
 
             if (parentStack) {
-                code.aload(context.getRuntimeContextLocal())
-                    .invokevirtual(
-                        context.getRuntimeContextClass(),
-                        RuntimeContextGenerator.POP_PARENT_METHOD,
-                        function(CtClass.voidType));
+                emitPopNode(context);
             }
         }
+    }
+
+    private void emitPushNode(BytecodeEmitContext context) {
+        context.getOutput()
+            .dup()
+            .aload(context.getRuntimeContextLocal())
+            .dup_x1()
+            .pop()
+            .invokevirtual(
+                context.getRuntimeContextClass(),
+                RuntimeContextGenerator.PUSH_PARENT_METHOD,
+                function(CtClass.voidType, Classes.ObjectType()));
+    }
+
+    private void emitPopNode(BytecodeEmitContext context) {
+        context.getOutput()
+            .aload(context.getRuntimeContextLocal())
+            .invokevirtual(
+                context.getRuntimeContextClass(),
+                RuntimeContextGenerator.POP_PARENT_METHOD,
+                function(CtClass.voidType));
     }
 
     private void emitCore(CtClass typeClass, BytecodeEmitContext context) {
