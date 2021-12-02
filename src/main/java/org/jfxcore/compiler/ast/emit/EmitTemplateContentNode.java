@@ -159,7 +159,7 @@ public class EmitTemplateContentNode extends AbstractNode implements ValueEmitte
     }
 
     private void emitConstructor(BytecodeEmitContext parentContext, CtClass declaringClass) throws Exception {
-        boolean needsContext = ContextHelper.needsContext(content);
+        boolean needsContext = RuntimeContextHelper.needsRuntimeContext(content);
         int occupiedLocals = TypeHelper.getSlots(itemType.jvmType()) + (needsContext ? 2 : 1);
 
         var context = new BytecodeEmitContext(

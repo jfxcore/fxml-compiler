@@ -59,11 +59,6 @@ public class ObjectInitializationErrors {
             ErrorCode.CANNOT_PARAMETERIZE_TYPE, type.getName()));
     }
 
-    public static MarkupException bindingExpressionNotApplicable(SourceInfo sourceInfo) {
-        return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
-            ErrorCode.BINDING_EXPRESSION_NOT_APPLICABLE));
-    }
-
     public static MarkupException objectCannotHaveMultipleChildren(SourceInfo sourceInfo, CtClass type) {
         return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
             ErrorCode.OBJECT_CANNOT_HAVE_MULTIPLE_CHILDREN, type.getName()));

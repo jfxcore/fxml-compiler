@@ -129,15 +129,22 @@ public class GeneralErrors {
     }
 
     public static MarkupException cannotAssignFunctionArgument(
-        SourceInfo sourceInfo, String methodName, int argumentIndex, String sourceType) {
+            SourceInfo sourceInfo, String methodName, int argumentIndex, String sourceType) {
         return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
             ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT, methodName, argumentIndex + 1, sourceType));
     }
 
     public static MarkupException numFunctionArgumentsMismatch(
-        SourceInfo sourceInfo, String methodName, int expected, int actual) {
+            SourceInfo sourceInfo, String methodName, int expected, int actual) {
         return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
             ErrorCode.NUM_FUNCTION_ARGUMENTS_MISMATCH, methodName, expected, actual));
+    }
+
+    public static MarkupException expressionNotApplicable(
+            SourceInfo sourceInfo, boolean allowAssignment) {
+        return new MarkupException(sourceInfo, allowAssignment ?
+            Diagnostic.newDiagnosticVariant(ErrorCode.EXPRESSION_NOT_APPLICABLE, "assign") :
+            Diagnostic.newDiagnostic(ErrorCode.EXPRESSION_NOT_APPLICABLE));
     }
 
 }

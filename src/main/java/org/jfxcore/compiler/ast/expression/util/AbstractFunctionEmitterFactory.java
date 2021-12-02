@@ -214,7 +214,7 @@ abstract class AbstractFunctionEmitterFactory {
                     factory = new SimplePathEmitterFactory(pathExpressionArg);
                 }
             } else {
-                throw new IllegalArgumentException();
+                throw GeneralErrors.expressionNotApplicable(sourceInfo, false);
             }
 
             try {
@@ -295,7 +295,7 @@ abstract class AbstractFunctionEmitterFactory {
             } else if (argument instanceof ValueEmitterNode) {
                 argumentTypes.add(TypeHelper.getTypeInstance(argument));
             } else {
-                throw new IllegalArgumentException();
+                throw GeneralErrors.expressionNotApplicable(argument.getSourceInfo(), false);
             }
         }
 

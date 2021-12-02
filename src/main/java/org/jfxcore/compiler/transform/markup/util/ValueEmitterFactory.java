@@ -31,7 +31,6 @@ import org.jfxcore.compiler.diagnostic.DiagnosticInfo;
 import org.jfxcore.compiler.diagnostic.ErrorCode;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.diagnostic.errors.GeneralErrors;
-import org.jfxcore.compiler.diagnostic.errors.ObjectInitializationErrors;
 import org.jfxcore.compiler.diagnostic.errors.PropertyAssignmentErrors;
 import org.jfxcore.compiler.diagnostic.errors.SymbolResolutionErrors;
 import org.jfxcore.compiler.util.Classes;
@@ -307,7 +306,7 @@ public class ValueEmitterFactory {
                                     namedArgsConstructor.constructor().getLongName(),
                                     argIndex + 1,
                                     TypeHelper.getTypeInstance(propertyNode.getValues().get(0)).getJavaName()),
-                            propertyNode.getValues().get(0).getSourceInfo()));
+                                propertyNode.getValues().get(0).getSourceInfo()));
 
                         break outer;
                     }
@@ -557,7 +556,7 @@ public class ValueEmitterFactory {
             if (bindingNode.getMode() == BindingMode.ONCE) {
                 value = bindingNode.toEmitter(invokingType).getValue();
             } else {
-                throw ObjectInitializationErrors.bindingExpressionNotApplicable(sourceInfo);
+                throw GeneralErrors.expressionNotApplicable(sourceInfo, true);
             }
         } else if (argumentNode instanceof TextNode textNode) {
             value = newObjectByCoercion(targetType, textNode);

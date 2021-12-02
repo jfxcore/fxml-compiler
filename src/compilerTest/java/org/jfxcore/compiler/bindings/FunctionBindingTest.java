@@ -443,6 +443,30 @@ public class FunctionBindingTest extends MethodReferencedSupport {
     }
 
     @Test
+    public void Bind_Once_With_BindingExpression_Param_Fails() {
+        MarkupException ex = assertThrows(MarkupException.class, () -> TestCompiler.newInstance(
+            this, "Bind_Once_With_BindingExpression_Param_Fails", """
+                <?import org.jfxcore.compiler.bindings.FunctionBindingTest.TestPane?>
+                <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                          id="{fx:once defaultMethod('foo-%s', {fx:bind doubleProp})}"/>
+            """));
+
+        assertEquals(ErrorCode.EXPRESSION_NOT_APPLICABLE, ex.getDiagnostic().getCode());
+    }
+
+    @Test
+    public void Bind_Once_With_AssignmentExpression_Param_Fails() {
+        MarkupException ex = assertThrows(MarkupException.class, () -> TestCompiler.newInstance(
+                this, "Bind_Once_With_BindingExpression_Param_Fails", """
+                <?import org.jfxcore.compiler.bindings.FunctionBindingTest.TestPane?>
+                <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                          id="{fx:once defaultMethod('foo-%s', {fx:once doubleProp})}"/>
+            """));
+
+        assertEquals(ErrorCode.EXPRESSION_NOT_APPLICABLE, ex.getDiagnostic().getCode());
+    }
+
+    @Test
     public void Bind_Unidirectional_To_Static_Method_With_Incompatible_ReturnType_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> TestCompiler.newInstance(
             this, "Bind_Unidirectional_To_Static_Method_With_Incompatible_ReturnType_Fails", """
@@ -790,6 +814,30 @@ public class FunctionBindingTest extends MethodReferencedSupport {
             """);
 
         assertEquals("foo-Infinity", root.getId());
+    }
+
+    @Test
+    public void Bind_Unidirectional_With_BindingExpression_Param_Fails() {
+        MarkupException ex = assertThrows(MarkupException.class, () -> TestCompiler.newInstance(
+            this, "Bind_Unidirectional_With_BindingExpression_Param_Fails", """
+                <?import org.jfxcore.compiler.bindings.FunctionBindingTest.TestPane?>
+                <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                          id="{fx:bind defaultMethod('foo-%s', {fx:bind doubleProp})}"/>
+            """));
+
+        assertEquals(ErrorCode.EXPRESSION_NOT_APPLICABLE, ex.getDiagnostic().getCode());
+    }
+
+    @Test
+    public void Bind_Unidirectional_With_AssignmentExpression_Param_Fails() {
+        MarkupException ex = assertThrows(MarkupException.class, () -> TestCompiler.newInstance(
+            this, "Bind_Unidirectional_With_AssignmentExpression_Param_Fails", """
+                <?import org.jfxcore.compiler.bindings.FunctionBindingTest.TestPane?>
+                <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                          id="{fx:bind defaultMethod('foo-%s', {fx:once doubleProp})}"/>
+            """));
+
+        assertEquals(ErrorCode.EXPRESSION_NOT_APPLICABLE, ex.getDiagnostic().getCode());
     }
 
     @SuppressWarnings("unused")

@@ -55,16 +55,25 @@ public class EmitInitializeRootNode extends AbstractNode implements RootNode, Em
     @Override
     public void emit(BytecodeEmitContext context) {
         Bytecode code = context.getOutput();
-        boolean needsContext = ContextHelper.needsContext(this);
+        boolean needsContext = RuntimeContextHelper.needsRuntimeContext(this);
 
         if (needsContext) {
-            GetMaxDepthVisitor maxDepthVisitor = new GetMaxDepthVisitor();
+            int maxDepth = 1;
+
+            for (Node node : preamble) {
+                var maxDepthVisitor = new GetMaxDepthVisitor();
+                Visitor.visit(node, maxDepthVisitor);
+                maxDepth = Math.max(maxDepth, maxDepthVisitor.getMaxDepth());
+            }
+
+            var maxDepthVisitor = new GetMaxDepthVisitor();
             Visitor.visit(root, maxDepthVisitor);
+            maxDepth = Math.max(maxDepth, maxDepthVisitor.getMaxDepth());
 
             code.anew(context.getRuntimeContextClass())
                 .dup()
                 .aload(0)
-                .iconst(maxDepthVisitor.getMaxDepth())
+                .iconst(maxDepth)
                 .invokespecial(
                     context.getRuntimeContextClass(),
                     MethodInfo.nameInit,
@@ -84,6 +93,7 @@ public class EmitInitializeRootNode extends AbstractNode implements RootNode, Em
     @Override
     public void acceptChildren(Visitor visitor) {
         super.acceptChildren(visitor);
+        acceptChildren(preamble, visitor);
         root = root.accept(visitor);
     }
 

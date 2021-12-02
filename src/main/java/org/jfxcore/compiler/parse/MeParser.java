@@ -273,6 +273,13 @@ public class MeParser {
         if ((token = tokenizer.poll(OPEN_CURLY)) != null) {
             MeToken identifier = tokenizer.pollQualifiedIdentifier(false);
             if (identifier != null) {
+                identifier = new MeToken(
+                    identifier.getType(),
+                    identifier.getValue(),
+                    identifier.isCompact(),
+                    identifier.getLine(),
+                    SourceInfo.span(token.getSourceInfo(), identifier.getSourceInfo()));
+
                 return new TokenInfo(NodeType.OBJECT, identifier);
             }
 

@@ -247,7 +247,7 @@ public class BytecodeEmitContext extends EmitContext<Bytecode> {
             runWithParentStack(entry.parents, () -> entry.generator.emitCode(this));
         }
 
-        if (ContextHelper.needsContext(rootNode)) {
+        if (RuntimeContextHelper.needsRuntimeContext(rootNode)) {
             Local contextLocal = getOutput().acquireLocal(false);
             this.runtimeContextLocal = contextLocal.getIndex();
             emit(rootNode);

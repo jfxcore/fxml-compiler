@@ -9,9 +9,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.WeakHashMap;
 
-public class ContextHelper {
+public class RuntimeContextHelper {
 
-    public static boolean needsContext(Node node) {
+    public static boolean needsRuntimeContext(Node node) {
         boolean[] result = new boolean[1];
 
         Visitor.visit(node, new Visitor() {
