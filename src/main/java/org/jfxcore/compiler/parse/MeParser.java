@@ -55,7 +55,7 @@ public class MeParser {
                 SourceInfo.span(tokenizer.getFirst().getSourceInfo(), tokenizer.getLast().getSourceInfo()));
         }
 
-        ObjectNode root = parseObjectExpression(tokenInfo.token, tokenizer);
+        ObjectNode root = parseObjectExpression(tokenInfo, tokenizer);
         if (!tokenizer.isEmpty()) {
             return null;
         }
@@ -63,24 +63,25 @@ public class MeParser {
         return root;
     }
 
-    private ObjectNode parseObjectExpression(MeToken identifier, CurlyTokenizer tokenizer) {
-        SourceInfo sourceInfo = identifier.getSourceInfo();
+    private ObjectNode parseObjectExpression(TokenInfo tokenInfo, CurlyTokenizer tokenizer) {
+        MeToken identifier = tokenInfo.token;
+        SourceInfo identifierSourceInfo = identifier.getSourceInfo();
         boolean intrinsic = identifier.getValue().startsWith(intrinsicPrefix);
         String name = cleanIdentifier(identifier.getValue());
 
-        TypeNode typeNode = new TypeNode(name, intrinsic ? intrinsicPrefix + name : name, intrinsic, sourceInfo);
+        var typeNode = new TypeNode(name, intrinsic ? intrinsicPrefix + name : name, intrinsic, identifierSourceInfo);
         List<PropertyNode> properties = new ArrayList<>();
         List<ValueNode> children = new ArrayList<>();
 
         loop: while (!tokenizer.isEmpty()) {
-            TokenInfo tokenInfo;
+            TokenInfo info;
 
-            switch ((tokenInfo = getNextToken(tokenizer, false)).type) {
+            switch ((info = getNextToken(tokenizer, false)).type) {
                 case VALUE: children.add(parseValueExpression(tokenizer, true, false)); break;
-                case FUNCTION: children.add(parseFunctionExpression(tokenInfo.token, tokenizer)); break;
-                case PROPERTY: properties.add(parsePropertyExpression(tokenInfo.token, tokenizer)); break;
+                case FUNCTION: children.add(parseFunctionExpression(info.token, tokenizer)); break;
+                case PROPERTY: properties.add(parsePropertyExpression(info.token, tokenizer)); break;
                 case OBJECT:
-                    ValueNode node = parseObjectExpression(tokenInfo.token, tokenizer);
+                    ValueNode node = parseObjectExpression(info, tokenizer);
 
                     if (tokenizer.poll(COMMA) != null) {
                         List<ValueNode> values = new ArrayList<>();
@@ -105,8 +106,9 @@ public class MeParser {
 
         tokenizer.remove(CLOSE_CURLY);
 
-        return new ObjectNode(
-            typeNode, properties, children, SourceInfo.span(sourceInfo, tokenizer.getLastRemoved().getSourceInfo()));
+        SourceInfo startSourceInfo = tokenInfo.curlySourceInfo != null ? tokenInfo.curlySourceInfo : identifierSourceInfo;
+        SourceInfo totalSourceInfo = SourceInfo.span(startSourceInfo, tokenizer.getLastRemoved().getSourceInfo());
+        return new ObjectNode(typeNode, properties, children, totalSourceInfo);
     }
 
     private PropertyNode parsePropertyExpression(MeToken identifier, CurlyTokenizer tokenizer) {
@@ -118,7 +120,7 @@ public class MeParser {
 
         switch ((tokenInfo = getNextToken(tokenizer, false)).type) {
             case VALUE: children.add(parseValueExpression(tokenizer, false, false)); break;
-            case OBJECT: children.add(parseObjectExpression(tokenInfo.token, tokenizer)); break;
+            case OBJECT: children.add(parseObjectExpression(tokenInfo, tokenizer)); break;
             case FUNCTION: children.add(parseFunctionExpression(tokenInfo.token, tokenizer)); break;
             default: throw ParserErrors.unexpectedToken(tokenizer.peekNotNull());
         }
@@ -188,7 +190,7 @@ public class MeParser {
 
                 case OBJECT:
                     if (allowObjectExpression) {
-                        current.add(parseObjectExpression(tokenInfo.token, tokenizer));
+                        current.add(parseObjectExpression(tokenInfo, tokenizer));
                         break;
                     }
 
@@ -241,7 +243,7 @@ public class MeParser {
 
             switch ((tokenInfo = getNextToken(tokenizer, false)).type) {
                 case VALUE: args.add(parseValueExpression(tokenizer, false, true)); break;
-                case OBJECT: args.add(parseObjectExpression(tokenInfo.token, tokenizer)); break;
+                case OBJECT: args.add(parseObjectExpression(tokenInfo, tokenizer)); break;
                 case FUNCTION: args.add(parseFunctionExpression(tokenInfo.token, tokenizer)); break;
             }
         } while (tokenizer.poll(COMMA) != null);
@@ -273,14 +275,7 @@ public class MeParser {
         if ((token = tokenizer.poll(OPEN_CURLY)) != null) {
             MeToken identifier = tokenizer.pollQualifiedIdentifier(false);
             if (identifier != null) {
-                identifier = new MeToken(
-                    identifier.getType(),
-                    identifier.getValue(),
-                    identifier.isCompact(),
-                    identifier.getLine(),
-                    SourceInfo.span(token.getSourceInfo(), identifier.getSourceInfo()));
-
-                return new TokenInfo(NodeType.OBJECT, identifier);
+                return new TokenInfo(token.getSourceInfo(), NodeType.OBJECT, identifier);
             }
 
             tokenizer.addFirst(token);
@@ -355,10 +350,19 @@ public class MeParser {
     }
 
     private static class TokenInfo {
+        // For object expressions, indicates the location of the opening curly brace
+        final SourceInfo curlySourceInfo;
         final NodeType type;
         final MeToken token;
 
         public TokenInfo(NodeType type, MeToken token) {
+            this.curlySourceInfo = null;
+            this.type = type;
+            this.token = token;
+        }
+
+        public TokenInfo(SourceInfo curlySourceInfo, NodeType type, MeToken token) {
+            this.curlySourceInfo = curlySourceInfo;
             this.type = type;
             this.token = token;
         }
