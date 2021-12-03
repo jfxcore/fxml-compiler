@@ -207,7 +207,7 @@ public class BindingSourceTest {
                 <?import javafx.geometry.*?>
                 <Pane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml" prefWidth="123">
                     <rotationAxis>
-                        <Point3D x="{fx:once parent/prefWidth}"/>
+                        <Point3D x="{fx:once parent/prefWidth}" y="0" z="0"/>
                     </rotationAxis>
                 </Pane>
             """);

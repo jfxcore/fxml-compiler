@@ -34,7 +34,7 @@ import org.jfxcore.compiler.diagnostic.errors.GeneralErrors;
 import org.jfxcore.compiler.diagnostic.errors.PropertyAssignmentErrors;
 import org.jfxcore.compiler.diagnostic.errors.SymbolResolutionErrors;
 import org.jfxcore.compiler.util.Classes;
-import org.jfxcore.compiler.util.MethodFinder;
+import org.jfxcore.compiler.util.Descriptors;
 import org.jfxcore.compiler.util.NameHelper;
 import org.jfxcore.compiler.util.PropertyHelper;
 import org.jfxcore.compiler.util.Resolver;
@@ -48,11 +48,9 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
-import java.util.ListIterator;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 import static org.jfxcore.compiler.util.ExceptionHelper.unchecked;
 
@@ -250,6 +248,21 @@ public class ValueEmitterFactory {
     }
 
     /**
+     * Tries to create a {@link EmitObjectNode} that represents the invocation of the default constructor.
+     *
+     * @return {@link EmitObjectNode} if successful; <code>null</code> otherwise.
+     */
+    public static EmitObjectNode newDefaultObject(ObjectNode objectNode) {
+        try {
+            TypeInstance type = TypeHelper.getTypeInstance(objectNode);
+            CtConstructor constructor = type.jvmType().getConstructor(Descriptors.constructor());
+            return createObjectNode(objectNode, constructor, Collections.emptyList());
+        } catch (NotFoundException ex) {
+            return null;
+        }
+    }
+
+    /**
      * Tries to create a {@link EmitObjectNode} that represents the invocation of a constructor
      * where all parameters are annotated with {@link javafx.beans.NamedArg}.
      *
@@ -257,7 +270,7 @@ public class ValueEmitterFactory {
      */
     public static EmitObjectNode newObjectWithNamedParams(ObjectNode objectNode, List<DiagnosticInfo> diagnostics) {
         TypeInstance type = TypeHelper.getTypeInstance(objectNode);
-        NamedArgsConstructor[] namedArgsConstructors = findNamedArgsConstructors(objectNode);
+        NamedArgsConstructor[] namedArgsConstructors = findNamedArgsConstructors(objectNode, diagnostics);
 
         outer:
         for (NamedArgsConstructor namedArgsConstructor : namedArgsConstructors) {
@@ -275,36 +288,42 @@ public class ValueEmitterFactory {
                     .findFirst()
                     .orElse(null);
 
-                // If a primitive-type property was not specified, we synthesize a literal node
-                // with the default value for the primitive type.
-                if (propertyNode == null) {
-                    if (constructorParam.type().isPrimitive()) {
-                        arguments.add(
-                            new EmitLiteralNode(
-                                constructorParam.type(),
-                                TypeHelper.getDefaultValue(constructorParam.type().jvmType()),
-                                objectNode.getSourceInfo()));
-                        continue;
-                    } else {
+                // If an argument was not specified, we synthesize a node if the @NamedArg
+                // annotation has a non-null 'defaultValue' parameter.
+                if (propertyNode == null && constructorParam.isOptional()) {
+                    var textNode = new TextNode(constructorParam.defaultValue(), SourceInfo.none());
+                    ValueEmitterNode synthesizedNode = newObjectByCoercion(constructorParam.type(), textNode);
+                    if (synthesizedNode == null) {
+                        synthesizedNode = newLiteralValue(
+                            constructorParam.defaultValue(), constructorParam.type(), SourceInfo.none());
+                    }
+
+                    if (synthesizedNode == null) {
                         break outer;
                     }
+
+                    arguments.add(synthesizedNode);
                 }
 
                 // For scalar properties, check whether the property type is assignable to the
                 // corresponding formal parameter of the current constructor.
-                if (propertyNode.getValues().size() == 1) {
+                if (propertyNode != null && propertyNode.getValues().size() == 1) {
                     ValueNode argument = acceptArgument(
                         propertyNode.getValues().get(0), constructorParam.type(), type, vararg);
 
                     if (argument != null) {
                         arguments.add(argument);
                     } else {
+                        var namedArgs = namedArgsConstructor.namedArgs();
+                        var argTypes = Arrays.stream(namedArgs).map(NamedArgParam::type).toArray(TypeInstance[]::new);
+                        var argNames = Arrays.stream(namedArgs).map(NamedArgParam::name).toArray(String[]::new);
+
                         diagnostics.add(
                             new DiagnosticInfo(
-                                Diagnostic.newDiagnostic(
-                                    ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT,
-                                    namedArgsConstructor.constructor().getLongName(),
-                                    argIndex + 1,
+                                Diagnostic.newDiagnosticVariant(
+                                    ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT, "named",
+                                    NameHelper.getShortMethodSignature(namedArgsConstructor.constructor(), argTypes, argNames),
+                                    propertyNode.getName(),
                                     TypeHelper.getTypeInstance(propertyNode.getValues().get(0)).getJavaName()),
                                 propertyNode.getValues().get(0).getSourceInfo()));
 
@@ -329,90 +348,19 @@ public class ValueEmitterFactory {
     }
 
     /**
-     * Tries to create a {@link EmitObjectNode} that represents the invocation of a constructor
-     * with arguments provided by the specified {@link ObjectNode#getChildren()}.
-     *
-     * @return {@link EmitObjectNode} if successful; <code>null</code> otherwise.
-     */
-    public static EmitObjectNode newObjectWithArguments(ObjectNode objectNode, List<DiagnosticInfo> diagnostics) {
-        TypeInstance type = TypeHelper.getTypeInstance(objectNode);
-        List<Node> children = objectNode.getChildren();
-        List<Node> argList = new ArrayList<>(children);
-        ListIterator<Node> arg = argList.listIterator();
-
-        while (arg.hasNext()) {
-            Node node = arg.next();
-
-            if (!(node instanceof ValueNode)) {
-                return null;
-            }
-
-            if (node instanceof ListNode) {
-                arg.remove();
-
-                for (Node child : ((ListNode)children.get(0)).getValues()) {
-                    arg.add(child);
-                }
-            }
-        }
-
-        CtConstructor constructor = new MethodFinder(type, type.jvmType()).findConstructor(
-            argList.stream().map(TypeHelper::getTypeInstance).collect(Collectors.toList()),
-            argList.stream().map(Node::getSourceInfo).collect(Collectors.toList()),
-            diagnostics,
-            objectNode.getSourceInfo());
-
-        if (constructor != null) {
-            TypeInstance[] paramTypes = new Resolver(objectNode.getSourceInfo())
-                .getParameterTypes(constructor, Collections.emptyList());
-
-            for (int i = 0; i < argList.size(); ++i) {
-                if (argList.get(i) instanceof TextNode) {
-                    ValueEmitterNode literalArg = newLiteralValue(
-                        ((TextNode)argList.get(i)).getText(), paramTypes[i], argList.get(i).getSourceInfo());
-
-                    if (literalArg == null) {
-                        diagnostics.add(
-                            new DiagnosticInfo(
-                                Diagnostic.newDiagnostic(
-                                    ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT,
-                                    constructor.getLongName(),
-                                    i + i,
-                                    paramTypes[i].getJavaName()),
-                                argList.get(i).getSourceInfo()));
-
-                        return null;
-                    }
-
-                    argList.set(i, literalArg);
-                }
-            }
-
-            children.clear();
-
-            return createObjectNode(
-                objectNode,
-                constructor,
-                argList.stream().map(n -> (ValueNode)n).collect(Collectors.toList()));
-        }
-
-        return null;
-    }
-
-    /**
      * Tries to create a {@link EmitObjectNode} that represents the creation of a collection type,
      * followed by calling {@link java.util.Collection#add(Object)} for each child.
      *
      * @return {@link EmitObjectNode} if successful; <code>null</code> otherwise.
      */
-    public static EmitObjectNode newCollection(ObjectNode node, List<DiagnosticInfo> diagnostics) {
+    public static EmitObjectNode newCollection(ObjectNode node) {
         if (!TypeHelper.getTypeInstance(node).subtypeOf(Classes.CollectionType())) {
             return null;
         }
 
         List<Node> children = new ArrayList<>(node.getChildren());
         node.getChildren().clear();
-        EmitObjectNode newObjectNode = ValueEmitterFactory.newObjectWithArguments(node, diagnostics);
+        EmitObjectNode newObjectNode = ValueEmitterFactory.newDefaultObject(node);
         if (newObjectNode == null) {
             node.getChildren().addAll(children);
             return null;
@@ -474,14 +422,14 @@ public class ValueEmitterFactory {
      *
      * @return {@link EmitObjectNode} if successful; <code>null</code> otherwise.
      */
-    public static EmitObjectNode newMap(ObjectNode node, List<DiagnosticInfo> diagnostics) {
+    public static EmitObjectNode newMap(ObjectNode node) {
         if (!TypeHelper.getTypeInstance(node).subtypeOf(Classes.MapType())) {
             return null;
         }
 
         List<Node> children = new ArrayList<>(node.getChildren());
         node.getChildren().clear();
-        EmitObjectNode newObjectNode = ValueEmitterFactory.newObjectWithArguments(node, diagnostics);
+        EmitObjectNode newObjectNode = ValueEmitterFactory.newDefaultObject(node);
         if (newObjectNode == null) {
             node.getChildren().addAll(children);
             return null;
@@ -699,7 +647,8 @@ public class ValueEmitterFactory {
      *
      * @return The constructor array, sorted by preference, or an empty array if no matching constructor was found.
      */
-    private static NamedArgsConstructor[] findNamedArgsConstructors(ObjectNode objectNode) {
+    private static NamedArgsConstructor[] findNamedArgsConstructors(
+            ObjectNode objectNode, List<DiagnosticInfo> diagnostics) {
         List<NamedArgsConstructor> namedArgsConstructors = new ArrayList<>();
         TypeInstance type = TypeHelper.getTypeInstance(objectNode);
         Resolver resolver = new Resolver(objectNode.getSourceInfo());
@@ -729,10 +678,11 @@ public class ValueEmitterFactory {
 
                 if (namedArgAnnotation != null) {
                     String value = TypeHelper.getAnnotationString(namedArgAnnotation, "value");
+                    String defaultValue = TypeHelper.getAnnotationString(namedArgAnnotation, "defaultValue");
 
                     if (value != null) {
                         TypeInstance argType = constructorParamTypes[i];
-                        namedArgs.add(new NamedArgParam(value, argType));
+                        namedArgs.add(new NamedArgParam(value, defaultValue, argType));
                     }
                 }
             }
@@ -743,26 +693,32 @@ public class ValueEmitterFactory {
             }
         }
 
-        // Find the constructor that best fits the properties specified on the AstElementNode.
-        // To determine which constructor is the best fit, we use a scoring system where each specified parameter
-        // adds 256 points, and every missing parameter removes 1 point. The result is that the highest
-        // number of specified parameters always wins. If it's a tie, the least number of missing parameters wins.
-        //
         Map<Integer, NamedArgsConstructor> constructorOrder = new TreeMap<>(Comparator.reverseOrder());
-        outer: for (NamedArgsConstructor constructor : namedArgsConstructors) {
+
+        for (NamedArgsConstructor constructor : namedArgsConstructors) {
             NamedArgParam[] namedArgs = constructor.namedArgs();
             int matches = 0;
 
             for (NamedArgParam param : namedArgs) {
-                if (objectNode.getProperties().stream().anyMatch(n -> n.getName().equals(param.name()))) {
+                if (param.isOptional() || objectNode.getProperties().stream()
+                        .anyMatch(n -> n.getName().equals(param.name()))) {
                     ++matches;
-                } else if (!param.type().isPrimitive()) {
-                    continue outer;
                 }
             }
 
-            if (matches > 0) {
-                constructorOrder.put((matches - namedArgs.length) + matches * 256, constructor);
+            if (matches == namedArgs.length) {
+                constructorOrder.put(matches, constructor);
+            } else {
+                var argTypes = Arrays.stream(namedArgs).map(NamedArgParam::type).toArray(TypeInstance[]::new);
+                var argNames = Arrays.stream(namedArgs).map(NamedArgParam::name).toArray(String[]::new);
+
+                diagnostics.add(new DiagnosticInfo(
+                    Diagnostic.newDiagnosticVariant(
+                        ErrorCode.NUM_FUNCTION_ARGUMENTS_MISMATCH, "named",
+                        NameHelper.getShortMethodSignature(constructor.constructor(), argTypes, argNames),
+                        namedArgs.length,
+                        matches),
+                    objectNode.getSourceInfo()));
             }
         }
 
@@ -773,7 +729,11 @@ public class ValueEmitterFactory {
         return new NamedArgsConstructor[0];
     }
 
-    private record NamedArgParam(String name, TypeInstance type) {}
+    private record NamedArgParam(String name, String defaultValue, TypeInstance type) {
+        boolean isOptional() {
+            return defaultValue != null;
+        }
+    }
 
     private record NamedArgsConstructor(CtConstructor constructor, NamedArgParam[] namedArgs) {}
 

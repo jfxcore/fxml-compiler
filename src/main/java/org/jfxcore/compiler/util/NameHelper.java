@@ -5,12 +5,13 @@ package org.jfxcore.compiler.util;
 
 import javassist.CtBehavior;
 import javassist.CtClass;
+import javassist.CtConstructor;
+import javassist.CtMethod;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 public class NameHelper {
 
@@ -66,16 +67,52 @@ public class NameHelper {
         return (isPrefix ? "is" : "get") + Character.toUpperCase(name.charAt(0)) + name.substring(1);
     }
 
-    @SuppressWarnings("StringBufferReplaceableByString")
+    public static String getLongMethodSignature(CtBehavior behavior) {
+        String behaviorName = behavior.getDeclaringClass().getName();
+        if (behavior instanceof CtMethod) {
+            behaviorName += "." + behavior.getName();
+        }
+
+        return getMethodSignature(
+            behaviorName,
+            Arrays.stream(ExceptionHelper.unchecked(SourceInfo.none(), behavior::getParameterTypes))
+                .map(CtClass::getName).toArray(String[]::new),
+            new String[0]);
+    }
+
     public static String getShortMethodSignature(CtBehavior behavior) {
-        StringBuilder builder = new StringBuilder(behavior.getDeclaringClass().getSimpleName());
-        builder.append(".").append(behavior.getName()).append("(");
-        builder.append(ExceptionHelper.unchecked(SourceInfo.none(), () ->
-            Arrays.stream(behavior.getParameterTypes())
-                .map(CtClass::getSimpleName)
-                .collect(Collectors.joining(","))));
-        builder.append(")");
-        return builder.toString();
+        return getMethodSignature(
+            behavior instanceof CtConstructor ?
+                behavior.getDeclaringClass().getSimpleName() : behavior.getName(),
+            Arrays.stream(ExceptionHelper.unchecked(SourceInfo.none(), behavior::getParameterTypes))
+                .map(CtClass::getName).toArray(String[]::new),
+            new String[0]);
+    }
+
+    public static String getShortMethodSignature(CtBehavior behavior, TypeInstance[] paramTypes, String[] paramNames) {
+        return getMethodSignature(
+            behavior.getDeclaringClass().getSimpleName(),
+            Arrays.stream(paramTypes).map(TypeInstance::getJavaName).toArray(String[]::new),
+            paramNames);
+    }
+
+    private static String getMethodSignature(String behaviorName, String[] paramTypes, String[] paramNames) {
+        var builder = new StringBuilder(behaviorName).append('(');
+
+        for (int i = 0; i < paramTypes.length; i++) {
+            if (i < paramNames.length) {
+                builder.append(paramNames[i]);
+                builder.append(": ");
+            }
+
+            builder.append(paramTypes[i]);
+
+            if (i < paramTypes.length - 1) {
+                builder.append(", ");
+            }
+        }
+
+        return builder.append(')').toString();
     }
 
     public static String getJavaClassName(SourceInfo sourceInfo, CtClass cls) {
