@@ -28,11 +28,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 @SuppressWarnings("HttpUrlsUsage")
 @ExtendWith(TestExtension.class)
-public class InstantiationTest extends MethodReferencedSupport {
-
-    public InstantiationTest() {
-        super("org.jfxcore.compiler.classes.InstantiationTest");
-    }
+public class InstantiationTest {
 
     @Nested
     public class DefaultConstructorTest {
@@ -469,7 +465,11 @@ public class InstantiationTest extends MethodReferencedSupport {
     }
 
     @Nested
-    public class FxValueTest {
+    public class FxValueTest extends MethodReferencedSupport {
+        FxValueTest() {
+            super("org.jfxcore.compiler.classes.FxValueTest");
+        }
+
         @Test
         public void Object_Is_Instantiated_With_ValueOf_Method() {
             Button root = TestCompiler.newInstance(
