@@ -11,9 +11,7 @@ import org.jfxcore.compiler.diagnostic.SourceInfo;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.function.Function;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 public class NameHelper {
 
