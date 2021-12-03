@@ -1125,9 +1125,9 @@ public class FunctionBindingTest extends MethodReferencedSupport {
     }
 
     @Test
-    public void Bind_Bidirectional_To_Method_With_Invalid_Custom_InverseMethod_Fails() {
+    public void Bind_Bidirectional_To_Method_With_Invalid_Custom_InverseMethod1_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> TestCompiler.newInstance(
-            this, "Bind_Bidirectional_To_Method_With_Invalid_Custom_InverseMethod_Fails", """
+            this, "Bind_Bidirectional_To_Method_With_Invalid_Custom_InverseMethod1_Fails", """
                 <?import javafx.fxml.*?>
                 <?import org.jfxcore.compiler.bindings.FunctionBindingTest.*?>
                 <BidirectionalTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
@@ -1135,9 +1135,12 @@ public class FunctionBindingTest extends MethodReferencedSupport {
             """));
 
         assertEquals(ErrorCode.INVALID_INVERSE_METHOD, ex.getDiagnostic().getCode());
+    }
 
-        ex = assertThrows(MarkupException.class, () -> TestCompiler.newInstance(
-            this, "Bind_Bidirectional_To_Method_With_Invalid_Custom_InverseMethod_Fails", """
+    @Test
+    public void Bind_Bidirectional_To_Method_With_Invalid_Custom_InverseMethod2_Fails() {
+        MarkupException ex = assertThrows(MarkupException.class, () -> TestCompiler.newInstance(
+            this, "Bind_Bidirectional_To_Method_With_Invalid_Custom_InverseMethod2_Fails", """
                 <?import javafx.fxml.*?>
                 <?import org.jfxcore.compiler.bindings.FunctionBindingTest.*?>
                 <BidirectionalTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"

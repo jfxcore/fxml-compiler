@@ -118,8 +118,11 @@ public class MethodFinder {
 
             if (numParams > numArgs || (numParams < numArgs && !isVarArgs)) {
                 if (diagnostics != null) {
-                    diagnostics.add(new DiagnosticInfo(Diagnostic.newDiagnostic(
-                        ErrorCode.NUM_FUNCTION_ARGUMENTS_MISMATCH, method.getLongName(), numParams, numArgs), sourceInfo));
+                    diagnostics.add(new DiagnosticInfo(
+                        Diagnostic.newDiagnostic(
+                            ErrorCode.NUM_FUNCTION_ARGUMENTS_MISMATCH,
+                            NameHelper.getShortMethodSignature(method), numParams, numArgs),
+                        sourceInfo));
                 }
 
                 return false;
@@ -161,7 +164,7 @@ public class MethodFinder {
                         if (diagnostics != null) {
                             diagnostics.add(new DiagnosticInfo(Diagnostic.newDiagnostic(
                                 ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT,
-                                method.getLongName(), i + 1, argName), argSourceInfo));
+                                NameHelper.getShortMethodSignature(method), i + 1, argName), argSourceInfo));
                         }
 
                         return false;

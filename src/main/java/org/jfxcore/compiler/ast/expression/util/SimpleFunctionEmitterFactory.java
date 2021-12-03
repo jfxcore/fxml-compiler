@@ -31,12 +31,12 @@ public class SimpleFunctionEmitterFactory extends AbstractFunctionEmitterFactory
         MethodInvocationInfo invocationInfo = createMethodInvocation(functionExpression, false, false);
         ValueEmitterNode value;
 
-        if (invocationInfo.method instanceof CtConstructor constructor) {
+        if (invocationInfo.method() instanceof CtConstructor constructor) {
             value = new EmitObjectNode(
                 null,
                 new Resolver(functionExpression.getSourceInfo()).getTypeInstance(constructor.getDeclaringClass()),
                 constructor,
-                invocationInfo.arguments,
+                invocationInfo.arguments(),
                 Collections.emptyList(),
                 EmitObjectNode.CreateKind.CONSTRUCTOR,
                 functionExpression.getSourceInfo());
@@ -46,7 +46,8 @@ public class SimpleFunctionEmitterFactory extends AbstractFunctionEmitterFactory
             ValueEmitterNode emitter = bindingSource.toSegment().toValueEmitter(bindingSource.getSourceInfo());
 
             value = new EmitMethodCallNode(
-                (CtMethod)invocationInfo.method, emitter, invocationInfo.arguments, functionExpression.getSourceInfo());
+                (CtMethod)invocationInfo.method(), emitter,
+                invocationInfo.arguments(), functionExpression.getSourceInfo());
         }
 
         value = functionExpression.getPath().getOperator().toEmitter(value, BindingMode.ONCE);
@@ -55,8 +56,8 @@ public class SimpleFunctionEmitterFactory extends AbstractFunctionEmitterFactory
             value,
             TypeHelper.getTypeInstance(value),
             null,
-            invocationInfo.method.getDeclaringClass(),
-            invocationInfo.method.getName(),
+            invocationInfo.method().getDeclaringClass(),
+            invocationInfo.method().getName(),
             functionExpression.getSourceInfo());
     }
 

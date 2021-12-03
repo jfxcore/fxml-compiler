@@ -105,19 +105,18 @@ public class ObjectTransform implements Transform {
             return newObjectNode;
         }
 
-        List<DiagnosticInfo> namedArgsDiagnostics = new ArrayList<>();
+        List<DiagnosticInfo> diagnostics = new ArrayList<>();
         MarkupException namedArgsException = null;
 
         try {
-            newObjectNode = ValueEmitterFactory.newObjectWithNamedParams(node, namedArgsDiagnostics);
+            newObjectNode = ValueEmitterFactory.newObjectWithNamedParams(node, diagnostics);
             if (newObjectNode != null) {
                 return newObjectNode;
             }
         } catch (MarkupException ex) {
             // If the expression was not applicable for the constructor (for example, because
-            // it was a binding expression), we don't bail out yet, but give another constructor
-            // a chance to be selected. The exception will be thrown later if we don't find
-            // another constructor.
+            // it was a binding expression), we don't bail out yet. If we don't find a better
+            // way to instantiate the object, the exception will be thrown at the end.
             if (ex.getDiagnostic().getCode() == ErrorCode.EXPRESSION_NOT_APPLICABLE) {
                 namedArgsException = ex;
             } else {
@@ -125,22 +124,12 @@ public class ObjectTransform implements Transform {
             }
         }
 
-        List<DiagnosticInfo> withArgsDiagnostics = new ArrayList<>();
-        newObjectNode = ValueEmitterFactory.newObjectWithArguments(node, withArgsDiagnostics);
-        if (newObjectNode != null) {
-            return newObjectNode;
-        } else if (namedArgsException != null) {
-            throw namedArgsException;
-        }
-
-        List<DiagnosticInfo> newCollectionDiagnostics = new ArrayList<>();
-        newObjectNode = ValueEmitterFactory.newCollection(node, newCollectionDiagnostics);
+        newObjectNode = ValueEmitterFactory.newCollection(node);
         if (newObjectNode != null) {
             return newObjectNode;
         }
 
-        List<DiagnosticInfo> newMapDiagnostics = new ArrayList<>();
-        newObjectNode = ValueEmitterFactory.newMap(node, newMapDiagnostics);
+        newObjectNode = ValueEmitterFactory.newMap(node);
         if (newObjectNode != null) {
             return newObjectNode;
         }
@@ -150,11 +139,12 @@ public class ObjectTransform implements Transform {
             return newObjectNode;
         }
 
-        List<DiagnosticInfo> diagnostics = new ArrayList<>();
-        diagnostics.addAll(namedArgsDiagnostics);
-        diagnostics.addAll(withArgsDiagnostics);
-        diagnostics.addAll(newCollectionDiagnostics);
-        diagnostics.addAll(newMapDiagnostics);
+        newObjectNode = ValueEmitterFactory.newDefaultObject(node);
+        if (newObjectNode != null) {
+            return newObjectNode;
+        } else if (namedArgsException != null) {
+            throw namedArgsException;
+        }
 
         if (!diagnostics.isEmpty()) {
             throw ObjectInitializationErrors.constructorNotFound(

@@ -35,20 +35,20 @@ public class ObservableFunctionEmitterFactory
     @Override
     public BindingEmitterInfo newInstance(boolean bidirectional) {
         MethodInvocationInfo invocationInfo = createMethodInvocation(functionExpression, bidirectional, true);
-        if (!invocationInfo.observable) {
+        if (!invocationInfo.observable()) {
             return null;
         }
 
-        TypeInstance valueType = invocationInfo.method instanceof CtConstructor ?
-            resolver.getTypeInstance(invocationInfo.method.getDeclaringClass()) :
-            resolver.getReturnType(invocationInfo.method);
+        TypeInstance valueType = invocationInfo.method() instanceof CtConstructor ?
+            resolver.getTypeInstance(invocationInfo.method().getDeclaringClass()) :
+            resolver.getReturnType(invocationInfo.method());
 
         ValueEmitterNode value = new EmitObservableFunctionNode(
             resolver.getObservableClass(valueType),
-            invocationInfo.method,
-            invocationInfo.inverseMethod,
+            invocationInfo.method(),
+            invocationInfo.inverseMethod(),
             functionExpression.getPath().getSource(),
-            invocationInfo.arguments,
+            invocationInfo.arguments(),
             functionExpression.getSourceInfo());
 
         Operator operator = functionExpression.getPath().getOperator();
@@ -63,8 +63,8 @@ public class ObservableFunctionEmitterFactory
             value,
             valueType,
             TypeHelper.getTypeInstance(value),
-            invocationInfo.method.getDeclaringClass(),
-            invocationInfo.method.getName(),
+            invocationInfo.method().getDeclaringClass(),
+            invocationInfo.method().getName(),
             functionExpression.getSourceInfo());
     }
 

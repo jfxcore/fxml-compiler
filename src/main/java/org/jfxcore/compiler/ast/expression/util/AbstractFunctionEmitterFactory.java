@@ -33,6 +33,7 @@ import org.jfxcore.compiler.diagnostic.errors.GeneralErrors;
 import org.jfxcore.compiler.diagnostic.errors.SymbolResolutionErrors;
 import org.jfxcore.compiler.util.Classes;
 import org.jfxcore.compiler.util.MethodFinder;
+import org.jfxcore.compiler.util.NameHelper;
 import org.jfxcore.compiler.util.NumberUtil;
 import org.jfxcore.compiler.util.Resolver;
 import org.jfxcore.compiler.util.TypeHelper;
@@ -77,7 +78,8 @@ abstract class AbstractFunctionEmitterFactory {
 
         if (!isVarArgs && arguments.size() != paramTypes.length || isVarArgs && arguments.size() < paramTypes.length) {
             throw GeneralErrors.numFunctionArgumentsMismatch(
-                functionExpression.getSourceInfo(), method.getLongName(), paramTypes.length, arguments.size());
+                functionExpression.getSourceInfo(), NameHelper.getLongMethodSignature(method),
+                paramTypes.length, arguments.size());
         }
 
         for (int i = 0; i < paramTypes.length; ++i) {
@@ -145,7 +147,7 @@ abstract class AbstractFunctionEmitterFactory {
             }
 
             throw GeneralErrors.cannotAssignFunctionArgument(
-                sourceInfo, method.getLongName(), paramIndex, ex.getTypeName());
+                sourceInfo, NameHelper.getLongMethodSignature(method), paramIndex, ex.getTypeName());
         }
     }
 
@@ -200,7 +202,7 @@ abstract class AbstractFunctionEmitterFactory {
                 MethodInvocationInfo invocationInfo = createMethodInvocation(
                     funcExpressionArg, false, preferObservable);
 
-                if (invocationInfo.observable) {
+                if (invocationInfo.observable()) {
                     factory = new ObservableFunctionEmitterFactory(funcExpressionArg, invokingType);
                 } else {
                     factory = new SimpleFunctionEmitterFactory(funcExpressionArg, invokingType);
@@ -271,10 +273,10 @@ abstract class AbstractFunctionEmitterFactory {
             if (argument instanceof FunctionExpressionNode funcExpressionArg) {
                 MethodInvocationInfo invocationInfo = createMethodInvocation(funcExpressionArg, false, true);
 
-                if (invocationInfo.method instanceof CtConstructor) {
-                    argumentTypes.add(resolver.getTypeInstance(invocationInfo.method.getDeclaringClass()));
+                if (invocationInfo.method() instanceof CtConstructor) {
+                    argumentTypes.add(resolver.getTypeInstance(invocationInfo.method().getDeclaringClass()));
                 } else {
-                    argumentTypes.add(resolver.getReturnType(invocationInfo.method));
+                    argumentTypes.add(resolver.getReturnType(invocationInfo.method()));
                 }
             } else if (argument instanceof PathExpressionNode pathExpressionArg) {
                 Operator operator = pathExpressionArg.getOperator();
@@ -446,22 +448,10 @@ abstract class AbstractFunctionEmitterFactory {
     private static record MethodInfoKey(
         FunctionExpressionNode functionExpression, boolean bidirectional, boolean preferObservable) {}
 
-    protected static class MethodInvocationInfo {
-        final boolean observable;
-        final CtBehavior method;
-        final CtBehavior inverseMethod;
-        final List<EmitMethodArgumentNode> arguments;
-
-        MethodInvocationInfo(
-                boolean observable,
-                CtBehavior method,
-                CtBehavior inverseMethod,
-                List<EmitMethodArgumentNode> arguments) {
-            this.observable = observable;
-            this.method = method;
-            this.inverseMethod = inverseMethod;
-            this.arguments = arguments;
-        }
-    }
+    protected static record MethodInvocationInfo(
+        boolean observable,
+        CtBehavior method,
+        CtBehavior inverseMethod,
+        List<EmitMethodArgumentNode> arguments) {}
 
 }

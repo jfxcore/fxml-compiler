@@ -6,7 +6,12 @@ package org.jfxcore.compiler;
 import javafx.scene.Node;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
+import javafx.scene.layout.Background;
+import javafx.scene.layout.BackgroundFill;
+import javafx.scene.layout.CornerRadii;
+import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Pane;
+import javafx.scene.paint.Color;
 import org.jfxcore.compiler.diagnostic.ErrorCode;
 import org.jfxcore.compiler.diagnostic.MarkupException;
 import org.jfxcore.compiler.util.TestCompiler;
@@ -19,6 +24,37 @@ import static org.junit.jupiter.api.Assertions.*;
 @SuppressWarnings("HttpUrlsUsage")
 @ExtendWith(TestExtension.class)
 public class MarkupExtensionTest {
+
+    @Test
+    public void Instantiation_With_MarkupExtension_Syntax() {
+        GridPane root = TestCompiler.newInstance(
+            this, "Instantiation_With_MarkupExtension_Syntax", """
+                <?import javafx.scene.layout.*?>
+                <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                    <fx:define>
+                        <Background fx:id="a" fills="{BackgroundFill fill=#ff0000; radii={fx:null}; insets=1,2,3.5,.4}"/>
+                        <Background fx:id="b" fills="{BackgroundFill fill=red; radii=EMPTY; insets=1,2,3.5,.4}"/>
+                        <Background fx:id="c" fills="{BackgroundFill fill=RED; radii={fx:constant CornerRadii.EMPTY}; insets=1,2,3.5,.4}"/>
+                    </fx:define>
+                </GridPane>
+            """);
+
+        class Test {
+            static void test(Background background) {
+                BackgroundFill fill = background.getFills().get(0);
+                assertEquals(Color.RED, fill.getFill());
+                assertEquals(CornerRadii.EMPTY, fill.getRadii());
+                assertEquals(1, fill.getInsets().getTop(), 0.001);
+                assertEquals(2, fill.getInsets().getRight(), 0.001);
+                assertEquals(3.5, fill.getInsets().getBottom(), 0.001);
+                assertEquals(.4, fill.getInsets().getLeft(), 0.001);
+            }
+        }
+
+        Test.test((Background)root.getProperties().get("a"));
+        Test.test((Background)root.getProperties().get("b"));
+        Test.test((Background)root.getProperties().get("c"));
+    }
 
     @Test
     public void URLExtension_With_Relative_Location_Is_Evaluated_Correctly() {
