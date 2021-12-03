@@ -289,22 +289,20 @@ public class ValueEmitterFactory {
                     .orElse(null);
 
                 // If an argument was not specified, we synthesize a node if the @NamedArg
-                // annotation has a non-empty 'defaultValue' parameter.
-                if (propertyNode == null) {
-                    String defaultValue = constructorParam.defaultValue();
-                    if (defaultValue != null && !defaultValue.isEmpty()) {
-                        var textNode = new TextNode(defaultValue, SourceInfo.none());
-                        ValueEmitterNode synthesizedNode = newObjectByCoercion(constructorParam.type(), textNode);
-                        if (synthesizedNode == null) {
-                            synthesizedNode = newLiteralValue(defaultValue, constructorParam.type(), SourceInfo.none());
-                        }
-
-                        if (synthesizedNode == null) {
-                            break outer;
-                        }
-
-                        arguments.add(synthesizedNode);
+                // annotation has a non-null 'defaultValue' parameter.
+                if (propertyNode == null && constructorParam.isOptional()) {
+                    var textNode = new TextNode(constructorParam.defaultValue(), SourceInfo.none());
+                    ValueEmitterNode synthesizedNode = newObjectByCoercion(constructorParam.type(), textNode);
+                    if (synthesizedNode == null) {
+                        synthesizedNode = newLiteralValue(
+                            constructorParam.defaultValue(), constructorParam.type(), SourceInfo.none());
                     }
+
+                    if (synthesizedNode == null) {
+                        break outer;
+                    }
+
+                    arguments.add(synthesizedNode);
                 }
 
                 // For scalar properties, check whether the property type is assignable to the
