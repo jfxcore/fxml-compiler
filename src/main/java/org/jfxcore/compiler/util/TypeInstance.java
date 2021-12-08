@@ -174,19 +174,6 @@ public class TypeInstance {
 
     /**
      * Determines whether the specified type can be converted to this type via any of the conversions
-     * specified by {@link #isAssignableFrom(TypeInstance)}, as well as narrowing primitive conversions.
-     */
-    public boolean isConvertibleFrom(TypeInstance from) {
-        if ((TypeHelper.isPrimitiveBox(type, from.type) || TypeHelper.isPrimitiveBox(from.type, type))
-                && dimensions == 0 && from.dimensions == 0) {
-            return true;
-        }
-
-        return isAssignableFrom(from);
-    }
-
-    /**
-     * Determines whether the specified type can be converted to this type via any of the conversions
      * specified by {@link #isAssignableFrom(TypeInstance, AssignmentContext)}, assuming a loose
      * assignment context.
      */

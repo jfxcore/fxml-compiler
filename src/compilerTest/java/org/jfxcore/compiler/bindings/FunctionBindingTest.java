@@ -290,7 +290,7 @@ public class FunctionBindingTest extends MethodReferencedSupport {
     @Test
     public void Bind_Once_To_Instance_Method_Of_LocalObject() {
         Pane root = TestCompiler.newInstance(
-                this, "Bind_Once_To_Instance_Method_Of_LocalObject", """
+            this, "Bind_Once_To_Instance_Method_Of_LocalObject", """
                 <?import javafx.scene.layout.*?>
                 <?import javafx.scene.control.*?>
                 <?import java.text.*?>
@@ -310,7 +310,7 @@ public class FunctionBindingTest extends MethodReferencedSupport {
     @Test
     public void Bind_Once_To_Instance_Method_Of_Indirect_Object() {
         Pane root = TestCompiler.newInstance(
-                this, "Bind_Once_To_Instance_Method_Of_Indirect_Object", """
+            this, "Bind_Once_To_Instance_Method_Of_Indirect_Object", """
                 <?import javafx.scene.control.*?>
                 <?import org.jfxcore.compiler.bindings.FunctionBindingTest.TestPane?>
                 <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">

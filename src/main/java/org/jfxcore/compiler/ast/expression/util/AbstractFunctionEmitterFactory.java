@@ -99,7 +99,7 @@ abstract class AbstractFunctionEmitterFactory {
                     }
 
                     throw GeneralErrors.cannotAssignFunctionArgument(
-                        argument.getSourceInfo(),NameHelper.getLongMethodSignature(methodWithPath.method()),
+                        argument.getSourceInfo(), NameHelper.getLongMethodSignature(methodWithPath.method()),
                         i, ex.getTypeName());
                 }
             } else {
@@ -189,7 +189,7 @@ abstract class AbstractFunctionEmitterFactory {
         Resolver resolver = new Resolver(sourceInfo);
 
         if (argument instanceof BooleanNode booleanArg) {
-            if (!paramType.isConvertibleFrom(resolver.getTypeInstance(Classes.BooleanType()))) {
+            if (!paramType.isAssignableFrom(resolver.getTypeInstance(Classes.BooleanType()))) {
                 throw new InconvertibleArgumentException(Classes.BooleanName);
             }
 
@@ -210,7 +210,7 @@ abstract class AbstractFunctionEmitterFactory {
                 throw new InconvertibleArgumentException(Classes.NumberName);
             }
 
-            if (!paramType.isConvertibleFrom(numberType)) {
+            if (!paramType.isAssignableFrom(numberType)) {
                 throw new InconvertibleArgumentException(Classes.NumberName);
             }
 
@@ -219,7 +219,7 @@ abstract class AbstractFunctionEmitterFactory {
         }
 
         if (argument instanceof TextNode textArg) {
-            if (!paramType.isConvertibleFrom(resolver.getTypeInstance(Classes.StringType()))) {
+            if (!paramType.isAssignableFrom(resolver.getTypeInstance(Classes.StringType()))) {
                 throw new InconvertibleArgumentException(Classes.StringName);
             }
 

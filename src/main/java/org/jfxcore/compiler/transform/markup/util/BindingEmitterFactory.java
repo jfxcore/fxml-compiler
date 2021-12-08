@@ -64,12 +64,12 @@ public class BindingEmitterFactory {
             TypeInstance targetItemType = targetType.getArguments().get(0);
             TypeInstance sourceItemType = TypeHelper.getTypeInstance(value).getArguments().get(0);
 
-            if (!targetItemType.isConvertibleFrom(sourceItemType)) {
+            if (!targetItemType.isAssignableFrom(sourceItemType)) {
                 throw BindingSourceErrors.cannotConvertSourceType(
                     sourceInfo, sourceItemType.getName(), targetItemType.getName());
             }
         } else {
-            if (targetType.isConvertibleFrom(result.getType())) {
+            if (targetType.isAssignableFrom(result.getType())) {
                 value = result.getValue();
             } else if (result.getObservableType() != null) {
                 value = new EmitUnwrapObservableNode(result.getValue());
@@ -85,7 +85,7 @@ public class BindingEmitterFactory {
                     sourceInfo, result.getValueType().getName(), targetType.getName());
             }
 
-            if (!targetType.isConvertibleFrom(TypeHelper.getTypeInstance(value))) {
+            if (!targetType.isAssignableFrom(TypeHelper.getTypeInstance(value))) {
                 throw BindingSourceErrors.cannotConvertSourceType(
                     sourceInfo, result.getValueType().getName(), targetType.getName());
             }
@@ -139,7 +139,7 @@ public class BindingEmitterFactory {
 
             TypeInstance sourceType = TypeHelper.getTypeInstance(value);
 
-            if (bindingMode.isUnidirectional() && !targetType.isConvertibleFrom(sourceType)) {
+            if (bindingMode.isUnidirectional() && !targetType.isAssignableFrom(sourceType)) {
                 throw BindingSourceErrors.cannotConvertSourceType(
                     propertyNode.getSourceInfo(), result.getValueType().getName(), targetType.getName());
             }
@@ -155,7 +155,7 @@ public class BindingEmitterFactory {
 
             value = result.getValue();
         } else {
-            if (targetType.isConvertibleFrom(result.getValueType())) {
+            if (targetType.isAssignableFrom(result.getValueType())) {
                 if (result.getObservableType() == null) {
                     value = new EmitWrapValueNode(result.getValue());
                 } else {

@@ -68,7 +68,7 @@ public class PathExpressionNode extends AbstractNode implements ExpressionNode {
             }
 
             return resolvedObservablePath = ResolvedPath.parse(
-                source.toSegment(), path,true, getSourceInfo());
+                source.toSegment(), path, true, getSourceInfo());
         }
 
         if (resolvedPath != null) {

@@ -517,8 +517,8 @@ public class ValueEmitterFactory {
         }
 
         var valueType = TypeHelper.getTypeInstance(value);
-        if (targetType.isConvertibleFrom(valueType) ||
-                vararg && targetType.getComponentType().isConvertibleFrom(valueType)) {
+        if (targetType.isAssignableFrom(valueType) ||
+                vararg && targetType.getComponentType().isAssignableFrom(valueType)) {
             return value;
         }
 

@@ -255,7 +255,7 @@ public class PathTest extends TestBase {
         ResolvedPath target = ResolvedPath.parse(firstSegment, new String[] {"target"}, true, SourceInfo.none());
         ResolvedPath source = ResolvedPath.parse(firstSegment, new String[] {"source1"}, true, SourceInfo.none());
 
-        assertTrue(target.getValueTypeInstance().isConvertibleFrom(source.getValueTypeInstance()));
+        assertTrue(target.getValueTypeInstance().isAssignableFrom(source.getValueTypeInstance()));
     }
 
     @Test
@@ -265,7 +265,7 @@ public class PathTest extends TestBase {
         ResolvedPath target = ResolvedPath.parse(firstSegment, new String[] {"target"}, true, SourceInfo.none());
         ResolvedPath source = ResolvedPath.parse(firstSegment, new String[] {"source2"}, true, SourceInfo.none());
 
-        assertFalse(target.getValueTypeInstance().isConvertibleFrom(source.getValueTypeInstance()));
+        assertFalse(target.getValueTypeInstance().isAssignableFrom(source.getValueTypeInstance()));
     }
 
     public interface OverrideMethodBase {

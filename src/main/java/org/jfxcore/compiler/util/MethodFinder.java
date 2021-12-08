@@ -242,10 +242,10 @@ public class MethodFinder {
                 continue;
             }
 
-            TypeInstance m1Type = params1[i].isConvertibleFrom(argumentTypes.get(i)) ?
+            TypeInstance m1Type = params1[i].isAssignableFrom(argumentTypes.get(i)) ?
                 params1[i] : TypeHelper.tryGetArrayComponentType(m1, i);
 
-            TypeInstance m2Type = params2[i].isConvertibleFrom(argumentTypes.get(i)) ?
+            TypeInstance m2Type = params2[i].isAssignableFrom(argumentTypes.get(i)) ?
                 params2[i] : TypeHelper.tryGetArrayComponentType(m2, i);
 
             if (m1Type == null || m2Type == null) {
