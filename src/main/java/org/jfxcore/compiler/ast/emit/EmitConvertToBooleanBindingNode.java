@@ -39,7 +39,7 @@ public class EmitConvertToBooleanBindingNode extends AbstractNode implements Val
     }
 
     @Override
-    public TypeNode getType() {
+    public ResolvedTypeNode getType() {
         return type;
     }
 

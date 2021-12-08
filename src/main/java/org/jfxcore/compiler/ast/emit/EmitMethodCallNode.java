@@ -5,7 +5,6 @@ package org.jfxcore.compiler.ast.emit;
 
 import javassist.CtMethod;
 import javassist.Modifier;
-import org.jetbrains.annotations.Nullable;
 import org.jfxcore.compiler.ast.AbstractNode;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.ast.ResolvedTypeNode;
@@ -22,32 +21,37 @@ public class EmitMethodCallNode extends AbstractNode implements ValueEmitterNode
 
     private final CtMethod method;
     private final ResolvedTypeNode type;
+    private final List<ValueEmitterNode> methodReceiver;
     private final List<ValueEmitterNode> arguments;
-    private @Nullable ValueEmitterNode methodReceiver;
 
     public EmitMethodCallNode(
             CtMethod method,
-            @Nullable ValueEmitterNode methodReceiver,
+            Collection<ValueEmitterNode> methodReceiver,
             Collection<? extends ValueEmitterNode> arguments,
             SourceInfo sourceInfo) {
         super(sourceInfo);
+        boolean isStatic = Modifier.isStatic(method.getModifiers());
+        if (isStatic && methodReceiver.size() > 0 || !isStatic && methodReceiver.size() == 0){
+            throw new IllegalArgumentException("methodReceiver");
+        }
+
         this.method = checkNotNull(method);
         this.type = new ResolvedTypeNode(new Resolver(SourceInfo.none()).getReturnType(method), sourceInfo);
         this.arguments = new ArrayList<>(checkNotNull(arguments));
-        this.methodReceiver = methodReceiver;
+        this.methodReceiver = new ArrayList<>(checkNotNull(methodReceiver));
     }
 
     private EmitMethodCallNode(
             CtMethod method,
             ResolvedTypeNode type,
-            @Nullable ValueEmitterNode methodReceiver,
+            Collection<ValueEmitterNode> methodReceiver,
             Collection<? extends ValueEmitterNode> arguments,
             SourceInfo sourceInfo) {
         super(sourceInfo);
         this.method = checkNotNull(method);
         this.type = checkNotNull(type);
         this.arguments = new ArrayList<>(checkNotNull(arguments));
-        this.methodReceiver = methodReceiver;
+        this.methodReceiver = new ArrayList<>(checkNotNull(methodReceiver));
     }
 
     @Override
@@ -59,8 +63,8 @@ public class EmitMethodCallNode extends AbstractNode implements ValueEmitterNode
     public void emit(BytecodeEmitContext context) {
         Bytecode code = context.getOutput();
 
-        if (methodReceiver != null && !Modifier.isStatic(method.getModifiers())) {
-            context.emit(methodReceiver);
+        for (ValueEmitterNode emitterNode : methodReceiver) {
+            context.emit(emitterNode);
         }
 
         for (EmitterNode argument : arguments) {
@@ -73,11 +77,7 @@ public class EmitMethodCallNode extends AbstractNode implements ValueEmitterNode
     @Override
     public void acceptChildren(Visitor visitor) {
         super.acceptChildren(visitor);
-
-        if (methodReceiver != null) {
-            methodReceiver = (ValueEmitterNode)methodReceiver.accept(visitor);
-        }
-
+        acceptChildren(methodReceiver, visitor);
         acceptChildren(arguments, visitor);
     }
 
@@ -86,7 +86,7 @@ public class EmitMethodCallNode extends AbstractNode implements ValueEmitterNode
         return new EmitMethodCallNode(
             method,
             type.deepClone(),
-            methodReceiver != null ? methodReceiver.deepClone() : null,
+            deepClone(methodReceiver),
             deepClone(arguments),
             getSourceInfo());
     }
@@ -99,7 +99,7 @@ public class EmitMethodCallNode extends AbstractNode implements ValueEmitterNode
         return TypeHelper.equals(method, that.method) &&
             type.equals(that.type) &&
             arguments.equals(that.arguments) &&
-            Objects.equals(methodReceiver, that.methodReceiver);
+            methodReceiver.equals(that.methodReceiver);
     }
 
     @Override

@@ -9,7 +9,6 @@ import org.jfxcore.compiler.ast.BindingMode;
 import org.jfxcore.compiler.ast.emit.EmitMethodCallNode;
 import org.jfxcore.compiler.ast.emit.EmitObjectNode;
 import org.jfxcore.compiler.ast.emit.ValueEmitterNode;
-import org.jfxcore.compiler.ast.expression.BindingContextNode;
 import org.jfxcore.compiler.ast.expression.BindingEmitterInfo;
 import org.jfxcore.compiler.ast.expression.FunctionExpressionNode;
 import org.jfxcore.compiler.util.Resolver;
@@ -41,12 +40,8 @@ public class SimpleFunctionEmitterFactory extends AbstractFunctionEmitterFactory
                 EmitObjectNode.CreateKind.CONSTRUCTOR,
                 functionExpression.getSourceInfo());
         } else {
-            BindingContextNode bindingSource = functionExpression.getPath().getSource();
-
-            ValueEmitterNode emitter = bindingSource.toSegment().toValueEmitter(bindingSource.getSourceInfo());
-
             value = new EmitMethodCallNode(
-                (CtMethod)invocationInfo.method(), emitter,
+                (CtMethod)invocationInfo.method(), invocationInfo.methodReceiver(),
                 invocationInfo.arguments(), functionExpression.getSourceInfo());
         }
 

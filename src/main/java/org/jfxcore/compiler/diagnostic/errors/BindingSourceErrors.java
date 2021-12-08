@@ -97,13 +97,13 @@ public class BindingSourceErrors {
             ErrorCode.CANNOT_BIND_FUNCTION, causes));
     }
 
-    public static MarkupException methodNotInvertible(SourceInfo sourceInfo, CtMethod method) {
+    public static MarkupException methodNotInvertible(SourceInfo sourceInfo, CtBehavior method) {
         return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
             ErrorCode.METHOD_NOT_INVERTIBLE, NameHelper.getLongMethodSignature(method)));
     }
 
     public static MarkupException invalidInverseMethod(
-            SourceInfo sourceInfo, CtMethod method, CtBehavior[] inverseMethods) {
+            SourceInfo sourceInfo, CtBehavior method, CtBehavior[] inverseMethods) {
         if (inverseMethods.length == 1) {
             return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
                 ErrorCode.INVALID_INVERSE_METHOD,
@@ -115,6 +115,11 @@ public class BindingSourceErrors {
             ErrorCode.INVALID_INVERSE_METHOD, "overloaded",
             Arrays.stream(inverseMethods).map(NameHelper::getLongMethodSignature).toArray(String[]::new),
             NameHelper.getLongMethodSignature(method)));
+    }
+
+    public static MarkupException inverseMethodNotStatic(SourceInfo sourceInfo, CtBehavior inverseMethod) {
+        return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
+            ErrorCode.INVERSE_METHOD_NOT_STATIC, NameHelper.getLongMethodSignature(inverseMethod)));
     }
 
     public static MarkupException bindingNotSupported(SourceInfo sourceInfo) {

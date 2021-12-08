@@ -249,7 +249,7 @@ public class ObjectTransform implements Transform {
 
         TypeInstance objectType = TypeHelper.getTypeInstance(objectNode);
 
-        if (!objectType.isConvertibleFrom(fieldType)) {
+        if (!objectType.isAssignableFrom(fieldType)) {
             throw ObjectInitializationErrors.cannotAssignConstant(constantNode.getSourceInfo(), objectType, fieldType);
         }
 

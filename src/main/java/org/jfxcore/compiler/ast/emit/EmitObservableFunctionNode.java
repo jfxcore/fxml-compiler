@@ -12,7 +12,6 @@ import org.jfxcore.compiler.ast.AbstractNode;
 import org.jfxcore.compiler.ast.GeneratorEmitterNode;
 import org.jfxcore.compiler.ast.ResolvedTypeNode;
 import org.jfxcore.compiler.ast.Visitor;
-import org.jfxcore.compiler.ast.expression.BindingContextNode;
 import org.jfxcore.compiler.generate.Generator;
 import org.jfxcore.compiler.generate.ObservableFunctionGenerator;
 import org.jfxcore.compiler.util.Bytecode;
@@ -35,7 +34,7 @@ public class EmitObservableFunctionNode
 
     private final CtBehavior method;
     private final CtBehavior inverseMethod;
-    private final BindingContextNode source;
+    private final List<ValueEmitterNode> methodReceiver;
     private final List<EmitMethodArgumentNode> arguments;
     private final ResolvedTypeNode type;
     private transient String compiledClassName;
@@ -44,14 +43,14 @@ public class EmitObservableFunctionNode
             TypeInstance type,
             CtBehavior method,
             @Nullable CtBehavior inverseMethod,
-            BindingContextNode source,
+            Collection<? extends ValueEmitterNode> methodReceiver,
             Collection<? extends EmitMethodArgumentNode> arguments,
             SourceInfo sourceInfo) {
         super(sourceInfo);
         this.type = new ResolvedTypeNode(checkNotNull(type), sourceInfo);
         this.method = checkNotNull(method);
         this.inverseMethod = inverseMethod;
-        this.source = checkNotNull(source);
+        this.methodReceiver = new ArrayList<>(checkNotNull(methodReceiver));
         this.arguments = new ArrayList<>(checkNotNull(arguments));
     }
 
@@ -84,7 +83,7 @@ public class EmitObservableFunctionNode
             return Collections.emptyList();
         }
 
-        var generator = new ObservableFunctionGenerator(method, inverseMethod, source, arguments);
+        var generator = new ObservableFunctionGenerator(method, inverseMethod, methodReceiver, arguments);
         compiledClassName = generator.getClassName();
         getClassCache().put(this, compiledClassName);
 
@@ -108,7 +107,7 @@ public class EmitObservableFunctionNode
     @Override
     public EmitObservableFunctionNode deepClone() {
         return new EmitObservableFunctionNode(
-            type.getTypeInstance(), method, inverseMethod, source.deepClone(), deepClone(arguments), getSourceInfo());
+            type.getTypeInstance(), method, inverseMethod, deepClone(methodReceiver), deepClone(arguments), getSourceInfo());
     }
 
     @Override
@@ -118,14 +117,14 @@ public class EmitObservableFunctionNode
         EmitObservableFunctionNode that = (EmitObservableFunctionNode)o;
         return TypeHelper.equals(method, that.method) &&
             TypeHelper.equals(inverseMethod, that.inverseMethod) &&
-            source.equals(that.source) &&
+            methodReceiver.equals(that.methodReceiver) &&
             arguments.equals(that.arguments) &&
             type.equals(that.type);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(TypeHelper.hashCode(method), TypeHelper.hashCode(inverseMethod), source, arguments, type);
+        return Objects.hash(TypeHelper.hashCode(method), TypeHelper.hashCode(inverseMethod), method, arguments, type);
     }
 
     @SuppressWarnings("unchecked")

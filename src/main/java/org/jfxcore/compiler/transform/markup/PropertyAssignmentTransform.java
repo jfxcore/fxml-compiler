@@ -258,7 +258,7 @@ public class PropertyAssignmentTransform implements Transform {
                             values.add(valueNode);
                         }
                     }
-                } else if (itemType.isConvertibleFrom(childType)) {
+                } else if (itemType.isAssignableFrom(childType)) {
                     if (isMap) {
                         if (child instanceof EmitLiteralNode
                                 || child instanceof EmitObjectNode
@@ -389,7 +389,7 @@ public class PropertyAssignmentTransform implements Transform {
             return ValueEmitterFactory.newObjectByCoercion(targetType, (TextNode)node);
         }
 
-        return node instanceof ValueEmitterNode valueEmitterNode && targetType.isConvertibleFrom(valueType) ?
+        return node instanceof ValueEmitterNode valueEmitterNode && targetType.isAssignableFrom(valueType) ?
             valueEmitterNode : null;
     }
 

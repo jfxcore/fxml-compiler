@@ -255,7 +255,7 @@ public class PathTest extends TestBase {
         ResolvedPath target = ResolvedPath.parse(firstSegment, new String[] {"target"}, true, SourceInfo.none());
         ResolvedPath source = ResolvedPath.parse(firstSegment, new String[] {"source1"}, true, SourceInfo.none());
 
-        assertTrue(target.getValueTypeInstance().isConvertibleFrom(source.getValueTypeInstance()));
+        assertTrue(target.getValueTypeInstance().isAssignableFrom(source.getValueTypeInstance()));
     }
 
     @Test
@@ -265,7 +265,7 @@ public class PathTest extends TestBase {
         ResolvedPath target = ResolvedPath.parse(firstSegment, new String[] {"target"}, true, SourceInfo.none());
         ResolvedPath source = ResolvedPath.parse(firstSegment, new String[] {"source2"}, true, SourceInfo.none());
 
-        assertFalse(target.getValueTypeInstance().isConvertibleFrom(source.getValueTypeInstance()));
+        assertFalse(target.getValueTypeInstance().isAssignableFrom(source.getValueTypeInstance()));
     }
 
     public interface OverrideMethodBase {
@@ -309,6 +309,23 @@ public class PathTest extends TestBase {
         ResolvedPath target = ResolvedPath.parse(firstSegment, new String[] {"value"}, true, SourceInfo.none());
         assertEquals("PathTest$Type10", target.get(0).getTypeInstance().toString());
         assertEquals("Comparable", target.get(1).getTypeInstance().toString());
+    }
+
+    @SuppressWarnings("InstantiationOfUtilityClass")
+    public static class StaticTestA { StaticTestB b = new StaticTestB(); }
+    public static class StaticTestB { static StaticTestC c = new StaticTestC(); }
+    public static class StaticTestC { public final String d = "foo"; }
+
+    @Test
+    public void Path_Before_Static_Segment_Is_Eliminated() {
+        Resolver resolver = new Resolver(SourceInfo.none());
+        String[] segments = new String[] {"b", "c", "d"};
+        Segment firstSegment = new ParentSegment(new TypeInstance(resolver.resolveClass(StaticTestA.class.getName())), null, -1);
+        ResolvedPath path = ResolvedPath.parse(firstSegment, segments, true, SourceInfo.none());
+
+        assertEquals(2, path.size());
+        assertEquals("c", path.get(0).getName());
+        assertEquals("d", path.get(1).getName());
     }
 
 }

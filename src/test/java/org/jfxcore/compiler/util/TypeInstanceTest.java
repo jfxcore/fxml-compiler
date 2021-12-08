@@ -18,6 +18,561 @@ import static org.junit.jupiter.api.Assertions.*;
 @SuppressWarnings("unused")
 public class TypeInstanceTest extends TestBase {
 
+    @Test
+    public void PrimitiveType_IsAssignableFrom_PrimitiveType() {
+        // byte
+        TypeInstance t0 = new TypeParser("byte").parse().get(0);
+        TypeInstance t1 = new TypeParser("char").parse().get(0);
+        assertFalse(t0.isAssignableFrom(t1));
+        assertFalse(t1.isAssignableFrom(t0));
+
+        t0 = new TypeParser("byte").parse().get(0);
+        t1 = new TypeParser("byte").parse().get(0);
+        assertTrue(t0.isAssignableFrom(t1));
+        assertTrue(t1.isAssignableFrom(t0));
+
+        t0 = new TypeParser("byte").parse().get(0);
+        t1 = new TypeParser("short").parse().get(0);
+        assertFalse(t0.isAssignableFrom(t1));
+        assertTrue(t1.isAssignableFrom(t0));
+
+        t0 = new TypeParser("byte").parse().get(0);
+        t1 = new TypeParser("int").parse().get(0);
+        assertFalse(t0.isAssignableFrom(t1));
+        assertTrue(t1.isAssignableFrom(t0));
+
+        t0 = new TypeParser("byte").parse().get(0);
+        t1 = new TypeParser("long").parse().get(0);
+        assertFalse(t0.isAssignableFrom(t1));
+        assertTrue(t1.isAssignableFrom(t0));
+
+        t0 = new TypeParser("byte").parse().get(0);
+        t1 = new TypeParser("float").parse().get(0);
+        assertFalse(t0.isAssignableFrom(t1));
+        assertTrue(t1.isAssignableFrom(t0));
+
+        t0 = new TypeParser("byte").parse().get(0);
+        t1 = new TypeParser("double").parse().get(0);
+        assertFalse(t0.isAssignableFrom(t1));
+        assertTrue(t1.isAssignableFrom(t0));
+
+        // short
+        t0 = new TypeParser("short").parse().get(0);
+        t1 = new TypeParser("char").parse().get(0);
+        assertFalse(t0.isAssignableFrom(t1));
+        assertFalse(t1.isAssignableFrom(t0));
+
+        t0 = new TypeParser("short").parse().get(0);
+        t1 = new TypeParser("short").parse().get(0);
+        assertTrue(t0.isAssignableFrom(t1));
+        assertTrue(t1.isAssignableFrom(t0));
+
+        t0 = new TypeParser("short").parse().get(0);
+        t1 = new TypeParser("int").parse().get(0);
+        assertFalse(t0.isAssignableFrom(t1));
+        assertTrue(t1.isAssignableFrom(t0));
+
+        t0 = new TypeParser("short").parse().get(0);
+        t1 = new TypeParser("long").parse().get(0);
+        assertFalse(t0.isAssignableFrom(t1));
+        assertTrue(t1.isAssignableFrom(t0));
+
+        t0 = new TypeParser("short").parse().get(0);
+        t1 = new TypeParser("float").parse().get(0);
+        assertFalse(t0.isAssignableFrom(t1));
+        assertTrue(t1.isAssignableFrom(t0));
+
+        t0 = new TypeParser("short").parse().get(0);
+        t1 = new TypeParser("double").parse().get(0);
+        assertFalse(t0.isAssignableFrom(t1));
+        assertTrue(t1.isAssignableFrom(t0));
+
+        // int
+        t0 = new TypeParser("int").parse().get(0);
+        t1 = new TypeParser("char").parse().get(0);
+        assertTrue(t0.isAssignableFrom(t1));
+        assertFalse(t1.isAssignableFrom(t0));
+
+        t0 = new TypeParser("int").parse().get(0);
+        t1 = new TypeParser("int").parse().get(0);
+        assertTrue(t0.isAssignableFrom(t1));
+        assertTrue(t1.isAssignableFrom(t0));
+
+        t0 = new TypeParser("int").parse().get(0);
+        t1 = new TypeParser("long").parse().get(0);
+        assertFalse(t0.isAssignableFrom(t1));
+        assertTrue(t1.isAssignableFrom(t0));
+
+        t0 = new TypeParser("int").parse().get(0);
+        t1 = new TypeParser("float").parse().get(0);
+        assertFalse(t0.isAssignableFrom(t1));
+        assertTrue(t1.isAssignableFrom(t0));
+
+        t0 = new TypeParser("int").parse().get(0);
+        t1 = new TypeParser("double").parse().get(0);
+        assertFalse(t0.isAssignableFrom(t1));
+        assertTrue(t1.isAssignableFrom(t0));
+
+        // long
+        t0 = new TypeParser("long").parse().get(0);
+        t1 = new TypeParser("char").parse().get(0);
+        assertTrue(t0.isAssignableFrom(t1));
+        assertFalse(t1.isAssignableFrom(t0));
+
+        t0 = new TypeParser("long").parse().get(0);
+        t1 = new TypeParser("long").parse().get(0);
+        assertTrue(t0.isAssignableFrom(t1));
+        assertTrue(t1.isAssignableFrom(t0));
+
+        t0 = new TypeParser("long").parse().get(0);
+        t1 = new TypeParser("float").parse().get(0);
+        assertFalse(t0.isAssignableFrom(t1));
+        assertTrue(t1.isAssignableFrom(t0));
+
+        t0 = new TypeParser("long").parse().get(0);
+        t1 = new TypeParser("double").parse().get(0);
+        assertFalse(t0.isAssignableFrom(t1));
+        assertTrue(t1.isAssignableFrom(t0));
+
+        // float
+        t0 = new TypeParser("float").parse().get(0);
+        t1 = new TypeParser("char").parse().get(0);
+        assertTrue(t0.isAssignableFrom(t1));
+        assertFalse(t1.isAssignableFrom(t0));
+
+        t0 = new TypeParser("float").parse().get(0);
+        t1 = new TypeParser("float").parse().get(0);
+        assertTrue(t0.isAssignableFrom(t1));
+        assertTrue(t1.isAssignableFrom(t0));
+
+        t0 = new TypeParser("float").parse().get(0);
+        t1 = new TypeParser("double").parse().get(0);
+        assertFalse(t0.isAssignableFrom(t1));
+        assertTrue(t1.isAssignableFrom(t0));
+
+        // double
+        t0 = new TypeParser("double").parse().get(0);
+        t1 = new TypeParser("char").parse().get(0);
+        assertTrue(t0.isAssignableFrom(t1));
+        assertFalse(t1.isAssignableFrom(t0));
+
+        t0 = new TypeParser("double").parse().get(0);
+        t1 = new TypeParser("double").parse().get(0);
+        assertTrue(t0.isAssignableFrom(t1));
+        assertTrue(t1.isAssignableFrom(t0));
+
+        // char
+        t0 = new TypeParser("char").parse().get(0);
+        t1 = new TypeParser("char").parse().get(0);
+        assertTrue(t0.isAssignableFrom(t1));
+        assertTrue(t1.isAssignableFrom(t0));
+    }
+
+    @Test
+    public void PrimitiveType_IsAssignableFrom_PrimitiveBoxType() {
+        // byte
+        TypeInstance t0 = new TypeParser("java.lang.Byte").parse().get(0);
+        TypeInstance t1 = new TypeParser("char").parse().get(0);
+        assertFalse(t0.isAssignableFrom(t1));
+        assertFalse(t1.isAssignableFrom(t0));
+
+        t0 = new TypeParser("java.lang.Byte").parse().get(0);
+        t1 = new TypeParser("byte").parse().get(0);
+        assertTrue(t0.isAssignableFrom(t1));
+        assertTrue(t1.isAssignableFrom(t0));
+
+        t0 = new TypeParser("java.lang.Byte").parse().get(0);
+        t1 = new TypeParser("short").parse().get(0);
+        assertFalse(t0.isAssignableFrom(t1));
+        assertTrue(t1.isAssignableFrom(t0));
+
+        t0 = new TypeParser("java.lang.Byte").parse().get(0);
+        t1 = new TypeParser("int").parse().get(0);
+        assertFalse(t0.isAssignableFrom(t1));
+        assertTrue(t1.isAssignableFrom(t0));
+
+        t0 = new TypeParser("java.lang.Byte").parse().get(0);
+        t1 = new TypeParser("long").parse().get(0);
+        assertFalse(t0.isAssignableFrom(t1));
+        assertTrue(t1.isAssignableFrom(t0));
+
+        t0 = new TypeParser("java.lang.Byte").parse().get(0);
+        t1 = new TypeParser("float").parse().get(0);
+        assertFalse(t0.isAssignableFrom(t1));
+        assertTrue(t1.isAssignableFrom(t0));
+
+        t0 = new TypeParser("java.lang.Byte").parse().get(0);
+        t1 = new TypeParser("double").parse().get(0);
+        assertFalse(t0.isAssignableFrom(t1));
+        assertTrue(t1.isAssignableFrom(t0));
+
+        // short
+        t0 = new TypeParser("java.lang.Short").parse().get(0);
+        t1 = new TypeParser("byte").parse().get(0);
+        assertFalse(t0.isAssignableFrom(t1));
+        assertFalse(t1.isAssignableFrom(t0));
+
+        t0 = new TypeParser("java.lang.Short").parse().get(0);
+        t1 = new TypeParser("char").parse().get(0);
+        assertFalse(t0.isAssignableFrom(t1));
+        assertFalse(t1.isAssignableFrom(t0));
+
+        t0 = new TypeParser("java.lang.Short").parse().get(0);
+        t1 = new TypeParser("short").parse().get(0);
+        assertTrue(t0.isAssignableFrom(t1));
+        assertTrue(t1.isAssignableFrom(t0));
+
+        t0 = new TypeParser("java.lang.Short").parse().get(0);
+        t1 = new TypeParser("int").parse().get(0);
+        assertFalse(t0.isAssignableFrom(t1));
+        assertTrue(t1.isAssignableFrom(t0));
+
+        t0 = new TypeParser("java.lang.Short").parse().get(0);
+        t1 = new TypeParser("long").parse().get(0);
+        assertFalse(t0.isAssignableFrom(t1));
+        assertTrue(t1.isAssignableFrom(t0));
+
+        t0 = new TypeParser("java.lang.Short").parse().get(0);
+        t1 = new TypeParser("float").parse().get(0);
+        assertFalse(t0.isAssignableFrom(t1));
+        assertTrue(t1.isAssignableFrom(t0));
+
+        t0 = new TypeParser("java.lang.Short").parse().get(0);
+        t1 = new TypeParser("double").parse().get(0);
+        assertFalse(t0.isAssignableFrom(t1));
+        assertTrue(t1.isAssignableFrom(t0));
+
+        // int
+        t0 = new TypeParser("java.lang.Integer").parse().get(0);
+        t1 = new TypeParser("byte").parse().get(0);
+        assertFalse(t0.isAssignableFrom(t1));
+        assertFalse(t1.isAssignableFrom(t0));
+
+        t0 = new TypeParser("java.lang.Integer").parse().get(0);
+        t1 = new TypeParser("char").parse().get(0);
+        assertFalse(t0.isAssignableFrom(t1));
+        assertFalse(t1.isAssignableFrom(t0));
+
+        t0 = new TypeParser("java.lang.Integer").parse().get(0);
+        t1 = new TypeParser("short").parse().get(0);
+        assertFalse(t0.isAssignableFrom(t1));
+        assertFalse(t1.isAssignableFrom(t0));
+
+        t0 = new TypeParser("java.lang.Integer").parse().get(0);
+        t1 = new TypeParser("int").parse().get(0);
+        assertTrue(t0.isAssignableFrom(t1));
+        assertTrue(t1.isAssignableFrom(t0));
+
+        t0 = new TypeParser("java.lang.Integer").parse().get(0);
+        t1 = new TypeParser("long").parse().get(0);
+        assertFalse(t0.isAssignableFrom(t1));
+        assertTrue(t1.isAssignableFrom(t0));
+
+        t0 = new TypeParser("java.lang.Integer").parse().get(0);
+        t1 = new TypeParser("float").parse().get(0);
+        assertFalse(t0.isAssignableFrom(t1));
+        assertTrue(t1.isAssignableFrom(t0));
+
+        t0 = new TypeParser("java.lang.Integer").parse().get(0);
+        t1 = new TypeParser("double").parse().get(0);
+        assertFalse(t0.isAssignableFrom(t1));
+        assertTrue(t1.isAssignableFrom(t0));
+
+        // long
+        t0 = new TypeParser("java.lang.Long").parse().get(0);
+        t1 = new TypeParser("byte").parse().get(0);
+        assertFalse(t0.isAssignableFrom(t1));
+        assertFalse(t1.isAssignableFrom(t0));
+
+        t0 = new TypeParser("java.lang.Long").parse().get(0);
+        t1 = new TypeParser("char").parse().get(0);
+        assertFalse(t0.isAssignableFrom(t1));
+        assertFalse(t1.isAssignableFrom(t0));
+
+        t0 = new TypeParser("java.lang.Long").parse().get(0);
+        t1 = new TypeParser("short").parse().get(0);
+        assertFalse(t0.isAssignableFrom(t1));
+        assertFalse(t1.isAssignableFrom(t0));
+
+        t0 = new TypeParser("java.lang.Long").parse().get(0);
+        t1 = new TypeParser("int").parse().get(0);
+        assertFalse(t0.isAssignableFrom(t1));
+        assertFalse(t1.isAssignableFrom(t0));
+
+        t0 = new TypeParser("java.lang.Long").parse().get(0);
+        t1 = new TypeParser("long").parse().get(0);
+        assertTrue(t0.isAssignableFrom(t1));
+        assertTrue(t1.isAssignableFrom(t0));
+
+        t0 = new TypeParser("java.lang.Long").parse().get(0);
+        t1 = new TypeParser("float").parse().get(0);
+        assertFalse(t0.isAssignableFrom(t1));
+        assertTrue(t1.isAssignableFrom(t0));
+
+        t0 = new TypeParser("java.lang.Long").parse().get(0);
+        t1 = new TypeParser("double").parse().get(0);
+        assertFalse(t0.isAssignableFrom(t1));
+        assertTrue(t1.isAssignableFrom(t0));
+
+        // float
+        t0 = new TypeParser("java.lang.Float").parse().get(0);
+        t1 = new TypeParser("byte").parse().get(0);
+        assertFalse(t0.isAssignableFrom(t1));
+        assertFalse(t1.isAssignableFrom(t0));
+
+        t0 = new TypeParser("java.lang.Float").parse().get(0);
+        t1 = new TypeParser("char").parse().get(0);
+        assertFalse(t0.isAssignableFrom(t1));
+        assertFalse(t1.isAssignableFrom(t0));
+
+        t0 = new TypeParser("java.lang.Float").parse().get(0);
+        t1 = new TypeParser("short").parse().get(0);
+        assertFalse(t0.isAssignableFrom(t1));
+        assertFalse(t1.isAssignableFrom(t0));
+
+        t0 = new TypeParser("java.lang.Float").parse().get(0);
+        t1 = new TypeParser("int").parse().get(0);
+        assertFalse(t0.isAssignableFrom(t1));
+        assertFalse(t1.isAssignableFrom(t0));
+
+        t0 = new TypeParser("java.lang.Float").parse().get(0);
+        t1 = new TypeParser("long").parse().get(0);
+        assertFalse(t0.isAssignableFrom(t1));
+        assertFalse(t1.isAssignableFrom(t0));
+
+        t0 = new TypeParser("java.lang.Float").parse().get(0);
+        t1 = new TypeParser("float").parse().get(0);
+        assertTrue(t0.isAssignableFrom(t1));
+        assertTrue(t1.isAssignableFrom(t0));
+
+        t0 = new TypeParser("java.lang.Float").parse().get(0);
+        t1 = new TypeParser("double").parse().get(0);
+        assertFalse(t0.isAssignableFrom(t1));
+        assertTrue(t1.isAssignableFrom(t0));
+
+        // double
+        t0 = new TypeParser("java.lang.Double").parse().get(0);
+        t1 = new TypeParser("byte").parse().get(0);
+        assertFalse(t0.isAssignableFrom(t1));
+        assertFalse(t1.isAssignableFrom(t0));
+
+        t0 = new TypeParser("java.lang.Double").parse().get(0);
+        t1 = new TypeParser("char").parse().get(0);
+        assertFalse(t0.isAssignableFrom(t1));
+        assertFalse(t1.isAssignableFrom(t0));
+
+        t0 = new TypeParser("java.lang.Double").parse().get(0);
+        t1 = new TypeParser("short").parse().get(0);
+        assertFalse(t0.isAssignableFrom(t1));
+        assertFalse(t1.isAssignableFrom(t0));
+
+        t0 = new TypeParser("java.lang.Double").parse().get(0);
+        t1 = new TypeParser("int").parse().get(0);
+        assertFalse(t0.isAssignableFrom(t1));
+        assertFalse(t1.isAssignableFrom(t0));
+
+        t0 = new TypeParser("java.lang.Double").parse().get(0);
+        t1 = new TypeParser("long").parse().get(0);
+        assertFalse(t0.isAssignableFrom(t1));
+        assertFalse(t1.isAssignableFrom(t0));
+
+        t0 = new TypeParser("java.lang.Double").parse().get(0);
+        t1 = new TypeParser("float").parse().get(0);
+        assertFalse(t0.isAssignableFrom(t1));
+        assertFalse(t1.isAssignableFrom(t0));
+
+        t0 = new TypeParser("java.lang.Double").parse().get(0);
+        t1 = new TypeParser("double").parse().get(0);
+        assertTrue(t0.isAssignableFrom(t1));
+        assertTrue(t1.isAssignableFrom(t0));
+
+        // char
+        t0 = new TypeParser("java.lang.Character").parse().get(0);
+        t1 = new TypeParser("byte").parse().get(0);
+        assertFalse(t0.isAssignableFrom(t1));
+        assertFalse(t1.isAssignableFrom(t0));
+
+        t0 = new TypeParser("java.lang.Character").parse().get(0);
+        t1 = new TypeParser("char").parse().get(0);
+        assertTrue(t0.isAssignableFrom(t1));
+        assertTrue(t1.isAssignableFrom(t0));
+
+        t0 = new TypeParser("java.lang.Character").parse().get(0);
+        t1 = new TypeParser("short").parse().get(0);
+        assertFalse(t0.isAssignableFrom(t1));
+        assertFalse(t1.isAssignableFrom(t0));
+
+        t0 = new TypeParser("java.lang.Character").parse().get(0);
+        t1 = new TypeParser("int").parse().get(0);
+        assertFalse(t0.isAssignableFrom(t1));
+        assertTrue(t1.isAssignableFrom(t0));
+
+        t0 = new TypeParser("java.lang.Character").parse().get(0);
+        t1 = new TypeParser("long").parse().get(0);
+        assertFalse(t0.isAssignableFrom(t1));
+        assertTrue(t1.isAssignableFrom(t0));
+
+        t0 = new TypeParser("java.lang.Character").parse().get(0);
+        t1 = new TypeParser("float").parse().get(0);
+        assertFalse(t0.isAssignableFrom(t1));
+        assertTrue(t1.isAssignableFrom(t0));
+
+        t0 = new TypeParser("java.lang.Character").parse().get(0);
+        t1 = new TypeParser("double").parse().get(0);
+        assertFalse(t0.isAssignableFrom(t1));
+        assertTrue(t1.isAssignableFrom(t0));
+    }
+
+    @Test
+    public void PrimitiveBoxType_IsAssignableFrom_PrimitiveBoxType() {
+        // byte
+        TypeInstance t0 = new TypeParser("java.lang.Byte").parse().get(0);
+        TypeInstance t1 = new TypeParser("java.lang.Character").parse().get(0);
+        assertFalse(t0.isAssignableFrom(t1));
+        assertFalse(t1.isAssignableFrom(t0));
+
+        t0 = new TypeParser("java.lang.Byte").parse().get(0);
+        t1 = new TypeParser("java.lang.Byte").parse().get(0);
+        assertTrue(t0.isAssignableFrom(t1));
+        assertTrue(t1.isAssignableFrom(t0));
+
+        t0 = new TypeParser("java.lang.Byte").parse().get(0);
+        t1 = new TypeParser("java.lang.Short").parse().get(0);
+        assertFalse(t0.isAssignableFrom(t1));
+        assertFalse(t1.isAssignableFrom(t0));
+
+        t0 = new TypeParser("java.lang.Byte").parse().get(0);
+        t1 = new TypeParser("java.lang.Integer").parse().get(0);
+        assertFalse(t0.isAssignableFrom(t1));
+        assertFalse(t1.isAssignableFrom(t0));
+
+        t0 = new TypeParser("java.lang.Byte").parse().get(0);
+        t1 = new TypeParser("java.lang.Long").parse().get(0);
+        assertFalse(t0.isAssignableFrom(t1));
+        assertFalse(t1.isAssignableFrom(t0));
+
+        t0 = new TypeParser("java.lang.Byte").parse().get(0);
+        t1 = new TypeParser("java.lang.Float").parse().get(0);
+        assertFalse(t0.isAssignableFrom(t1));
+        assertFalse(t1.isAssignableFrom(t0));
+
+        t0 = new TypeParser("java.lang.Byte").parse().get(0);
+        t1 = new TypeParser("java.lang.Double").parse().get(0);
+        assertFalse(t0.isAssignableFrom(t1));
+        assertFalse(t1.isAssignableFrom(t0));
+
+        // short
+        t0 = new TypeParser("java.lang.Short").parse().get(0);
+        t1 = new TypeParser("java.lang.Character").parse().get(0);
+        assertFalse(t0.isAssignableFrom(t1));
+        assertFalse(t1.isAssignableFrom(t0));
+
+        t0 = new TypeParser("java.lang.Short").parse().get(0);
+        t1 = new TypeParser("java.lang.Short").parse().get(0);
+        assertTrue(t0.isAssignableFrom(t1));
+        assertTrue(t1.isAssignableFrom(t0));
+
+        t0 = new TypeParser("java.lang.Short").parse().get(0);
+        t1 = new TypeParser("java.lang.Integer").parse().get(0);
+        assertFalse(t0.isAssignableFrom(t1));
+        assertFalse(t1.isAssignableFrom(t0));
+
+        t0 = new TypeParser("java.lang.Short").parse().get(0);
+        t1 = new TypeParser("java.lang.Long").parse().get(0);
+        assertFalse(t0.isAssignableFrom(t1));
+        assertFalse(t1.isAssignableFrom(t0));
+
+        t0 = new TypeParser("java.lang.Short").parse().get(0);
+        t1 = new TypeParser("java.lang.Float").parse().get(0);
+        assertFalse(t0.isAssignableFrom(t1));
+        assertFalse(t1.isAssignableFrom(t0));
+
+        t0 = new TypeParser("java.lang.Short").parse().get(0);
+        t1 = new TypeParser("java.lang.Double").parse().get(0);
+        assertFalse(t0.isAssignableFrom(t1));
+        assertFalse(t1.isAssignableFrom(t0));
+
+        // int
+        t0 = new TypeParser("java.lang.Integer").parse().get(0);
+        t1 = new TypeParser("java.lang.Character").parse().get(0);
+        assertFalse(t0.isAssignableFrom(t1));
+        assertFalse(t1.isAssignableFrom(t0));
+
+        t0 = new TypeParser("java.lang.Integer").parse().get(0);
+        t1 = new TypeParser("java.lang.Integer").parse().get(0);
+        assertTrue(t0.isAssignableFrom(t1));
+        assertTrue(t1.isAssignableFrom(t0));
+
+        t0 = new TypeParser("java.lang.Integer").parse().get(0);
+        t1 = new TypeParser("java.lang.Long").parse().get(0);
+        assertFalse(t0.isAssignableFrom(t1));
+        assertFalse(t1.isAssignableFrom(t0));
+
+        t0 = new TypeParser("java.lang.Integer").parse().get(0);
+        t1 = new TypeParser("java.lang.Float").parse().get(0);
+        assertFalse(t0.isAssignableFrom(t1));
+        assertFalse(t1.isAssignableFrom(t0));
+
+        t0 = new TypeParser("java.lang.Integer").parse().get(0);
+        t1 = new TypeParser("java.lang.Double").parse().get(0);
+        assertFalse(t0.isAssignableFrom(t1));
+        assertFalse(t1.isAssignableFrom(t0));
+
+        // long
+        t0 = new TypeParser("java.lang.Long").parse().get(0);
+        t1 = new TypeParser("java.lang.Character").parse().get(0);
+        assertFalse(t0.isAssignableFrom(t1));
+        assertFalse(t1.isAssignableFrom(t0));
+
+        t0 = new TypeParser("java.lang.Long").parse().get(0);
+        t1 = new TypeParser("java.lang.Long").parse().get(0);
+        assertTrue(t0.isAssignableFrom(t1));
+        assertTrue(t1.isAssignableFrom(t0));
+
+        t0 = new TypeParser("java.lang.Long").parse().get(0);
+        t1 = new TypeParser("java.lang.Float").parse().get(0);
+        assertFalse(t0.isAssignableFrom(t1));
+        assertFalse(t1.isAssignableFrom(t0));
+
+        t0 = new TypeParser("java.lang.Long").parse().get(0);
+        t1 = new TypeParser("java.lang.Double").parse().get(0);
+        assertFalse(t0.isAssignableFrom(t1));
+        assertFalse(t1.isAssignableFrom(t0));
+
+        // float
+        t0 = new TypeParser("java.lang.Float").parse().get(0);
+        t1 = new TypeParser("java.lang.Character").parse().get(0);
+        assertFalse(t0.isAssignableFrom(t1));
+        assertFalse(t1.isAssignableFrom(t0));
+
+        t0 = new TypeParser("java.lang.Float").parse().get(0);
+        t1 = new TypeParser("java.lang.Float").parse().get(0);
+        assertTrue(t0.isAssignableFrom(t1));
+        assertTrue(t1.isAssignableFrom(t0));
+
+        t0 = new TypeParser("java.lang.Float").parse().get(0);
+        t1 = new TypeParser("java.lang.Double").parse().get(0);
+        assertFalse(t0.isAssignableFrom(t1));
+        assertFalse(t1.isAssignableFrom(t0));
+
+        // double
+        t0 = new TypeParser("java.lang.Double").parse().get(0);
+        t1 = new TypeParser("java.lang.Character").parse().get(0);
+        assertFalse(t0.isAssignableFrom(t1));
+        assertFalse(t1.isAssignableFrom(t0));
+
+        t0 = new TypeParser("java.lang.Double").parse().get(0);
+        t1 = new TypeParser("java.lang.Double").parse().get(0);
+        assertTrue(t0.isAssignableFrom(t1));
+        assertTrue(t1.isAssignableFrom(t0));
+
+        // char
+        t0 = new TypeParser("java.lang.Character").parse().get(0);
+        t1 = new TypeParser("java.lang.Character").parse().get(0);
+        assertTrue(t0.isAssignableFrom(t1));
+        assertTrue(t1.isAssignableFrom(t0));
+    }
+
     public static class Type1<A> {}
     public static class Type2<B> extends Type1<B> {}
     public static class Type3 extends Type2<String> {}
@@ -108,24 +663,6 @@ public class TypeInstanceTest extends TestBase {
     }
 
     @Test
-    public void IsAssignableFrom_Float_Double() {
-        TypeInstance t0 = new TypeParser("float").parse().get(0);
-        TypeInstance t1 = new TypeParser("double").parse().get(0);
-        assertEquals("float", t0.getJavaName());
-        assertEquals("double", t1.getJavaName());
-        assertFalse(t0.isAssignableFrom(t1));
-    }
-
-    @Test
-    public void IsAssignableFrom_Double_Float() {
-        TypeInstance t0 = new TypeParser("double").parse().get(0);
-        TypeInstance t1 = new TypeParser("float").parse().get(0);
-        assertEquals("double", t0.getJavaName());
-        assertEquals("float", t1.getJavaName());
-        assertFalse(t0.isAssignableFrom(t1));
-    }
-
-    @Test
     public void IsAssignableFrom_Object_DoubleArray() {
         TypeInstance t0 = new TypeParser("java.lang.Object").parse().get(0);
         TypeInstance t1 = new TypeParser("java.lang.Double[]").parse().get(0);
@@ -213,34 +750,6 @@ public class TypeInstanceTest extends TestBase {
         assertEquals("double[][]", t0.getJavaName());
         assertEquals("double[][][]", t1.getJavaName());
         assertFalse(t0.isAssignableFrom(t1));
-    }
-
-    @Test
-    public void IsConvertibleFrom_float_double() {
-        TypeInstance t0 = new TypeParser("float").parse().get(0);
-        TypeInstance t1 = new TypeParser("double").parse().get(0);
-        assertTrue(t0.isConvertibleFrom(t1));
-    }
-
-    @Test
-    public void IsConvertibleFrom_int_long() {
-        TypeInstance t0 = new TypeParser("int").parse().get(0);
-        TypeInstance t1 = new TypeParser("long").parse().get(0);
-        assertTrue(t0.isConvertibleFrom(t1));
-    }
-
-    @Test
-    public void IsConvertibleFrom_Float_double() {
-        TypeInstance t0 = new TypeParser("java.lang.Float").parse().get(0);
-        TypeInstance t1 = new TypeParser("double").parse().get(0);
-        assertTrue(t0.isConvertibleFrom(t1));
-    }
-
-    @Test
-    public void IsConvertibleFrom_int_Float() {
-        TypeInstance t0 = new TypeParser("int").parse().get(0);
-        TypeInstance t1 = new TypeParser("java.lang.Float").parse().get(0);
-        assertTrue(t0.isConvertibleFrom(t1));
     }
 
     public static class Type6<T> {}

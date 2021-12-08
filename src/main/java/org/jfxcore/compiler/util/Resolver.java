@@ -685,7 +685,7 @@ public class Resolver {
     /**
      * Returns the method annotation for the specified name, or <code>null</code> if the annotation was not found.
      */
-    public Annotation tryResolveMethodAnnotation(CtMethod method, String annotationName) {
+    public Annotation tryResolveMethodAnnotation(CtBehavior method, String annotationName) {
         AnnotationsAttribute attr = (AnnotationsAttribute)method
             .getMethodInfo2()
             .getAttribute(AnnotationsAttribute.visibleTag);

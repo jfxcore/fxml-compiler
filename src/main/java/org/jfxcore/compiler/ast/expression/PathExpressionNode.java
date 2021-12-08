@@ -11,6 +11,8 @@ import org.jfxcore.compiler.ast.expression.util.SimplePathEmitterFactory;
 import org.jfxcore.compiler.ast.expression.path.ResolvedPath;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.util.TypeInstance;
+
+import java.util.Arrays;
 import java.util.Objects;
 import java.util.regex.MatchResult;
 import java.util.regex.Pattern;
@@ -48,15 +50,25 @@ public class PathExpressionNode extends AbstractNode implements ExpressionNode {
         return path;
     }
 
-    @SuppressWarnings("ReplaceNullCheck")
     public ResolvedPath resolvePath(boolean preferObservable) {
+        return resolvePath(preferObservable, false);
+    }
+
+    public ResolvedPath resolvePath(boolean preferObservable, boolean assumeMethod) {
+        // If we assume that the path points to a method (i.e. the last segment is the method name),
+        // we drop the last segment because it will not be part of the path.
+        String[] path = getSplitPath();
+        if (assumeMethod) {
+            path = Arrays.copyOf(path, path.length - 1);
+        }
+        
         if (preferObservable) {
             if (resolvedObservablePath != null) {
                 return resolvedObservablePath;
             }
 
             return resolvedObservablePath = ResolvedPath.parse(
-                source.toSegment(), getSplitPath(),true, getSourceInfo());
+                source.toSegment(), path, true, getSourceInfo());
         }
 
         if (resolvedPath != null) {
@@ -64,7 +76,7 @@ public class PathExpressionNode extends AbstractNode implements ExpressionNode {
         }
 
         return resolvedPath = ResolvedPath.parse(
-            source.toSegment(), getSplitPath(), false, getSourceInfo());
+            source.toSegment(), path, false, getSourceInfo());
     }
 
     private String[] getSplitPath() {
