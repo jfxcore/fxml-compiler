@@ -28,7 +28,7 @@ public class EmitUrlNode extends AbstractNode implements ValueEmitterNode, Paren
     }
 
     @Override
-    public TypeNode getType() {
+    public ResolvedTypeNode getType() {
         return type;
     }
 

@@ -13,6 +13,7 @@ import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 import javafx.beans.value.ObservableBooleanValue;
 import javafx.fxml.InverseMethod;
+import javafx.scene.control.Label;
 import javafx.scene.layout.Pane;
 import org.jfxcore.compiler.diagnostic.ErrorCode;
 import org.jfxcore.compiler.diagnostic.MarkupException;
@@ -21,6 +22,8 @@ import org.jfxcore.compiler.util.TestCompiler;
 import org.jfxcore.compiler.util.TestExtension;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+
+import java.text.DecimalFormat;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -73,6 +76,10 @@ public class FunctionBindingTest extends MethodReferencedSupport {
         public ObjectProperty<Stringifier> objPropProperty() {
             return objProp;
         }
+
+        public final Container1 c1 = new Container1(new Container2(new DecimalFormat("000")));
+        public static record Container1(Container2 c2) {}
+        public static record Container2(DecimalFormat fmt) {}
     }
 
     @SuppressWarnings("unused")
@@ -253,7 +260,7 @@ public class FunctionBindingTest extends MethodReferencedSupport {
                 <?import org.jfxcore.compiler.bindings.FunctionBindingTest.TestPane?>
                 <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
                           prefWidth="{fx:once add(add(1, 2), add(3, 4))}"
-                          prefHeight="{fx:once boxedAdd(boxedAdd(1, 2), add(3, 4))}"/>
+                          prefHeight="{fx:once boxedAdd(boxedAdd(1.0, 2.0), add(3, 4))}"/>
             """);
 
         assertFalse(root.prefWidthProperty().isBound());
@@ -278,6 +285,41 @@ public class FunctionBindingTest extends MethodReferencedSupport {
 
         assertFalse(root.prefHeightProperty().isBound());
         assertEquals(2.0, root.getPrefHeight(), 0.001);
+    }
+
+    @Test
+    public void Bind_Once_To_Instance_Method_Of_LocalObject() {
+        Pane root = TestCompiler.newInstance(
+                this, "Bind_Once_To_Instance_Method_Of_LocalObject", """
+                <?import javafx.scene.layout.*?>
+                <?import javafx.scene.control.*?>
+                <?import java.text.*?>
+                <Pane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                    <fx:define>
+                        <DecimalFormat fx:id="fmt">000</DecimalFormat>
+                        <Double fx:id="val">7</Double>
+                    </fx:define>
+                    <Label text="{fx:once fmt.format(val)}"/>
+                </Pane>
+            """);
+
+        Label label = (Label)root.getChildren().get(0);
+        assertEquals("007", label.getText());
+    }
+
+    @Test
+    public void Bind_Once_To_Instance_Method_Of_Indirect_Object() {
+        Pane root = TestCompiler.newInstance(
+                this, "Bind_Once_To_Instance_Method_Of_Indirect_Object", """
+                <?import javafx.scene.control.*?>
+                <?import org.jfxcore.compiler.bindings.FunctionBindingTest.TestPane?>
+                <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                    <Label text="{fx:once c1.c2.fmt.format(7)}"/>
+                </TestPane>
+            """);
+
+        Label label = (Label)root.getChildren().get(0);
+        assertEquals("007", label.getText());
     }
 
     @Test
@@ -309,14 +351,18 @@ public class FunctionBindingTest extends MethodReferencedSupport {
 
     @Test
     public void Bind_Once_To_Varargs_Constructor() {
-        TestPane root = TestCompiler.newInstance(
+        MarkupException ex = assertThrows(MarkupException.class, () -> TestCompiler.newInstance(
             this, "Bind_Once_To_Varargs_Constructor", """
                 <?import org.jfxcore.compiler.bindings.FunctionBindingTest.*?>
                 <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
                           objProp="{fx:once Stringifier(97, 98, 99)}"/>
-            """);
+            """));
 
-        assertEquals("abc", root.objProp.get().value);
+        assertEquals(ErrorCode.CANNOT_BIND_FUNCTION, ex.getDiagnostic().getCode());
+        assertEquals(3, ex.getDiagnostic().getCauses().length);
+        assertEquals(ErrorCode.NUM_FUNCTION_ARGUMENTS_MISMATCH, ex.getDiagnostic().getCauses()[0].getCode());
+        assertEquals(ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT, ex.getDiagnostic().getCauses()[1].getCode());
+        assertEquals(ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT, ex.getDiagnostic().getCauses()[2].getCode());
     }
 
     @Test
@@ -560,6 +606,44 @@ public class FunctionBindingTest extends MethodReferencedSupport {
     }
 
     @Test
+    public void Bind_Unidirectional_To_Instance_Method_Of_LocalObject() {
+        Pane root = TestCompiler.newInstance(
+            this, "Bind_Unidirectional_To_Instance_Method_Of_LocalObject", """
+                <?import javafx.scene.layout.*?>
+                <?import javafx.scene.control.*?>
+                <?import java.text.*?>
+                <Pane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                    <fx:define>
+                        <DecimalFormat fx:id="fmt">000</DecimalFormat>
+                    </fx:define>
+                    <Label text="{fx:bind fmt.format(parent[0]/prefWidth)}" prefWidth="7"/>
+                </Pane>
+            """);
+
+        Label label = (Label)root.getChildren().get(0);
+        assertEquals("007", label.getText());
+        label.setPrefWidth(10);
+        assertEquals("010", label.getText());
+    }
+
+    @Test
+    public void Bind_Unidirectional_To_Instance_Method_Of_Indirect_Object() {
+        Pane root = TestCompiler.newInstance(
+                this, "Bind_Unidirectional_To_Instance_Method_Of_Indirect_Object", """
+                <?import javafx.scene.control.*?>
+                <?import org.jfxcore.compiler.bindings.FunctionBindingTest.TestPane?>
+                <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                    <Label text="{fx:bind c1.c2.fmt.format(parent[0]/prefWidth)}" prefWidth="7"/>
+                </TestPane>
+            """);
+
+        Label label = (Label)root.getChildren().get(0);
+        assertEquals("007", label.getText());
+        label.setPrefWidth(10);
+        assertEquals("010", label.getText());
+    }
+
+    @Test
     public void Bind_Unidirectional_To_Nested_Instance_Methods() {
         TestPane root = TestCompiler.newInstance(
             this, "Bind_Unidirectional_To_Nested_Instance_Methods", """
@@ -643,15 +727,18 @@ public class FunctionBindingTest extends MethodReferencedSupport {
 
     @Test
     public void Bind_Unidirectional_To_Varargs_Constructor() {
-        TestPane root = TestCompiler.newInstance(
+        MarkupException ex = assertThrows(MarkupException.class, () -> TestCompiler.newInstance(
             this, "Bind_Unidirectional_To_Varargs_Constructor", """
                 <?import org.jfxcore.compiler.bindings.FunctionBindingTest.*?>
                 <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
                           objProp="{fx:bind Stringifier('foo', 97, 98, 99)}"/>
-            """);
+            """));
 
-        assertTrue(root.objPropProperty().isBound());
-        assertEquals("fooabc", root.objProp.get().value);
+        assertEquals(ErrorCode.CANNOT_BIND_FUNCTION, ex.getDiagnostic().getCode());
+        assertEquals(3, ex.getDiagnostic().getCauses().length);
+        assertEquals(ErrorCode.NUM_FUNCTION_ARGUMENTS_MISMATCH, ex.getDiagnostic().getCauses()[0].getCode());
+        assertEquals(ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT, ex.getDiagnostic().getCauses()[1].getCode());
+        assertEquals(ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT, ex.getDiagnostic().getCauses()[2].getCode());
     }
 
     @Test
@@ -906,17 +993,41 @@ public class FunctionBindingTest extends MethodReferencedSupport {
             throw new UnsupportedOperationException();
         }
 
-        public ObjectProperty<DoubleString> doubleStringProp = new SimpleObjectProperty<>(new DoubleString(5));
+        public ObjectProperty<DoubleContainer> doubleContainer = new SimpleObjectProperty<>(new DoubleContainer(5));
 
-        public double doubleStringToDouble(DoubleString value) {
+        public ObjectProperty<DoubleContainer> doubleContainerProperty() {
+            return doubleContainer;
+        }
+
+        public double doubleContainerToDouble(DoubleContainer value) {
             return value.value;
+        }
+
+        public final C1 c1 = new C1(new C2());
+
+        public static final C1 static_c1 = new C1(new C2());
+
+        public static record C1(C2 c2) {}
+
+        public static class C2 {
+            public boolean instanceNot(boolean value) {
+                return !value;
+            }
+
+            public boolean customInverseMethodIndirect(boolean value) {
+                return !value;
+            }
         }
     }
 
-    public static class DoubleString {
+    public static class DoubleContainer {
         final double value;
-        public DoubleString(double value) {
+        public DoubleContainer(double value) {
             this.value = value;
+        }
+
+        public static double doubleContainerToDouble(DoubleContainer ds) {
+            return ds.value;
         }
     }
 
@@ -1084,12 +1195,25 @@ public class FunctionBindingTest extends MethodReferencedSupport {
     }
 
     @Test
-    public void Bind_Bidirectional_To_Static_Method_With_Custom_InverseMethod() {
-        BidirectionalTestPane root = TestCompiler.newInstance(
-            this, "Bind_Bidirectional_To_Static_Method_With_Custom_InverseMethod", """
+    public void Bind_Bidirectional_To_Indirect_Method_Only_Resolves_Custom_InverseMethods_On_Indirect_Class() {
+        // "customInverseMethod" exists on BidirectionalTestPane, but won't be resolved here
+        MarkupException ex = assertThrows(MarkupException.class, () -> TestCompiler.newInstance(
+            this, "Bind_Bidirectional_To_Indirect_Method_Only_Resolves_Custom_InverseMethods_On_Indirect_Class", """
                 <?import org.jfxcore.compiler.bindings.FunctionBindingTest.*?>
                 <BidirectionalTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          visible="{fx:sync BidirectionalTestPane.staticNot(boolProp); inverseMethod=customInverseMethod}"/>
+                          visible="{fx:sync c1.c2.instanceNot(boolProp); inverseMethod=customInverseMethod}"/>
+            """));
+
+        assertEquals(ErrorCode.METHOD_NOT_FOUND, ex.getDiagnostic().getCode());
+    }
+
+    @Test
+    public void Bind_Bidirectional_To_Indirect_Method_With_Indirect_Custom_InverseMethod() {
+        BidirectionalTestPane root = TestCompiler.newInstance(
+            this, "Bind_Bidirectional_To_Indirect_Method_With_Indirect_Custom_InverseMethod", """
+                <?import org.jfxcore.compiler.bindings.FunctionBindingTest.*?>
+                <BidirectionalTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                          visible="{fx:sync c1.c2.instanceNot(boolProp); inverseMethod=customInverseMethodIndirect}"/>
             """);
 
         assertTrue(root.isVisible());
@@ -1098,17 +1222,95 @@ public class FunctionBindingTest extends MethodReferencedSupport {
     }
 
     @Test
+    public void Bind_Bidirectional_To_Statically_Resolvable_Indirect_Method_With_Indirect_Custom_InverseMethod() {
+        BidirectionalTestPane root = TestCompiler.newInstance(
+            this, "Bind_Bidirectional_To_Statically_Resolvable_Indirect_Method_With_Indirect_Custom_InverseMethod", """
+                <?import org.jfxcore.compiler.bindings.FunctionBindingTest.*?>
+                <BidirectionalTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                          visible="{fx:sync static_c1.c2.instanceNot(boolProp); inverseMethod=customInverseMethodIndirect}"/>
+            """);
+
+        assertTrue(root.isVisible());
+        root.setVisible(false);
+        assertTrue(root.boolProp.get());
+    }
+
+    @Test
+    public void Bind_Bidirectional_To_Static_Method_With_Instance_InverseMethod() {
+        MarkupException ex = assertThrows(MarkupException.class, () ->TestCompiler.newInstance(
+            this, "Bind_Bidirectional_To_Static_Method_With_Instance_InverseMethod", """
+                <?import org.jfxcore.compiler.bindings.FunctionBindingTest.*?>
+                <BidirectionalTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                          visible="{fx:sync BidirectionalTestPane.staticNot(boolProp); inverseMethod=customInverseMethod}"/>
+            """));
+
+        assertEquals(ErrorCode.INVERSE_METHOD_NOT_STATIC, ex.getDiagnostic().getCode());
+    }
+
+    @Test
     public void Bind_Bidirectional_To_Method_With_InverseConstructor() {
         BidirectionalTestPane root = TestCompiler.newInstance(
             this, "Bind_Bidirectional_To_Method_With_InverseConstructor", """
                 <?import org.jfxcore.compiler.bindings.FunctionBindingTest.*?>
                 <BidirectionalTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          prefWidth="{fx:sync doubleStringToDouble(doubleStringProp); inverseMethod=DoubleString}"/>
+                          prefWidth="{fx:sync doubleContainerToDouble(doubleContainer); inverseMethod=DoubleContainer}"/>
             """);
 
         assertEquals(5, root.getPrefWidth(), 0.001);
         root.setPrefWidth(4);
-        assertEquals(4, root.doubleStringProp.get().value, 0.001);
+        assertEquals(4, root.doubleContainer.get().value, 0.001);
+    }
+
+    @Test
+    public void Bind_Bidirectional_To_Method_With_Qualified_InverseConstructor() {
+        BidirectionalTestPane root = TestCompiler.newInstance(
+            this, "Bind_Bidirectional_To_Method_With_Qualified_InverseConstructor", """
+                <?import org.jfxcore.compiler.bindings.FunctionBindingTest.*?>
+                <BidirectionalTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                          prefWidth="{fx:sync doubleContainerToDouble(doubleContainer); inverseMethod=BidirectionalTestPane.DoubleContainer}"/>
+            """);
+
+        assertEquals(5, root.getPrefWidth(), 0.001);
+        root.setPrefWidth(4);
+        assertEquals(4, root.doubleContainer.get().value, 0.001);
+    }
+
+    @Test
+    public void Bind_Bidirectional_To_Constructor_With_InverseMethod() {
+        BidirectionalTestPane root = TestCompiler.newInstance(
+            this, "Bind_Bidirectional_To_Constructor_With_InverseMethod", """
+                <?import org.jfxcore.compiler.bindings.FunctionBindingTest.*?>
+                <BidirectionalTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                          doubleContainer="{fx:sync DoubleContainer(doubleProp); inverseMethod=doubleContainerToDouble}"/>
+            """);
+
+        assertEquals(1, root.doubleProp.get(), 0.001);
+        assertEquals(1, root.doubleContainer.get().value, 0.001);
+        
+        root.doubleProp.set(2);
+        assertEquals(2, root.doubleContainer.get().value, 0.001);
+        
+        root.doubleContainer.set(new DoubleContainer(3));
+        assertEquals(3, root.doubleProp.get(), 0.001);
+    }
+
+    @Test
+    public void Bind_Bidirectional_To_Constructor_With_Qualified_InverseMethod() {
+        BidirectionalTestPane root = TestCompiler.newInstance(
+            this, "Bind_Bidirectional_To_Constructor_With_Qualified_InverseMethod", """
+                <?import org.jfxcore.compiler.bindings.FunctionBindingTest.*?>
+                <BidirectionalTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                          doubleContainer="{fx:sync DoubleContainer(doubleProp); inverseMethod=DoubleContainer.doubleContainerToDouble}"/>
+            """);
+
+        assertEquals(1, root.doubleProp.get(), 0.001);
+        assertEquals(1, root.doubleContainer.get().value, 0.001);
+
+        root.doubleProp.set(2);
+        assertEquals(2, root.doubleContainer.get().value, 0.001);
+
+        root.doubleContainer.set(new DoubleContainer(3));
+        assertEquals(3, root.doubleProp.get(), 0.001);
     }
 
     @Test

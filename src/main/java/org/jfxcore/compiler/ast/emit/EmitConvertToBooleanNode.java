@@ -32,7 +32,7 @@ public class EmitConvertToBooleanNode extends AbstractNode implements ValueEmitt
     }
 
     @Override
-    public TypeNode getType() {
+    public ResolvedTypeNode getType() {
         return type;
     }
 

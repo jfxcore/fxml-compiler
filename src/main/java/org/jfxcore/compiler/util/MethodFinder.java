@@ -14,12 +14,14 @@ import org.jfxcore.compiler.diagnostic.DiagnosticInfo;
 import org.jfxcore.compiler.diagnostic.ErrorCode;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
-import static org.jfxcore.compiler.util.MethodFinder.InvocationType.INSTANCE;
-import static org.jfxcore.compiler.util.MethodFinder.InvocationType.STATIC;
+import static org.jfxcore.compiler.util.MethodFinder.InvocationType.*;
+import static org.jfxcore.compiler.util.TypeInstance.*;
 
 public class MethodFinder {
 
@@ -37,45 +39,50 @@ public class MethodFinder {
             List<SourceInfo> argumentSourceInfo,
             @Nullable List<DiagnosticInfo> diagnostics,
             SourceInfo sourceInfo) {
-        List<CtConstructor> applicableConstructors = new ArrayList<>();
-
-        for (CtConstructor constructor : declaringType.getConstructors()) {
-            InvocationContext ctx = new InvocationContext(
-                false, declaringType.getSimpleName(), argumentTypes, argumentSourceInfo);
-
-            if (evaluateApplicability(constructor, ctx, diagnostics, sourceInfo)) {
-                applicableConstructors.add(constructor);
-            }
-        }
-
-        if (!applicableConstructors.isEmpty()) {
-            return findMostSpecificMethod(applicableConstructors, argumentTypes, diagnostics, sourceInfo);
-        }
-
-        return null;
+        List<CtConstructor> constructors = List.of(declaringType.getConstructors());
+        return resolveOverloadedMethod(constructors, argumentTypes, argumentSourceInfo, diagnostics, sourceInfo);
     }
 
     public CtMethod findMethod(
             String methodName,
             List<TypeInstance> argumentTypes,
             List<SourceInfo> argumentSourceInfo,
-            @Nullable List<DiagnosticInfo> diagnostics,
             InvocationType invocationType,
+            @Nullable List<DiagnosticInfo> diagnostics,
             SourceInfo sourceInfo) {
-        List<CtMethod> applicableMethods = new ArrayList<>();
+        List<CtMethod> methods = Arrays.stream(declaringType.getMethods())
+            .filter(method -> method.getName().equals(methodName))
+            .filter(method -> {
+                boolean staticMethod = Modifier.isStatic(method.getModifiers());
+                return staticMethod && invocationType != INSTANCE || !staticMethod && invocationType != STATIC;
+            })
+            .collect(Collectors.toList());
 
-        for (CtMethod method : declaringType.getMethods()) {
-            boolean staticMethod = Modifier.isStatic(method.getModifiers());
-            if (staticMethod && invocationType == INSTANCE || !staticMethod && invocationType == STATIC) {
-                continue;
-            }
+        return resolveOverloadedMethod(methods, argumentTypes, argumentSourceInfo, diagnostics, sourceInfo);
+    }
 
-            InvocationContext ctx = new InvocationContext(staticMethod, methodName, argumentTypes, argumentSourceInfo);
-            if (evaluateApplicability(method, ctx, diagnostics, sourceInfo)) {
-                applicableMethods.add(method);
-            }
+    private <T extends CtBehavior> T resolveOverloadedMethod(
+            List<T> methods,
+            List<TypeInstance> argumentTypes,
+            List<SourceInfo> argumentSourceInfo,
+            @Nullable List<DiagnosticInfo> diagnostics,
+            SourceInfo sourceInfo) {
+        List<T> applicableMethods;
+
+        var phase1 = new InvocationContext(AssignmentContext.STRICT, false, argumentTypes, argumentSourceInfo);
+        applicableMethods = methods.stream().filter(method -> evaluateApplicability(method, phase1, null, sourceInfo)).toList();
+        if (!applicableMethods.isEmpty()) {
+            return findMostSpecificMethod(applicableMethods, argumentTypes, diagnostics, sourceInfo);
         }
 
+        var phase2 = new InvocationContext(AssignmentContext.LOOSE, false, argumentTypes, argumentSourceInfo);
+        applicableMethods = methods.stream().filter(method -> evaluateApplicability(method, phase2, null, sourceInfo)).toList();
+        if (!applicableMethods.isEmpty()) {
+            return findMostSpecificMethod(applicableMethods, argumentTypes, diagnostics, sourceInfo);
+        }
+
+        var phase3 = new InvocationContext(AssignmentContext.LOOSE, true, argumentTypes, argumentSourceInfo);
+        applicableMethods = methods.stream().filter(method -> evaluateApplicability(method, phase3, diagnostics, sourceInfo)).toList();
         if (!applicableMethods.isEmpty()) {
             return findMostSpecificMethod(applicableMethods, argumentTypes, diagnostics, sourceInfo);
         }
@@ -89,32 +96,19 @@ public class MethodFinder {
      */
     private boolean evaluateApplicability(
             CtBehavior method,
-            InvocationContext invocationContext,
+            InvocationContext context,
             @Nullable List<DiagnosticInfo> diagnostics,
             SourceInfo sourceInfo) {
-        if (!invocationContext.methodName().equals(method.getName())) {
-            return false;
-        }
-
-        if (invocationContext.staticInvocation() && !Modifier.isStatic(method.getModifiers())) {
-            if (diagnostics != null) {
-                diagnostics.add(new DiagnosticInfo(
-                    Diagnostic.newDiagnostic(ErrorCode.METHOD_NOT_STATIC, method.getLongName()), sourceInfo));
-            }
-
-            return false;
-        }
-
         try {
             Resolver resolver = new Resolver(sourceInfo);
             TypeInstance[] paramTypes = resolver.getParameterTypes(method, List.of(invokingType));
             int numParams = paramTypes.length;
             if (numParams == 0) {
-                return invocationContext.arguments().isEmpty();
+                return context.arguments().isEmpty();
             }
 
-            int numArgs = invocationContext.arguments().size();
-            boolean isVarArgs = Modifier.isVarArgs(method.getModifiers());
+            int numArgs = context.arguments().size();
+            boolean isVarArgs = context.allowVarargInvocation() && Modifier.isVarArgs(method.getModifiers());
 
             if (numParams > numArgs || (numParams < numArgs && !isVarArgs)) {
                 if (diagnostics != null) {
@@ -129,11 +123,11 @@ public class MethodFinder {
             }
 
             for (int i = 0; i < numParams; ++i) {
-                SourceInfo argSourceInfo = invocationContext.argumentSourceInfo().get(i);
-                TypeInstance argumentType = invocationContext.arguments().get(i);
+                SourceInfo argSourceInfo = context.argumentSourceInfo().get(i);
+                TypeInstance argumentType = context.arguments().get(i);
                 TypeInstance parameterType = paramTypes[i];
 
-                if (!parameterType.isConvertibleFrom(argumentType)) {
+                if (!parameterType.isAssignableFrom(argumentType, context.assignmentContext())) {
                     boolean valid = true;
 
                     if (i < numParams - 1 || !isVarArgs) {
@@ -145,7 +139,8 @@ public class MethodFinder {
                             valid = false;
                         } else {
                             for (int j = i; j < numArgs; ++j) {
-                                if (!componentType.isConvertibleFrom(invocationContext.arguments().get(j))) {
+                                if (!componentType.isAssignableFrom(
+                                        context.arguments().get(j), context.assignmentContext())) {
                                     valid = false;
                                     break;
                                 }
@@ -154,14 +149,8 @@ public class MethodFinder {
                     }
 
                     if (!valid) {
-                        String argName = argumentType.getName();
-                        if (TypeHelper.isNumeric(argumentType.jvmType())) {
-                            argName = "number";
-                        } else if (argumentType.equals(Classes.BooleanType())) {
-                            argName = "boolean";
-                        }
-
                         if (diagnostics != null) {
+                            String argName = argumentType.getName();
                             diagnostics.add(new DiagnosticInfo(Diagnostic.newDiagnostic(
                                 ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT,
                                 NameHelper.getShortMethodSignature(method), i + 1, argName), argSourceInfo));
@@ -273,11 +262,6 @@ public class MethodFinder {
         return m1IsMoreSpecific != null && m1IsMoreSpecific;
     }
 
-    /**
-     * A type t1 is more specific than t2 with regards to an invocation type e if
-     *   1. t1 is a subtype of t2
-     *   2. e is a subtype of t1
-     */
     private boolean isTypeMoreSpecific(TypeInstance t1, TypeInstance t2, TypeInstance e) {
         if (t1.subtypeOf(t2)) {
             return true;
@@ -287,7 +271,63 @@ public class MethodFinder {
             return false;
         }
 
-        return e.subtypeOf(t1);
+        if (e.subtypeOf(t1)) {
+            return true;
+        }
+
+        boolean t1Assignable = t1.isAssignableFrom(e, AssignmentContext.STRICT);
+        boolean t2Assignable = t2.isAssignableFrom(e, AssignmentContext.STRICT);
+
+        if (t1Assignable && !t2Assignable) {
+            return true;
+        }
+
+        if (!t1Assignable && t2Assignable) {
+            return false;
+        }
+
+        if (TypeHelper.isIntegralPrimitive(e.jvmType())) {
+            if (TypeHelper.isIntegralPrimitive(t1.jvmType())) {
+                if (!TypeHelper.isIntegralPrimitive(t2.jvmType())) {
+                    return true;
+                }
+
+                return maxWideningConversions(e.jvmType(), t1.jvmType()) < maxWideningConversions(e.jvmType(), t2.jvmType());
+            } else if (t1.jvmType() == CtClass.floatType && t2.jvmType() == CtClass.doubleType) {
+                return true;
+            }
+        }
+
+        if (TypeHelper.isFPPrimitive(e.jvmType()) && TypeHelper.isFPPrimitive(t1.jvmType())) {
+            if (!TypeHelper.isFPPrimitive(t2.jvmType())) {
+                return true;
+            }
+
+            return maxWideningConversions(e.jvmType(), t1.jvmType()) < maxWideningConversions(e.jvmType(), t2.jvmType());
+        }
+
+        return false;
+    }
+
+    private int maxWideningConversions(CtClass from, CtClass to) {
+        if (to == CtClass.longType) {
+            if (from == CtClass.intType) return 1;
+            if (from == CtClass.shortType) return 2;
+            if (from == CtClass.charType) return 3;
+            if (from == CtClass.byteType) return 3;
+        } else if (to == CtClass.intType) {
+            if (from == CtClass.shortType) return 1;
+            if (from == CtClass.charType) return 2;
+            if (from == CtClass.byteType) return 2;
+            return 0;
+        } else if (to == CtClass.shortType) {
+            if (from == CtClass.charType) return 1;
+            if (from == CtClass.byteType) return 1;
+        } else if (to == CtClass.doubleType) {
+            if (from == CtClass.floatType) return 1;
+        }
+
+        return 0;
     }
 
     public enum InvocationType {
@@ -295,7 +335,9 @@ public class MethodFinder {
     }
 
     private record InvocationContext(
-        boolean staticInvocation, String methodName, List<TypeInstance> arguments,
+        AssignmentContext assignmentContext,
+        boolean allowVarargInvocation,
+        List<TypeInstance> arguments,
         List<SourceInfo> argumentSourceInfo) {}
 
 }

@@ -83,12 +83,13 @@ tasks.check { dependsOn(compilerTest) }
 
 tasks.shadowJar {
     archiveClassifier.set("")
-    minimize()
     include("*.jar")
+    include("META-INF/services/org.jfxcore.*")
     include("org/**/*.*")
     include("kotlinx/**/*.*")
     include("javassist/**/*.*")
     relocate("javassist", "org.jfxcore.javassist")
+    relocate("org.jetbrains", "org.jfxcore.jetbrains")
     relocate("kotlinx", "org.jfxcore.kotlinx")
     dependencies {
         exclude(dependency("org.jetbrains.kotlin:kotlin-stdlib"))
@@ -165,7 +166,7 @@ dependencies {
     testImplementation(files("${gradle.includedBuild("jfx").projectDir}/build/sdk/lib/javafx.fxml.jar"))
 
     implementation("org.javassist:javassist:3.28.0-GA")
-    implementation("org.jetbrains.kotlinx:kotlinx-metadata-jvm:0.4.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-metadata-jvm:0.4.1")
 
     compileOnly("org.jetbrains:annotations:13.0")
     compileOnly(files("${gradle.includedBuild("jfx").projectDir}/build/sdk/lib/javafx.base.jar"))

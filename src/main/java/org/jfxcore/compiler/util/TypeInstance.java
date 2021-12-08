@@ -35,6 +35,11 @@ public class TypeInstance {
         }
     }
 
+    public enum AssignmentContext {
+        STRICT,
+        LOOSE
+    }
+
     private final CtClass type;
     private final List<TypeInstance> arguments;
     private final List<TypeInstance> superTypes;
@@ -64,6 +69,8 @@ public class TypeInstance {
     }
 
     public TypeInstance(CtClass type, List<TypeInstance> arguments, WildcardType wildcard) {
+        checkArguments(type, arguments);
+
         int dimensions = 0;
         while (type.isArray()) {
             type = unchecked(SourceInfo.none(), type::getComponentType);
@@ -82,6 +89,8 @@ public class TypeInstance {
     }
 
     public TypeInstance(CtClass type, List<TypeInstance> arguments, List<TypeInstance> superTypes, WildcardType wildcard) {
+        checkArguments(type, arguments);
+
         int dimensions = 0;
         while (type.isArray()) {
             type = unchecked(SourceInfo.none(), type::getComponentType);
@@ -100,11 +109,19 @@ public class TypeInstance {
     }
 
     public TypeInstance(CtClass type, int dimensions, List<TypeInstance> arguments, List<TypeInstance> superTypes, WildcardType wildcard) {
+        checkArguments(type, arguments);
+
         this.type = type;
         this.dimensions = dimensions;
         this.arguments = arguments;
         this.superTypes = superTypes;
         this.wildcard = wildcard;
+    }
+
+    private static void checkArguments(CtClass type, List<TypeInstance> arguments) {
+        if ((type.isPrimitive() || TypeHelper.isPrimitiveBox(type)) && arguments.size() > 0) {
+            throw new IllegalArgumentException("Primitive cannot be parameterized.");
+        }
     }
 
     public boolean isArray() {
@@ -116,7 +133,7 @@ public class TypeInstance {
     }
 
     public boolean isPrimitive() {
-        return type.isPrimitive();
+        return type.isPrimitive() && dimensions == 0;
     }
 
     public CtClass jvmType() {
@@ -155,36 +172,118 @@ public class TypeInstance {
         return new TypeInstance(type, 0, arguments, superTypes, wildcard);
     }
 
+    /**
+     * Determines whether the specified type can be converted to this type via any of the conversions
+     * specified by {@link #isAssignableFrom(TypeInstance)}, as well as narrowing primitive conversions.
+     */
     public boolean isConvertibleFrom(TypeInstance from) {
-        if (TypeHelper.isNumeric(type) && TypeHelper.isNumeric(from.type)) {
+        if ((TypeHelper.isPrimitiveBox(type, from.type) || TypeHelper.isPrimitiveBox(from.type, type))
+                && dimensions == 0 && from.dimensions == 0) {
             return true;
-        }
-
-        if (isPrimitive() && !from.isPrimitive()) {
-            return unchecked(SourceInfo.none(), () -> from.type.subtypeOf(TypeHelper.getBoxedType(type)));
-        }
-
-        if (!isPrimitive() && from.isPrimitive()) {
-            return unchecked(SourceInfo.none(), () -> TypeHelper.getBoxedType(from.type).subtypeOf(type));
         }
 
         return isAssignableFrom(from);
     }
 
+    /**
+     * Determines whether the specified type can be converted to this type via any of the conversions
+     * specified by {@link #isAssignableFrom(TypeInstance, AssignmentContext)}, assuming a loose
+     * assignment context.
+     */
     public boolean isAssignableFrom(TypeInstance from) {
-        if (type.isPrimitive()) {
-            return arguments.isEmpty()
-                && from.arguments.isEmpty()
-                && dimensions == from.dimensions
-                && TypeHelper.equals(type, from.type);
+        return isAssignableFrom(from, AssignmentContext.LOOSE);
+    }
+
+    /**
+     * Determines whether the specified type can be converted to this type via any of the
+     * following conversions:
+     * <ol>
+     *     <li>an identity conversion
+     *     <li>a widening primitive conversion
+     *     <li>a widening reference conversion
+     * </ol>
+     *
+     * In a loose assignment context, the following conversions are also permitted:
+     * <ol>
+     *     <li>a boxing conversion, optionally followed by a widening reference conversion
+     *     <li>an unboxing conversion, optionally followed by a widening primitive conversion
+     * </ol>
+     */
+    public boolean isAssignableFrom(TypeInstance from, AssignmentContext context) {
+        // Identity conversion
+        if (equals(from)) {
+            return true;
         }
 
-        if (from.type.isPrimitive()) {
-            return dimensions == 0 && TypeHelper.equals(type, Classes.ObjectType());
-        }
+        // Widening primitive conversion
+        if (dimensions == 0 && from.dimensions == 0
+                && TypeHelper.isNumericPrimitive(type) && TypeHelper.isNumeric(from.type)) {
+            // In a loose assignment context, we assume an unboxing conversion has occurred
+            CtClass fromType = context == AssignmentContext.LOOSE ? TypeHelper.getPrimitiveType(from.type) : from.type;
 
-        if (dimensions != from.dimensions && (dimensions > 0 || !equals(Classes.ObjectType()))) {
+            if (TypeHelper.equals(type, CtClass.charType)) {
+                return TypeHelper.equals(fromType, CtClass.charType);
+            }
+
+            if (TypeHelper.equals(type, CtClass.byteType)) {
+                return TypeHelper.equals(fromType, CtClass.byteType);
+            }
+
+            if (TypeHelper.equals(type, CtClass.shortType)) {
+                return TypeHelper.equals(fromType, CtClass.shortType)
+                    || TypeHelper.equals(fromType, CtClass.byteType);
+            }
+
+            if (TypeHelper.equals(type, CtClass.intType)) {
+                return TypeHelper.equals(fromType, CtClass.intType)
+                    || TypeHelper.equals(fromType, CtClass.shortType)
+                    || TypeHelper.equals(fromType, CtClass.charType)
+                    || TypeHelper.equals(fromType, CtClass.byteType);
+            }
+
+            if (TypeHelper.equals(type, CtClass.longType)) {
+                return TypeHelper.equals(fromType, CtClass.longType)
+                    || TypeHelper.equals(fromType, CtClass.intType)
+                    || TypeHelper.equals(fromType, CtClass.shortType)
+                    || TypeHelper.equals(fromType, CtClass.charType)
+                    || TypeHelper.equals(fromType, CtClass.byteType);
+            }
+
+            if (TypeHelper.equals(type, CtClass.floatType)) {
+                return TypeHelper.equals(fromType, CtClass.floatType)
+                    || TypeHelper.equals(fromType, CtClass.longType)
+                    || TypeHelper.equals(fromType, CtClass.intType)
+                    || TypeHelper.equals(fromType, CtClass.shortType)
+                    || TypeHelper.equals(fromType, CtClass.charType)
+                    || TypeHelper.equals(fromType, CtClass.byteType);
+            }
+
+            if (TypeHelper.equals(type, CtClass.doubleType)) {
+                return TypeHelper.equals(fromType, CtClass.doubleType)
+                    || TypeHelper.equals(fromType, CtClass.floatType)
+                    || TypeHelper.equals(fromType, CtClass.longType)
+                    || TypeHelper.equals(fromType, CtClass.intType)
+                    || TypeHelper.equals(fromType, CtClass.shortType)
+                    || TypeHelper.equals(fromType, CtClass.charType)
+                    || TypeHelper.equals(fromType, CtClass.byteType);
+            }
+
             return false;
+        }
+
+        // Unboxing conversion
+        if (context == AssignmentContext.LOOSE && TypeHelper.isPrimitiveBox(from.type, type)) {
+            return TypeHelper.equals(type, TypeHelper.getPrimitiveType(from.type));
+        }
+
+        // Boxing conversion, followed by optional widening reference conversion
+        if (context == AssignmentContext.LOOSE && from.isPrimitive()) {
+            return dimensions == 0 && unchecked(SourceInfo.none(),
+                () -> TypeHelper.getBoxedType(from.type).subtypeOf(type));
+        }
+
+        if (dimensions != from.dimensions) {
+            return dimensions == 0 || equals(Classes.ObjectType());
         }
 
         if (arguments.size() > 0 && arguments.size() != from.arguments.size()) {
@@ -258,6 +357,7 @@ public class TypeInstance {
         if (o == null || getClass() != o.getClass()) return false;
         TypeInstance that = (TypeInstance)o;
         if (arguments.size() != that.arguments.size()) return false;
+        if (dimensions != that.dimensions) return false;
         return arguments.isEmpty() ? TypeHelper.equals(type, that.type) : equals(new HashSet<>(), that);
     }
 

@@ -47,7 +47,7 @@ public class EmitWrapValueNode extends AbstractNode implements ValueEmitterNode,
     }
 
     @Override
-    public TypeNode getType() {
+    public ResolvedTypeNode getType() {
         return type;
     }
 

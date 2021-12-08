@@ -50,57 +50,39 @@ public class TypeHelper {
      * Determines whether a type is the box type of a primitive type.
      */
     public static boolean isPrimitiveBox(CtClass boxType, CtClass primitiveType) {
-        switch (boxType.getName()) {
-            case BooleanName:
-                return primitiveType.getName().equals("boolean");
-            case ByteName:
-                return primitiveType.getName().equals("byte");
-            case CharacterName:
-                return primitiveType.getName().equals("char");
-            case ShortName:
-                return primitiveType.getName().equals("short");
-            case IntegerName:
-                return primitiveType.getName().equals("int");
-            case LongName:
-                return primitiveType.getName().equals("long");
-            case FloatName:
-                return primitiveType.getName().equals("float");
-            case DoubleName:
-                return primitiveType.getName().equals("double");
-            case NumberName:
-                switch (primitiveType.getName()) {
-                    case "byte":
-                    case "short":
-                    case "int":
-                    case "long":
-                    case "float":
-                    case "double":
-                        return true;
-                    default:
-                        return false;
-                }
-            default:
-                return false;
-        }
+        return switch (boxType.getName()) {
+            case BooleanName -> primitiveType.getName().equals("boolean");
+            case ByteName -> primitiveType.getName().equals("byte");
+            case CharacterName -> primitiveType.getName().equals("char");
+            case ShortName -> primitiveType.getName().equals("short");
+            case IntegerName -> primitiveType.getName().equals("int");
+            case LongName -> primitiveType.getName().equals("long");
+            case FloatName -> primitiveType.getName().equals("float");
+            case DoubleName -> primitiveType.getName().equals("double");
+            case NumberName -> switch (primitiveType.getName()) {
+                case "byte", "short", "int", "long", "float", "double" -> true;
+                default -> false;
+            };
+            default -> false;
+        };
     }
 
     /**
-     * Returns the primitive numeric type for the specified boxed numeric type.
-     * If the specified type is not a boxed numeric type, <code>null</code> is returned.
+     * Returns the primitive numeric type for the specified numeric type.
+     * If the specified type is not a numeric type, <code>null</code> is returned.
      */
     public static @Nullable CtClass getPrimitiveType(CtClass type) {
-        switch (type.getName()) {
-            case BooleanName: return CtClass.booleanType;
-            case ByteName: return CtClass.byteType;
-            case CharacterName: return CtClass.charType;
-            case ShortName: return CtClass.shortType;
-            case IntegerName: return CtClass.intType;
-            case LongName: return CtClass.longType;
-            case FloatName: return CtClass.floatType;
-            case DoubleName: return CtClass.doubleType;
-        }
-
-        return null;
+        return switch (type.getName()) {
+            case "boolean", BooleanName -> CtClass.booleanType;
+            case "byte", ByteName -> CtClass.byteType;
+            case "char", CharacterName -> CtClass.charType;
+            case "short", ShortName -> CtClass.shortType;
+            case "int", IntegerName -> CtClass.intType;
+            case "long", LongName -> CtClass.longType;
+            case "float", FloatName -> CtClass.floatType;
+            case "double", DoubleName -> CtClass.doubleType;
+            default -> null;
+        };
     }
 
     /**
@@ -130,6 +112,56 @@ public class TypeHelper {
     }
 
     /**
+     * Returns whether the specified type is a boxed or primitive integral number.
+     */
+    public static boolean isIntegral(CtClass type) {
+        return isIntegralPrimitive(type) || isIntegralBox(type);
+    }
+
+    /**
+     * Returns whether the specified type is a primitive integral number.
+     */
+    public static boolean isIntegralPrimitive(CtClass type) {
+        return type == CtClass.byteType
+            || type == CtClass.charType
+            || type == CtClass.shortType
+            || type == CtClass.intType
+            || type == CtClass.longType;
+    }
+
+    /**
+     * Returns whether the specified type is a boxed integral number.
+     */
+    public static boolean isIntegralBox(CtClass type) {
+        return equals(type, ByteType())
+            || equals(type, CharacterType())
+            || equals(type, ShortType())
+            || equals(type, IntegerType())
+            || equals(type, LongType());
+    }
+
+    /**
+     * Returns whether the specified type is a boxed or primitive floating-point number.
+     */
+    public static boolean isFP(CtClass type) {
+        return isFPPrimitive(type) || isFPBox(type);
+    }
+
+    /**
+     * Returns whether the specified type is a primitive floating-point number.
+     */
+    public static boolean isFPPrimitive(CtClass type) {
+        return type == CtClass.floatType || type == CtClass.doubleType;
+    }
+
+    /**
+     * Returns whether the specified type is a boxed floating-point number.
+     */
+    public static boolean isFPBox(CtClass type) {
+        return equals(type, FloatType()) || equals(type, DoubleType());
+    }
+
+    /**
      * Returns whether the specified type is a primitive or boxed number.
      */
     public static boolean isNumeric(CtClass type) {
@@ -140,19 +172,14 @@ public class TypeHelper {
      * Returns whether the specified type is a primitive number.
      */
     public static boolean isNumericPrimitive(CtClass type) {
-        return
-            type == CtClass.byteType || type == CtClass.charType || type == CtClass.shortType
-                || type == CtClass.intType || type == CtClass.longType || type == CtClass.floatType
-                || type == CtClass.doubleType;
+        return isIntegralPrimitive(type) || isFPPrimitive(type);
     }
 
     /**
      * Returns whether the specified type is a boxed number.
      */
     public static boolean isNumericBox(CtClass type) {
-        return
-            equals(type, ByteType()) || equals(type, CharacterType()) || equals(type, ShortType()) || equals(type, IntegerType())
-                || equals(type, LongType()) || equals(type, FloatType()) || equals(type, DoubleType()) || equals(type, NumberType());
+        return isIntegralBox(type) || isFPBox(type);
     }
 
     /**

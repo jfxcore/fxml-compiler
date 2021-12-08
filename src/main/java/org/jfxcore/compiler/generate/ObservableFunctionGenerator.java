@@ -11,6 +11,7 @@ import javassist.CtMethod;
 import javassist.Modifier;
 import javassist.bytecode.MethodInfo;
 import org.jfxcore.compiler.ast.emit.EmitObservableFunctionNode;
+import org.jfxcore.compiler.ast.emit.ValueEmitterNode;
 import org.jfxcore.compiler.util.Label;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.ast.emit.BytecodeEmitContext;
@@ -54,7 +55,8 @@ public class ObservableFunctionGenerator extends GeneratorBase {
     private final CtBehavior inverseMethod;
     private final boolean storeCallerContext;
     private final boolean bidirectional;
-    private final BindingContextNode source;
+    private final List<ValueEmitterNode> methodReceiver;
+    private final CtClass methodReceiverType;
     private final List<EmitMethodArgumentNode> arguments;
     private final List<CtField> paramFields;
     private final List<String> fieldNames;
@@ -93,7 +95,7 @@ public class ObservableFunctionGenerator extends GeneratorBase {
     public ObservableFunctionGenerator(
             CtBehavior method,
             CtBehavior inverseMethod,
-            BindingContextNode source,
+            List<ValueEmitterNode> methodReceiver,
             Collection<? extends EmitMethodArgumentNode> arguments) {
         this.method = method;
         this.inverseMethod = inverseMethod;
@@ -101,7 +103,8 @@ public class ObservableFunctionGenerator extends GeneratorBase {
             !Modifier.isStatic(this.method.getModifiers()) && this.method instanceof CtMethod
             || inverseMethod != null && !Modifier.isStatic(inverseMethod.getModifiers());
         this.bidirectional = inverseMethod != null;
-        this.source = source;
+        this.methodReceiver = new ArrayList<>(methodReceiver);
+        this.methodReceiverType = method.getDeclaringClass();
         this.arguments = new ArrayList<>(arguments);
         this.paramFields = new ArrayList<>();
         this.fieldNames = new ArrayList<>();
@@ -180,7 +183,7 @@ public class ObservableFunctionGenerator extends GeneratorBase {
         CtField field;
 
         if (storeCallerContext) {
-            field = new CtField(source.getType().getJvmType(), mangle("context0"), clazz);
+            field = new CtField(methodReceiverType, mangle("context0"), clazz);
             field.setModifiers(Modifier.FINAL | Modifier.PRIVATE);
             clazz.addField(field);
         }
@@ -417,9 +420,11 @@ public class ObservableFunctionGenerator extends GeneratorBase {
         if (storeCallerContext) {
             code.aload(0);
 
-            context.emit(source.toSegment().toValueEmitter(source.getSourceInfo()));
+            for (ValueEmitterNode emitter : methodReceiver) {
+                context.emit(emitter);
+            }
 
-            code.putfield(clazz, mangle("context0"), source.getType().getJvmType());
+            code.putfield(clazz, mangle("context0"), methodReceiverType);
         }
 
         int fieldIdx = 0;
@@ -531,7 +536,7 @@ public class ObservableFunctionGenerator extends GeneratorBase {
                 .dup();
         } else if (!Modifier.isStatic(this.method.getModifiers())) {
             code.aload(0)
-                .getfield(clazz, mangle("context0"), source.getType().getJvmType());
+                .getfield(clazz, mangle("context0"), methodReceiverType);
         }
 
         int fieldIdx = 0;
@@ -704,7 +709,7 @@ public class ObservableFunctionGenerator extends GeneratorBase {
 
             if (!Modifier.isStatic(inverseMethod.getModifiers())) {
                 code.aload(0)
-                    .getfield(clazz, mangle("context0"), source.getType().getJvmType());
+                    .getfield(clazz, mangle("context0"), methodReceiverType);
             }
         }
 

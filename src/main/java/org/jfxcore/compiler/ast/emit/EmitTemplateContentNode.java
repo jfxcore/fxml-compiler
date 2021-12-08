@@ -70,7 +70,7 @@ public class EmitTemplateContentNode extends AbstractNode implements ValueEmitte
     }
 
     @Override
-    public TypeNode getType() {
+    public ResolvedTypeNode getType() {
         return type;
     }
 

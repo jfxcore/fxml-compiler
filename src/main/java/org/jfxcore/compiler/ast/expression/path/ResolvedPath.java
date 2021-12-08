@@ -6,6 +6,7 @@ package org.jfxcore.compiler.ast.expression.path;
 import javassist.CtClass;
 import javassist.CtField;
 import javassist.CtMethod;
+import javassist.Modifier;
 import javassist.NotFoundException;
 import javassist.bytecode.annotation.Annotation;
 import kotlinx.metadata.Flag;
@@ -34,7 +35,6 @@ import org.jfxcore.compiler.util.ObservableKind;
 import org.jfxcore.compiler.util.Resolver;
 import org.jfxcore.compiler.util.TypeHelper;
 import org.jfxcore.compiler.util.TypeInstance;
-import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -105,6 +105,22 @@ public class ResolvedPath {
 
                     segments.add(source);
                     currentHostType = source.getValueTypeInstance().jvmType();
+                }
+
+                // If the path includes static segments (i.e. static fields or static getters), we can
+                // remove everything before the last static segment, as we don't need those segments
+                // to resolve the path at runtime.
+                for (int i = segments.size() - 1; i >= 0; --i) {
+                    boolean isStatic =
+                        segments.get(i) instanceof FieldSegment fieldSegment
+                            && Modifier.isStatic(fieldSegment.getField().getModifiers())
+                        || segments.get(i) instanceof GetterSegment getterSegment
+                            && Modifier.isStatic(getterSegment.getGetter().getModifiers());
+
+                    if (isStatic) {
+                        segments.subList(0, i).clear();
+                        break;
+                    }
                 }
             }
         } catch (NotFoundException ex) {

@@ -47,7 +47,7 @@ public class ObservableFunctionEmitterFactory
             resolver.getObservableClass(valueType),
             invocationInfo.method(),
             invocationInfo.inverseMethod(),
-            functionExpression.getPath().getSource(),
+            invocationInfo.methodReceiver(),
             invocationInfo.arguments(),
             functionExpression.getSourceInfo());
 

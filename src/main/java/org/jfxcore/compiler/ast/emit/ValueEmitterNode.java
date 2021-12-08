@@ -3,12 +3,16 @@
 
 package org.jfxcore.compiler.ast.emit;
 
+import org.jfxcore.compiler.ast.ResolvedTypeNode;
 import org.jfxcore.compiler.ast.ValueNode;
 
 /**
  * Identifies a node that emits Java bytecode that places a value on top of the operand stack.
  */
 public interface ValueEmitterNode extends EmitterNode, ValueNode {
+
+    @Override
+    ResolvedTypeNode getType();
 
     @Override
     ValueEmitterNode deepClone();
