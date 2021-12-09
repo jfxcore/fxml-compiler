@@ -22,14 +22,14 @@ public class PropertyAssignmentErrors {
             SourceInfo sourceInfo, PropertyInfo propertyInfo, TypeInstance assignType) {
         return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
             ErrorCode.INCOMPATIBLE_PROPERTY_TYPE, formatPropertyName(propertyInfo),
-            propertyInfo.getValueTypeInstance().getName(), assignType != null ? assignType.getName() : "'null'"));
+            propertyInfo.getValueTypeInstance().getJavaName(), assignType != null ? assignType.getJavaName() : "'null'"));
     }
 
     public static MarkupException incompatiblePropertyType(
             SourceInfo sourceInfo, CtClass declaringClass, String propertyName, CtClass requiredType, TypeInstance assignType) {
         return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
             ErrorCode.INCOMPATIBLE_PROPERTY_TYPE, formatPropertyName(declaringClass, propertyName),
-            requiredType.getName(), assignType != null ? assignType.getName() : "'null'"));
+            requiredType.getName(), assignType != null ? assignType.getJavaName() : "'null'"));
     }
 
     public static MarkupException incompatiblePropertyItems(SourceInfo sourceInfo, PropertyInfo propertyInfo) {
@@ -42,7 +42,7 @@ public class PropertyAssignmentErrors {
             SourceInfo sourceInfo, PropertyInfo propertyInfo, String value, boolean raw) {
         return new MarkupException(sourceInfo, raw ?
             Diagnostic.newDiagnosticVariant(
-                ErrorCode.CANNOT_COERCE_PROPERTY_VALUE, "raw", propertyInfo.getValueTypeInstance().getName()) :
+                ErrorCode.CANNOT_COERCE_PROPERTY_VALUE, "raw", propertyInfo.getValueTypeInstance().getJavaName()) :
             Diagnostic.newDiagnostic(
                 ErrorCode.CANNOT_COERCE_PROPERTY_VALUE, formatPropertyName(propertyInfo), value));
     }

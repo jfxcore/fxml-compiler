@@ -10,7 +10,6 @@ import org.jfxcore.compiler.ast.Node;
 import org.jfxcore.compiler.ast.Visitor;
 import org.jfxcore.compiler.ast.expression.util.ObservableFunctionEmitterFactory;
 import org.jfxcore.compiler.ast.expression.util.SimpleFunctionEmitterFactory;
-import org.jfxcore.compiler.ast.text.TextNode;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.util.TypeInstance;
 import java.util.ArrayList;
@@ -22,17 +21,17 @@ public class FunctionExpressionNode extends AbstractNode implements ExpressionNo
 
     private final List<Node> arguments;
     private PathExpressionNode path;
-    private TextNode inverseMethod;
+    private PathExpressionNode inversePath;
 
     public FunctionExpressionNode(
             PathExpressionNode path,
-            @Nullable TextNode inverseMethod,
             Collection<? extends Node> arguments,
+            @Nullable PathExpressionNode inversePath,
             SourceInfo sourceInfo) {
         super(sourceInfo);
         this.path = checkNotNull(path);
         this.arguments = new ArrayList<>(checkNotNull(arguments));
-        this.inverseMethod = inverseMethod;
+        this.inversePath = inversePath;
     }
 
     public PathExpressionNode getPath() {
@@ -44,8 +43,8 @@ public class FunctionExpressionNode extends AbstractNode implements ExpressionNo
     }
 
     @Nullable
-    public TextNode getInverseMethod() {
-        return inverseMethod;
+    public PathExpressionNode getInversePath() {
+        return inversePath;
     }
 
     @Override
@@ -67,19 +66,19 @@ public class FunctionExpressionNode extends AbstractNode implements ExpressionNo
     public void acceptChildren(Visitor visitor) {
         super.acceptChildren(visitor);
         path = (PathExpressionNode)path.accept(visitor);
-        if (inverseMethod != null) {
-            inverseMethod = (TextNode)inverseMethod.accept(visitor);
-        }
-
         acceptChildren(arguments, visitor);
+
+        if (inversePath != null) {
+            inversePath = (PathExpressionNode) inversePath.accept(visitor);
+        }
     }
 
     @Override
     public FunctionExpressionNode deepClone() {
         return new FunctionExpressionNode(
             path.deepClone(),
-            inverseMethod != null ? inverseMethod.deepClone() : null,
             deepClone(arguments),
+            inversePath != null ? inversePath.deepClone() : null,
             getSourceInfo());
     }
 
@@ -88,14 +87,14 @@ public class FunctionExpressionNode extends AbstractNode implements ExpressionNo
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         FunctionExpressionNode that = (FunctionExpressionNode)o;
-        return arguments.equals(that.arguments) &&
-            path.equals(that.path) &&
-            Objects.equals(inverseMethod, that.inverseMethod);
+        return path.equals(that.path) &&
+            arguments.equals(that.arguments) &&
+            Objects.equals(inversePath, that.inversePath);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(arguments, path, inverseMethod);
+        return Objects.hash(path, arguments, inversePath);
     }
 
 }

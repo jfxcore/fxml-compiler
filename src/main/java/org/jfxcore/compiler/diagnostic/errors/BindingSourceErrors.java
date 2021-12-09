@@ -77,9 +77,9 @@ public class BindingSourceErrors {
             ErrorCode.INVALID_BINDING_EXPRESSION));
     }
 
-    public static MarkupException invalidBindingContext(SourceInfo sourceInfo) {
+    public static MarkupException bindingContextNotApplicable(SourceInfo sourceInfo) {
         return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
-            ErrorCode.INVALID_BINDING_CONTEXT, sourceInfo.getText()));
+            ErrorCode.BINDING_CONTEXT_NOT_APPLICABLE));
     }
 
     public static MarkupException parentTypeNotFound(SourceInfo sourceInfo, String name) {
@@ -117,9 +117,21 @@ public class BindingSourceErrors {
             NameHelper.getLongMethodSignature(method)));
     }
 
-    public static MarkupException inverseMethodNotStatic(SourceInfo sourceInfo, CtBehavior inverseMethod) {
+    public static MarkupException invalidInverseMethod(
+            SourceInfo sourceInfo, CtBehavior method, Diagnostic[] causes) {
+        if (causes.length == 1) {
+            return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
+                ErrorCode.INVALID_INVERSE_METHOD, causes, method));
+        }
+
+        return new MarkupException(sourceInfo, Diagnostic.newDiagnosticVariant(
+            ErrorCode.INVALID_INVERSE_METHOD, "overloaded",
+            causes, NameHelper.getLongMethodSignature(method)));
+    }
+
+    public static MarkupException invalidInverseMethodAnnotationValue(SourceInfo sourceInfo, CtBehavior behavior) {
         return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
-            ErrorCode.INVERSE_METHOD_NOT_STATIC, NameHelper.getLongMethodSignature(inverseMethod)));
+            ErrorCode.INVALID_INVERSE_METHOD_ANNOTATION_VALUE, NameHelper.getLongMethodSignature(behavior)));
     }
 
     public static MarkupException bindingNotSupported(SourceInfo sourceInfo) {

@@ -3,7 +3,6 @@
 
 package org.jfxcore.compiler.ast.expression.util;
 
-import javassist.CtConstructor;
 import org.jfxcore.compiler.ast.BindingMode;
 import org.jfxcore.compiler.ast.emit.EmitObservableFunctionNode;
 import org.jfxcore.compiler.ast.emit.ValueEmitterNode;
@@ -39,15 +38,14 @@ public class ObservableFunctionEmitterFactory
             return null;
         }
 
-        TypeInstance valueType = invocationInfo.method() instanceof CtConstructor ?
-            resolver.getTypeInstance(invocationInfo.method().getDeclaringClass()) :
-            resolver.getReturnType(invocationInfo.method());
+        TypeInstance valueType = invocationInfo.type();
 
         ValueEmitterNode value = new EmitObservableFunctionNode(
             resolver.getObservableClass(valueType),
-            invocationInfo.method(),
-            invocationInfo.inverseMethod(),
-            invocationInfo.methodReceiver(),
+            invocationInfo.method().jvmMethod(),
+            invocationInfo.inverseMethod() != null ? invocationInfo.inverseMethod().jvmMethod() : null,
+            invocationInfo.method().receiver(),
+            invocationInfo.inverseMethod() != null ? invocationInfo.inverseMethod().receiver() : null,
             invocationInfo.arguments(),
             functionExpression.getSourceInfo());
 
@@ -63,8 +61,8 @@ public class ObservableFunctionEmitterFactory
             value,
             valueType,
             TypeHelper.getTypeInstance(value),
-            invocationInfo.method().getDeclaringClass(),
-            invocationInfo.method().getName(),
+            invocationInfo.method().jvmMethod().getDeclaringClass(),
+            invocationInfo.method().jvmMethod().getName(),
             functionExpression.getSourceInfo());
     }
 

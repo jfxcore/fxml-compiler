@@ -443,7 +443,7 @@ public class FunctionBindingTest extends MethodReferencedSupport {
                 </TestPane>
             """));
 
-        assertEquals(ErrorCode.INVALID_BINDING_CONTEXT, ex.getDiagnostic().getCode());
+        assertEquals(ErrorCode.BINDING_CONTEXT_NOT_APPLICABLE, ex.getDiagnostic().getCode());
     }
 
     @Test
@@ -886,7 +886,7 @@ public class FunctionBindingTest extends MethodReferencedSupport {
                 </TestPane>
             """));
 
-        assertEquals(ErrorCode.INVALID_BINDING_CONTEXT, ex.getDiagnostic().getCode());
+        assertEquals(ErrorCode.BINDING_CONTEXT_NOT_APPLICABLE, ex.getDiagnostic().getCode());
     }
 
     @Test
@@ -1029,6 +1029,19 @@ public class FunctionBindingTest extends MethodReferencedSupport {
         public static double doubleContainerToDouble(DoubleContainer ds) {
             return ds.value;
         }
+    }
+
+    @Test
+    public void Bind_Bidirectional_To_Unresolvable_InverseMethod_Fails() {
+        MarkupException ex = assertThrows(MarkupException.class, () -> TestCompiler.newInstance(
+            this, "Bind_Bidirectional_To_Unresolvable_InverseMethod_Fails", """
+                <?import java.lang.*?>
+                <?import org.jfxcore.compiler.bindings.FunctionBindingTest.TestPane?>
+                <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                          prefWidth="{fx:sync sum(doubleProp); inverseMethod=foo.doesNotExist}"/>
+            """));
+
+        assertEquals(ErrorCode.CLASS_NOT_FOUND, ex.getDiagnostic().getCode());
     }
 
     @Test
@@ -1195,25 +1208,12 @@ public class FunctionBindingTest extends MethodReferencedSupport {
     }
 
     @Test
-    public void Bind_Bidirectional_To_Indirect_Method_Only_Resolves_Custom_InverseMethods_On_Indirect_Class() {
-        // "customInverseMethod" exists on BidirectionalTestPane, but won't be resolved here
-        MarkupException ex = assertThrows(MarkupException.class, () -> TestCompiler.newInstance(
-            this, "Bind_Bidirectional_To_Indirect_Method_Only_Resolves_Custom_InverseMethods_On_Indirect_Class", """
-                <?import org.jfxcore.compiler.bindings.FunctionBindingTest.*?>
-                <BidirectionalTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          visible="{fx:sync c1.c2.instanceNot(boolProp); inverseMethod=customInverseMethod}"/>
-            """));
-
-        assertEquals(ErrorCode.METHOD_NOT_FOUND, ex.getDiagnostic().getCode());
-    }
-
-    @Test
     public void Bind_Bidirectional_To_Indirect_Method_With_Indirect_Custom_InverseMethod() {
         BidirectionalTestPane root = TestCompiler.newInstance(
             this, "Bind_Bidirectional_To_Indirect_Method_With_Indirect_Custom_InverseMethod", """
                 <?import org.jfxcore.compiler.bindings.FunctionBindingTest.*?>
                 <BidirectionalTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          visible="{fx:sync c1.c2.instanceNot(boolProp); inverseMethod=customInverseMethodIndirect}"/>
+                          visible="{fx:sync c1.c2.instanceNot(boolProp); inverseMethod=c1.c2.customInverseMethodIndirect}"/>
             """);
 
         assertTrue(root.isVisible());
@@ -1227,24 +1227,12 @@ public class FunctionBindingTest extends MethodReferencedSupport {
             this, "Bind_Bidirectional_To_Statically_Resolvable_Indirect_Method_With_Indirect_Custom_InverseMethod", """
                 <?import org.jfxcore.compiler.bindings.FunctionBindingTest.*?>
                 <BidirectionalTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          visible="{fx:sync static_c1.c2.instanceNot(boolProp); inverseMethod=customInverseMethodIndirect}"/>
+                          visible="{fx:sync static_c1.c2.instanceNot(boolProp); inverseMethod=static_c1.c2.customInverseMethodIndirect}"/>
             """);
 
         assertTrue(root.isVisible());
         root.setVisible(false);
         assertTrue(root.boolProp.get());
-    }
-
-    @Test
-    public void Bind_Bidirectional_To_Static_Method_With_Instance_InverseMethod() {
-        MarkupException ex = assertThrows(MarkupException.class, () ->TestCompiler.newInstance(
-            this, "Bind_Bidirectional_To_Static_Method_With_Instance_InverseMethod", """
-                <?import org.jfxcore.compiler.bindings.FunctionBindingTest.*?>
-                <BidirectionalTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          visible="{fx:sync BidirectionalTestPane.staticNot(boolProp); inverseMethod=customInverseMethod}"/>
-            """));
-
-        assertEquals(ErrorCode.INVERSE_METHOD_NOT_STATIC, ex.getDiagnostic().getCode());
     }
 
     @Test
@@ -1327,16 +1315,16 @@ public class FunctionBindingTest extends MethodReferencedSupport {
     }
 
     @Test
-    public void Bind_Bidirectional_To_Method_With_Invalid_Custom_InverseMethod1_Fails() {
+    public void Bind_Bidirectional_To_Method_With_Incompatible_ReturnType_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> TestCompiler.newInstance(
-            this, "Bind_Bidirectional_To_Method_With_Invalid_Custom_InverseMethod1_Fails", """
+            this, "Bind_Bidirectional_To_Method_With_Incompatible_ReturnType_Fails", """
                 <?import javafx.fxml.*?>
                 <?import org.jfxcore.compiler.bindings.FunctionBindingTest.*?>
                 <BidirectionalTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
                           id="{fx:sync noInverseMethod(doubleProp); inverseMethod=invalidInverseMethod}"/>
             """));
 
-        assertEquals(ErrorCode.INVALID_INVERSE_METHOD, ex.getDiagnostic().getCode());
+        assertEquals(ErrorCode.INCOMPATIBLE_RETURN_VALUE, ex.getDiagnostic().getCode());
     }
 
     @Test
@@ -1349,7 +1337,10 @@ public class FunctionBindingTest extends MethodReferencedSupport {
                           id="{fx:sync noInverseMethod(doubleProp); inverseMethod=java.lang.String.format}"/>
             """));
 
-        assertEquals(ErrorCode.INVALID_INVERSE_METHOD, ex.getDiagnostic().getCode());
+        assertEquals(ErrorCode.CANNOT_BIND_FUNCTION, ex.getDiagnostic().getCode());
+        assertEquals(2, ex.getDiagnostic().getCauses().length);
+        assertEquals(ErrorCode.NUM_FUNCTION_ARGUMENTS_MISMATCH, ex.getDiagnostic().getCauses()[0].getCode());
+        assertEquals(ErrorCode.NUM_FUNCTION_ARGUMENTS_MISMATCH, ex.getDiagnostic().getCauses()[1].getCode());
     }
 
     @Test

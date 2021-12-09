@@ -4,9 +4,13 @@
 package org.jfxcore.compiler.diagnostic;
 
 import org.jetbrains.annotations.Nullable;
+import org.jfxcore.compiler.ast.Node;
 import org.jfxcore.compiler.util.CompilationContext;
 import org.jfxcore.compiler.util.CompilationSource;
+
+import java.util.Collection;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 /**
  * Identifies a span of text in a source code document.
@@ -19,6 +23,16 @@ public final class SourceInfo {
 
     public static SourceInfo span(SourceInfo from, SourceInfo to) {
         return new SourceInfo(from.start.getLine(), from.start.getColumn(), to.end.getLine(), to.end.getColumn());
+    }
+
+    public static SourceInfo span(Collection<Node> nodes) {
+        var list = nodes.stream().map(Node::getSourceInfo).collect(Collectors.toList());
+
+        if (list.isEmpty()) {
+            return none();
+        }
+
+        return span(list.get(0), list.get(list.size() - 1));
     }
 
     public static SourceInfo shrink(SourceInfo sourceInfo) {

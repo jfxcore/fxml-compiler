@@ -9,7 +9,11 @@ import javassist.CtConstructor;
 import javassist.CtMethod;
 import javassist.Modifier;
 import javassist.bytecode.annotation.Annotation;
+import org.jetbrains.annotations.Nullable;
+import org.jfxcore.compiler.ast.AbstractNode;
 import org.jfxcore.compiler.ast.Node;
+import org.jfxcore.compiler.ast.ResolvedTypeNode;
+import org.jfxcore.compiler.ast.emit.BytecodeEmitContext;
 import org.jfxcore.compiler.ast.emit.EmitLiteralNode;
 import org.jfxcore.compiler.ast.emit.EmitMethodArgumentNode;
 import org.jfxcore.compiler.ast.emit.ValueEmitterNode;
@@ -41,7 +45,7 @@ import org.jfxcore.compiler.util.TypeHelper;
 import org.jfxcore.compiler.util.TypeInstance;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -49,8 +53,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Queue;
 import java.util.stream.Collectors;
-
-import static org.jfxcore.compiler.util.ExceptionHelper.unchecked;
 
 abstract class AbstractFunctionEmitterFactory {
 
@@ -69,26 +71,32 @@ abstract class AbstractFunctionEmitterFactory {
             return cachedMethodInfo;
         }
 
+        PathExpressionNode methodPath = functionExpression.getPath();
+        Queue<Node> methodArguments = new ArrayDeque<>(functionExpression.getArguments());
+        MethodClosure method = findMethod(methodPath, null, methodArguments, preferObservable);
+        MethodClosure inverseMethod = null;
+
         Resolver resolver = new Resolver(functionExpression.getSourceInfo());
-        MethodWithPath methodWithPath = findMethod(functionExpression, preferObservable);
-        boolean isVarArgs = Modifier.isVarArgs(methodWithPath.method().getModifiers());
-        Queue<Node> arguments = new ArrayDeque<>(functionExpression.getArguments());
-        TypeInstance[] paramTypes = resolver.getParameterTypes(methodWithPath.method(), List.of(invokingType));
+        boolean isVarArgs = Modifier.isVarArgs(method.jvmMethod().getModifiers());
+        TypeInstance[] paramTypes = resolver.getParameterTypes(method.jvmMethod(), List.of(invokingType));
+        TypeInstance returnType = resolver.getReturnType(method.jvmMethod(), List.of(invokingType));
         List<EmitMethodArgumentNode> argumentValues = new ArrayList<>();
         boolean observableFunction = false;
-        CtBehavior inverseMethod = null;
 
-        if (!isVarArgs && arguments.size() != paramTypes.length || isVarArgs && arguments.size() < paramTypes.length) {
+        if (!isVarArgs && methodArguments.size() != paramTypes.length
+                || isVarArgs && methodArguments.size() < paramTypes.length) {
             throw GeneralErrors.numFunctionArgumentsMismatch(
-                functionExpression.getSourceInfo(), NameHelper.getLongMethodSignature(methodWithPath.method()),
-                paramTypes.length, arguments.size());
+                SourceInfo.span(methodArguments),
+                NameHelper.getLongMethodSignature(method.jvmMethod()),
+                paramTypes.length,
+                methodArguments.size());
         }
 
         for (int i = 0; i < paramTypes.length; ++i) {
             EmitMethodArgumentNode argumentValue;
 
             if (i < paramTypes.length - 1 || !isVarArgs) {
-                Node argument = arguments.remove();
+                Node argument = methodArguments.remove();
 
                 try {
                     argumentValue = createSingleFunctionArgumentValue(
@@ -99,12 +107,12 @@ abstract class AbstractFunctionEmitterFactory {
                     }
 
                     throw GeneralErrors.cannotAssignFunctionArgument(
-                        argument.getSourceInfo(), NameHelper.getLongMethodSignature(methodWithPath.method()),
+                        argument.getSourceInfo(), NameHelper.getLongMethodSignature(method.jvmMethod()),
                         i, ex.getTypeName());
                 }
             } else {
                 argumentValue = createVariadicFunctionArgumentValue(
-                    new ArrayList<>(arguments), methodWithPath.method(), i, bidirectional, preferObservable);
+                    new ArrayList<>(methodArguments), method.jvmMethod(), i, bidirectional, preferObservable);
             }
 
             argumentValues.add(argumentValue);
@@ -116,7 +124,8 @@ abstract class AbstractFunctionEmitterFactory {
 
         if (bidirectional) {
             if (argumentValues.size() != 1) {
-                throw BindingSourceErrors.invalidBidirectionalMethodParamCount(functionExpression.getSourceInfo());
+                throw BindingSourceErrors.invalidBidirectionalMethodParamCount(
+                    SourceInfo.span(methodArguments));
             } else {
                 Node argNode = functionExpression.getArguments().get(0);
                 if (!(argNode instanceof PathExpressionNode)) {
@@ -124,36 +133,32 @@ abstract class AbstractFunctionEmitterFactory {
                 }
             }
 
-            inverseMethod = findInverseMethod(methodWithPath, functionExpression);
-
-            // An instance inverse method cannot invert a static method, because we don't have
-            // a method receiver for the inverse method (path expressions are not supported).
-            if (methodWithPath.path() == null
-                    && Modifier.isStatic(methodWithPath.method().getModifiers())
-                    && !Modifier.isStatic(inverseMethod.getModifiers())) {
-                Node node = functionExpression.getInverseMethod();
-                if (node == null) {
-                    node = functionExpression.getPath();
+            var inversePath = functionExpression.getInversePath();
+            if (inversePath != null) {
+                // Synthetic node to represent the value of the return type
+                class ReturnValueNode extends AbstractNode implements ValueEmitterNode {
+                    final ResolvedTypeNode type = new ResolvedTypeNode(returnType, methodPath.getSourceInfo());
+                    public ReturnValueNode() { super(methodPath.getSourceInfo()); }
+                    @Override public void emit(BytecodeEmitContext context) {}
+                    @Override public ValueEmitterNode deepClone() { return null; }
+                    @Override public ResolvedTypeNode getType() {
+                        return type;
+                    }
                 }
 
-                throw BindingSourceErrors.inverseMethodNotStatic(node.getSourceInfo(), inverseMethod);
+                inverseMethod = findMethod(
+                    inversePath, paramTypes[0], List.of(new ReturnValueNode()), preferObservable);
+            } else {
+                inverseMethod = findInverseMethodViaAnnotation(
+                    method, paramTypes[0], returnType, methodPath.getSourceInfo());
             }
         }
 
-        List<ValueEmitterNode> methodReceiver;
+        TypeInstance valueType = method.jvmMethod() instanceof CtConstructor ?
+            resolver.getTypeInstance(method.jvmMethod().getDeclaringClass()) :
+            resolver.getReturnType(method.jvmMethod(), List.of(invokingType));
 
-        if (methodWithPath.path() != null) {
-            methodReceiver = methodWithPath.path().toValueEmitters(functionExpression.getSourceInfo());
-        } else if (!Modifier.isStatic(methodWithPath.method().getModifiers())) {
-            BindingContextNode bindingSource = functionExpression.getPath().getSource();
-            methodReceiver = List.of(bindingSource.toSegment().toValueEmitter(bindingSource.getSourceInfo()));
-        } else {
-            methodReceiver = Collections.emptyList();
-        }
-
-        var result = new MethodInvocationInfo(
-            observableFunction, methodWithPath.method(), inverseMethod, methodReceiver, argumentValues);
-
+        var result = new MethodInvocationInfo(observableFunction, valueType, method, inverseMethod, argumentValues);
         methodInvocationCache.put(key, result);
 
         return result;
@@ -272,9 +277,12 @@ abstract class AbstractFunctionEmitterFactory {
         throw new InconvertibleArgumentException(argument.getClass().getName());
     }
 
-    private MethodWithPath findMethod(FunctionExpressionNode expressionNode, boolean preferObservable) {
-        Resolver resolver = new Resolver(expressionNode.getSourceInfo());
-        String methodFullName = expressionNode.getPath().getPath();
+    private MethodClosure findMethod(
+            PathExpressionNode pathExpression,
+            @Nullable TypeInstance returnType,
+            Collection<Node> arguments,
+            boolean preferObservable) {
+        String methodFullName = pathExpression.getPath();
         String methodName;
         CtClass declaringClass;
         ResolvedPath resolvedPath = null;
@@ -288,19 +296,20 @@ abstract class AbstractFunctionEmitterFactory {
             methodName = methodFullName.substring(idx + 1);
 
             try {
-                resolvedPath = expressionNode.getPath().resolvePath(false, true);
+                resolvedPath = pathExpression.resolvePath(false, true);
                 className = resolvedPath.getValueTypeInstance().getJavaName();
                 maybeInstanceMethod = true;
             } catch (MarkupException ignored) {
                 // If we don't have a valid path expression, the only other possible interpretation would be
                 // a static method call. Since a static method call is not resolved by a path expression, we
                 // check that only the default binding context selector is used.
-                BindingContextSelector selector = expressionNode.getPath().getSource().getSelector();
+                BindingContextSelector selector = pathExpression.getSource().getSelector();
                 if (selector != BindingContextSelector.DEFAULT && selector != BindingContextSelector.TEMPLATED_ITEM) {
-                    throw BindingSourceErrors.invalidBindingContext(expressionNode.getPath().getSource().getSourceInfo());
+                    throw BindingSourceErrors.bindingContextNotApplicable(pathExpression.getSource().getSourceInfo());
                 }
             }
 
+            var resolver = new Resolver(pathExpression.getSourceInfo());
             declaringClass = resolver.tryResolveClassAgainstImports(className);
 
             if (declaringClass == null) {
@@ -310,44 +319,14 @@ abstract class AbstractFunctionEmitterFactory {
         } else {
             maybeInstanceMethod = true;
             methodName = methodFullName;
-            declaringClass = expressionNode.getPath().getSource().getType().getJvmType();
+            declaringClass = pathExpression.getSource().getType().getJvmType();
         }
 
-        List<TypeInstance> argumentTypes = new ArrayList<>();
+        List<TypeInstance> argumentTypes = arguments.stream()
+            .map(arg -> getArgumentType(arg, preferObservable))
+            .collect(Collectors.toList());
 
-        for (Node argument : expressionNode.getArguments()) {
-            if (argument instanceof FunctionExpressionNode funcExpressionArg) {
-                MethodInvocationInfo invocationInfo = createMethodInvocation(funcExpressionArg, false, true);
-
-                if (invocationInfo.method() instanceof CtConstructor) {
-                    argumentTypes.add(resolver.getTypeInstance(invocationInfo.method().getDeclaringClass()));
-                } else {
-                    argumentTypes.add(resolver.getReturnType(invocationInfo.method()));
-                }
-            } else if (argument instanceof PathExpressionNode pathExpressionArg) {
-                Operator operator = pathExpressionArg.getOperator();
-
-                if (operator == Operator.NOT || operator == Operator.BOOLIFY) {
-                    argumentTypes.add(resolver.getTypeInstance(CtClass.booleanType));
-                } else {
-                    argumentTypes.add(pathExpressionArg.resolvePath(preferObservable).getValueTypeInstance());
-                }
-            } else if (argument instanceof TextNode) {
-                if (argument instanceof BooleanNode) {
-                    argumentTypes.add(resolver.getTypeInstance(Classes.BooleanType()));
-                } else if (argument instanceof NumberNode numberNode) {
-                    argumentTypes.add(NumberUtil.parseType(numberNode.getText()));
-                } else {
-                    argumentTypes.add(resolver.getTypeInstance(Classes.StringType()));
-                }
-            } else if (argument instanceof ValueEmitterNode) {
-                argumentTypes.add(TypeHelper.getTypeInstance(argument));
-            } else {
-                throw GeneralErrors.expressionNotApplicable(argument.getSourceInfo(), false);
-            }
-        }
-
-        List<SourceInfo> argsSourceInfo = expressionNode.getArguments().stream()
+        List<SourceInfo> argumentsSourceInfo = arguments.stream()
             .map(Node::getSourceInfo).collect(Collectors.toList());
 
         List<DiagnosticInfo> diagnostics = new ArrayList<>();
@@ -357,19 +336,21 @@ abstract class AbstractFunctionEmitterFactory {
         if (!isConstructor) {
             CtMethod method = new MethodFinder(invokingType, declaringClass).findMethod(
                 methodName,
+                returnType,
                 argumentTypes,
-                argsSourceInfo,
+                argumentsSourceInfo,
                 maybeInstanceMethod ? MethodFinder.InvocationType.BOTH : MethodFinder.InvocationType.STATIC,
                 diagnostics,
-                expressionNode.getSourceInfo());
+                pathExpression.getSourceInfo());
 
             if (method != null) {
-                return new MethodWithPath(resolvedPath, method);
+                return new MethodClosure(getMethodReceiverEmitters(pathExpression, resolvedPath, method), method);
             }
         }
 
         // If no applicable methods were found, we treat the identifier as the name of a class and
         // see if there is a constructor that accepts our arguments.
+        var resolver = new Resolver(pathExpression.getSourceInfo());
         CtClass ctorClass = resolver.tryResolveClass(methodFullName);
         if (ctorClass == null) {
             ctorClass = resolver.tryResolveClassAgainstImports(methodName);
@@ -377,10 +358,19 @@ abstract class AbstractFunctionEmitterFactory {
 
         if (ctorClass != null) {
             CtConstructor constructor = new MethodFinder(invokingType, ctorClass).findConstructor(
-                argumentTypes, argsSourceInfo, diagnostics, expressionNode.getSourceInfo());
+                argumentTypes,
+                argumentsSourceInfo,
+                diagnostics,
+                pathExpression.getSourceInfo());
 
             if (constructor != null) {
-                return new MethodWithPath(null, constructor);
+                if (returnType != null && !resolver.getReturnType(
+                        constructor, List.of(invokingType)).subtypeOf(returnType)) {
+                    throw GeneralErrors.incompatibleReturnValue(
+                        pathExpression.getSourceInfo(), constructor, returnType);
+                }
+
+                return new MethodClosure(Collections.emptyList(), constructor);
             }
         }
 
@@ -390,117 +380,103 @@ abstract class AbstractFunctionEmitterFactory {
 
         if (!diagnostics.isEmpty()) {
             throw BindingSourceErrors.cannotBindFunction(
-                expressionNode.getSourceInfo(),
+                pathExpression.getSourceInfo(),
                 diagnostics.stream().map(DiagnosticInfo::getDiagnostic).toArray(Diagnostic[]::new));
         }
 
-        throw SymbolResolutionErrors.methodNotFound(expressionNode.getSourceInfo(), declaringClass, methodName);
+        throw SymbolResolutionErrors.methodNotFound(
+            pathExpression.getSourceInfo(), declaringClass, methodName);
     }
 
-    private CtBehavior findInverseMethod(MethodWithPath methodWithPath, FunctionExpressionNode functionExpression) {
-        Resolver resolver;
-        SourceInfo sourceInfo = functionExpression.getSourceInfo();
-        TextNode inverseMethod = functionExpression.getInverseMethod();
-        String inverseMethodName = inverseMethod != null ? inverseMethod.getText() : null;
-        CtClass declaringClass;
+    private TypeInstance getArgumentType(Node argument, boolean preferObservable) {
+        var resolver = new Resolver(argument.getSourceInfo());
 
-        if (inverseMethodName == null) {
-            resolver = new Resolver(sourceInfo);
-            Annotation annotation = resolver.tryResolveMethodAnnotation(
-                methodWithPath.method(), Classes.InverseMethodAnnotationName);
+        if (argument instanceof FunctionExpressionNode funcExpressionArg) {
+            MethodInvocationInfo invocationInfo = createMethodInvocation(funcExpressionArg, false, true);
 
-            if (annotation == null) {
-                throw BindingSourceErrors.methodNotInvertible(sourceInfo, methodWithPath.method());
+            if (invocationInfo.method().jvmMethod() instanceof CtConstructor) {
+                return resolver.getTypeInstance(invocationInfo.method().jvmMethod().getDeclaringClass());
+            } else {
+                return resolver.getReturnType(invocationInfo.method().jvmMethod());
             }
+        } else if (argument instanceof PathExpressionNode pathExpressionArg) {
+            Operator operator = pathExpressionArg.getOperator();
 
-            declaringClass = methodWithPath.method().getDeclaringClass();
-            inverseMethodName = TypeHelper.getAnnotationString(annotation, "value");
-            if (inverseMethodName == null) {
-                throw SymbolResolutionErrors.methodNotFound(sourceInfo, declaringClass, null);
+            if (operator == Operator.NOT || operator == Operator.BOOLIFY) {
+                return resolver.getTypeInstance(CtClass.booleanType);
+            } else {
+                return pathExpressionArg.resolvePath(preferObservable).getValueTypeInstance();
             }
-        } else if (inverseMethodName.contains(".")) {
-            resolver = new Resolver(inverseMethod.getSourceInfo());
-            String[] parts = inverseMethodName.split("\\.");
-            String className = Arrays.stream(parts).limit(parts.length - 1).collect(Collectors.joining("."));
-            declaringClass = resolver.resolveClassAgainstImports(className);
-            inverseMethodName = parts[parts.length - 1];
-        } else {
-            declaringClass = methodWithPath.method().getDeclaringClass();
-            resolver = new Resolver(sourceInfo);
+        } else if (argument instanceof TextNode) {
+            if (argument instanceof BooleanNode) {
+                return resolver.getTypeInstance(Classes.BooleanType());
+            } else if (argument instanceof NumberNode numberNode) {
+                return NumberUtil.parseType(numberNode.getText());
+            } else {
+                return resolver.getTypeInstance(Classes.StringType());
+            }
+        } else if (argument instanceof ValueEmitterNode) {
+            return TypeHelper.getTypeInstance(argument);
         }
 
-        TypeInstance requiredReturnType = resolver.getParameterTypes(methodWithPath.method(), List.of(invokingType))[0];
-        TypeInstance requiredParamType = resolver.getReturnType(methodWithPath.method());
-        List<CtBehavior> discardedMethods = new ArrayList<>();
-        String inverseMethodNameCopy = inverseMethodName;
+        throw GeneralErrors.expressionNotApplicable(argument.getSourceInfo(), false);
+    }
 
-        CtMethod result = resolver.tryResolveMethod(declaringClass, m -> {
-            if (!m.getName().equals(inverseMethodNameCopy) || Modifier.isPrivate(m.getModifiers())) {
-                return false;
-            }
-
-            TypeInstance[] paramTypes = resolver.getParameterTypes(m, List.of(invokingType));
-            if (paramTypes.length == 1
-                    && unchecked(sourceInfo, () -> requiredParamType.subtypeOf(paramTypes[0]))
-                    && unchecked(sourceInfo, () -> resolver.getReturnType(m).subtypeOf(requiredReturnType))) {
-                return true;
-            }
-
-            discardedMethods.add(m);
-            return false;
-        });
-
-        if (result != null) {
-            return result;
+    private List<ValueEmitterNode> getMethodReceiverEmitters(
+            PathExpressionNode pathExpression, ResolvedPath resolvedPath, CtMethod method) {
+        if (resolvedPath != null) {
+            return resolvedPath.toValueEmitters(pathExpression.getSourceInfo());
         }
 
-        CtClass ctorClass = resolver.tryResolveClass(inverseMethodName);
-        if (ctorClass == null) {
-            ctorClass = resolver.tryResolveClassAgainstImports(inverseMethodName);
+        if (!Modifier.isStatic(method.getModifiers())) {
+            BindingContextNode bindingSource = pathExpression.getSource();
+            return List.of(bindingSource.toSegment().toValueEmitter(bindingSource.getSourceInfo()));
         }
 
-        if (ctorClass != null) {
-            TypeInstance ctorClassType = resolver.getTypeInstance(ctorClass);
+        return Collections.emptyList();
+    }
 
-            for (CtConstructor constructor : ctorClass.getConstructors()) {
-                TypeInstance[] paramTypes = resolver.getParameterTypes(constructor, List.of(invokingType));
-                if (paramTypes.length != 1 || !requiredParamType.subtypeOf(paramTypes[0])) {
-                    discardedMethods.add(constructor);
-                    continue;
-                }
+    private MethodClosure findInverseMethodViaAnnotation(
+            MethodClosure method, TypeInstance argumentType, TypeInstance returnType, SourceInfo sourceInfo) {
+        var resolver = new Resolver(sourceInfo);
+        Annotation annotation = resolver.tryResolveMethodAnnotation(
+            method.jvmMethod(), Classes.InverseMethodAnnotationName);
 
-                if (!ctorClassType.subtypeOf(requiredReturnType)) {
-                    discardedMethods.add(constructor);
-                    continue;
-                }
-
-                return constructor;
-            }
+        if (annotation == null) {
+            throw BindingSourceErrors.methodNotInvertible(sourceInfo, method.jvmMethod());
         }
 
-        if (discardedMethods.isEmpty()) {
-            throw SymbolResolutionErrors.methodNotFound(
-                inverseMethod != null ? inverseMethod.getSourceInfo() : sourceInfo,
-                declaringClass,
-                inverseMethodName);
+        String methodName = TypeHelper.getAnnotationString(annotation, "value");
+        if (methodName == null) {
+            throw BindingSourceErrors.invalidInverseMethodAnnotationValue(sourceInfo, method.jvmMethod());
         }
 
-        throw BindingSourceErrors.invalidInverseMethod(
-            inverseMethod != null ? inverseMethod.getSourceInfo() : sourceInfo,
-            methodWithPath.method(),
-            discardedMethods.toArray(CtBehavior[]::new));
+        CtClass declaringClass = method.jvmMethod().getDeclaringClass();
+        List<DiagnosticInfo> diagnostics = new ArrayList<>();
+
+        CtMethod jvmMethod = new MethodFinder(invokingType, declaringClass).findMethod(
+            methodName, argumentType, List.of(returnType), List.of(sourceInfo),
+            MethodFinder.InvocationType.BOTH, diagnostics, sourceInfo);
+
+        if (!diagnostics.isEmpty()) {
+            throw BindingSourceErrors.invalidInverseMethod(
+                sourceInfo, method.jvmMethod(),
+                diagnostics.stream().map(DiagnosticInfo::getDiagnostic).toArray(Diagnostic[]::new));
+        }
+
+        return new MethodClosure(method.receiver(), jvmMethod);
     }
 
     private static record MethodInfoKey(
         FunctionExpressionNode functionExpression, boolean bidirectional, boolean preferObservable) {}
 
-    private static record MethodWithPath(ResolvedPath path, CtBehavior method) {}
+    protected static record MethodClosure(List<ValueEmitterNode> receiver, CtBehavior jvmMethod) {}
 
     protected static record MethodInvocationInfo(
         boolean observable,
-        CtBehavior method,
-        CtBehavior inverseMethod,
-        List<ValueEmitterNode> methodReceiver,
+        TypeInstance type,
+        MethodClosure method,
+        MethodClosure inverseMethod,
         List<EmitMethodArgumentNode> arguments) { }
 
 }

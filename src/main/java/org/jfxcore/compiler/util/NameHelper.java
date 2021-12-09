@@ -68,7 +68,7 @@ public class NameHelper {
     }
 
     public static String getLongMethodSignature(CtBehavior behavior) {
-        String behaviorName = behavior.getDeclaringClass().getName();
+        String behaviorName = getJavaClassName(SourceInfo.none(), behavior.getDeclaringClass());
         if (behavior instanceof CtMethod) {
             behaviorName += "." + behavior.getName();
         }

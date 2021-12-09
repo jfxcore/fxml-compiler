@@ -20,6 +20,10 @@ public class Diagnostic {
         return new Diagnostic(code, new Diagnostic[0], String.format(SR.getString(code), args));
     }
 
+    public static Diagnostic newDiagnostic(ErrorCode code, Diagnostic[] causes, Object... args) {
+        return new Diagnostic(code, causes, String.format(SR.getString(code), args));
+    }
+
     public static Diagnostic newDiagnosticMessage(ErrorCode code, String message) {
         return new Diagnostic(code, new Diagnostic[0], message);
     }
