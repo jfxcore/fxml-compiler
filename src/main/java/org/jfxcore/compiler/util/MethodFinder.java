@@ -34,54 +34,69 @@ public class MethodFinder {
         this.declaringType = declaringType;
     }
 
-    public CtConstructor findConstructor(
-            List<TypeInstance> argumentTypes,
-            List<SourceInfo> argumentSourceInfo,
-            @Nullable List<DiagnosticInfo> diagnostics,
-            SourceInfo sourceInfo) {
-        List<CtConstructor> constructors = List.of(declaringType.getConstructors());
-        return resolveOverloadedMethod(constructors, argumentTypes, argumentSourceInfo, diagnostics, sourceInfo);
-    }
-
-    public CtMethod findMethod(
-            String methodName,
-            List<TypeInstance> argumentTypes,
-            List<SourceInfo> argumentSourceInfo,
-            InvocationType invocationType,
-            @Nullable List<DiagnosticInfo> diagnostics,
-            SourceInfo sourceInfo) {
-        List<CtMethod> methods = Arrays.stream(declaringType.getMethods())
+    public List<CtMethod> findOverloadedMethods(String methodName, InvocationType invocationType) {
+        return Arrays.stream(declaringType.getMethods())
             .filter(method -> method.getName().equals(methodName))
             .filter(method -> {
                 boolean staticMethod = Modifier.isStatic(method.getModifiers());
                 return staticMethod && invocationType != INSTANCE || !staticMethod && invocationType != STATIC;
             })
             .collect(Collectors.toList());
+    }
 
-        return resolveOverloadedMethod(methods, argumentTypes, argumentSourceInfo, diagnostics, sourceInfo);
+    public @Nullable CtConstructor findConstructor(
+            List<TypeInstance> argumentTypes,
+            List<SourceInfo> argumentSourceInfo,
+            @Nullable List<DiagnosticInfo> diagnostics,
+            SourceInfo sourceInfo) {
+        return resolveOverloadedMethod(
+            List.of(declaringType.getConstructors()),
+            null,
+            argumentTypes,
+            argumentSourceInfo,
+            diagnostics,
+            sourceInfo);
+    }
+
+    public @Nullable CtMethod findMethod(
+            String methodName,
+            @Nullable TypeInstance returnType,
+            List<TypeInstance> argumentTypes,
+            List<SourceInfo> argumentSourceInfo,
+            InvocationType invocationType,
+            @Nullable List<DiagnosticInfo> diagnostics,
+            SourceInfo sourceInfo) {
+        return resolveOverloadedMethod(
+            findOverloadedMethods(methodName, invocationType),
+            returnType,
+            argumentTypes,
+            argumentSourceInfo,
+            diagnostics,
+            sourceInfo);
     }
 
     private <T extends CtBehavior> T resolveOverloadedMethod(
             List<T> methods,
+            @Nullable TypeInstance returnType,
             List<TypeInstance> argumentTypes,
             List<SourceInfo> argumentSourceInfo,
             @Nullable List<DiagnosticInfo> diagnostics,
             SourceInfo sourceInfo) {
         List<T> applicableMethods;
 
-        var phase1 = new InvocationContext(AssignmentContext.STRICT, false, argumentTypes, argumentSourceInfo);
+        var phase1 = new InvocationContext(AssignmentContext.STRICT, false, returnType, argumentTypes, argumentSourceInfo);
         applicableMethods = methods.stream().filter(method -> evaluateApplicability(method, phase1, null, sourceInfo)).toList();
         if (!applicableMethods.isEmpty()) {
             return findMostSpecificMethod(applicableMethods, argumentTypes, diagnostics, sourceInfo);
         }
 
-        var phase2 = new InvocationContext(AssignmentContext.LOOSE, false, argumentTypes, argumentSourceInfo);
+        var phase2 = new InvocationContext(AssignmentContext.LOOSE, false, returnType, argumentTypes, argumentSourceInfo);
         applicableMethods = methods.stream().filter(method -> evaluateApplicability(method, phase2, null, sourceInfo)).toList();
         if (!applicableMethods.isEmpty()) {
             return findMostSpecificMethod(applicableMethods, argumentTypes, diagnostics, sourceInfo);
         }
 
-        var phase3 = new InvocationContext(AssignmentContext.LOOSE, true, argumentTypes, argumentSourceInfo);
+        var phase3 = new InvocationContext(AssignmentContext.LOOSE, true, returnType, argumentTypes, argumentSourceInfo);
         applicableMethods = methods.stream().filter(method -> evaluateApplicability(method, phase3, diagnostics, sourceInfo)).toList();
         if (!applicableMethods.isEmpty()) {
             return findMostSpecificMethod(applicableMethods, argumentTypes, diagnostics, sourceInfo);
@@ -103,10 +118,6 @@ public class MethodFinder {
             Resolver resolver = new Resolver(sourceInfo);
             TypeInstance[] paramTypes = resolver.getParameterTypes(method, List.of(invokingType));
             int numParams = paramTypes.length;
-            if (numParams == 0) {
-                return context.arguments().isEmpty();
-            }
-
             int numArgs = context.arguments().size();
             boolean isVarArgs = context.allowVarargInvocation() && Modifier.isVarArgs(method.getModifiers());
 
@@ -115,7 +126,7 @@ public class MethodFinder {
                     diagnostics.add(new DiagnosticInfo(
                         Diagnostic.newDiagnostic(
                             ErrorCode.NUM_FUNCTION_ARGUMENTS_MISMATCH,
-                            NameHelper.getShortMethodSignature(method), numParams, numArgs),
+                            NameHelper.getLongMethodSignature(method), numParams, numArgs),
                         sourceInfo));
                 }
 
@@ -150,14 +161,29 @@ public class MethodFinder {
 
                     if (!valid) {
                         if (diagnostics != null) {
-                            String argName = argumentType.getName();
+                            String argName = argumentType.getJavaName();
                             diagnostics.add(new DiagnosticInfo(Diagnostic.newDiagnostic(
                                 ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT,
-                                NameHelper.getShortMethodSignature(method), i + 1, argName), argSourceInfo));
+                                NameHelper.getLongMethodSignature(method), i + 1, argName), argSourceInfo));
                         }
 
                         return false;
                     }
+                }
+            }
+
+            if (context.returnType() != null) {
+                TypeInstance returnType = resolver.getReturnType(method);
+                if (!context.returnType().isAssignableFrom(returnType)) {
+                    if (diagnostics != null) {
+                        diagnostics.add(new DiagnosticInfo(
+                            Diagnostic.newDiagnostic(
+                                ErrorCode.INCOMPATIBLE_RETURN_VALUE,
+                                NameHelper.getLongMethodSignature(method), context.returnType().getJavaName()),
+                            sourceInfo));
+                    }
+
+                    return false;
                 }
             }
 
@@ -337,6 +363,7 @@ public class MethodFinder {
     private record InvocationContext(
         AssignmentContext assignmentContext,
         boolean allowVarargInvocation,
+        @Nullable TypeInstance returnType,
         List<TypeInstance> arguments,
         List<SourceInfo> argumentSourceInfo) {}
 

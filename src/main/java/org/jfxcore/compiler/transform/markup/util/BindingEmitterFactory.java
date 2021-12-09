@@ -66,7 +66,7 @@ public class BindingEmitterFactory {
 
             if (!targetItemType.isAssignableFrom(sourceItemType)) {
                 throw BindingSourceErrors.cannotConvertSourceType(
-                    sourceInfo, sourceItemType.getName(), targetItemType.getName());
+                    sourceInfo, sourceItemType.getJavaName(), targetItemType.getJavaName());
             }
         } else {
             if (targetType.isAssignableFrom(result.getType())) {
@@ -82,12 +82,12 @@ public class BindingEmitterFactory {
                     sourceInfo);
             } else {
                 throw BindingSourceErrors.cannotConvertSourceType(
-                    sourceInfo, result.getValueType().getName(), targetType.getName());
+                    sourceInfo, result.getValueType().getJavaName(), targetType.getJavaName());
             }
 
             if (!targetType.isAssignableFrom(TypeHelper.getTypeInstance(value))) {
                 throw BindingSourceErrors.cannotConvertSourceType(
-                    sourceInfo, result.getValueType().getName(), targetType.getName());
+                    sourceInfo, result.getValueType().getJavaName(), targetType.getJavaName());
             }
         }
 
@@ -141,16 +141,16 @@ public class BindingEmitterFactory {
 
             if (bindingMode.isUnidirectional() && !targetType.isAssignableFrom(sourceType)) {
                 throw BindingSourceErrors.cannotConvertSourceType(
-                    propertyNode.getSourceInfo(), result.getValueType().getName(), targetType.getName());
+                    propertyNode.getSourceInfo(), result.getValueType().getJavaName(), targetType.getJavaName());
             }
             else if (bindingMode.isBidirectional() && !targetType.equals(sourceType)) {
                 throw BindingSourceErrors.sourceTypeMismatch(
-                    propertyNode.getSourceInfo(), result.getValueType().getName(), targetType.getName());
+                    propertyNode.getSourceInfo(), result.getValueType().getJavaName(), targetType.getJavaName());
             }
         } else if (bindingMode.isBidirectional()) {
             if (!targetType.equals(result.getValueType())) {
                 throw BindingSourceErrors.sourceTypeMismatch(
-                    propertyNode.getSourceInfo(), result.getValueType().getName(), targetType.getName());
+                    propertyNode.getSourceInfo(), result.getValueType().getJavaName(), targetType.getJavaName());
             }
 
             value = result.getValue();
@@ -172,7 +172,7 @@ public class BindingEmitterFactory {
             }
             else {
                 throw BindingSourceErrors.cannotConvertSourceType(
-                    propertyNode.getSourceInfo(), result.getValueType().getName(), targetType.getName());
+                    propertyNode.getSourceInfo(), result.getValueType().getJavaName(), targetType.getJavaName());
             }
         }
 

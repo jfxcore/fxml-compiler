@@ -3,11 +3,13 @@
 
 package org.jfxcore.compiler.diagnostic.errors;
 
+import javassist.CtBehavior;
 import javassist.CtClass;
 import org.jfxcore.compiler.diagnostic.Diagnostic;
 import org.jfxcore.compiler.diagnostic.ErrorCode;
 import org.jfxcore.compiler.diagnostic.MarkupException;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
+import org.jfxcore.compiler.util.NameHelper;
 import org.jfxcore.compiler.util.PropertyInfo;
 import org.jfxcore.compiler.util.TypeInstance;
 
@@ -114,7 +116,7 @@ public class GeneralErrors {
 
     public static MarkupException typeArgumentOutOfBound(SourceInfo sourceInfo, TypeInstance typeArg, TypeInstance requiredType) {
         return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
-            ErrorCode.TYPE_ARGUMENT_OUT_OF_BOUND, typeArg.getName(), requiredType.getName()));
+            ErrorCode.TYPE_ARGUMENT_OUT_OF_BOUND, typeArg.getJavaName(), requiredType.getJavaName()));
     }
 
     public static MarkupException numTypeArgumentsMismatch(
@@ -126,6 +128,13 @@ public class GeneralErrors {
     public static MarkupException rootClassCannotBeFinal(SourceInfo sourceInfo, CtClass rootClass) {
         return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
             ErrorCode.ROOT_CLASS_CANNOT_BE_FINAL, rootClass.getName()));
+    }
+
+    public static MarkupException incompatibleReturnValue(
+            SourceInfo sourceInfo, CtBehavior behavior, TypeInstance requiredType) {
+        return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
+            ErrorCode.INCOMPATIBLE_RETURN_VALUE,
+            NameHelper.getLongMethodSignature(behavior), requiredType.getJavaName()));
     }
 
     public static MarkupException cannotAssignFunctionArgument(

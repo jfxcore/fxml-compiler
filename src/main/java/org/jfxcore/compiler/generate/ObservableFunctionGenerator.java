@@ -10,6 +10,7 @@ import javassist.CtField;
 import javassist.CtMethod;
 import javassist.Modifier;
 import javassist.bytecode.MethodInfo;
+import org.jetbrains.annotations.Nullable;
 import org.jfxcore.compiler.ast.emit.EmitObservableFunctionNode;
 import org.jfxcore.compiler.ast.emit.ValueEmitterNode;
 import org.jfxcore.compiler.util.Label;
@@ -19,7 +20,6 @@ import org.jfxcore.compiler.ast.ValueNode;
 import org.jfxcore.compiler.ast.emit.EmitMethodArgumentNode;
 import org.jfxcore.compiler.ast.emit.EmitLiteralNode;
 import org.jfxcore.compiler.ast.emit.EmitObservablePathNode;
-import org.jfxcore.compiler.ast.expression.BindingContextNode;
 import org.jfxcore.compiler.util.Bytecode;
 import org.jfxcore.compiler.util.Local;
 import org.jfxcore.compiler.util.NameHelper;
@@ -45,18 +45,21 @@ public class ObservableFunctionGenerator extends GeneratorBase {
     private static final String INVALIDATION_LISTENER_FIELD = "invalidationListener";
     private static final String CHANGE_LISTENER_FIELD = "changeListener";
     private static final String VALUE_FIELD = "value";
-    private static final String PRIMITIVE_VALUE_FIELD = "pvalue";
+    private static final String PRIMITIVE_VALUE_FIELD = "primitiveValue";
     private static final String FLAGS_FIELD = "flags";
     private static final String VALIDATE_METHOD = "validate";
     private static final String CONNECT_METHOD = "connect";
     private static final String DISCONNECT_METHOD = "disconnect";
 
+    private final boolean bidirectional;
     private final CtBehavior method;
     private final CtBehavior inverseMethod;
-    private final boolean storeCallerContext;
-    private final boolean bidirectional;
+    private final boolean storeMethodReceiver;
+    private final boolean storeInverseMethodReceiver;
     private final List<ValueEmitterNode> methodReceiver;
+    private final List<ValueEmitterNode> inverseMethodReceiver;
     private final CtClass methodReceiverType;
+    private final CtClass inverseMethodReceiverType;
     private final List<EmitMethodArgumentNode> arguments;
     private final List<CtField> paramFields;
     private final List<String> fieldNames;
@@ -94,17 +97,20 @@ public class ObservableFunctionGenerator extends GeneratorBase {
 
     public ObservableFunctionGenerator(
             CtBehavior method,
-            CtBehavior inverseMethod,
+            @Nullable CtBehavior inverseMethod,
             List<ValueEmitterNode> methodReceiver,
+            List<ValueEmitterNode> inverseMethodReceiver,
             Collection<? extends EmitMethodArgumentNode> arguments) {
+        this.bidirectional = inverseMethod != null;
         this.method = method;
         this.inverseMethod = inverseMethod;
-        this.storeCallerContext =
-            !Modifier.isStatic(this.method.getModifiers()) && this.method instanceof CtMethod
-            || inverseMethod != null && !Modifier.isStatic(inverseMethod.getModifiers());
-        this.bidirectional = inverseMethod != null;
+        this.storeMethodReceiver = !Modifier.isStatic(this.method.getModifiers()) && this.method instanceof CtMethod;
+        this.storeInverseMethodReceiver = inverseMethod != null &&
+            !Modifier.isStatic(this.inverseMethod.getModifiers()) && this.inverseMethod instanceof CtMethod;
         this.methodReceiver = new ArrayList<>(methodReceiver);
+        this.inverseMethodReceiver = new ArrayList<>(inverseMethodReceiver);
         this.methodReceiverType = method.getDeclaringClass();
+        this.inverseMethodReceiverType = inverseMethod != null ? inverseMethod.getDeclaringClass() : null;
         this.arguments = new ArrayList<>(arguments);
         this.paramFields = new ArrayList<>();
         this.fieldNames = new ArrayList<>();
@@ -182,8 +188,14 @@ public class ObservableFunctionGenerator extends GeneratorBase {
         int fieldNum = 1;
         CtField field;
 
-        if (storeCallerContext) {
-            field = new CtField(methodReceiverType, mangle("context0"), clazz);
+        if (storeMethodReceiver) {
+            field = new CtField(methodReceiverType, mangle("methodReceiver"), clazz);
+            field.setModifiers(Modifier.FINAL | Modifier.PRIVATE);
+            clazz.addField(field);
+        }
+
+        if (storeInverseMethodReceiver) {
+            field = new CtField(inverseMethodReceiverType, mangle("inverseMethodReceiver"), clazz);
             field.setModifiers(Modifier.FINAL | Modifier.PRIVATE);
             clazz.addField(field);
         }
@@ -417,14 +429,24 @@ public class ObservableFunctionGenerator extends GeneratorBase {
         code.aload(0)
             .invokespecial(clazz.getSuperclass(), MethodInfo.nameInit, constructor());
 
-        if (storeCallerContext) {
+        if (storeMethodReceiver) {
             code.aload(0);
 
             for (ValueEmitterNode emitter : methodReceiver) {
                 context.emit(emitter);
             }
 
-            code.putfield(clazz, mangle("context0"), methodReceiverType);
+            code.putfield(clazz, mangle("methodReceiver"), methodReceiverType);
+        }
+
+        if (storeInverseMethodReceiver) {
+            code.aload(0);
+
+            for (ValueEmitterNode emitter : inverseMethodReceiver) {
+                context.emit(emitter);
+            }
+
+            code.putfield(clazz, mangle("inverseMethodReceiver"), inverseMethodReceiverType);
         }
 
         int fieldIdx = 0;
@@ -536,7 +558,7 @@ public class ObservableFunctionGenerator extends GeneratorBase {
                 .dup();
         } else if (!Modifier.isStatic(this.method.getModifiers())) {
             code.aload(0)
-                .getfield(clazz, mangle("context0"), methodReceiverType);
+                .getfield(clazz, mangle("methodReceiver"), methodReceiverType);
         }
 
         int fieldIdx = 0;
@@ -709,7 +731,7 @@ public class ObservableFunctionGenerator extends GeneratorBase {
 
             if (!Modifier.isStatic(inverseMethod.getModifiers())) {
                 code.aload(0)
-                    .getfield(clazz, mangle("context0"), methodReceiverType);
+                    .getfield(clazz, mangle("inverseMethodReceiver"), inverseMethodReceiverType);
             }
         }
 

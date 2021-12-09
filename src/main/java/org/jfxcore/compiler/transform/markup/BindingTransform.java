@@ -24,7 +24,6 @@ import org.jfxcore.compiler.ast.text.FunctionNode;
 import org.jfxcore.compiler.ast.text.ListNode;
 import org.jfxcore.compiler.ast.text.NumberNode;
 import org.jfxcore.compiler.ast.text.TextNode;
-import org.jfxcore.compiler.diagnostic.MarkupException;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.diagnostic.errors.BindingSourceErrors;
 import org.jfxcore.compiler.diagnostic.errors.GeneralErrors;
@@ -74,14 +73,10 @@ public class BindingTransform implements Transform {
         PropertyNode inverseMethodNode = objectNode.findProperty("inverseMethod");
         BindingContextNode bindingSourceNode = createBindingContextNode(context, pathNode.getSourceInfo());
 
-        try {
-            ExpressionNode pathExpression = parsePath(
-                context, pathNode, inverseMethodNode, Operator.IDENTITY, bindingSourceNode, pathNode.getSourceInfo());
+        ExpressionNode pathExpression = parsePath(
+            context, pathNode, inverseMethodNode, Operator.IDENTITY, bindingSourceNode, pathNode.getSourceInfo());
 
-            return new BindingNode(pathExpression, bindingMode, node.getSourceInfo());
-        } catch (MarkupException ex) {
-            throw new MarkupException(pathNode.getSourceInfo(), ex.getDiagnostic());
-        }
+        return new BindingNode(pathExpression, bindingMode, node.getSourceInfo());
     }
 
     private BindingMode getBindingMode(TransformContext context, ObjectNode node) {
@@ -130,16 +125,27 @@ public class BindingTransform implements Transform {
         if (pathNode instanceof FunctionNode functionNode) {
             TextNode funcName = functionNode.getName();
 
-            TextNode inverseMethodName = inverseMethodNode != null ?
+            TextNode inverseMethodText = inverseMethodNode != null ?
                 (TextNode)inverseMethodNode.getSingleValue(context) : null;
 
-            sourceInfo = inverseMethodNode != null ?
-                SourceInfo.span(sourceInfo, inverseMethodNode.getSourceInfo()) : sourceInfo;
+            PathExpressionNode inverseMethodExpression = null;
+
+            if (inverseMethodText != null) {
+                ExpressionNode pathExpression = parsePath(
+                    context, inverseMethodText, null, Operator.IDENTITY,
+                    bindingSourceNode, inverseMethodText.getSourceInfo());
+
+                if (!(pathExpression instanceof PathExpressionNode)) {
+                    throw GeneralErrors.expressionNotApplicable(pathExpression.getSourceInfo(), false);
+                }
+
+                inverseMethodExpression = (PathExpressionNode)pathExpression;
+            }
 
             return new FunctionExpressionNode(
                 new PathExpressionNode(operator, bindingSourceNode, funcName.getText(), funcName.getSourceInfo()),
-                inverseMethodName,
                 functionNode.getArguments().stream().map(arg -> parseFunctionArgument(context, arg)).collect(Collectors.toList()),
+                inverseMethodExpression,
                 sourceInfo);
         }
 
@@ -158,7 +164,7 @@ public class BindingTransform implements Transform {
                 throw BindingSourceErrors.invalidBindingExpression(sourceInfo);
             }
 
-            return parsePath(context, values.poll(), null, operator, bindingSourceNode, sourceInfo);
+            return parsePath(context, values.poll(), inverseMethodNode, operator, bindingSourceNode, sourceInfo);
         }
 
         if (pathNode instanceof TextNode textNode && !textNode.isRawText()) {
@@ -260,8 +266,6 @@ public class BindingTransform implements Transform {
                     BindingContextSelector.PARENT, searchType, searchType, 1,
                     SourceInfo.span(first.getSourceInfo(), pollCloseBracket(values).getSourceInfo()));
             }
-        } else {
-            throw BindingSourceErrors.invalidBindingContext(first.getSourceInfo());
         }
 
         throw BindingSourceErrors.invalidBindingExpression(first.getSourceInfo());

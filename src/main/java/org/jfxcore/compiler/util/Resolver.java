@@ -192,6 +192,14 @@ public class Resolver {
      * If the behavior is a constructor, returns the declaring type.
      */
     public TypeInstance getReturnType(CtBehavior behavior) {
+        return getReturnType(behavior, Collections.emptyList());
+    }
+
+    /**
+     * If the behavior is a method, returns the return type.
+     * If the behavior is a constructor, returns the declaring type.
+     */
+    public TypeInstance getReturnType(CtBehavior behavior, List<TypeInstance> invocationChain) {
         try {
             CacheKey key = new CacheKey("getReturnType", behavior);
             CacheEntry entry = getCache().get(key);
@@ -219,7 +227,7 @@ public class Resolver {
                             TypeInstance.WildcardType.NONE,
                             new SignatureAttribute.TypeParameter[0],
                             methodSignature.getTypeParameters(),
-                            Collections.emptyList(),
+                            invocationChain,
                             Collections.emptyList()),
                         new TypeInstance(Classes.ObjectType()));
                 }

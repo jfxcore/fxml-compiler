@@ -35,6 +35,7 @@ public class EmitObservableFunctionNode
     private final CtBehavior method;
     private final CtBehavior inverseMethod;
     private final List<ValueEmitterNode> methodReceiver;
+    private final List<ValueEmitterNode> inverseMethodReceiver;
     private final List<EmitMethodArgumentNode> arguments;
     private final ResolvedTypeNode type;
     private transient String compiledClassName;
@@ -44,6 +45,7 @@ public class EmitObservableFunctionNode
             CtBehavior method,
             @Nullable CtBehavior inverseMethod,
             Collection<? extends ValueEmitterNode> methodReceiver,
+            @Nullable Collection<? extends ValueEmitterNode> inverseMethodReceiver,
             Collection<? extends EmitMethodArgumentNode> arguments,
             SourceInfo sourceInfo) {
         super(sourceInfo);
@@ -51,6 +53,8 @@ public class EmitObservableFunctionNode
         this.method = checkNotNull(method);
         this.inverseMethod = inverseMethod;
         this.methodReceiver = new ArrayList<>(checkNotNull(methodReceiver));
+        this.inverseMethodReceiver = inverseMethodReceiver != null ?
+            new ArrayList<>(inverseMethodReceiver) : Collections.emptyList();
         this.arguments = new ArrayList<>(checkNotNull(arguments));
     }
 
@@ -83,7 +87,9 @@ public class EmitObservableFunctionNode
             return Collections.emptyList();
         }
 
-        var generator = new ObservableFunctionGenerator(method, inverseMethod, methodReceiver, arguments);
+        var generator = new ObservableFunctionGenerator(
+            method, inverseMethod, methodReceiver, inverseMethodReceiver, arguments);
+
         compiledClassName = generator.getClassName();
         getClassCache().put(this, compiledClassName);
 
@@ -107,7 +113,8 @@ public class EmitObservableFunctionNode
     @Override
     public EmitObservableFunctionNode deepClone() {
         return new EmitObservableFunctionNode(
-            type.getTypeInstance(), method, inverseMethod, deepClone(methodReceiver), deepClone(arguments), getSourceInfo());
+            type.getTypeInstance(), method, inverseMethod, deepClone(methodReceiver),
+            deepClone(inverseMethodReceiver), deepClone(arguments), getSourceInfo());
     }
 
     @Override
@@ -118,13 +125,16 @@ public class EmitObservableFunctionNode
         return TypeHelper.equals(method, that.method) &&
             TypeHelper.equals(inverseMethod, that.inverseMethod) &&
             methodReceiver.equals(that.methodReceiver) &&
+            inverseMethodReceiver.equals(that.inverseMethodReceiver) &&
             arguments.equals(that.arguments) &&
             type.equals(that.type);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(TypeHelper.hashCode(method), TypeHelper.hashCode(inverseMethod), method, arguments, type);
+        return Objects.hash(
+            TypeHelper.hashCode(method), TypeHelper.hashCode(inverseMethod), method,
+            methodReceiver, inverseMethodReceiver, arguments, type);
     }
 
     @SuppressWarnings("unchecked")

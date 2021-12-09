@@ -51,4 +51,9 @@ public class Location {
         return result;
     }
 
+    @Override
+    public String toString() {
+        return line + ":" + column;
+    }
+
 }

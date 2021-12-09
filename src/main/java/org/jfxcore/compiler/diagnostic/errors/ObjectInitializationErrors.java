@@ -41,7 +41,7 @@ public class ObjectInitializationErrors {
     public static MarkupException cannotAssignConstant(
             SourceInfo sourceInfo, TypeInstance targetType, TypeInstance assignType) {
         return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
-            ErrorCode.CANNOT_ASSIGN_CONSTANT, targetType.getName(), assignType.getName()));
+            ErrorCode.CANNOT_ASSIGN_CONSTANT, targetType.getJavaName(), assignType.getJavaName()));
     }
 
     public static MarkupException constantCannotHaveContent(SourceInfo sourceInfo) {
