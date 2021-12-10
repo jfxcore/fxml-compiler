@@ -982,26 +982,23 @@ public class CollectionBindingMatrixTest {
     @SuppressWarnings("unchecked")
     public void ParameterizedTest(Execution execution) throws Exception {
         String target = execution.target, source = execution.source;
-        String fileName = "ParameterizedTest_" + target + "_" + source.replaceAll("fx:|\\{|_|\s|;|=", "");
-        fileName = fileName.substring(0, fileName.length() - 1);
+        String fileName = "ParameterizedTest_" + target + "_" + source.replaceAll("fx:|\\{|}|_|\s|;|=", "");
 
         var expectedError = execution.expected instanceof ErrorCode ? (ErrorCode)execution.expected : null;
         var expectedResult = !(execution.expected instanceof ErrorCode) ? execution.expected : null;
 
         if (expectedError != null) {
-            MarkupException ex = assertThrows(MarkupException.class, () -> TestCompiler.newInstance(
-                this, "ParameterizedTest", """
-                        <?import org.jfxcore.compiler.bindings.CollectionBindingMatrixTest.CollectionTestPane?>
-                        <CollectionTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml" %s="%s"/>
-                    """.formatted(target, source)));
+            MarkupException ex = assertThrows(MarkupException.class, () -> TestCompiler.newInstance(fileName, """
+                    <?import org.jfxcore.compiler.bindings.CollectionBindingMatrixTest.CollectionTestPane?>
+                    <CollectionTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml" %s="%s"/>
+                """.formatted(target, source)));
 
             assertEquals(expectedError, ex.getDiagnostic().getCode());
         } else {
-            CollectionTestPane root = TestCompiler.newInstance(
-                this, fileName, """
-                        <?import org.jfxcore.compiler.bindings.CollectionBindingMatrixTest.CollectionTestPane?>
-                        <CollectionTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml" %s="%s"/>
-                    """.formatted(target, source));
+            CollectionTestPane root = TestCompiler.newInstance(fileName, """
+                    <?import org.jfxcore.compiler.bindings.CollectionBindingMatrixTest.CollectionTestPane?>
+                    <CollectionTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml" %s="%s"/>
+                """.formatted(target, source));
 
             Method getter;
             try {

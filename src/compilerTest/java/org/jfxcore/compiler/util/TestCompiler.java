@@ -16,7 +16,6 @@ import org.jfxcore.compiler.diagnostic.MarkupException;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.parse.FxmlParser;
 import org.jfxcore.compiler.transform.Transformer;
-
 import javax.tools.Diagnostic;
 import javax.tools.JavaFileObject;
 import javax.tools.StandardJavaFileManager;
@@ -37,9 +36,8 @@ import java.util.List;
 public class TestCompiler extends AbstractCompiler {
 
     @SuppressWarnings("unchecked")
-    public static <T> T newInstance(Object testClass, String fileName, String fxml) {
+    public static <T> T newInstance(String fileName, String fxml) {
         try {
-            fileName = testClass.getClass().getSimpleName() + "_" + fileName;
             Constructor<?> ctor = new TestCompiler().compileClass(fileName, fxml).getDeclaredConstructor();
             ctor.setAccessible(true);
             return (T)ctor.newInstance();
@@ -49,17 +47,6 @@ public class TestCompiler extends AbstractCompiler {
             }
 
             throw new RuntimeException(ex);
-        } catch (RuntimeException ex) {
-            throw ex;
-        } catch (Throwable ex) {
-            throw new RuntimeException(ex);
-        }
-    }
-
-    public static <T> Class<T> compileClass(Object testClass, String fileName, String fxml) {
-        try {
-            fileName = testClass.getClass().getSimpleName() + "_" + fileName;
-            return new TestCompiler().compileClass(fileName, fxml);
         } catch (RuntimeException ex) {
             throw ex;
         } catch (Throwable ex) {

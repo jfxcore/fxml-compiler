@@ -15,16 +15,16 @@ import javafx.collections.ObservableList;
 import javafx.scene.layout.Pane;
 import org.jfxcore.compiler.diagnostic.ErrorCode;
 import org.jfxcore.compiler.diagnostic.MarkupException;
+import org.jfxcore.compiler.util.CompilerTestBase;
 import org.jfxcore.compiler.util.TestExtension;
 import org.junit.jupiter.api.Test;
-import org.jfxcore.compiler.util.TestCompiler;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 @SuppressWarnings("HttpUrlsUsage")
 @ExtendWith(TestExtension.class)
-public class PropertyReferenceBindingTest {
+public class PropertyReferenceBindingTest extends CompilerTestBase {
 
     @SuppressWarnings("unused")
     public static class DoublePropertyEx extends SimpleDoubleProperty {
@@ -66,24 +66,20 @@ public class PropertyReferenceBindingTest {
 
     @Test
     public void Bind_Unidirectional_To_Invariant_PropertyReference_Fails() {
-        MarkupException ex = assertThrows(MarkupException.class, () -> TestCompiler.newInstance(
-            this, "Bind_Unidirectional_To_Invariant_PropertyReference_Fails", """
-                <?import org.jfxcore.compiler.bindings.PropertyReferenceBindingTest.TestPane?>
-                <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          visible="{fx:bind !!context::boolVal}"/>
-            """));
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                      visible="{fx:bind !!context::boolVal}"/>
+        """));
 
         assertEquals(ErrorCode.INVALID_INVARIANT_REFERENCE, ex.getDiagnostic().getCode());
     }
 
     @Test
     public void Bind_Unidirectional_To_Invariant_Property() {
-        TestPane root = TestCompiler.newInstance(
-            this, "Bind_Unidirectional_To_Invariant_Property", """
-                <?import org.jfxcore.compiler.bindings.PropertyReferenceBindingTest.TestPane?>
-                <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          id="{fx:bind context::boolProp.name}"/>
-            """);
+        TestPane root = compileAndRun("""
+            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                      id="{fx:bind context::boolProp.name}"/>
+        """);
 
         assertTrue(root.idProperty().isBound());
         assertEquals("boolProp", root.getId());
@@ -91,13 +87,11 @@ public class PropertyReferenceBindingTest {
 
     @Test
     public void Bind_Unidirectional_To_Observable_Property() {
-        TestPane root = TestCompiler.newInstance(
-            this, "Bind_Unidirectional_To_Observable_Property", """
-                <?import org.jfxcore.compiler.bindings.PropertyReferenceBindingTest.TestPane?>
-                <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          prefWidth="{fx:bind context::listProp.size}"
-                          visible="{fx:bind context::listProp.empty}"/>
-            """);
+        TestPane root = compileAndRun("""
+            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                      prefWidth="{fx:bind context::listProp.size}"
+                      visible="{fx:bind context::listProp.empty}"/>
+        """);
 
         assertTrue(root.isVisible());
         assertEquals(0, root.getPrefWidth(), 0.001);
@@ -109,24 +103,20 @@ public class PropertyReferenceBindingTest {
 
     @Test
     public void Bind_Unidirectional_To_Property_Of_Property() {
-        TestPane root = TestCompiler.newInstance(
-            this, "Bind_Unidirectional_To_Property_Of_Property", """
-                <?import org.jfxcore.compiler.bindings.PropertyReferenceBindingTest.TestPane?>
-                <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          visible="{fx:bind !!invariantContext::doublePropEx.subProp}"/>
-            """);
+        TestPane root = compileAndRun("""
+            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                      visible="{fx:bind !!invariantContext::doublePropEx.subProp}"/>
+        """);
 
         assertTrue(root.isVisible());
     }
 
     @Test
     public void Bind_Unidirectional_To_Property_Of_Property_Of_Property() {
-        TestPane root = TestCompiler.newInstance(
-            this, "Bind_Unidirectional_To_Property_Of_Property_Of_Property", """
-                <?import org.jfxcore.compiler.bindings.PropertyReferenceBindingTest.TestPane?>
-                <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          visible="{fx:bind invariantContext::doublePropEx::subProp.empty}"/>
-            """);
+        TestPane root = compileAndRun("""
+            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                      visible="{fx:bind invariantContext::doublePropEx::subProp.empty}"/>
+        """);
 
         assertTrue(root.isVisible());
         root.invariantContext.doublePropEx.subProp.add("foo");
