@@ -8,12 +8,11 @@ import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
 import org.jfxcore.compiler.diagnostic.ErrorCode;
 import org.jfxcore.compiler.diagnostic.MarkupException;
-import org.jfxcore.compiler.util.TestCompiler;
+import org.jfxcore.compiler.util.CompilerTestBase;
 import org.jfxcore.compiler.util.TestExtension;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -26,25 +25,23 @@ import static org.junit.jupiter.api.Assertions.*;
 public class CollectionsTest {
 
     @Nested
-    public class InstantiationTest {
+    public class InstantiationTest extends CompilerTestBase {
         @Test
         public void Objects_Are_Added_To_List() {
-            GridPane root = TestCompiler.newInstance(
-                this, "Objects_Are_Added_To_List", """
-                    <?import java.lang.*?>
-                    <?import java.util.*?>
-                    <?import javafx.scene.layout.*?>
-                    <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
-                        <properties>
-                            <ArrayList fx:typeArguments="Object" fx:id="list">
-                                <String fx:id="str0">foo</String>
-                                <Double fx:id="val0" fx:value="123.5"/>
-                                <String>baz</String>
-                                <GridPane fx:id="pane"/>
-                            </ArrayList>
-                        </properties>
-                    </GridPane>
-                """);
+            GridPane root = compileAndRun("""
+                <?import java.util.*?>
+                <?import javafx.scene.layout.*?>
+                <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                    <properties>
+                        <ArrayList fx:typeArguments="Object" fx:id="list">
+                            <String fx:id="str0">foo</String>
+                            <Double fx:id="val0" fx:value="123.5"/>
+                            <String>baz</String>
+                            <GridPane fx:id="pane"/>
+                        </ArrayList>
+                    </properties>
+                </GridPane>
+            """);
 
             List<?> list = (List<?>)root.getProperties().get("list");
             assertEquals(4, list.size());
@@ -56,40 +53,36 @@ public class CollectionsTest {
 
         @Test
         public void Objects_Are_Added_To_Incompatible_List_ItemType_Fails() {
-            MarkupException ex = assertThrows(MarkupException.class, () -> TestCompiler.newInstance(
-                this, "Objects_Are_Added_To_Incompatible_List_ItemType_Fails", """
-                    <?import java.lang.*?>
-                    <?import java.util.*?>
-                    <?import javafx.scene.layout.*?>
-                    <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
-                        <properties>
-                            <ArrayList fx:typeArguments="Integer" fx:id="list">
-                                <String>foo</String>
-                            </ArrayList>
-                        </properties>
-                    </GridPane>
-                """));
+            MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+                <?import java.util.*?>
+                <?import javafx.scene.layout.*?>
+                <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                    <properties>
+                        <ArrayList fx:typeArguments="Integer" fx:id="list">
+                            <String>foo</String>
+                        </ArrayList>
+                    </properties>
+                </GridPane>
+            """));
 
             assertEquals(ErrorCode.CANNOT_ADD_ITEM_INCOMPATIBLE_TYPE, ex.getDiagnostic().getCode());
         }
 
         @Test
         public void Objects_Are_Added_To_Set() {
-            GridPane root = TestCompiler.newInstance(
-                this, "Objects_Are_Added_To_Set", """
-                    <?import java.lang.*?>
-                    <?import java.util.*?>
-                    <?import javafx.scene.layout.*?>
-                    <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
-                        <properties>
-                            <HashSet fx:typeArguments="Object" fx:id="set">
-                                <String fx:id="str0">foo</String>
-                                <Double fx:id="val0" fx:value="123.5"/>
-                                <String>baz</String>
-                            </HashSet>
-                        </properties>
-                    </GridPane>
-                """);
+            GridPane root = compileAndRun("""
+                <?import java.util.*?>
+                <?import javafx.scene.layout.*?>
+                <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                    <properties>
+                        <HashSet fx:typeArguments="Object" fx:id="set">
+                            <String fx:id="str0">foo</String>
+                            <Double fx:id="val0" fx:value="123.5"/>
+                            <String>baz</String>
+                        </HashSet>
+                    </properties>
+                </GridPane>
+            """);
 
             Set<?> set = (Set<?>)root.getProperties().get("set");
             assertEquals(3, set.size());
@@ -100,45 +93,41 @@ public class CollectionsTest {
 
         @Test
         public void Objects_Are_Added_To_Incompatible_Set_ItemType_Fails() {
-            MarkupException ex = assertThrows(MarkupException.class, () -> TestCompiler.newInstance(
-                this, "Objects_Are_Added_To_Incompatible_Set_ItemType_Fails", """
-                    <?import java.lang.*?>
-                    <?import java.util.*?>
-                    <?import javafx.scene.layout.*?>
-                    <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
-                        <properties>
-                            <HashSet fx:typeArguments="Integer" fx:id="list">
-                                <String>foo</String>
-                            </HashSet>
-                        </properties>
-                    </GridPane>
-                """));
+            MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+                <?import java.util.*?>
+                <?import javafx.scene.layout.*?>
+                <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                    <properties>
+                        <HashSet fx:typeArguments="Integer" fx:id="list">
+                            <String>foo</String>
+                        </HashSet>
+                    </properties>
+                </GridPane>
+            """));
 
             assertEquals(ErrorCode.CANNOT_ADD_ITEM_INCOMPATIBLE_TYPE, ex.getDiagnostic().getCode());
         }
 
         @Test
         public void Objects_Are_Added_To_Map() {
-            GridPane root = TestCompiler.newInstance(
-                this, "Objects_Are_Added_To_Map", """
-                    <?import java.lang.*?>
-                    <?import java.util.*?>
-                    <?import javafx.scene.layout.*?>
-                    <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
-                        <properties>
-                            <HashMap fx:id="map0">
-                                <String>foo</String>
-                                <Double fx:value="123.5"/>
-                            </HashMap>
-                        
-                            <HashMap fx:typeArguments="String,Object" fx:id="map1">
-                                <String fx:id="str0">foo</String>
-                                <Double fx:id="val0" fx:value="123.5"/>
-                                <String>baz</String>
-                            </HashMap>
-                        </properties>
-                    </GridPane>
-                """);
+            GridPane root = compileAndRun("""
+                <?import java.util.*?>
+                <?import javafx.scene.layout.*?>
+                <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                    <properties>
+                        <HashMap fx:id="map0">
+                            <String>foo</String>
+                            <Double fx:value="123.5"/>
+                        </HashMap>
+                    
+                        <HashMap fx:typeArguments="String,Object" fx:id="map1">
+                            <String fx:id="str0">foo</String>
+                            <Double fx:id="val0" fx:value="123.5"/>
+                            <String>baz</String>
+                        </HashMap>
+                    </properties>
+                </GridPane>
+            """);
 
             //noinspection unchecked
             Map<Object, Object> map0 = (Map<Object, Object>)root.getProperties().get("map0");
@@ -159,57 +148,51 @@ public class CollectionsTest {
 
         @Test
         public void Object_Is_Added_To_Incompatible_Map_KeyType_Fails() {
-            MarkupException ex = assertThrows(MarkupException.class, () -> TestCompiler.newInstance(
-                this, "Object_Is_Added_To_Incompatible_Map_KeyType_Fails", """
-                    <?import java.lang.*?>
-                    <?import java.util.*?>
-                    <?import javafx.scene.layout.*?>
-                    <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
-                        <properties>
-                            <HashMap fx:typeArguments="Integer,String">
-                                <String>foo</String>
-                            </HashMap>
-                        </properties>
-                    </GridPane>
-                """));
+            MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+                <?import java.util.*?>
+                <?import javafx.scene.layout.*?>
+                <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                    <properties>
+                        <HashMap fx:typeArguments="Integer,String">
+                            <String>foo</String>
+                        </HashMap>
+                    </properties>
+                </GridPane>
+            """));
 
             assertEquals(ErrorCode.UNSUPPORTED_MAP_KEY_TYPE, ex.getDiagnostic().getCode());
         }
 
         @Test
         public void Object_Is_Added_To_Incompatible_Map_ValueType_Fails() {
-            MarkupException ex = assertThrows(MarkupException.class, () -> TestCompiler.newInstance(
-                this, "Object_Is_Added_To_Incompatible_Map_ValueType_Fails", """
-                    <?import java.lang.*?>
-                    <?import java.util.*?>
-                    <?import javafx.scene.layout.*?>
-                    <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
-                        <properties>
-                            <HashMap fx:typeArguments="String,Integer">
-                                <String>foo</String>
-                            </HashMap>
-                        </properties>
-                    </GridPane>
-                """));
+            MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+                <?import java.util.*?>
+                <?import javafx.scene.layout.*?>
+                <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                    <properties>
+                        <HashMap fx:typeArguments="String,Integer">
+                            <String>foo</String>
+                        </HashMap>
+                    </properties>
+                </GridPane>
+            """));
 
             assertEquals(ErrorCode.CANNOT_ADD_ITEM_INCOMPATIBLE_TYPE, ex.getDiagnostic().getCode());
         }
     }
 
     @Nested
-    public class PropertyAssignmentTest {
+    public class PropertyAssignmentTest extends CompilerTestBase {
         @Test
         public void Literal_Is_Added_To_MapProperty_Fails() {
-            MarkupException ex = assertThrows(MarkupException.class, () -> TestCompiler.newInstance(
-                this, "Literal_Is_Added_To_MapProperty_Fails", """
-                    <?import java.lang.*?>
-                    <?import javafx.scene.layout.*?>
-                    <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
-                        <properties>
-                            Hello123
-                        </properties>
-                    </GridPane>
-                """));
+            MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+                <?import javafx.scene.layout.*?>
+                <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                    <properties>
+                        Hello123
+                    </properties>
+                </GridPane>
+            """));
 
             assertEquals(ErrorCode.CANNOT_ADD_ITEM_INCOMPATIBLE_VALUE, ex.getDiagnostic().getCode());
         }
@@ -226,38 +209,33 @@ public class CollectionsTest {
 
         @Test
         public void Object_Is_Added_To_Unsupported_MapProperty_Fails() {
-            MarkupException ex = assertThrows(MarkupException.class, () -> TestCompiler.newInstance(
-                this, "Object_Is_Added_To_Unsupported_MapProperty_Fails", """
-                    <?import java.lang.*?>
-                    <?import javafx.scene.layout.*?>
-                    <?import org.jfxcore.compiler.CollectionsTest.PropertyAssignmentTest.*?>
-                    <UnsupportedKeyTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
-                        <unsupportedKeyMap>
-                            <String>foo</String>
-                        </unsupportedKeyMap>
-                    </UnsupportedKeyTestPane>
-                """));
+            MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+                <?import javafx.scene.layout.*?>
+                <UnsupportedKeyTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                    <unsupportedKeyMap>
+                        <String>foo</String>
+                    </unsupportedKeyMap>
+                </UnsupportedKeyTestPane>
+            """));
 
             assertEquals(ErrorCode.UNSUPPORTED_MAP_KEY_TYPE, ex.getDiagnostic().getCode());
         }
 
         @Test
         public void Objects_Are_Added_To_MapProperty() {
-            GridPane root = TestCompiler.newInstance(
-                this, "Objects_Are_Added_To_MapProperty", """
-                    <?import java.lang.*?>
-                    <?import javafx.scene.layout.*?>
-                    <?import javafx.scene.paint.*?>
-                    <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
-                        <properties>
-                            <String fx:id="str0">foo</String>
-                            <Double fx:id="val0" fx:value="123.5"/>
-                            <String>baz</String>
-                            <Color fx:id="col0" fx:constant="RED"/>
-                            <GridPane fx:id="pane"/>
-                        </properties>
-                    </GridPane>
-                """);
+            GridPane root = compileAndRun("""
+                <?import javafx.scene.layout.*?>
+                <?import javafx.scene.paint.*?>
+                <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                    <properties>
+                        <String fx:id="str0">foo</String>
+                        <Double fx:id="val0" fx:value="123.5"/>
+                        <String>baz</String>
+                        <Color fx:id="col0" fx:constant="RED"/>
+                        <GridPane fx:id="pane"/>
+                    </properties>
+                </GridPane>
+            """);
 
             assertEquals("foo", root.getProperties().get("str0"));
             assertEquals(123.5, (Double)root.getProperties().get("val0"), 0.001);
@@ -281,19 +259,16 @@ public class CollectionsTest {
 
         @Test
         public void Object_Are_Added_To_StringKey_MapProperty() {
-            StringKeyMapTestPane root = TestCompiler.newInstance(
-                this, "Object_Are_Added_To_StringKey_MapProperty", """
-                    <?import java.lang.*?>
-                    <?import javafx.scene.layout.*?>
-                    <?import org.jfxcore.compiler.CollectionsTest.PropertyAssignmentTest.*?>
-                    <StringKeyMapTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
-                        <stringKeyMap>
-                            <String fx:id="str0">foo</String>
-                            <Double fx:id="val0" fx:value="123.5"/>
-                            <String>baz</String>
-                        </stringKeyMap>
-                    </StringKeyMapTestPane>
-                """);
+            StringKeyMapTestPane root = compileAndRun("""
+                <?import javafx.scene.layout.*?>
+                <StringKeyMapTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                    <stringKeyMap>
+                        <String fx:id="str0">foo</String>
+                        <Double fx:id="val0" fx:value="123.5"/>
+                        <String>baz</String>
+                    </stringKeyMap>
+                </StringKeyMapTestPane>
+            """);
 
             assertEquals("foo", root.stringKeyMap.get("str0"));
             assertEquals(123.5, (Double)root.stringKeyMap.get("val0"), 0.001);

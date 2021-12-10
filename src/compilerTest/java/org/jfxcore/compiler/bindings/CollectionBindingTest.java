@@ -17,12 +17,10 @@ import javafx.collections.ObservableSet;
 import javafx.scene.layout.Pane;
 import org.jfxcore.compiler.diagnostic.ErrorCode;
 import org.jfxcore.compiler.diagnostic.MarkupException;
-import org.jfxcore.compiler.util.MethodReferencedSupport;
-import org.jfxcore.compiler.util.TestCompiler;
+import org.jfxcore.compiler.util.CompilerTestBase;
 import org.jfxcore.compiler.util.TestExtension;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
@@ -33,11 +31,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 @SuppressWarnings({"HttpUrlsUsage", "DuplicatedCode"})
 @ExtendWith(TestExtension.class)
-public class CollectionBindingTest extends MethodReferencedSupport {
-
-    public CollectionBindingTest() {
-        super("org.jfxcore.compiler.classes.CollectionBindingTest");
-    }
+public class CollectionBindingTest extends CompilerTestBase {
 
     @SuppressWarnings("unused")
     public static class IndirectContext {
@@ -82,12 +76,10 @@ public class CollectionBindingTest extends MethodReferencedSupport {
 
     @Test
     public void Once_Binding_To_Vanilla_List() {
-        ListTestPane root = TestCompiler.newInstance(
-            this, "Once_Binding_To_Vanilla_List", """
-                <?import org.jfxcore.compiler.bindings.CollectionBindingTest.ListTestPane?>
-                <ListTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                              listProp="{fx:once list1}" objectProp="{fx:once list1}"/>
-            """);
+        ListTestPane root = compileAndRun("""
+            <ListTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                          listProp="{fx:once list1}" objectProp="{fx:once list1}"/>
+        """);
 
         assertEquals(3, root.listProp.size());
 
@@ -105,12 +97,10 @@ public class CollectionBindingTest extends MethodReferencedSupport {
 
     @Test
     public void Once_Binding_To_ObservableList() {
-        ListTestPane root = TestCompiler.newInstance(
-            this, "Once_Binding_To_ObservableList", """
-                <?import org.jfxcore.compiler.bindings.CollectionBindingTest.ListTestPane?>
-                <ListTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                              listProp="{fx:once list2}" objectProp="{fx:once list2}"/>
-            """);
+        ListTestPane root = compileAndRun("""
+            <ListTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                          listProp="{fx:once list2}" objectProp="{fx:once list2}"/>
+        """);
 
         assertEquals(3, root.listProp.size());
         boolean[] flag1 = new boolean[1];
@@ -129,12 +119,10 @@ public class CollectionBindingTest extends MethodReferencedSupport {
 
     @Test
     public void Once_Binding_To_ObservableValue_Of_Vanilla_List() {
-        ListTestPane root = TestCompiler.newInstance(
-            this, "Once_Binding_To_ObservableValue_Of_Vanilla_List", """
-                <?import org.jfxcore.compiler.bindings.CollectionBindingTest.ListTestPane?>
-                <ListTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                              listProp="{fx:once list3}" objectProp="{fx:once list3}"/>
-            """);
+        ListTestPane root = compileAndRun("""
+            <ListTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                          listProp="{fx:once list3}" objectProp="{fx:once list3}"/>
+        """);
 
         assertEquals(3, root.listProp.size());
         boolean[] flag1 = new boolean[1];
@@ -158,12 +146,10 @@ public class CollectionBindingTest extends MethodReferencedSupport {
 
     @Test
     public void Once_Binding_To_ObservableValue_Of_ObservableList() {
-        ListTestPane root = TestCompiler.newInstance(
-            this, "Once_Binding_To_ObservableValue_Of_ObservableList", """
-                <?import org.jfxcore.compiler.bindings.CollectionBindingTest.ListTestPane?>
-                <ListTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                              listProp="{fx:once list4}" objectProp="{fx:once list4}"/>
-            """);
+        ListTestPane root = compileAndRun("""
+            <ListTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                          listProp="{fx:once list4}" objectProp="{fx:once list4}"/>
+        """);
 
         assertEquals(3, root.listProp.size());
         boolean[] flag1 = new boolean[1];
@@ -187,15 +173,13 @@ public class CollectionBindingTest extends MethodReferencedSupport {
 
     @Test
     public void Once_ContentBinding_To_Vanilla_List() {
-        ListTestPane root = TestCompiler.newInstance(
-            this, "Once_ContentBinding_To_Vanilla_List", """
-                <?import org.jfxcore.compiler.bindings.CollectionBindingTest.ListTestPane?>
-                <ListTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                              listProp="{fx:once list1; content=true}"/>
-            """);
+        ListTestPane root = compileAndRun("""
+            <ListTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                          listProp="{fx:once list1; content=true}"/>
+        """);
 
-        assertNotReferenced("Once_ContentBinding_To_Vanilla_List", root, "observableListValue");
-        assertNotReferenced("Once_ContentBinding_To_Vanilla_List", root, "observableList");
+        assertNotReferenced(root, "observableListValue");
+        assertNotReferenced(root, "observableList");
 
         assertEquals(3, root.listProp.size());
         root.list1.clear(); // Change the source list
@@ -204,15 +188,13 @@ public class CollectionBindingTest extends MethodReferencedSupport {
 
     @Test
     public void Once_ContentBinding_To_Vanilla_List_Indirect() {
-        ListTestPane root = TestCompiler.newInstance(
-            this, "Once_ContentBinding_To_Vanilla_List_Indirect", """
-                <?import org.jfxcore.compiler.bindings.CollectionBindingTest.ListTestPane?>
-                <ListTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                              listProp="{fx:once indirect.list1; content=true}"/>
-            """);
+        ListTestPane root = compileAndRun("""
+            <ListTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                          listProp="{fx:once indirect.list1; content=true}"/>
+        """);
 
-        assertNotReferenced("Once_ContentBinding_To_Vanilla_List_Indirect", root, "observableListValue");
-        assertNotReferenced("Once_ContentBinding_To_Vanilla_List_Indirect", root, "observableList");
+        assertNotReferenced(root, "observableListValue");
+        assertNotReferenced(root, "observableList");
 
         assertEquals(3, root.listProp.size());
         root.indirect.get().list1.clear(); // Change the source list
@@ -221,15 +203,13 @@ public class CollectionBindingTest extends MethodReferencedSupport {
 
     @Test
     public void Once_ContentBinding_To_Observable_List() {
-        ListTestPane root = TestCompiler.newInstance(
-            this, "Once_ContentBinding_To_Observable_List", """
-                <?import org.jfxcore.compiler.bindings.CollectionBindingTest.ListTestPane?>
-                <ListTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                              listProp="{fx:once list2; content=true}"/>
-            """);
+        ListTestPane root = compileAndRun("""
+            <ListTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                          listProp="{fx:once list2; content=true}"/>
+        """);
 
-        assertNotReferenced("Once_ContentBinding_To_Observable_List", root, "observableListValue");
-        assertNotReferenced("Once_ContentBinding_To_Observable_List", root, "observableList");
+        assertNotReferenced(root, "observableListValue");
+        assertNotReferenced(root, "observableList");
 
         assertEquals(3, root.listProp.size());
         root.list1.clear(); // Change the source list
@@ -238,15 +218,13 @@ public class CollectionBindingTest extends MethodReferencedSupport {
 
     @Test
     public void Once_ContentBinding_To_Observable_List_Indirect() {
-        ListTestPane root = TestCompiler.newInstance(
-            this, "Once_ContentBinding_To_Observable_List_Indirect", """
-                <?import org.jfxcore.compiler.bindings.CollectionBindingTest.ListTestPane?>
-                <ListTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                              listProp="{fx:once indirect.list2; content=true}"/>
-            """);
+        ListTestPane root = compileAndRun("""
+            <ListTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                          listProp="{fx:once indirect.list2; content=true}"/>
+        """);
 
-        assertNotReferenced("Once_ContentBinding_To_Observable_List_Indirect", root, "observableListValue");
-        assertNotReferenced("Once_ContentBinding_To_Observable_List_Indirect", root, "observableList");
+        assertNotReferenced(root, "observableListValue");
+        assertNotReferenced(root, "observableList");
 
         assertEquals(3, root.listProp.size());
         root.indirect.get().list1.clear(); // Change the source list
@@ -255,15 +233,13 @@ public class CollectionBindingTest extends MethodReferencedSupport {
 
     @Test
     public void Once_ContentBinding_To_ObservableValue_Of_Vanilla_List() {
-        ListTestPane root = TestCompiler.newInstance(
-            this, "Once_ContentBinding_To_ObservableValue_Of_Vanilla_List", """
-                <?import org.jfxcore.compiler.bindings.CollectionBindingTest.ListTestPane?>
-                <ListTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                              listProp="{fx:once list3; content=true}"/>
-            """);
+        ListTestPane root = compileAndRun("""
+            <ListTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                          listProp="{fx:once list3; content=true}"/>
+        """);
 
-        assertNotReferenced("Once_ContentBinding_To_ObservableValue_Of_Vanilla_List", root, "observableListValue");
-        assertNotReferenced("Once_ContentBinding_To_ObservableValue_Of_Vanilla_List", root, "observableList");
+        assertNotReferenced(root, "observableListValue");
+        assertNotReferenced(root, "observableList");
 
         assertEquals(3, root.listProp.size());
         root.indirect.get().list1.clear(); // Change the source list
@@ -272,15 +248,13 @@ public class CollectionBindingTest extends MethodReferencedSupport {
 
     @Test
     public void Once_ContentBinding_To_ObservableValue_Of_Vanilla_List_Indirect() {
-        ListTestPane root = TestCompiler.newInstance(
-            this, "Once_ContentBinding_To_ObservableValue_Of_Vanilla_List_Indirect", """
-                <?import org.jfxcore.compiler.bindings.CollectionBindingTest.ListTestPane?>
-                <ListTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                              listProp="{fx:once indirect.list3; content=true}"/>
-            """);
+        ListTestPane root = compileAndRun("""
+            <ListTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                          listProp="{fx:once indirect.list3; content=true}"/>
+        """);
 
-        assertNotReferenced("Once_ContentBinding_To_ObservableValue_Of_Vanilla_List_Indirect", root, "observableListValue");
-        assertNotReferenced("Once_ContentBinding_To_ObservableValue_Of_Vanilla_List_Indirect", root, "observableList");
+        assertNotReferenced(root, "observableListValue");
+        assertNotReferenced(root, "observableList");
 
         assertEquals(3, root.listProp.size());
         root.indirect.get().list1.clear(); // Change the source list
@@ -289,15 +263,13 @@ public class CollectionBindingTest extends MethodReferencedSupport {
 
     @Test
     public void Once_ContentBinding_To_ObservableValue_Of_Observable_List() {
-        ListTestPane root = TestCompiler.newInstance(
-            this, "Once_ContentBinding_To_ObservableValue_Of_Observable_List", """
-                <?import org.jfxcore.compiler.bindings.CollectionBindingTest.ListTestPane?>
-                <ListTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                              listProp="{fx:once list4; content=true}"/>
-            """);
+        ListTestPane root = compileAndRun("""
+            <ListTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                          listProp="{fx:once list4; content=true}"/>
+        """);
 
-        assertNotReferenced("Once_ContentBinding_To_ObservableValue_Of_Observable_List", root, "observableListValue");
-        assertNotReferenced("Once_ContentBinding_To_ObservableValue_Of_Observable_List", root, "observableList");
+        assertNotReferenced(root, "observableListValue");
+        assertNotReferenced(root, "observableList");
 
         assertEquals(3, root.listProp.size());
         root.indirect.get().list1.clear(); // Change the source list
@@ -306,15 +278,13 @@ public class CollectionBindingTest extends MethodReferencedSupport {
 
     @Test
     public void Once_ContentBinding_To_ObservableValue_Of_Observable_List_Indirect() {
-        ListTestPane root = TestCompiler.newInstance(
-            this, "Once_ContentBinding_To_ObservableValue_Of_Observable_List_Indirect", """
-                <?import org.jfxcore.compiler.bindings.CollectionBindingTest.ListTestPane?>
-                <ListTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                              listProp="{fx:once indirect.list4; content=true}"/>
-            """);
+        ListTestPane root = compileAndRun("""
+            <ListTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                          listProp="{fx:once indirect.list4; content=true}"/>
+        """);
 
-        assertNotReferenced("Once_ContentBinding_To_ObservableValue_Of_Observable_List_Indirect", root, "observableListValue");
-        assertNotReferenced("Once_ContentBinding_To_ObservableValue_Of_Observable_List_Indirect", root, "observableList");
+        assertNotReferenced(root, "observableListValue");
+        assertNotReferenced(root, "observableList");
 
         assertEquals(3, root.listProp.size());
         root.indirect.get().list1.clear(); // Change the source list
@@ -323,36 +293,30 @@ public class CollectionBindingTest extends MethodReferencedSupport {
 
     @Test
     public void Once_Binding_Fails_For_ReadOnlyListProperty() {
-        MarkupException ex = assertThrows(MarkupException.class, () -> TestCompiler.newInstance(
-            this, "Once_Binding_Fails_For_ReadOnlyListProperty", """
-                <?import org.jfxcore.compiler.bindings.CollectionBindingTest.ListTestPane?>
-                <ListTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                              readOnlyListProp="{fx:once list1}"/>
-            """));
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <ListTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                          readOnlyListProp="{fx:once list1}"/>
+        """));
 
         assertEquals(ErrorCode.CANNOT_MODIFY_READONLY_PROPERTY, ex.getDiagnostic().getCode());
     }
 
     @Test
     public void Once_Binding_Fails_For_Incompatible_List() {
-        MarkupException ex = assertThrows(MarkupException.class, () -> TestCompiler.newInstance(
-            this, "Once_Binding_Fails_For_Incompatible_List", """
-                <?import org.jfxcore.compiler.bindings.CollectionBindingTest.ListTestPane?>
-                <ListTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                              listProp="{fx:once incompatibleList1}"/>
-            """));
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <ListTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                          listProp="{fx:once incompatibleList1}"/>
+        """));
 
         assertEquals(ErrorCode.CANNOT_CONVERT_SOURCE_TYPE, ex.getDiagnostic().getCode());
     }
 
     @Test
     public void ContentBinding_With_Invalid_ContentParameter_Fails() {
-        MarkupException ex = assertThrows(MarkupException.class, () -> TestCompiler.newInstance(
-            this, "ContentBinding_With_Invalid_ContentParameter_Fails", """
-                <?import org.jfxcore.compiler.bindings.CollectionBindingTest.ListTestPane?>
-                <ListTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                              listProp="{fx:sync list2; content=foo}"/>
-            """));
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <ListTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                          listProp="{fx:sync list2; content=foo}"/>
+        """));
 
         assertEquals(ErrorCode.CANNOT_COERCE_PROPERTY_VALUE, ex.getDiagnostic().getCode());
     }
@@ -363,15 +327,14 @@ public class CollectionBindingTest extends MethodReferencedSupport {
      */
     @Test
     public void Unidirectional_Binding_To_Vanilla_List() {
-        ListTestPane root = TestCompiler.newInstance(
-            this, "Unidirectional_Binding_To_Vanilla_List", """
-                <?import org.jfxcore.compiler.bindings.CollectionBindingTest.ListTestPane?>
-                <ListTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                              listProp="{fx:bind list1}" objectProp="{fx:bind list1}"/>
-            """);
+        ListTestPane root = compileAndRun("""
+            <?import org.jfxcore.compiler.bindings.CollectionBindingTest.ListTestPane?>
+            <ListTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                          listProp="{fx:bind list1}" objectProp="{fx:bind list1}"/>
+        """);
 
-        assertReferenced("Unidirectional_Binding_To_Vanilla_List", root, "observableListValue");
-        assertNotReferenced("Unidirectional_Binding_To_Vanilla_List", root, "observableObjectValue");
+        assertReferenced(root, "observableListValue");
+        assertNotReferenced(root, "observableObjectValue");
         assertEquals(3, root.listProp.size());
 
         boolean[] flag = new boolean[1];
@@ -392,15 +355,13 @@ public class CollectionBindingTest extends MethodReferencedSupport {
      */
     @Test
     public void Unidirectional_Binding_To_Vanilla_List_Indirect() {
-        ListTestPane root = TestCompiler.newInstance(
-            this, "Unidirectional_Binding_To_Vanilla_List_Indirect", """
-                <?import org.jfxcore.compiler.bindings.CollectionBindingTest.ListTestPane?>
-                <ListTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                              listProp="{fx:bind indirect.list1}" objectProp="{fx:bind indirect.list1}"/>
-            """);
+        ListTestPane root = compileAndRun("""
+            <ListTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                          listProp="{fx:bind indirect.list1}" objectProp="{fx:bind indirect.list1}"/>
+        """);
 
-        assertReferenced("Unidirectional_Binding_To_Vanilla_List_Indirect", root, "observableListValue");
-        assertNotReferenced("Unidirectional_Binding_To_Vanilla_List_Indirect", root, "observableObjectValue");
+        assertReferenced(root, "observableListValue");
+        assertNotReferenced(root, "observableObjectValue");
         assertEquals(3, root.listProp.size());
 
         boolean[] flag = new boolean[1];
@@ -423,12 +384,10 @@ public class CollectionBindingTest extends MethodReferencedSupport {
      */
     @Test
     public void Unidirectional_ContentBinding_To_Vanilla_List_Fails() {
-        MarkupException ex = assertThrows(MarkupException.class, () -> TestCompiler.newInstance(
-            this, "Unidirectional_ContentBinding_To_Vanilla_List_Fails", """
-                <?import org.jfxcore.compiler.bindings.CollectionBindingTest.ListTestPane?>
-                <ListTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                              listProp="{fx:bind list1; content=true}"/>
-            """));
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <ListTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                          listProp="{fx:bind list1; content=true}"/>
+        """));
 
         assertEquals(ErrorCode.INVALID_CONTENT_BINDING_SOURCE, ex.getDiagnostic().getCode());
     }
@@ -439,12 +398,10 @@ public class CollectionBindingTest extends MethodReferencedSupport {
      */
     @Test
     public void Unidirectional_ContentBinding_Fails_For_ObjectProperty() {
-        MarkupException ex = assertThrows(MarkupException.class, () -> TestCompiler.newInstance(
-            this, "Unidirectional_ContentBinding_Fails_For_ObjectProperty", """
-                <?import org.jfxcore.compiler.bindings.CollectionBindingTest.ListTestPane?>
-                <ListTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                              objectProp="{fx:bind list1; content=true}"/>
-            """));
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <ListTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                          objectProp="{fx:bind list1; content=true}"/>
+        """));
 
         assertEquals(ErrorCode.INVALID_CONTENT_BINDING_TARGET, ex.getDiagnostic().getCode());
     }
@@ -455,15 +412,13 @@ public class CollectionBindingTest extends MethodReferencedSupport {
      */
     @Test
     public void Unidirectional_Binding_To_ObservableList() {
-        ListTestPane root = TestCompiler.newInstance(
-            this, "Unidirectional_Binding_To_ObservableList", """
-                <?import org.jfxcore.compiler.bindings.CollectionBindingTest.ListTestPane?>
-                <ListTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                              listProp="{fx:bind list2}" objectProp="{fx:bind list2}"/>
-            """);
+        ListTestPane root = compileAndRun("""
+            <ListTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                          listProp="{fx:bind list2}" objectProp="{fx:bind list2}"/>
+        """);
 
-        assertReferenced("Unidirectional_Binding_To_ObservableList", root, "observableObjectValue");
-        assertNotReferenced("Unidirectional_Binding_To_ObservableList", root, "observableListValue");
+        assertReferenced(root, "observableObjectValue");
+        assertNotReferenced(root, "observableListValue");
 
         assertEquals(3, root.listProp.size());
         boolean[] flag1 = new boolean[1];
@@ -486,15 +441,13 @@ public class CollectionBindingTest extends MethodReferencedSupport {
      */
     @Test
     public void Unidirectional_ContentBinding_To_ObservableList() {
-        ListTestPane root = TestCompiler.newInstance(
-            this, "Unidirectional_ContentBinding_To_ObservableList", """
-                <?import org.jfxcore.compiler.bindings.CollectionBindingTest.ListTestPane?>
-                <ListTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                              listProp="{fx:bind list2; content=true}"/>
-            """);
+        ListTestPane root = compileAndRun("""
+            <ListTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                          listProp="{fx:bind list2; content=true}"/>
+        """);
 
-        assertNotReferenced("Unidirectional_ContentBinding_To_ObservableList", root, "observableListValue");
-        assertNotReferenced("Unidirectional_ContentBinding_To_ObservableList", root, "observableObjectValue");
+        assertNotReferenced(root, "observableListValue");
+        assertNotReferenced(root, "observableObjectValue");
 
         assertEquals(3, root.listProp.size());
         boolean[] flag1 = new boolean[1];
@@ -510,15 +463,13 @@ public class CollectionBindingTest extends MethodReferencedSupport {
      */
     @Test
     public void Unidirectional_Binding_To_ObservableValue_Of_Vanilla_List() throws Exception {
-        ListTestPane root = TestCompiler.newInstance(
-            this, "Unidirectional_Binding_To_ObservableValue_Of_Vanilla_List", """
-                <?import org.jfxcore.compiler.bindings.CollectionBindingTest.ListTestPane?>
-                <ListTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                              listProp="{fx:bind list3}" objectProp="{fx:bind list3}"/>
-            """);
+        ListTestPane root = compileAndRun("""
+            <ListTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                          listProp="{fx:bind list3}" objectProp="{fx:bind list3}"/>
+        """);
 
-        assertReferenced("Unidirectional_Binding_To_ObservableValue_Of_Vanilla_List", root, "observableListValue");
-        assertNotReferenced("Unidirectional_Binding_To_ObservableValue_Of_Vanilla_List", root, "observableObjectValue");
+        assertReferenced(root, "observableListValue");
+        assertNotReferenced(root, "observableObjectValue");
 
         assertEquals(3, root.listProp.size());
         boolean[] flag = new boolean[1];
@@ -553,15 +504,13 @@ public class CollectionBindingTest extends MethodReferencedSupport {
      */
     @Test
     public void Unidirectional_ContentBinding_To_ObservableValue_Of_Vanilla_List() {
-        ListTestPane root = TestCompiler.newInstance(
-            this, "Unidirectional_ContentBinding_To_ObservableValue_Of_Vanilla_List", """
-                <?import org.jfxcore.compiler.bindings.CollectionBindingTest.ListTestPane?>
-                <ListTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                              listProp="{fx:bind list3; content=true}"/>
-            """);
+        ListTestPane root = compileAndRun("""
+            <ListTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                          listProp="{fx:bind list3; content=true}"/>
+        """);
 
-        assertReferenced("Unidirectional_ContentBinding_To_ObservableValue_Of_Vanilla_List", root, "observableListValue");
-        assertNotReferenced("Unidirectional_ContentBinding_To_ObservableValue_Of_Vanilla_List", root, "observableObjectValue");
+        assertReferenced(root, "observableListValue");
+        assertNotReferenced(root, "observableObjectValue");
     }
 
     /*
@@ -570,15 +519,13 @@ public class CollectionBindingTest extends MethodReferencedSupport {
      */
     @Test
     public void Unidirectional_Binding_To_ObservableValue_Of_ObservableList() {
-        ListTestPane root = TestCompiler.newInstance(
-            this, "Unidirectional_Binding_To_ObservableValue_Of_ObservableList", """
-                <?import org.jfxcore.compiler.bindings.CollectionBindingTest.ListTestPane?>
-                <ListTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                              listProp="{fx:bind list4}" objectProp="{fx:bind list4}"/>
-            """);
+        ListTestPane root = compileAndRun("""
+            <ListTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                          listProp="{fx:bind list4}" objectProp="{fx:bind list4}"/>
+        """);
 
-        assertNotReferenced("Unidirectional_Binding_To_ObservableValue_Of_ObservableList", root, "observableListValue");
-        assertNotReferenced("Unidirectional_Binding_To_ObservableValue_Of_ObservableList", root, "observableObjectValue");
+        assertNotReferenced(root, "observableListValue");
+        assertNotReferenced(root, "observableObjectValue");
 
         assertEquals(3, root.listProp.size());
         boolean[] flag1 = new boolean[1];
@@ -606,15 +553,13 @@ public class CollectionBindingTest extends MethodReferencedSupport {
      */
     @Test
     public void Unidirectional_ContentBinding_To_ObservableValue_Of_ObservableList() {
-        ListTestPane root = TestCompiler.newInstance(
-            this, "Unidirectional_ContentBinding_To_ObservableValue_Of_ObservableList", """
-                <?import org.jfxcore.compiler.bindings.CollectionBindingTest.ListTestPane?>
-                <ListTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                              listProp="{fx:bind list4; content=true}"/>
-            """);
+        ListTestPane root = compileAndRun("""
+            <ListTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                          listProp="{fx:bind list4; content=true}"/>
+        """);
 
-        assertReferenced("Unidirectional_ContentBinding_To_ObservableValue_Of_ObservableList", root, "observableListValue");
-        assertNotReferenced("Unidirectional_ContentBinding_To_ObservableValue_Of_ObservableList", root, "observableObjectValue");
+        assertReferenced(root, "observableListValue");
+        assertNotReferenced(root, "observableObjectValue");
 
         assertEquals(3, root.listProp.size());
         boolean[] flag1 = new boolean[1];
@@ -634,21 +579,17 @@ public class CollectionBindingTest extends MethodReferencedSupport {
      */
     @Test
     public void Bidirectional_Binding_To_Vanilla_List_Fails() {
-        MarkupException ex = assertThrows(MarkupException.class, () -> TestCompiler.newInstance(
-            this, "Bidirectional_Binding_To_Vanilla_List_Fails", """
-                <?import org.jfxcore.compiler.bindings.CollectionBindingTest.ListTestPane?>
-                <ListTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                              listProp="{fx:sync list1}"/>
-            """));
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <ListTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                          listProp="{fx:sync list1}"/>
+        """));
 
         assertEquals(ErrorCode.INVALID_BIDIRECTIONAL_BINDING_SOURCE, ex.getDiagnostic().getCode());
 
-        ex = assertThrows(MarkupException.class, () -> TestCompiler.newInstance(
-            this, "Bidirectional_Binding_To_Vanilla_List_Fails", """
-                <?import org.jfxcore.compiler.bindings.CollectionBindingTest.ListTestPane?>
-                <ListTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                              objectProp="{fx:sync list1}"/>
-            """));
+        ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <ListTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                          objectProp="{fx:sync list1}"/>
+        """));
 
         assertEquals(ErrorCode.INVALID_BIDIRECTIONAL_BINDING_SOURCE, ex.getDiagnostic().getCode());
     }
@@ -659,12 +600,10 @@ public class CollectionBindingTest extends MethodReferencedSupport {
      */
     @Test
     public void Bidirectional_ContentBinding_To_Vanilla_List_Fails() {
-        MarkupException ex = assertThrows(MarkupException.class, () -> TestCompiler.newInstance(
-            this, "Bidirectional_ContentBinding_To_Vanilla_List_Fails", """
-                <?import org.jfxcore.compiler.bindings.CollectionBindingTest.ListTestPane?>
-                <ListTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                              listProp="{fx:sync list1; content=true}"/>
-            """));
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <ListTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                          listProp="{fx:sync list1; content=true}"/>
+        """));
 
         assertEquals(ErrorCode.INVALID_BIDIRECTIONAL_CONTENT_BINDING_SOURCE, ex.getDiagnostic().getCode());
     }
@@ -675,12 +614,10 @@ public class CollectionBindingTest extends MethodReferencedSupport {
      */
     @Test
     public void Bidirectional_Binding_To_ObservableList_Fails() {
-        MarkupException ex = assertThrows(MarkupException.class, () -> TestCompiler.newInstance(
-            this, "Bidirectional_Binding_To_ObservableList_Fails", """
-                <?import org.jfxcore.compiler.bindings.CollectionBindingTest.ListTestPane?>
-                <ListTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                              listProp="{fx:sync list2}" objectProp="{fx:sync list2}"/>
-            """));
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <ListTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                          listProp="{fx:sync list2}" objectProp="{fx:sync list2}"/>
+        """));
 
         assertEquals(ErrorCode.INVALID_BIDIRECTIONAL_BINDING_SOURCE, ex.getDiagnostic().getCode());
     }
@@ -691,15 +628,13 @@ public class CollectionBindingTest extends MethodReferencedSupport {
      */
     @Test
     public void Bidirectional_ContentBinding_To_ObservableList() {
-        ListTestPane root = TestCompiler.newInstance(
-            this, "Bidirectional_ContentBinding_To_ObservableList", """
-                <?import org.jfxcore.compiler.bindings.CollectionBindingTest.ListTestPane?>
-                <ListTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                              listProp="{fx:sync list2; content=true}"/>
-            """);
+        ListTestPane root = compileAndRun("""
+            <ListTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                          listProp="{fx:sync list2; content=true}"/>
+        """);
 
-        assertNotReferenced("Bidirectional_ContentBinding_To_ObservableList", root, "observableListValue");
-        assertNotReferenced("Bidirectional_ContentBinding_To_ObservableList", root, "observableObjectValue");
+        assertNotReferenced(root, "observableListValue");
+        assertNotReferenced(root, "observableObjectValue");
 
         assertEquals(3, root.listProp.size());
         boolean[] flag1 = new boolean[1];
@@ -715,12 +650,10 @@ public class CollectionBindingTest extends MethodReferencedSupport {
      */
     @Test
     public void Bidirectional_Binding_To_ObservableValue_Of_Vanilla_List_Fails() {
-        MarkupException ex = assertThrows(MarkupException.class, () -> TestCompiler.newInstance(
-            this, "Bidirectional_Binding_To_ObservableValue_Of_Vanilla_List_Fails", """
-                <?import org.jfxcore.compiler.bindings.CollectionBindingTest.ListTestPane?>
-                <ListTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                              listProp="{fx:sync list3}"/>
-            """));
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <ListTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                          listProp="{fx:sync list3}"/>
+        """));
 
         assertEquals(ErrorCode.SOURCE_TYPE_MISMATCH, ex.getDiagnostic().getCode());
     }
@@ -731,12 +664,10 @@ public class CollectionBindingTest extends MethodReferencedSupport {
      */
     @Test
     public void Bidirectional_ContentBinding_To_ObservableValue_Of_Vanilla_List_Fails() {
-        MarkupException ex = assertThrows(MarkupException.class, () -> TestCompiler.newInstance(
-            this, "Bidirectional_ContentBinding_To_ObservableValue_Of_Vanilla_List_Fails", """
-                <?import org.jfxcore.compiler.bindings.CollectionBindingTest.ListTestPane?>
-                <ListTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                              listProp="{fx:sync list3; content=true}"/>
-            """));
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <ListTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                          listProp="{fx:sync list3; content=true}"/>
+        """));
 
         assertEquals(ErrorCode.INVALID_BIDIRECTIONAL_CONTENT_BINDING_SOURCE, ex.getDiagnostic().getCode());
     }
@@ -747,15 +678,13 @@ public class CollectionBindingTest extends MethodReferencedSupport {
      */
     @Test
     public void Bidirectional_Binding_To_Property_Of_ObservableList() {
-        ListTestPane root = TestCompiler.newInstance(
-            this, "Bidirectional_Binding_To_Property_Of_ObservableList", """
-                <?import org.jfxcore.compiler.bindings.CollectionBindingTest.ListTestPane?>
-                <ListTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                              listProp="{fx:sync list4}"/>
-            """);
+        ListTestPane root = compileAndRun("""
+            <ListTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                          listProp="{fx:sync list4}"/>
+        """);
 
-        assertNotReferenced("Bidirectional_Binding_To_Property_Of_ObservableList", root, "observableListValue");
-        assertNotReferenced("Bidirectional_Binding_To_Property_Of_ObservableList", root, "observableObjectValue");
+        assertNotReferenced(root, "observableListValue");
+        assertNotReferenced(root, "observableObjectValue");
     }
 
     /*
@@ -764,15 +693,13 @@ public class CollectionBindingTest extends MethodReferencedSupport {
      */
     @Test
     public void Bidirectional_ContentBinding_To_Property_Of_ObservableList() {
-        ListTestPane root = TestCompiler.newInstance(
-            this, "Bidirectional_ContentBinding_To_Property_Of_ObservableList", """
-                <?import org.jfxcore.compiler.bindings.CollectionBindingTest.ListTestPane?>
-                <ListTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                              listProp="{fx:sync list4; content=true}"/>
-            """);
+        ListTestPane root = compileAndRun("""
+            <ListTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                          listProp="{fx:sync list4; content=true}"/>
+        """);
 
-        assertReferenced("Bidirectional_ContentBinding_To_Property_Of_ObservableList", root, "observableListValue");
-        assertNotReferenced("Bidirectional_ContentBinding_To_Property_Of_ObservableList", root, "observableObjectValue");
+        assertReferenced(root, "observableListValue");
+        assertNotReferenced(root, "observableObjectValue");
     }
 
     /*
@@ -781,12 +708,10 @@ public class CollectionBindingTest extends MethodReferencedSupport {
      */
     @Test
     public void Bidirectional_Binding_To_ReadOnlyObservableValue_Of_ObservableList_Fails() {
-        MarkupException ex = assertThrows(MarkupException.class, () -> TestCompiler.newInstance(
-            this, "Bidirectional_Binding_To_ObservableValue_Of_ObservableList_Fails", """
-                <?import org.jfxcore.compiler.bindings.CollectionBindingTest.ListTestPane?>
-                <ListTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                              listProp="{fx:sync list4ReadOnly}"/>
-            """));
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <ListTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                          listProp="{fx:sync list4ReadOnly}"/>
+        """));
 
         assertEquals(ErrorCode.INVALID_BIDIRECTIONAL_BINDING_SOURCE, ex.getDiagnostic().getCode());
     }
@@ -797,15 +722,13 @@ public class CollectionBindingTest extends MethodReferencedSupport {
      */
     @Test
     public void Bidirectional_ContentBinding_To_ReadOnlyObservableValue_Of_ObservableList() {
-        ListTestPane root = TestCompiler.newInstance(
-            this, "Bidirectional_ContentBinding_To_ReadOnlyObservableValue_Of_ObservableList", """
-                <?import org.jfxcore.compiler.bindings.CollectionBindingTest.ListTestPane?>
-                <ListTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                              listProp="{fx:sync list4ReadOnly; content=true}"/>
-            """);
+        ListTestPane root = compileAndRun("""
+            <ListTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                          listProp="{fx:sync list4ReadOnly; content=true}"/>
+        """);
 
-        assertReferenced("Bidirectional_ContentBinding_To_ReadOnlyObservableValue_Of_ObservableList", root, "observableListValue");
-        assertNotReferenced("Bidirectional_ContentBinding_To_ReadOnlyObservableValue_Of_ObservableList", root, "observableObjectValue");
+        assertReferenced(root, "observableListValue");
+        assertNotReferenced(root, "observableObjectValue");
     }
 
     @SuppressWarnings("unchecked")

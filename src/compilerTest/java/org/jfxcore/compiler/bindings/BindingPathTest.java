@@ -20,11 +20,10 @@ import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Pane;
 import org.jfxcore.compiler.diagnostic.ErrorCode;
 import org.jfxcore.compiler.diagnostic.MarkupException;
-import org.jfxcore.compiler.util.TestCompiler;
+import org.jfxcore.compiler.util.CompilerTestBase;
 import org.jfxcore.compiler.util.TestExtension;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-
 import java.util.ArrayList;
 import java.util.List;
 
@@ -32,7 +31,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 @SuppressWarnings({"HttpUrlsUsage", "DuplicatedCode"})
 @ExtendWith(TestExtension.class)
-public class BindingPathTest {
+public class BindingPathTest extends CompilerTestBase {
 
     @SuppressWarnings("unused")
     public static class SimpleGetterSetterTestPane extends Pane {
@@ -49,12 +48,10 @@ public class BindingPathTest {
 
     @Test
     public void Bind_Once_Is_Bound_To_Simple_Getter_And_Setter() {
-        SimpleGetterSetterTestPane root = TestCompiler.newInstance(
-            this, "Bind_Once_Is_Bound_To_Simple_Getter_And_Setter", """
-                <?import org.jfxcore.compiler.bindings.BindingPathTest.SimpleGetterSetterTestPane?>
-                <SimpleGetterSetterTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                      foo="{fx:once bar}"/>
-            """);
+        SimpleGetterSetterTestPane root = compileAndRun("""
+            <SimpleGetterSetterTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                  foo="{fx:once bar}"/>
+        """);
 
         assertEquals(2, root.calledMethods.size());
         assertEquals("getBar", root.calledMethods.get(0));
@@ -122,51 +119,44 @@ public class BindingPathTest {
 
     @Test
     public void Invalid_Property_In_Binding_Intrinsic_Throws() {
-        MarkupException ex = assertThrows(MarkupException.class, () -> TestCompiler.newInstance(
-            this, "Invalid_Property_In_Binding_Intrinsic_Throws", """
-                <?import javafx.scene.control.*?>
-                <?import javafx.scene.layout.*?>
-                <Pane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
-                    <Label text="{fx:bind path=style; foo=bar}"/>
-                </Pane>
-            """));
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <?import javafx.scene.control.*?>
+            <?import javafx.scene.layout.*?>
+            <Pane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                <Label text="{fx:bind path=style; foo=bar}"/>
+            </Pane>
+        """));
 
         assertEquals(ErrorCode.PROPERTY_NOT_FOUND, ex.getDiagnostic().getCode());
     }
 
     @Test
     public void Bind_Once_To_Nonexistent_Property_Fails() {
-        MarkupException ex = assertThrows(MarkupException.class, () -> TestCompiler.newInstance(
-            this, "Bind_Once_To_Nonexistent_Property_Fails", """
-                <?import org.jfxcore.compiler.bindings.BindingPathTest.TestPane?>
-                <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          prefWidth="{fx:once nonexistent}"/>
-            """));
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                      prefWidth="{fx:once nonexistent}"/>
+        """));
 
         assertEquals(ErrorCode.MEMBER_NOT_FOUND, ex.getDiagnostic().getCode());
     }
 
     @Test
     public void Bind_Once_To_RawType_Property_Fails() {
-        MarkupException ex = assertThrows(MarkupException.class, () -> TestCompiler.newInstance(
-            this, "Bind_Once_To_RawType_Property_Fails", """
-                <?import org.jfxcore.compiler.bindings.BindingPathTest.TestPane?>
-                <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          prefWidth="{fx:once rawProp}"/>
-            """));
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                      prefWidth="{fx:once rawProp}"/>
+        """));
 
         assertEquals(ErrorCode.CANNOT_CONVERT_SOURCE_TYPE, ex.getDiagnostic().getCode());
     }
 
     @Test
     public void Bind_Once_To_Interface_Method() {
-        TestPane root = TestCompiler.newInstance(
-            this, "Bind_Once_To_Interface_Method", """
-                <?import org.jfxcore.compiler.bindings.BindingPathTest.*?>
-                <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                              visible="{fx:once context.invariantList.isEmpty}"
-                              managed="{fx:once context.observableList.isEmpty}"/>
-            """);
+        TestPane root = compileAndRun("""
+            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                      visible="{fx:once context.invariantList.isEmpty}"
+                      managed="{fx:once context.observableList.isEmpty}"/>
+        """);
 
         assertFalse(root.visibleProperty().isBound());
         assertFalse(root.isVisible());
@@ -177,21 +167,19 @@ public class BindingPathTest {
 
     @Test
     public void Bind_Once_To_Single_Invariant_Property() {
-        TestPane root = TestCompiler.newInstance(
-            this, "Bind_Once_To_Single_Invariant_Property", """
-                <?import org.jfxcore.compiler.bindings.BindingPathTest.TestPane?>
-                <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          visible="{fx:once observableBoolean}"
-                          prefWidth="{fx:once simpleDoubleVal}"
-                          prefHeight="{fx:once simpleDoubleBox}"
-                          minWidth="{fx:once simpleShortVal}"
-                          minHeight="{fx:once simpleShortBox}"
-                          maxHeight="{fx:once observableDouble}">
-                    <maxWidth>
-                        <fx:once path="simpleProp"/>
-                    </maxWidth>
-                </TestPane>
-            """);
+        TestPane root = compileAndRun("""
+            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                      visible="{fx:once observableBoolean}"
+                      prefWidth="{fx:once simpleDoubleVal}"
+                      prefHeight="{fx:once simpleDoubleBox}"
+                      minWidth="{fx:once simpleShortVal}"
+                      minHeight="{fx:once simpleShortBox}"
+                      maxHeight="{fx:once observableDouble}">
+                <maxWidth>
+                    <fx:once path="simpleProp"/>
+                </maxWidth>
+            </TestPane>
+        """);
 
         assertFalse(root.visibleProperty().isBound());
         assertTrue(root.isVisible());
@@ -217,16 +205,14 @@ public class BindingPathTest {
 
     @Test
     public void Bind_Once_To_Invariant_Properties() {
-        TestPane root = TestCompiler.newInstance(
-            this, "Bind_Once_To_Invariant_Properties", """
-                <?import org.jfxcore.compiler.bindings.BindingPathTest.TestPane?>
-                <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          managed="{fx:once invariantContext.invariantBoolVal}"
-                          prefWidth="{fx:once invariantContext.invariantDoubleVal}"
-                          prefHeight="{fx:once invariantContext.invariantDoubleBox}"
-                          minWidth="{fx:once invariantContext.invariantShortVal}"
-                          minHeight="{fx:once invariantContext.invariantShortBox}"/>
-            """);
+        TestPane root = compileAndRun("""
+            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                      managed="{fx:once invariantContext.invariantBoolVal}"
+                      prefWidth="{fx:once invariantContext.invariantDoubleVal}"
+                      prefHeight="{fx:once invariantContext.invariantDoubleBox}"
+                      minWidth="{fx:once invariantContext.invariantShortVal}"
+                      minHeight="{fx:once invariantContext.invariantShortBox}"/>
+        """);
 
         assertFalse(root.managedProperty().isBound());
         assertTrue(root.isManaged());
@@ -246,12 +232,10 @@ public class BindingPathTest {
 
     @Test
     public void Bind_Once_To_Observable_Properties() {
-        TestPane root = TestCompiler.newInstance(
-            this, "Bind_Once_To_Observable_Properties", """
-                <?import org.jfxcore.compiler.bindings.BindingPathTest.TestPane?>
-                <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          managed="{fx:once context.boolVal}" prefWidth="{fx:once context.doubleVal}"/>
-            """);
+        TestPane root = compileAndRun("""
+            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                      managed="{fx:once context.boolVal}" prefWidth="{fx:once context.doubleVal}"/>
+        """);
 
         assertFalse(root.managedProperty().isBound());
         assertTrue(root.isManaged());
@@ -262,14 +246,12 @@ public class BindingPathTest {
 
     @Test
     public void Bind_Once_To_Observable_And_Invariant_Properties() {
-        TestPane root = TestCompiler.newInstance(
-            this, "Bind_Once_To_Observable_And_Invariant_Properties", """
-                <?import org.jfxcore.compiler.bindings.BindingPathTest.TestPane?>
-                <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          managed="{fx:once context.invariantBoolVal}"
-                          prefWidth="{fx:once context.invariantDoubleVal}" prefHeight="{fx:once context.invariantDoubleBox}"
-                          minWidth="{fx:once context.invariantShortVal}" minHeight="{fx:once context.invariantShortBox}"/>
-            """);
+        TestPane root = compileAndRun("""
+            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                      managed="{fx:once context.invariantBoolVal}"
+                      prefWidth="{fx:once context.invariantDoubleVal}" prefHeight="{fx:once context.invariantDoubleBox}"
+                      minWidth="{fx:once context.invariantShortVal}" minHeight="{fx:once context.invariantShortBox}"/>
+        """);
 
         assertFalse(root.managedProperty().isBound());
         assertTrue(root.isManaged());
@@ -289,12 +271,10 @@ public class BindingPathTest {
 
     @Test
     public void Bind_Once_To_Invariant_And_Observable_Properties() {
-        TestPane root = TestCompiler.newInstance(
-            this, "Bind_Once_To_Invariant_And_Observable_Properties", """
-                <?import org.jfxcore.compiler.bindings.BindingPathTest.TestPane?>
-                <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          managed="{fx:once invariantContext.boolVal}" prefWidth="{fx:once invariantContext.doubleVal}"/>
-            """);
+        TestPane root = compileAndRun("""
+            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                      managed="{fx:once invariantContext.boolVal}" prefWidth="{fx:once invariantContext.doubleVal}"/>
+        """);
 
         assertFalse(root.managedProperty().isBound());
         assertTrue(root.isManaged());
@@ -305,12 +285,10 @@ public class BindingPathTest {
 
     @Test
     public void Bind_Once_To_Invariant_Null_Context() {
-        TestPane root = TestCompiler.newInstance(
-            this, "Bind_Once_To_Invariant_Null_Context", """
-                <?import org.jfxcore.compiler.bindings.BindingPathTest.TestPane?>
-                <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          managed="{fx:once nullContext.boolVal}"/>
-            """);
+        TestPane root = compileAndRun("""
+            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                      managed="{fx:once nullContext.boolVal}"/>
+        """);
 
         assertFalse(root.managedProperty().isBound());
         assertFalse(root.isManaged());
@@ -318,38 +296,32 @@ public class BindingPathTest {
 
     @Test
     public void Bind_Once_Fails_For_ReadOnlyProperty() {
-        MarkupException ex = assertThrows(MarkupException.class, () -> TestCompiler.newInstance(
-            this, "Bind_Once_Fails_For_ReadOnlyProperty", """
-                <?import org.jfxcore.compiler.bindings.BindingPathTest.TestPane?>
-                <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          notBindable="{fx:once invariantContext.boolVal}"/>
-            """));
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                      notBindable="{fx:once invariantContext.boolVal}"/>
+        """));
 
         assertEquals(ErrorCode.CANNOT_MODIFY_READONLY_PROPERTY, ex.getDiagnostic().getCode());
     }
 
     @Test
     public void Bind_Once_To_Static_Property() {
-        TestPane root = TestCompiler.newInstance(
-            this, "Bind_Once_To_Static_Property", """
-                <?import javafx.scene.layout.*?>
-                <?import org.jfxcore.compiler.bindings.BindingPathTest.TestPane?>
-                <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          GridPane.margin="{fx:once context.margin}"/>
-            """);
+        TestPane root = compileAndRun("""
+            <?import javafx.scene.layout.*?>
+            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                      GridPane.margin="{fx:once context.margin}"/>
+        """);
 
         assertEquals(new Insets(1, 2, 3, 4), GridPane.getMargin(root));
     }
 
     @Test
     public void Bind_Unidirectional_To_Interface_Method() {
-        TestPane root = TestCompiler.newInstance(
-            this, "Bind_Unidirectional_To_Interface_Method", """
-                <?import org.jfxcore.compiler.bindings.BindingPathTest.*?>
-                <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                              visible="{fx:bind context.invariantList.isEmpty}"
-                              managed="{fx:bind context.observableList.isEmpty}"/>
-            """);
+        TestPane root = compileAndRun("""
+            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                          visible="{fx:bind context.invariantList.isEmpty}"
+                          managed="{fx:bind context.observableList.isEmpty}"/>
+        """);
 
         assertTrue(root.visibleProperty().isBound());
         assertFalse(root.isVisible());
@@ -360,13 +332,11 @@ public class BindingPathTest {
 
     @Test
     public void Bind_Unidirectional_To_Single_Invariant_Property() {
-        TestPane root = TestCompiler.newInstance(
-            this, "Bind_Unidirectional_To_Single_Invariant_Property", """
-                <?import org.jfxcore.compiler.bindings.BindingPathTest.TestPane?>
-                <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          prefWidth="{fx:bind simpleDoubleVal}" prefHeight="{fx:bind simpleDoubleBox}"
-                          minWidth="{fx:bind simpleShortVal}" minHeight="{fx:bind simpleShortBox}"/>
-            """);
+        TestPane root = compileAndRun("""
+            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                      prefWidth="{fx:bind simpleDoubleVal}" prefHeight="{fx:bind simpleDoubleBox}"
+                      minWidth="{fx:bind simpleShortVal}" minHeight="{fx:bind simpleShortBox}"/>
+        """);
 
         assertTrue(root.prefWidthProperty().isBound());
         assertEquals(2.0, root.getPrefWidth(), 0.001);
@@ -383,14 +353,12 @@ public class BindingPathTest {
 
     @Test
     public void Bind_Unidirectional_To_Invariant_Properties() {
-        TestPane root = TestCompiler.newInstance(
-            this, "Bind_Unidirectional_To_Invariant_Properties", """
-                <?import org.jfxcore.compiler.bindings.BindingPathTest.TestPane?>
-                <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          managed="{fx:bind invariantContext.invariantBoolVal}"
-                          prefWidth="{fx:bind invariantContext.invariantDoubleVal}"
-                          prefHeight="{fx:bind invariantContext.invariantDoubleBox}"/>
-            """);
+        TestPane root = compileAndRun("""
+            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                      managed="{fx:bind invariantContext.invariantBoolVal}"
+                      prefWidth="{fx:bind invariantContext.invariantDoubleVal}"
+                      prefHeight="{fx:bind invariantContext.invariantDoubleBox}"/>
+        """);
 
         assertTrue(root.managedProperty().isBound());
         assertTrue(root.isManaged());
@@ -404,12 +372,10 @@ public class BindingPathTest {
 
     @Test
     public void Bind_Unidirectional_To_Observable_Properties() {
-        TestPane root = TestCompiler.newInstance(
-            this, "Bind_Unidirectional_To_Observable_Properties", """
-                <?import org.jfxcore.compiler.bindings.BindingPathTest.TestPane?>
-                <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          managed="{fx:bind context.boolVal}" prefWidth="{fx:bind context.doubleVal}"/>
-            """);
+        TestPane root = compileAndRun("""
+            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                      managed="{fx:bind context.boolVal}" prefWidth="{fx:bind context.doubleVal}"/>
+        """);
 
         assertTrue(root.managedProperty().isBound());
         assertTrue(root.isManaged());
@@ -424,14 +390,12 @@ public class BindingPathTest {
 
     @Test
     public void Bind_Unidirectional_To_Observable_And_Invariant_Properties() {
-        TestPane root = TestCompiler.newInstance(
-            this, "Bind_Unidirectional_To_Observable_And_Invariant_Properties", """
-                <?import org.jfxcore.compiler.bindings.BindingPathTest.TestPane?>
-                <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          managed="{fx:bind context.invariantBoolVal}"
-                          prefWidth="{fx:bind context.invariantDoubleVal}" prefHeight="{fx:bind context.invariantDoubleBox}"
-                          minWidth="{fx:bind context.invariantShortVal}" minHeight="{fx:bind context.invariantShortBox}"/>
-            """);
+        TestPane root = compileAndRun("""
+            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                      managed="{fx:bind context.invariantBoolVal}"
+                      prefWidth="{fx:bind context.invariantDoubleVal}" prefHeight="{fx:bind context.invariantDoubleBox}"
+                      minWidth="{fx:bind context.invariantShortVal}" minHeight="{fx:bind context.invariantShortBox}"/>
+        """);
 
         assertTrue(root.managedProperty().isBound());
         assertTrue(root.isManaged());
@@ -465,12 +429,10 @@ public class BindingPathTest {
 
     @Test
     public void Bind_Unidirectional_To_Invariant_And_Observable_Properties() {
-        TestPane root = TestCompiler.newInstance(
-            this, "Bind_Unidirectional_To_Invariant_And_Observable_Properties", """
-                <?import org.jfxcore.compiler.bindings.BindingPathTest.TestPane?>
-                <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          managed="{fx:bind invariantContext.boolVal}" prefWidth="{fx:bind invariantContext.doubleVal}"/>
-            """);
+        TestPane root = compileAndRun("""
+            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                      managed="{fx:bind invariantContext.boolVal}" prefWidth="{fx:bind invariantContext.doubleVal}"/>
+        """);
 
         assertTrue(root.managedProperty().isBound());
         assertTrue(root.isManaged());
@@ -485,12 +447,10 @@ public class BindingPathTest {
 
     @Test
     public void Bind_Unidirectional_To_Invariant_Null_Context() {
-        TestPane root = TestCompiler.newInstance(
-            this, "Bind_Unidirectional_To_Invariant_Null_Context", """
-                <?import org.jfxcore.compiler.bindings.BindingPathTest.TestPane?>
-                <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          managed="{fx:bind nullContext.boolVal}"/>
-            """);
+        TestPane root = compileAndRun("""
+            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                      managed="{fx:bind nullContext.boolVal}"/>
+        """);
 
         assertTrue(root.managedProperty().isBound());
         assertFalse(root.isManaged());
@@ -498,61 +458,51 @@ public class BindingPathTest {
 
     @Test
     public void Bind_Unidirectional_Fails_For_ReadOnlyProperty() {
-        MarkupException ex = assertThrows(MarkupException.class, () -> TestCompiler.newInstance(
-            this, "Bind_Unidirectional_Fails_For_ReadOnlyProperty", """
-                <?import org.jfxcore.compiler.bindings.BindingPathTest.TestPane?>
-                <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          notBindable="{fx:bind invariantContext.boolVal}"/>
-            """));
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                      notBindable="{fx:bind invariantContext.boolVal}"/>
+        """));
 
         assertEquals(ErrorCode.CANNOT_MODIFY_READONLY_PROPERTY, ex.getDiagnostic().getCode());
     }
 
     @Test
     public void Bind_Unidirectional_To_Static_Property_Fails() {
-        MarkupException ex = assertThrows(MarkupException.class, () -> TestCompiler.newInstance(
-            this, "Bind_Unidirectional_To_Static_Property_Fails", """
-                <?import javafx.scene.layout.*?>
-                <?import org.jfxcore.compiler.bindings.BindingPathTest.TestPane?>
-                <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          GridPane.margin="{fx:bind context.margin}"/>
-            """));
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <?import javafx.scene.layout.*?>
+            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                      GridPane.margin="{fx:bind context.margin}"/>
+        """));
 
         assertEquals(ErrorCode.INVALID_BINDING_TARGET, ex.getDiagnostic().getCode());
     }
 
     @Test
     public void Bind_Bidirectional_To_Single_Invariant_Property_Fails() {
-        MarkupException ex = assertThrows(MarkupException.class, () -> TestCompiler.newInstance(
-            this, "Bind_Bidirectional_To_Single_Invariant_Property_Fails", """
-                <?import org.jfxcore.compiler.bindings.BindingPathTest.TestPane?>
-                <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          prefWidth="{fx:sync simpleDoubleVal}"/>
-            """));
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                      prefWidth="{fx:sync simpleDoubleVal}"/>
+        """));
 
         assertEquals(ErrorCode.INVALID_BIDIRECTIONAL_BINDING_SOURCE, ex.getDiagnostic().getCode());
     }
 
     @Test
     public void Bind_Bidirectional_To_Invariant_Properties_Fails() {
-        MarkupException ex = assertThrows(MarkupException.class, () -> TestCompiler.newInstance(
-            this, "Bind_Bidirectional_To_Invariant_Properties_Fails", """
-                <?import org.jfxcore.compiler.bindings.BindingPathTest.TestPane?>
-                <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          managed="{fx:sync invariantContext.invariantBoolVal}"/>
-            """));
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                      managed="{fx:sync invariantContext.invariantBoolVal}"/>
+        """));
 
         assertEquals(ErrorCode.INVALID_BIDIRECTIONAL_BINDING_SOURCE, ex.getDiagnostic().getCode());
     }
 
     @Test
     public void Bind_Bidirectional_To_Observable_Properties() {
-        TestPane root = TestCompiler.newInstance(
-            this, "Bind_Bidirectional_To_Observable_Properties", """
-                <?import org.jfxcore.compiler.bindings.BindingPathTest.TestPane?>
-                <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          managed="{fx:sync context.boolVal}" prefWidth="{fx:sync context.doubleVal}"/>
-            """);
+        TestPane root = compileAndRun("""
+            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                      managed="{fx:sync context.boolVal}" prefWidth="{fx:sync context.doubleVal}"/>
+        """);
 
         assertFalse(root.managedProperty().isBound()); // bidirectional binding doesn't set isBound()==true
         assertTrue(root.isManaged());
@@ -567,12 +517,10 @@ public class BindingPathTest {
 
     @Test
     public void Bind_Bidirectional_To_Observable_Properties_Works_When_Path_Changes() {
-        TestPane root = TestCompiler.newInstance(
-            this, "Bind_Bidirectional_To_Observable_Properties_Works_When_Path_Changes", """
-                <?import org.jfxcore.compiler.bindings.BindingPathTest.TestPane?>
-                <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          managed="{fx:sync context.boolVal}" prefWidth="{fx:sync context.doubleVal}"/>
-            """);
+        TestPane root = compileAndRun("""
+            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                      managed="{fx:sync context.boolVal}" prefWidth="{fx:sync context.doubleVal}"/>
+        """);
 
         assertTrue(root.isManaged());
         root.context.set(null);
@@ -589,24 +537,20 @@ public class BindingPathTest {
 
     @Test
     public void Bind_Bidirectional_To_Observable_And_Invariant_Properties_Fails() {
-        MarkupException ex = assertThrows(MarkupException.class, () -> TestCompiler.newInstance(
-            this, "Bind_Bidirectional_To_Observable_And_Invariant_Properties_Fails", """
-                <?import org.jfxcore.compiler.bindings.BindingPathTest.TestPane?>
-                <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          managed="{fx:sync context.invariantBoolVal}"/>
-            """));
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                      managed="{fx:sync context.invariantBoolVal}"/>
+        """));
 
         assertEquals(ErrorCode.INVALID_BIDIRECTIONAL_BINDING_SOURCE, ex.getDiagnostic().getCode());
     }
 
     @Test
     public void Bind_Bidirectional_To_Invariant_And_Observable_Properties() {
-        TestPane root = TestCompiler.newInstance(
-            this, "Bind_Bidirectional_To_Invariant_And_Observable_Properties", """
-                <?import org.jfxcore.compiler.bindings.BindingPathTest.TestPane?>
-                <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          managed="{fx:sync invariantContext.boolVal}" prefWidth="{fx:sync invariantContext.doubleVal}"/>
-            """);
+        TestPane root = compileAndRun("""
+            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                      managed="{fx:sync invariantContext.boolVal}" prefWidth="{fx:sync invariantContext.doubleVal}"/>
+        """);
 
         assertFalse(root.managedProperty().isBound());
         assertTrue(root.isManaged());
@@ -621,12 +565,10 @@ public class BindingPathTest {
 
     @Test
     public void Bind_Bidirectional_To_Invariant_Null_Context() {
-        TestPane root = TestCompiler.newInstance(
-            this, "Bind_Bidirectional_To_Invariant_Null_Context", """
-                <?import org.jfxcore.compiler.bindings.BindingPathTest.TestPane?>
-                <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          managed="{fx:sync nullContext.boolVal}"/>
-            """);
+        TestPane root = compileAndRun("""
+            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                      managed="{fx:sync nullContext.boolVal}"/>
+        """);
 
         assertFalse(root.managedProperty().isBound());
         assertTrue(root.isManaged());
@@ -634,25 +576,21 @@ public class BindingPathTest {
 
     @Test
     public void Bind_Bidirectional_Fails_For_ReadOnlyProperty() {
-        MarkupException ex = assertThrows(MarkupException.class, () -> TestCompiler.newInstance(
-            this, "Bind_Bidirectional_Fails_For_ReadOnlyProperty", """
-                <?import org.jfxcore.compiler.bindings.BindingPathTest.TestPane?>
-                <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          notBindable="{fx:sync invariantContext.boolVal}"/>
-            """));
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                      notBindable="{fx:sync invariantContext.boolVal}"/>
+        """));
 
         assertEquals(ErrorCode.CANNOT_MODIFY_READONLY_PROPERTY, ex.getDiagnostic().getCode());
     }
 
     @Test
     public void Bind_Bidirectional_To_Static_Property_Fails() {
-        MarkupException ex = assertThrows(MarkupException.class, () -> TestCompiler.newInstance(
-            this, "Bind_Bidirectional_To_Static_Property_Fails", """
-                <?import javafx.scene.layout.*?>
-                <?import org.jfxcore.compiler.bindings.BindingPathTest.TestPane?>
-                <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          GridPane.margin="{fx:sync context.margin}"/>
-            """));
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <?import javafx.scene.layout.*?>
+            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                      GridPane.margin="{fx:sync context.margin}"/>
+        """));
 
         assertEquals(ErrorCode.INVALID_BINDING_TARGET, ex.getDiagnostic().getCode());
     }

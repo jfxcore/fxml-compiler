@@ -10,7 +10,7 @@ import javafx.scene.layout.Pane;
 import javafx.scene.shape.Rectangle;
 import org.jfxcore.compiler.diagnostic.ErrorCode;
 import org.jfxcore.compiler.diagnostic.MarkupException;
-import org.jfxcore.compiler.util.TestCompiler;
+import org.jfxcore.compiler.util.CompilerTestBase;
 import org.jfxcore.compiler.util.TestExtension;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -19,39 +19,37 @@ import static org.junit.jupiter.api.Assertions.*;
 
 @SuppressWarnings("HttpUrlsUsage")
 @ExtendWith(TestExtension.class)
-public class ControlBindingTest {
+public class ControlBindingTest extends CompilerTestBase {
 
     @Test
     public void Bind_Once_To_IncompatibleType_Fails() {
-        MarkupException ex = assertThrows(MarkupException.class, () -> TestCompiler.newInstance(
-            this, "Bind_Once_To_IncompatibleType_Fails", """
-                <?import javafx.scene.control.*?>
-                <?import javafx.scene.layout.*?>
-                <Pane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
-                    <Button fx:id="btn" text="foo"/>
-                    <Label prefWidth="{fx:once btn.text}"/>
-                </Pane>
-            """));
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <?import javafx.scene.control.*?>
+            <?import javafx.scene.layout.*?>
+            <Pane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                <Button fx:id="btn" text="foo"/>
+                <Label prefWidth="{fx:once btn.text}"/>
+            </Pane>
+        """));
 
         assertEquals(ErrorCode.CANNOT_CONVERT_SOURCE_TYPE, ex.getDiagnostic().getCode());
     }
 
     @Test
     public void Bind_Once_To_Local_Control() {
-        Pane root = TestCompiler.newInstance(
-            this, "Bind_Once_To_Local_Control", """
-                <?import javafx.scene.control.*?>
-                <?import javafx.scene.layout.*?>
-                <Pane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
-                    <Button fx:id="btn" text="foo"/>
-                    <Label text="{fx:once btn.text}"/>
-                    <Label>
-                        <text>
-                            <fx:once path="btn.text"/>
-                        </text>
-                    </Label>
-                </Pane>
-            """);
+        Pane root = compileAndRun("""
+            <?import javafx.scene.control.*?>
+            <?import javafx.scene.layout.*?>
+            <Pane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                <Button fx:id="btn" text="foo"/>
+                <Label text="{fx:once btn.text}"/>
+                <Label>
+                    <text>
+                        <fx:once path="btn.text"/>
+                    </text>
+                </Label>
+            </Pane>
+        """);
 
         assertFalse(((Label)root.getChildren().get(1)).textProperty().isBound());
         assertEquals("foo", ((Label)root.getChildren().get(1)).getText());
@@ -62,15 +60,14 @@ public class ControlBindingTest {
 
     @Test
     public void Bind_Once_To_Local_Control_Cat2Type() {
-        Pane root = TestCompiler.newInstance(
-            this, "Bind_Once_To_Local_Control_Cat2Type", """
-                <?import javafx.scene.control.*?>
-                <?import javafx.scene.layout.*?>
-                <Pane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
-                    <Button fx:id="btn" prefWidth="123"/>
-                    <Label prefWidth="{fx:once btn.prefWidth}"/>
-                </Pane>
-            """);
+        Pane root = compileAndRun("""
+            <?import javafx.scene.control.*?>
+            <?import javafx.scene.layout.*?>
+            <Pane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                <Button fx:id="btn" prefWidth="123"/>
+                <Label prefWidth="{fx:once btn.prefWidth}"/>
+            </Pane>
+        """);
 
         assertFalse(((Label)root.getChildren().get(1)).prefWidthProperty().isBound());
         assertEquals(123, ((Label)root.getChildren().get(1)).getPrefWidth(), 0.001);
@@ -78,14 +75,13 @@ public class ControlBindingTest {
 
     @Test
     public void Bind_Once_To_Same_Control() {
-        Pane root = TestCompiler.newInstance(
-            this, "Bind_Once_To_Same_Control", """
-                <?import javafx.scene.shape.*?>
-                <?import javafx.scene.layout.*?>
-                <Pane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
-                    <Rectangle fill="red" stroke="{fx:once parent[0]/fill}"/>
-                </Pane>
-            """);
+        Pane root = compileAndRun("""
+            <?import javafx.scene.shape.*?>
+            <?import javafx.scene.layout.*?>
+            <Pane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                <Rectangle fill="red" stroke="{fx:once parent[0]/fill}"/>
+            </Pane>
+        """);
 
         Rectangle rect = (Rectangle)root.getChildren().get(0);
         assertEquals(rect.getFill(), rect.getStroke());
@@ -101,16 +97,14 @@ public class ControlBindingTest {
 
     @Test
     public void Bind_Once_To_NonNode() {
-        Pane root = TestCompiler.newInstance(
-            this, "Bind_Once_To_NonNode", """
-                <?import javafx.scene.layout.*?>
-                <?import org.jfxcore.compiler.bindings.ControlBindingTest.*?>
-                <Pane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
-                    <properties>
-                        <NonNode fx:id="prop" prop1="123.0" prop2="{fx:once parent[0]/prop1}"/>
-                    </properties>
-                </Pane>
-            """);
+        Pane root = compileAndRun("""
+            <?import javafx.scene.layout.*?>
+            <Pane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                <properties>
+                    <NonNode fx:id="prop" prop1="123.0" prop2="{fx:once parent[0]/prop1}"/>
+                </properties>
+            </Pane>
+        """);
 
         NonNode child = (NonNode)root.getProperties().get("prop");
         assertEquals(child.prop1.get(), child.prop2.get(), 0.001);
@@ -118,34 +112,32 @@ public class ControlBindingTest {
 
     @Test
     public void Bind_Unidirectional_To_IncompatibleType_Fails() {
-        MarkupException ex = assertThrows(MarkupException.class, () -> TestCompiler.newInstance(
-            this, "Bind_Unidirectional_To_IncompatibleType_Fails", """
-                <?import javafx.scene.control.*?>
-                <?import javafx.scene.layout.*?>
-                <Pane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
-                    <Button fx:id="btn" text="foo"/>
-                    <Label prefWidth="{fx:bind btn.text}"/>
-                </Pane>
-            """));
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <?import javafx.scene.control.*?>
+            <?import javafx.scene.layout.*?>
+            <Pane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                <Button fx:id="btn" text="foo"/>
+                <Label prefWidth="{fx:bind btn.text}"/>
+            </Pane>
+        """));
 
         assertEquals(ErrorCode.CANNOT_CONVERT_SOURCE_TYPE, ex.getDiagnostic().getCode());
     }
 
     @Test
     public void Bind_Unidirectional_To_Multiple_Local_Controls() {
-        Pane root = TestCompiler.newInstance(
-            this, "Bind_Unidirectional_To_Multiple_Local_Controls", """
-                <?import javafx.scene.control.*?>
-                <?import javafx.scene.layout.*?>
-                <Pane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                      prefWidth="{fx:bind btn.prefWidth}">
-                    <Pane fx:id="pane" prefWidth="{fx:bind prefWidth}">
-                        <Pane prefWidth="{fx:bind pane.prefWidth}">
-                            <Button fx:id="btn" prefWidth="123"/>
-                        </Pane>
+        Pane root = compileAndRun("""
+            <?import javafx.scene.control.*?>
+            <?import javafx.scene.layout.*?>
+            <Pane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                  prefWidth="{fx:bind btn.prefWidth}">
+                <Pane fx:id="pane" prefWidth="{fx:bind prefWidth}">
+                    <Pane prefWidth="{fx:bind pane.prefWidth}">
+                        <Button fx:id="btn" prefWidth="123"/>
                     </Pane>
                 </Pane>
-            """);
+            </Pane>
+        """);
 
         assertEquals(123.0, root.getPrefWidth(), 0.001);
         assertEquals(123.0, ((Pane)root.getChildren().get(0)).getPrefWidth(), 0.001);
@@ -154,30 +146,28 @@ public class ControlBindingTest {
 
     @Test
     public void Bind_Bidirectional_To_IncompatibleType_Fails() {
-        MarkupException ex = assertThrows(MarkupException.class, () -> TestCompiler.newInstance(
-            this, "Bind_Bidirectional_To_IncompatibleType_Fails", """
-                <?import javafx.scene.control.*?>
-                <?import javafx.scene.layout.*?>
-                <Pane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
-                    <Button fx:id="btn" text="foo"/>
-                    <Label prefWidth="{fx:sync btn.text}"/>
-                </Pane>
-            """));
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <?import javafx.scene.control.*?>
+            <?import javafx.scene.layout.*?>
+            <Pane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                <Button fx:id="btn" text="foo"/>
+                <Label prefWidth="{fx:sync btn.text}"/>
+            </Pane>
+        """));
 
         assertEquals(ErrorCode.SOURCE_TYPE_MISMATCH, ex.getDiagnostic().getCode());
     }
 
     @Test
     public void Bind_Bidirectional_To_Local_Control() {
-        Pane root = TestCompiler.newInstance(
-            this, "Bind_Bidirectional_To_Local_Control", """
-                <?import javafx.scene.control.*?>
-                <?import javafx.scene.layout.*?>
-                <Pane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
-                    <Label fx:id="lbl" text="foo"/>
-                    <Label text="{fx:sync lbl.text}"/>
-                </Pane>
-            """);
+        Pane root = compileAndRun("""
+            <?import javafx.scene.control.*?>
+            <?import javafx.scene.layout.*?>
+            <Pane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                <Label fx:id="lbl" text="foo"/>
+                <Label text="{fx:sync lbl.text}"/>
+            </Pane>
+        """);
 
         Label label0 = (Label)root.getChildren().get(1);
         Label label1 = (Label)root.getChildren().get(1);
@@ -191,19 +181,18 @@ public class ControlBindingTest {
 
     @Test
     public void Bind_Bidirectional_To_Multiple_Local_Controls() {
-        Pane root = TestCompiler.newInstance(
-            this, "Bind_Bidirectional_To_Multiple_Local_Controls", """
-                <?import javafx.scene.control.*?>
-                <?import javafx.scene.layout.*?>
-                <Pane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                      prefWidth="{fx:sync btn.prefWidth}">
-                    <Pane fx:id="pane" prefWidth="{fx:sync prefWidth}">
-                        <Pane prefWidth="{fx:sync pane.prefWidth}">
-                            <Button fx:id="btn" prefWidth="123"/>
-                        </Pane>
+        Pane root = compileAndRun("""
+            <?import javafx.scene.control.*?>
+            <?import javafx.scene.layout.*?>
+            <Pane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                  prefWidth="{fx:sync btn.prefWidth}">
+                <Pane fx:id="pane" prefWidth="{fx:sync prefWidth}">
+                    <Pane prefWidth="{fx:sync pane.prefWidth}">
+                        <Button fx:id="btn" prefWidth="123"/>
                     </Pane>
                 </Pane>
-            """);
+            </Pane>
+        """);
 
         assertEquals(123.0, root.getPrefWidth(), 0.001);
         assertEquals(123.0, ((Pane)root.getChildren().get(0)).getPrefWidth(), 0.001);

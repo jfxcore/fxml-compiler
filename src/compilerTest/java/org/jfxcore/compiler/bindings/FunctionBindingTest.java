@@ -17,23 +17,17 @@ import javafx.scene.control.Label;
 import javafx.scene.layout.Pane;
 import org.jfxcore.compiler.diagnostic.ErrorCode;
 import org.jfxcore.compiler.diagnostic.MarkupException;
-import org.jfxcore.compiler.util.MethodReferencedSupport;
-import org.jfxcore.compiler.util.TestCompiler;
+import org.jfxcore.compiler.util.CompilerTestBase;
 import org.jfxcore.compiler.util.TestExtension;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-
 import java.text.DecimalFormat;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 @SuppressWarnings("HttpUrlsUsage")
 @ExtendWith(TestExtension.class)
-public class FunctionBindingTest extends MethodReferencedSupport {
-
-    public FunctionBindingTest() {
-        super("org.jfxcore.compiler.classes.FunctionBindingTest");
-    }
+public class FunctionBindingTest extends CompilerTestBase {
 
     @SuppressWarnings("unused")
     public interface TestDefaultMethod {
@@ -111,52 +105,40 @@ public class FunctionBindingTest extends MethodReferencedSupport {
 
     @Test
     public void Bind_Once_To_Static_Method_With_Incompatible_ReturnType_Fails() {
-        MarkupException ex = assertThrows(MarkupException.class, () -> TestCompiler.newInstance(
-            this, "Bind_Once_To_Static_Method_With_Incompatible_ReturnType_Fails", """
-                <?import java.lang.*?>
-                <?import org.jfxcore.compiler.bindings.FunctionBindingTest.TestPane?>
-                <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          prefWidth="{fx:once String.format('foo-%s', invariantDoubleVal)}"/>
-            """));
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                      prefWidth="{fx:once String.format('foo-%s', invariantDoubleVal)}"/>
+        """));
 
         assertEquals(ErrorCode.CANNOT_CONVERT_SOURCE_TYPE, ex.getDiagnostic().getCode());
     }
 
     @Test
     public void Bind_Once_To_Static_Method_With_Incompatible_ParamType_Fails() {
-        MarkupException ex = assertThrows(MarkupException.class, () -> TestCompiler.newInstance(
-            this, "Bind_Once_To_Static_Method_With_Incompatible_ParamType_Fails", """
-                <?import java.lang.*?>
-                <?import org.jfxcore.compiler.bindings.FunctionBindingTest.TestPane?>
-                <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          prefWidth="{fx:once staticAdd(1, stringProp)}"/>
-            """));
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                      prefWidth="{fx:once staticAdd(1, stringProp)}"/>
+        """));
 
         assertEquals(ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT, ex.getDiagnostic().getCode());
     }
 
     @Test
     public void Bind_Once_To_Instance_Method_With_Incompatible_ParamType_Fails() {
-        MarkupException ex = assertThrows(MarkupException.class, () -> TestCompiler.newInstance(
-            this, "Bind_Once_To_Instance_Method_With_Incompatible_ParamType_Fails", """
-                <?import java.lang.*?>
-                <?import org.jfxcore.compiler.bindings.FunctionBindingTest.TestPane?>
-                <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          prefWidth="{fx:once add(1, stringProp)}"/>
-            """));
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                      prefWidth="{fx:once add(1, stringProp)}"/>
+        """));
 
         assertEquals(ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT, ex.getDiagnostic().getCode());
     }
 
     @Test
     public void Bind_Once_To_Static_Method_With_Invariant_Param() {
-        TestPane root = TestCompiler.newInstance(
-            this, "Bind_Once_To_Static_Method_With_Invariant_Param", """
-                <?import java.lang.*?>
-                <?import org.jfxcore.compiler.bindings.FunctionBindingTest.TestPane?>
-                <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          id="{fx:once String.format('foo-%s', invariantDoubleVal)}"/>
-            """);
+        TestPane root = compileAndRun("""
+            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                      id="{fx:once String.format('foo-%s', invariantDoubleVal)}"/>
+        """);
 
         assertFalse(root.idProperty().isBound());
         assertEquals("foo-1.0", root.getId());
@@ -164,15 +146,10 @@ public class FunctionBindingTest extends MethodReferencedSupport {
 
     @Test
     public void Bind_Once_To_Static_Method_With_Observable_Param() {
-        String FILENAME = "Bind_Once_To_Static_Method_With_Observable_Param";
-
-        TestPane root = TestCompiler.newInstance(
-            this, FILENAME, """
-                <?import java.lang.*?>
-                <?import org.jfxcore.compiler.bindings.FunctionBindingTest.TestPane?>
-                <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          id="{fx:once String.format('foo-%s', doubleProp)}"/>
-            """);
+        TestPane root = compileAndRun("""
+            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                      id="{fx:once String.format('foo-%s', doubleProp)}"/>
+        """);
 
         assertFalse(root.idProperty().isBound());
         assertEquals("foo-1.0", root.getId());
@@ -180,40 +157,30 @@ public class FunctionBindingTest extends MethodReferencedSupport {
         root.doubleProp.set(2);
         assertEquals("foo-1.0", root.getId());
 
-        assertReferenced(FILENAME, root, "requireNonNull");
-        assertReferenced(FILENAME, root, "doubleValue");
+        assertReferenced(root, "requireNonNull");
+        assertReferenced(root, "doubleValue");
     }
 
     @Test
     public void Bind_Once_To_Static_Method_With_Multiple_Invariant_Params() {
-        String FILENAME = "Bind_Once_To_Static_Method_With_Multiple_Invariant_Params";
-
-        TestPane root = TestCompiler.newInstance(
-            this, FILENAME, """
-                <?import java.lang.*?>
-                <?import org.jfxcore.compiler.bindings.FunctionBindingTest.TestPane?>
-                <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          id="{fx:once String.format('foo-%s-%s', invariantDoubleVal, invariantStringVal)}"/>
-            """);
+        TestPane root = compileAndRun("""
+            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                      id="{fx:once String.format('foo-%s-%s', invariantDoubleVal, invariantStringVal)}"/>
+        """);
 
         assertFalse(root.idProperty().isBound());
         assertEquals("foo-1.0-bar", root.getId());
 
-        assertNotReferenced(FILENAME, root, "requireNonNull");
-        assertNotReferenced(FILENAME, root, "doubleValue");
+        assertNotReferenced(root, "requireNonNull");
+        assertNotReferenced(root, "doubleValue");
     }
 
     @Test
     public void Bind_Once_To_Static_Method_With_Multiple_Observable_Params() {
-        String FILENAME = "Bind_Once_To_Static_Method_With_Multiple_Observable_Params";
-
-        TestPane root = TestCompiler.newInstance(
-            this, FILENAME, """
-                <?import java.lang.*?>
-                <?import org.jfxcore.compiler.bindings.FunctionBindingTest.TestPane?>
-                <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          id="{fx:once String.format('foo-%s-%s', doubleProp, stringProp)}"/>
-            """);
+        TestPane root = compileAndRun("""
+            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                      id="{fx:once String.format('foo-%s-%s', doubleProp, stringProp)}"/>
+        """);
 
         assertFalse(root.idProperty().isBound());
         assertEquals("foo-1.0-bar", root.getId());
@@ -222,19 +189,17 @@ public class FunctionBindingTest extends MethodReferencedSupport {
         root.stringProp.set("baz");
         assertEquals("foo-1.0-bar", root.getId());
 
-        assertReferenced(FILENAME, root, "requireNonNull");
-        assertReferenced(FILENAME, root, "doubleValue");
-        assertReferenced(FILENAME, root, "getValue");
+        assertReferenced(root, "requireNonNull");
+        assertReferenced(root, "doubleValue");
+        assertReferenced(root, "getValue");
     }
 
     @Test
     public void Bind_Once_To_Instance_Method_With_Literal_Params() {
-        TestPane root = TestCompiler.newInstance(
-            this, "Bind_Once_To_Instance_Method_With_Literal_Params", """
-                <?import org.jfxcore.compiler.bindings.FunctionBindingTest.TestPane?>
-                <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          prefWidth="{fx:once add(10, 20)}"/>
-            """);
+        TestPane root = compileAndRun("""
+            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                      prefWidth="{fx:once add(10, 20)}"/>
+        """);
 
         assertFalse(root.prefWidthProperty().isBound());
         assertEquals(30.0, root.getPrefWidth(), 0.001);
@@ -242,12 +207,10 @@ public class FunctionBindingTest extends MethodReferencedSupport {
 
     @Test
     public void Bind_Once_To_Static_Method_With_Literal_Params() {
-        TestPane root = TestCompiler.newInstance(
-            this, "Bind_Once_To_Static_Method_With_Literal_Params", """
-                <?import org.jfxcore.compiler.bindings.FunctionBindingTest.TestPane?>
-                <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          prefWidth="{fx:once staticAdd(10, 20)}"/>
-            """);
+        TestPane root = compileAndRun("""
+            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                      prefWidth="{fx:once staticAdd(10, 20)}"/>
+        """);
 
         assertFalse(root.prefWidthProperty().isBound());
         assertEquals(30.0, root.getPrefWidth(), 0.001);
@@ -255,13 +218,11 @@ public class FunctionBindingTest extends MethodReferencedSupport {
 
     @Test
     public void Bind_Once_To_Nested_Instance_Methods() {
-        TestPane root = TestCompiler.newInstance(
-            this, "Bind_Once_To_Nested_Instance_Methods", """
-                <?import org.jfxcore.compiler.bindings.FunctionBindingTest.TestPane?>
-                <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          prefWidth="{fx:once add(add(1, 2), add(3, 4))}"
-                          prefHeight="{fx:once boxedAdd(boxedAdd(1.0, 2.0), add(3, 4))}"/>
-            """);
+        TestPane root = compileAndRun("""
+            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                      prefWidth="{fx:once add(add(1, 2), add(3, 4))}"
+                      prefHeight="{fx:once boxedAdd(boxedAdd(1.0, 2.0), add(3, 4))}"/>
+        """);
 
         assertFalse(root.prefWidthProperty().isBound());
         assertEquals(10.0, root.getPrefWidth(), 0.001);
@@ -272,13 +233,11 @@ public class FunctionBindingTest extends MethodReferencedSupport {
 
     @Test
     public void Bind_Once_To_Instance_Method_With_Mixed_Params() {
-        TestPane root = TestCompiler.newInstance(
-            this, "Bind_Once_To_Instance_Method_With_Mixed_Params", """
-                <?import org.jfxcore.compiler.bindings.FunctionBindingTest.TestPane?>
-                <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          prefWidth="{fx:once add(invariantDoubleVal, doubleProp)}"
-                          prefHeight="{fx:once boxedAdd(invariantDoubleVal, doubleProp)}"/>
-            """);
+        TestPane root = compileAndRun("""
+            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                      prefWidth="{fx:once add(invariantDoubleVal, doubleProp)}"
+                      prefHeight="{fx:once boxedAdd(invariantDoubleVal, doubleProp)}"/>
+        """);
 
         assertFalse(root.prefWidthProperty().isBound());
         assertEquals(2.0, root.getPrefWidth(), 0.001);
@@ -289,19 +248,18 @@ public class FunctionBindingTest extends MethodReferencedSupport {
 
     @Test
     public void Bind_Once_To_Instance_Method_Of_LocalObject() {
-        Pane root = TestCompiler.newInstance(
-            this, "Bind_Once_To_Instance_Method_Of_LocalObject", """
-                <?import javafx.scene.layout.*?>
-                <?import javafx.scene.control.*?>
-                <?import java.text.*?>
-                <Pane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
-                    <fx:define>
-                        <DecimalFormat fx:id="fmt">000</DecimalFormat>
-                        <Double fx:id="val">7</Double>
-                    </fx:define>
-                    <Label text="{fx:once fmt.format(val)}"/>
-                </Pane>
-            """);
+        Pane root = compileAndRun("""
+            <?import javafx.scene.layout.*?>
+            <?import javafx.scene.control.*?>
+            <?import java.text.*?>
+            <Pane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                <fx:define>
+                    <DecimalFormat fx:id="fmt">000</DecimalFormat>
+                    <Double fx:id="val">7</Double>
+                </fx:define>
+                <Label text="{fx:once fmt.format(val)}"/>
+            </Pane>
+        """);
 
         Label label = (Label)root.getChildren().get(0);
         assertEquals("007", label.getText());
@@ -309,14 +267,12 @@ public class FunctionBindingTest extends MethodReferencedSupport {
 
     @Test
     public void Bind_Once_To_Instance_Method_Of_Indirect_Object() {
-        Pane root = TestCompiler.newInstance(
-            this, "Bind_Once_To_Instance_Method_Of_Indirect_Object", """
-                <?import javafx.scene.control.*?>
-                <?import org.jfxcore.compiler.bindings.FunctionBindingTest.TestPane?>
-                <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
-                    <Label text="{fx:once c1.c2.fmt.format(7)}"/>
-                </TestPane>
-            """);
+        Pane root = compileAndRun("""
+            <?import javafx.scene.control.*?>
+            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                <Label text="{fx:once c1.c2.fmt.format(7)}"/>
+            </TestPane>
+        """);
 
         Label label = (Label)root.getChildren().get(0);
         assertEquals("007", label.getText());
@@ -324,13 +280,10 @@ public class FunctionBindingTest extends MethodReferencedSupport {
 
     @Test
     public void Bind_Once_To_Constructor() {
-        TestPane root = TestCompiler.newInstance(
-            this, "Bind_Once_To_Constructor", """
-                <?import java.lang.*?>
-                <?import org.jfxcore.compiler.bindings.FunctionBindingTest.TestPane?>
-                <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          id="{fx:once String('foo')}"/>
-            """);
+        TestPane root = compileAndRun("""
+            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                      id="{fx:once String('foo')}"/>
+        """);
 
         assertFalse(root.idProperty().isBound());
         assertEquals("foo", root.getId());
@@ -338,12 +291,10 @@ public class FunctionBindingTest extends MethodReferencedSupport {
 
     @Test
     public void Bind_Once_To_Fully_Qualified_Constructor() {
-        TestPane root = TestCompiler.newInstance(
-            this, "Bind_Once_To_Fully_Qualified_Constructor", """
-                <?import org.jfxcore.compiler.bindings.FunctionBindingTest.TestPane?>
-                <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          id="{fx:once java.lang.String('foo')}"/>
-            """);
+        TestPane root = compileAndRun("""
+            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                      id="{fx:once java.lang.String('foo')}"/>
+        """);
 
         assertFalse(root.idProperty().isBound());
         assertEquals("foo", root.getId());
@@ -351,12 +302,10 @@ public class FunctionBindingTest extends MethodReferencedSupport {
 
     @Test
     public void Bind_Once_To_Varargs_Constructor() {
-        MarkupException ex = assertThrows(MarkupException.class, () -> TestCompiler.newInstance(
-            this, "Bind_Once_To_Varargs_Constructor", """
-                <?import org.jfxcore.compiler.bindings.FunctionBindingTest.*?>
-                <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          objProp="{fx:once Stringifier(97, 98, 99)}"/>
-            """));
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                      objProp="{fx:once Stringifier(97, 98, 99)}"/>
+        """));
 
         assertEquals(ErrorCode.CANNOT_BIND_FUNCTION, ex.getDiagnostic().getCode());
         assertEquals(3, ex.getDiagnostic().getCauses().length);
@@ -367,29 +316,24 @@ public class FunctionBindingTest extends MethodReferencedSupport {
 
     @Test
     public void Bind_Once_To_Constructor_With_More_Specific_Argument() {
-        TestPane root = TestCompiler.newInstance(
-            this, "Bind_Once_To_Constructor_With_More_Specific_Argument", """
-                <?import org.jfxcore.compiler.bindings.FunctionBindingTest.*?>
-                <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          objProp="{fx:once Stringifier('foo')}"/>
-            """);
+        TestPane root = compileAndRun("""
+            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                      objProp="{fx:once Stringifier('foo')}"/>
+        """);
 
         assertEquals("foo", root.objProp.get().value);
     }
 
     @Test
     public void Bind_Once_With_ParentScope_Arguments() {
-        TestPane root = TestCompiler.newInstance(
-            this, "Bind_Once_With_ParentScope_Arguments", """
-                <?import java.lang.*?>
-                <?import javafx.scene.layout.*?>
-                <?import org.jfxcore.compiler.bindings.FunctionBindingTest.*?>
-                <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
-                    <Pane>
-                        <Pane id="{fx:once String.format('foo-%s', parent[2]/invariantDoubleVal)}"/>
-                    </Pane>
-                </TestPane>
-            """);
+        TestPane root = compileAndRun("""
+            <?import javafx.scene.layout.*?>
+            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                <Pane>
+                    <Pane id="{fx:once String.format('foo-%s', parent[2]/invariantDoubleVal)}"/>
+                </Pane>
+            </TestPane>
+        """);
 
         Pane pane = (Pane)((Pane)root.getChildren().get(0)).getChildren().get(0);
         assertEquals("foo-1.0", pane.getId());
@@ -397,18 +341,15 @@ public class FunctionBindingTest extends MethodReferencedSupport {
 
     @Test
     public void Bind_Once_With_ParentScope_Function_And_Argument_Does_Not_Apply_Latest_Value() {
-        TestPane root = TestCompiler.newInstance(
-            this, "Bind_Once_With_ParentScope_Function_And_Argument_Does_Not_Apply_Latest_Value", """
-                <?import java.lang.*?>
-                <?import javafx.scene.layout.*?>
-                <?import org.jfxcore.compiler.bindings.FunctionBindingTest.*?>
-                <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          prefHeight="1">
-                    <Pane fx:id="pane" prefWidth="2">
-                        <Pane prefWidth="{fx:once parent[2]/add(prefHeight, parent[2]/pane.prefWidth)}"/>
-                    </Pane>
-                </TestPane>
-            """);
+        TestPane root = compileAndRun("""
+            <?import javafx.scene.layout.*?>
+            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                      prefHeight="1">
+                <Pane fx:id="pane" prefWidth="2">
+                    <Pane prefWidth="{fx:once parent[2]/add(prefHeight, parent[2]/pane.prefWidth)}"/>
+                </Pane>
+            </TestPane>
+        """);
 
         Pane pane = (Pane)((Pane)root.getChildren().get(0)).getChildren().get(0);
         assertEquals(-2, pane.getPrefWidth(), 0.001);
@@ -416,137 +357,109 @@ public class FunctionBindingTest extends MethodReferencedSupport {
 
     @Test
     public void Bind_Once_With_Invalid_ParentScope_Function_Fails() {
-        MarkupException ex = assertThrows(MarkupException.class, () -> TestCompiler.newInstance(
-            this, "Bind_Once_With_Invalid_ParentScope_Function_Fails", """
-                <?import java.lang.*?>
-                <?import javafx.scene.layout.*?>
-                <?import org.jfxcore.compiler.bindings.FunctionBindingTest.*?>
-                <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
-                    <Pane>
-                        <Pane prefWidth="{fx:once parent[1]/add(1, 2)}"/>
-                    </Pane>
-                </TestPane>
-            """));
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <?import javafx.scene.layout.*?>
+            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                <Pane>
+                    <Pane prefWidth="{fx:once parent[1]/add(1, 2)}"/>
+                </Pane>
+            </TestPane>
+        """));
 
         assertEquals(ErrorCode.METHOD_NOT_FOUND, ex.getDiagnostic().getCode());
     }
 
     @Test
     public void Bind_Once_To_Static_Method_With_ParentScope_Fails() {
-        MarkupException ex = assertThrows(MarkupException.class, () -> TestCompiler.newInstance(
-            this, "Bind_Once_To_Static_Method_With_ParentScope_Fails", """
-                <?import java.lang.*?>
-                <?import javafx.scene.layout.*?>
-                <?import org.jfxcore.compiler.bindings.FunctionBindingTest.*?>
-                <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
-                    <Pane id="{fx:once parent/String.format('%s', 2)}"/>
-                </TestPane>
-            """));
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <?import javafx.scene.layout.*?>
+            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                <Pane id="{fx:once parent/String.format('%s', 2)}"/>
+            </TestPane>
+        """));
 
         assertEquals(ErrorCode.BINDING_CONTEXT_NOT_APPLICABLE, ex.getDiagnostic().getCode());
     }
 
     @Test
     public void Bind_Once_To_Interface_Default_Method() {
-        TestPane root = TestCompiler.newInstance(
-            this, "Bind_Once_To_Interface_Default_Method", """
-                <?import java.lang.*?>
-                <?import javafx.fxml.*?>
-                <?import org.jfxcore.compiler.bindings.FunctionBindingTest.TestPane?>
-                <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          id="{fx:once defaultMethod('foo-%s', invariantDoubleVal)}"/>
-            """);
+        TestPane root = compileAndRun("""
+            <?import javafx.fxml.*?>
+            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                      id="{fx:once defaultMethod('foo-%s', invariantDoubleVal)}"/>
+        """);
 
         assertEquals("foo-1.0", root.getId());
     }
 
     @Test
     public void Bind_Once_With_FxConstant_Param() {
-        TestPane root = TestCompiler.newInstance(
-            this, "Bind_Once_With_FxConstant_Param", """
-                <?import java.lang.*?>
-                <?import javafx.fxml.*?>
-                <?import org.jfxcore.compiler.bindings.FunctionBindingTest.TestPane?>
-                <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          id="{fx:once defaultMethod('foo-%s', {fx:constant Double.POSITIVE_INFINITY})}"/>
-            """);
+        TestPane root = compileAndRun("""
+            <?import javafx.fxml.*?>
+            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                      id="{fx:once defaultMethod('foo-%s', {fx:constant Double.POSITIVE_INFINITY})}"/>
+        """);
 
         assertEquals("foo-Infinity", root.getId());
     }
 
     @Test
     public void Bind_Once_With_FxConstant_Param_Fails_With_Unqualified_Constant() {
-        MarkupException ex = assertThrows(MarkupException.class, () -> TestCompiler.newInstance(
-            this, "Bind_Once_With_FxConstant_Param_Fails_With_Unqualified_Constant", """
-                <?import java.lang.*?>
-                <?import javafx.fxml.*?>
-                <?import org.jfxcore.compiler.bindings.FunctionBindingTest.TestPane?>
-                <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          id="{fx:once defaultMethod('foo-%s', {fx:constant POSITIVE_INFINITY})}"/>
-            """));
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <?import javafx.fxml.*?>
+            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                      id="{fx:once defaultMethod('foo-%s', {fx:constant POSITIVE_INFINITY})}"/>
+        """));
 
         assertEquals(ErrorCode.NOT_FOUND, ex.getDiagnostic().getCode());
     }
 
     @Test
     public void Bind_Once_With_BindingExpression_Param_Fails() {
-        MarkupException ex = assertThrows(MarkupException.class, () -> TestCompiler.newInstance(
-            this, "Bind_Once_With_BindingExpression_Param_Fails", """
-                <?import org.jfxcore.compiler.bindings.FunctionBindingTest.TestPane?>
-                <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          id="{fx:once defaultMethod('foo-%s', {fx:bind doubleProp})}"/>
-            """));
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                      id="{fx:once defaultMethod('foo-%s', {fx:bind doubleProp})}"/>
+        """));
 
         assertEquals(ErrorCode.EXPRESSION_NOT_APPLICABLE, ex.getDiagnostic().getCode());
     }
 
     @Test
     public void Bind_Once_With_AssignmentExpression_Param_Fails() {
-        MarkupException ex = assertThrows(MarkupException.class, () -> TestCompiler.newInstance(
-                this, "Bind_Once_With_BindingExpression_Param_Fails", """
-                <?import org.jfxcore.compiler.bindings.FunctionBindingTest.TestPane?>
-                <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          id="{fx:once defaultMethod('foo-%s', {fx:once doubleProp})}"/>
-            """));
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                      id="{fx:once defaultMethod('foo-%s', {fx:once doubleProp})}"/>
+        """));
 
         assertEquals(ErrorCode.EXPRESSION_NOT_APPLICABLE, ex.getDiagnostic().getCode());
     }
 
     @Test
     public void Bind_Unidirectional_To_Static_Method_With_Incompatible_ReturnType_Fails() {
-        MarkupException ex = assertThrows(MarkupException.class, () -> TestCompiler.newInstance(
-            this, "Bind_Unidirectional_To_Static_Method_With_Incompatible_ReturnType_Fails", """
-                <?import java.lang.*?>
-                <?import org.jfxcore.compiler.bindings.FunctionBindingTest.TestPane?>
-                <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          prefWidth="{fx:bind String.format('foo-%s', invariantDoubleVal)}"/>
-            """));
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                      prefWidth="{fx:bind String.format('foo-%s', invariantDoubleVal)}"/>
+        """));
 
         assertEquals(ErrorCode.CANNOT_CONVERT_SOURCE_TYPE, ex.getDiagnostic().getCode());
     }
 
     @Test
     public void Bind_Unidirectional_To_Static_Method_With_Incompatible_ParamType_Fails() {
-        MarkupException ex = assertThrows(MarkupException.class, () -> TestCompiler.newInstance(
-            this, "Bind_Unidirectional_To_Static_Method_With_Incompatible_ParamType_Fails", """
-                <?import java.lang.*?>
-                <?import org.jfxcore.compiler.bindings.FunctionBindingTest.TestPane?>
-                <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          prefWidth="{fx:bind add(1, stringProp)}"/>
-            """));
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                      prefWidth="{fx:bind add(1, stringProp)}"/>
+        """));
 
         assertEquals(ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT, ex.getDiagnostic().getCode());
     }
 
     @Test
     public void Bind_Unidirectional_To_Static_Method_With_Invariant_Param() {
-        TestPane root = TestCompiler.newInstance(
-            this, "Bind_Unidirectional_To_Static_Method_With_Invariant_Param", """
-                <?import java.lang.*?>
-                <?import org.jfxcore.compiler.bindings.FunctionBindingTest.TestPane?>
-                <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          id="{fx:bind String.format('foo-%s', invariantDoubleVal)}"/>
-            """);
+        TestPane root = compileAndRun("""
+            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                      id="{fx:bind String.format('foo-%s', invariantDoubleVal)}"/>
+        """);
 
         assertTrue(root.idProperty().isBound());
         assertEquals("foo-1.0", root.getId());
@@ -554,13 +467,10 @@ public class FunctionBindingTest extends MethodReferencedSupport {
 
     @Test
     public void Bind_Unidirectional_To_Static_Method_With_Observable_Param() {
-        TestPane root = TestCompiler.newInstance(
-            this, "Bind_Unidirectional_To_Static_Method_With_Observable_Param", """
-                <?import java.lang.*?>
-                <?import org.jfxcore.compiler.bindings.FunctionBindingTest.TestPane?>
-                <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          id="{fx:bind String.format('foo-%s', doubleProp)}"/>
-            """);
+        TestPane root = compileAndRun( """
+            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                      id="{fx:bind String.format('foo-%s', doubleProp)}"/>
+        """);
 
         assertTrue(root.idProperty().isBound());
         assertEquals("foo-1.0", root.getId());
@@ -571,13 +481,10 @@ public class FunctionBindingTest extends MethodReferencedSupport {
 
     @Test
     public void Bind_Unidirectional_To_Static_Method_With_Multiple_Observable_Params() {
-        TestPane root = TestCompiler.newInstance(
-            this, "Bind_Unidirectional_To_Static_Method_With_Multiple_Observable_Params", """
-                <?import java.lang.*?>
-                <?import org.jfxcore.compiler.bindings.FunctionBindingTest.TestPane?>
-                <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          id="{fx:bind String.format('foo-%s-%s', doubleProp, stringProp)}"/>
-            """);
+        TestPane root = compileAndRun("""
+            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                      id="{fx:bind String.format('foo-%s-%s', doubleProp, stringProp)}"/>
+        """);
 
         assertTrue(root.idProperty().isBound());
         assertEquals("foo-1.0-bar", root.getId());
@@ -591,12 +498,10 @@ public class FunctionBindingTest extends MethodReferencedSupport {
 
     @Test
     public void Bind_Unidirectional_To_Instance_Method_With_Mixed_Params() {
-        TestPane root = TestCompiler.newInstance(
-            this, "Bind_Unidirectional_To_Instance_Method_With_Mixed_Params", """
-                <?import org.jfxcore.compiler.bindings.FunctionBindingTest.TestPane?>
-                <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          prefWidth="{fx:bind add(invariantDoubleVal, doubleProp)}"/>
-            """);
+        TestPane root = compileAndRun("""
+            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                      prefWidth="{fx:bind add(invariantDoubleVal, doubleProp)}"/>
+        """);
 
         assertTrue(root.prefWidthProperty().isBound());
         assertEquals(2.0, root.getPrefWidth(), 0.001);
@@ -607,18 +512,17 @@ public class FunctionBindingTest extends MethodReferencedSupport {
 
     @Test
     public void Bind_Unidirectional_To_Instance_Method_Of_LocalObject() {
-        Pane root = TestCompiler.newInstance(
-            this, "Bind_Unidirectional_To_Instance_Method_Of_LocalObject", """
-                <?import javafx.scene.layout.*?>
-                <?import javafx.scene.control.*?>
-                <?import java.text.*?>
-                <Pane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
-                    <fx:define>
-                        <DecimalFormat fx:id="fmt">000</DecimalFormat>
-                    </fx:define>
-                    <Label text="{fx:bind fmt.format(parent[0]/prefWidth)}" prefWidth="7"/>
-                </Pane>
-            """);
+        Pane root = compileAndRun("""
+            <?import javafx.scene.layout.*?>
+            <?import javafx.scene.control.*?>
+            <?import java.text.*?>
+            <Pane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                <fx:define>
+                    <DecimalFormat fx:id="fmt">000</DecimalFormat>
+                </fx:define>
+                <Label text="{fx:bind fmt.format(parent[0]/prefWidth)}" prefWidth="7"/>
+            </Pane>
+        """);
 
         Label label = (Label)root.getChildren().get(0);
         assertEquals("007", label.getText());
@@ -628,14 +532,12 @@ public class FunctionBindingTest extends MethodReferencedSupport {
 
     @Test
     public void Bind_Unidirectional_To_Instance_Method_Of_Indirect_Object() {
-        Pane root = TestCompiler.newInstance(
-                this, "Bind_Unidirectional_To_Instance_Method_Of_Indirect_Object", """
-                <?import javafx.scene.control.*?>
-                <?import org.jfxcore.compiler.bindings.FunctionBindingTest.TestPane?>
-                <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
-                    <Label text="{fx:bind c1.c2.fmt.format(parent[0]/prefWidth)}" prefWidth="7"/>
-                </TestPane>
-            """);
+        Pane root = compileAndRun("""
+            <?import javafx.scene.control.*?>
+            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                <Label text="{fx:bind c1.c2.fmt.format(parent[0]/prefWidth)}" prefWidth="7"/>
+            </TestPane>
+        """);
 
         Label label = (Label)root.getChildren().get(0);
         assertEquals("007", label.getText());
@@ -645,12 +547,10 @@ public class FunctionBindingTest extends MethodReferencedSupport {
 
     @Test
     public void Bind_Unidirectional_To_Nested_Instance_Methods() {
-        TestPane root = TestCompiler.newInstance(
-            this, "Bind_Unidirectional_To_Nested_Instance_Methods", """
-                <?import org.jfxcore.compiler.bindings.FunctionBindingTest.TestPane?>
-                <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          prefWidth="{fx:bind add(add(invariantDoubleVal, doubleProp), add(invariantDoubleVal, doubleProp))}"/>
-            """);
+        TestPane root = compileAndRun("""
+            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                      prefWidth="{fx:bind add(add(invariantDoubleVal, doubleProp), add(invariantDoubleVal, doubleProp))}"/>
+        """);
 
         assertTrue(root.prefWidthProperty().isBound());
         assertEquals(4.0, root.getPrefWidth(), 0.001);
@@ -662,24 +562,20 @@ public class FunctionBindingTest extends MethodReferencedSupport {
 
     @Test
     public void Bind_Unidirectional_To_Nested_Instance_Method_With_Incompatible_ParamType_Fails() {
-        MarkupException ex = assertThrows(MarkupException.class, () -> TestCompiler.newInstance(
-            this, "Bind_Unidirectional_To_Nested_Instance_Method_With_Incompatible_ParamType_Fails", """
-                <?import org.jfxcore.compiler.bindings.FunctionBindingTest.TestPane?>
-                <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          prefWidth="{fx:bind add(1, add(1, stringProp))}"/>
-            """));
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                      prefWidth="{fx:bind add(1, add(1, stringProp))}"/>
+        """));
 
         assertEquals(ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT, ex.getDiagnostic().getCode());
     }
 
     @Test
     public void Bind_Unidirectional_To_Varargs_Instance_Method_With_Mixed_Params() {
-        TestPane root = TestCompiler.newInstance(
-            this, "Bind_Unidirectional_To_Varargs_Instance_Method_With_Mixed_Params", """
-                <?import org.jfxcore.compiler.bindings.FunctionBindingTest.TestPane?>
-                <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          prefWidth="{fx:bind sum(invariantDoubleVal, doubleProp, doubleProp)}"/>
-            """);
+        TestPane root = compileAndRun("""
+            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                      prefWidth="{fx:bind sum(invariantDoubleVal, doubleProp, doubleProp)}"/>
+        """);
 
         assertTrue(root.prefWidthProperty().isBound());
         assertEquals(3.0, root.getPrefWidth(), 0.001);
@@ -690,13 +586,10 @@ public class FunctionBindingTest extends MethodReferencedSupport {
 
     @Test
     public void Bind_Unidirectional_To_Static_Varargs_Method_With_Indirect_Path_Params() {
-        TestPane root = TestCompiler.newInstance(
-            this, "Bind_Unidirectional_To_Static_Varargs_Method_With_Indirect_Path_Params", """
-                <?import java.lang.*?>
-                <?import org.jfxcore.compiler.bindings.FunctionBindingTest.TestPane?>
-                <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          id="{fx:bind String.format('%s-%s-%s', context.invariantDoubleVal, context.doubleVal, context.doubleVal)}"/>
-            """);
+        TestPane root = compileAndRun("""
+            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                      id="{fx:bind String.format('%s-%s-%s', context.invariantDoubleVal, context.doubleVal, context.doubleVal)}"/>
+        """);
 
         assertTrue(root.idProperty().isBound());
         assertEquals("234.0-123.0-123.0", root.getId());
@@ -713,13 +606,10 @@ public class FunctionBindingTest extends MethodReferencedSupport {
 
     @Test
     public void Bind_Unidirectional_To_Constructor() {
-        TestPane root = TestCompiler.newInstance(
-            this, "Bind_Unidirectional_To_Constructor", """
-                <?import java.lang.*?>
-                <?import org.jfxcore.compiler.bindings.FunctionBindingTest.TestPane?>
-                <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          id="{fx:bind String('foo')}"/>
-            """);
+        TestPane root = compileAndRun("""
+            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                      id="{fx:bind String('foo')}"/>
+        """);
 
         assertTrue(root.idProperty().isBound());
         assertEquals("foo", root.getId());
@@ -727,12 +617,10 @@ public class FunctionBindingTest extends MethodReferencedSupport {
 
     @Test
     public void Bind_Unidirectional_To_Varargs_Constructor() {
-        MarkupException ex = assertThrows(MarkupException.class, () -> TestCompiler.newInstance(
-            this, "Bind_Unidirectional_To_Varargs_Constructor", """
-                <?import org.jfxcore.compiler.bindings.FunctionBindingTest.*?>
-                <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          objProp="{fx:bind Stringifier('foo', 97, 98, 99)}"/>
-            """));
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                      objProp="{fx:bind Stringifier('foo', 97, 98, 99)}"/>
+        """));
 
         assertEquals(ErrorCode.CANNOT_BIND_FUNCTION, ex.getDiagnostic().getCode());
         assertEquals(3, ex.getDiagnostic().getCauses().length);
@@ -743,42 +631,34 @@ public class FunctionBindingTest extends MethodReferencedSupport {
 
     @Test
     public void Bind_Unidirectional_To_Constructor_With_More_Specific_Argument() {
-        TestPane root = TestCompiler.newInstance(
-            this, "Bind_Unidirectional_To_Constructor_With_More_Specific_Argument", """
-                <?import org.jfxcore.compiler.bindings.FunctionBindingTest.*?>
-                <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          objProp="{fx:bind Stringifier('foo')}"/>
-            """);
+        TestPane root = compileAndRun("""
+            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                      objProp="{fx:bind Stringifier('foo')}"/>
+        """);
 
         assertEquals("foo", root.objProp.get().value);
     }
 
     @Test
     public void Bind_Unidirectional_To_Varargs_Constructor_Fails() {
-        MarkupException ex = assertThrows(MarkupException.class, () -> TestCompiler.newInstance(
-            this, "Bind_Unidirectional_To_Varargs_Constructor_Fails", """
-                <?import java.lang.*?>
-                <?import org.jfxcore.compiler.bindings.FunctionBindingTest.TestPane?>
-                <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          id="{fx:bind String(0, 1, 'foo')}"/>
-            """));
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                      id="{fx:bind String(0, 1, 'foo')}"/>
+        """));
 
         assertEquals(ErrorCode.CANNOT_BIND_FUNCTION, ex.getDiagnostic().getCode());
     }
 
     @Test
     public void Bind_Unidirectional_With_ParentScope_Arguments() {
-        TestPane root = TestCompiler.newInstance(
-            this, "Bind_Unidirectional_With_ParentScope_Arguments", """
-                <?import java.lang.*?>
-                <?import javafx.scene.layout.*?>
-                <?import org.jfxcore.compiler.bindings.FunctionBindingTest.*?>
-                <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
-                    <Pane prefWidth="123">
-                        <Pane id="{fx:bind String.format('foo-%s-%s', parent/prefWidth, parent[2]/invariantDoubleVal)}"/>
-                    </Pane>
-                </TestPane>
-            """);
+        TestPane root = compileAndRun("""
+            <?import javafx.scene.layout.*?>
+            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                <Pane prefWidth="123">
+                    <Pane id="{fx:bind String.format('foo-%s-%s', parent/prefWidth, parent[2]/invariantDoubleVal)}"/>
+                </Pane>
+            </TestPane>
+        """);
 
         Pane pane = (Pane)((Pane)root.getChildren().get(0)).getChildren().get(0);
         assertEquals("foo-123.0-1.0", pane.getId());
@@ -786,17 +666,14 @@ public class FunctionBindingTest extends MethodReferencedSupport {
 
     @Test
     public void Bind_Unidirectional_With_This_Argument() {
-        TestPane root = TestCompiler.newInstance(
-            this, "Bind_Unidirectional_With_This_Argument", """
-                <?import java.lang.*?>
-                <?import javafx.scene.layout.*?>
-                <?import org.jfxcore.compiler.bindings.FunctionBindingTest.*?>
-                <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
-                    <VBox>
-                        <Pane id="{fx:bind String.format('foo-%s', this)}"/>
-                    </VBox>
-                </TestPane>
-            """);
+        TestPane root = compileAndRun("""
+            <?import javafx.scene.layout.*?>
+            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                <VBox>
+                    <Pane id="{fx:bind String.format('foo-%s', this)}"/>
+                </VBox>
+            </TestPane>
+        """);
 
         Pane pane = (Pane)((Pane)root.getChildren().get(0)).getChildren().get(0);
         assertTrue(pane.getId().startsWith("foo-FunctionBindingTest_Bind_Unidirectional_With_This_Argument"));
@@ -804,17 +681,14 @@ public class FunctionBindingTest extends MethodReferencedSupport {
 
     @Test
     public void Bind_Unidirectional_With_ParentScope_This_Argument() {
-        TestPane root = TestCompiler.newInstance(
-            this, "Bind_Unidirectional_With_ParentScope_This_Argument", """
-                <?import java.lang.*?>
-                <?import javafx.scene.layout.*?>
-                <?import org.jfxcore.compiler.bindings.FunctionBindingTest.*?>
-                <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
-                    <VBox>
-                        <Pane id="{fx:bind String.format('foo-%s', parent/this)}"/>
-                    </VBox>
-                </TestPane>
-            """);
+        TestPane root = compileAndRun("""
+            <?import javafx.scene.layout.*?>
+            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                <VBox>
+                    <Pane id="{fx:bind String.format('foo-%s', parent/this)}"/>
+                </VBox>
+            </TestPane>
+        """);
 
         Pane pane = (Pane)((Pane)root.getChildren().get(0)).getChildren().get(0);
         assertTrue(pane.getId().startsWith("foo-VBox"));
@@ -822,17 +696,14 @@ public class FunctionBindingTest extends MethodReferencedSupport {
 
     @Test
     public void Bind_Unidirectional_With_ParentScope_Function() {
-        TestPane root = TestCompiler.newInstance(
-            this, "Bind_Unidirectional_With_ParentScope_Function", """
-                <?import java.lang.*?>
-                <?import javafx.scene.layout.*?>
-                <?import org.jfxcore.compiler.bindings.FunctionBindingTest.*?>
-                <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
-                    <Pane>
-                        <Pane prefWidth="{fx:bind parent[2]/add(1, 2)}"/>
-                    </Pane>
-                </TestPane>
-            """);
+        TestPane root = compileAndRun("""
+            <?import javafx.scene.layout.*?>
+            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                <Pane>
+                    <Pane prefWidth="{fx:bind parent[2]/add(1, 2)}"/>
+                </Pane>
+            </TestPane>
+        """);
 
         Pane pane = (Pane)((Pane)root.getChildren().get(0)).getChildren().get(0);
         assertEquals(3, pane.getPrefWidth(), 0.001);
@@ -840,18 +711,15 @@ public class FunctionBindingTest extends MethodReferencedSupport {
 
     @Test
     public void Bind_Unidirectional_With_ParentScope_Function_And_Argument() {
-        TestPane root = TestCompiler.newInstance(
-            this, "Bind_Unidirectional_With_ParentScope_Function_And_Argument", """
-                <?import java.lang.*?>
-                <?import javafx.scene.layout.*?>
-                <?import org.jfxcore.compiler.bindings.FunctionBindingTest.*?>
-                <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          prefHeight="1">
-                    <Pane fx:id="pane" prefWidth="2">
-                        <Pane prefWidth="{fx:bind parent[2]/add(prefHeight, parent[2]/pane.prefWidth)}"/>
-                    </Pane>
-                </TestPane>
-            """);
+        TestPane root = compileAndRun("""
+            <?import javafx.scene.layout.*?>
+            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                      prefHeight="1">
+                <Pane fx:id="pane" prefWidth="2">
+                    <Pane prefWidth="{fx:bind parent[2]/add(prefHeight, parent[2]/pane.prefWidth)}"/>
+                </Pane>
+            </TestPane>
+        """);
 
         Pane pane = (Pane)((Pane)root.getChildren().get(0)).getChildren().get(0);
         assertEquals(3, pane.getPrefWidth(), 0.001);
@@ -859,70 +727,57 @@ public class FunctionBindingTest extends MethodReferencedSupport {
 
     @Test
     public void Bind_Unidirectional_With_Invalid_ParentScope_Function_Fails() {
-        MarkupException ex = assertThrows(MarkupException.class, () -> TestCompiler.newInstance(
-            this, "Bind_Unidirectional_With_Invalid_ParentScope_Function_Fails", """
-                <?import java.lang.*?>
-                <?import javafx.scene.layout.*?>
-                <?import org.jfxcore.compiler.bindings.FunctionBindingTest.*?>
-                <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
-                    <Pane>
-                        <Pane prefWidth="{fx:bind parent[1]/add(1, 2)}"/>
-                    </Pane>
-                </TestPane>
-            """));
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <?import javafx.scene.layout.*?>
+            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                <Pane>
+                    <Pane prefWidth="{fx:bind parent[1]/add(1, 2)}"/>
+                </Pane>
+            </TestPane>
+        """));
 
         assertEquals(ErrorCode.METHOD_NOT_FOUND, ex.getDiagnostic().getCode());
     }
 
     @Test
     public void Bind_Unidirectional_To_Static_Method_With_ParentScope_Fails() {
-        MarkupException ex = assertThrows(MarkupException.class, () -> TestCompiler.newInstance(
-            this, "Bind_Unidirectional_To_Static_Method_With_ParentScope_Fails", """
-                <?import java.lang.*?>
-                <?import javafx.scene.layout.*?>
-                <?import org.jfxcore.compiler.bindings.FunctionBindingTest.*?>
-                <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
-                    <Pane id="{fx:bind parent/String.format('%s', 2)}"/>
-                </TestPane>
-            """));
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <?import javafx.scene.layout.*?>
+            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                <Pane id="{fx:bind parent/String.format('%s', 2)}"/>
+            </TestPane>
+        """));
 
         assertEquals(ErrorCode.BINDING_CONTEXT_NOT_APPLICABLE, ex.getDiagnostic().getCode());
     }
 
     @Test
     public void Bind_Unidirectional_With_FxConstant_Param() {
-        TestPane root = TestCompiler.newInstance(
-            this, "Bind_Unidirectional_With_FxConstant_Param", """
-                <?import java.lang.*?>
-                <?import javafx.fxml.*?>
-                <?import org.jfxcore.compiler.bindings.FunctionBindingTest.TestPane?>
-                <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          id="{fx:bind defaultMethod('foo-%s', {fx:constant Double.POSITIVE_INFINITY})}"/>
-            """);
+        TestPane root = compileAndRun("""
+            <?import javafx.fxml.*?>
+            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                      id="{fx:bind defaultMethod('foo-%s', {fx:constant Double.POSITIVE_INFINITY})}"/>
+        """);
 
         assertEquals("foo-Infinity", root.getId());
     }
 
     @Test
     public void Bind_Unidirectional_With_BindingExpression_Param_Fails() {
-        MarkupException ex = assertThrows(MarkupException.class, () -> TestCompiler.newInstance(
-            this, "Bind_Unidirectional_With_BindingExpression_Param_Fails", """
-                <?import org.jfxcore.compiler.bindings.FunctionBindingTest.TestPane?>
-                <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          id="{fx:bind defaultMethod('foo-%s', {fx:bind doubleProp})}"/>
-            """));
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                      id="{fx:bind defaultMethod('foo-%s', {fx:bind doubleProp})}"/>
+        """));
 
         assertEquals(ErrorCode.EXPRESSION_NOT_APPLICABLE, ex.getDiagnostic().getCode());
     }
 
     @Test
     public void Bind_Unidirectional_With_AssignmentExpression_Param_Fails() {
-        MarkupException ex = assertThrows(MarkupException.class, () -> TestCompiler.newInstance(
-            this, "Bind_Unidirectional_With_AssignmentExpression_Param_Fails", """
-                <?import org.jfxcore.compiler.bindings.FunctionBindingTest.TestPane?>
-                <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          id="{fx:bind defaultMethod('foo-%s', {fx:once doubleProp})}"/>
-            """));
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                      id="{fx:bind defaultMethod('foo-%s', {fx:once doubleProp})}"/>
+        """));
 
         assertEquals(ErrorCode.EXPRESSION_NOT_APPLICABLE, ex.getDiagnostic().getCode());
     }
@@ -1033,100 +888,82 @@ public class FunctionBindingTest extends MethodReferencedSupport {
 
     @Test
     public void Bind_Bidirectional_To_Unresolvable_InverseMethod_Fails() {
-        MarkupException ex = assertThrows(MarkupException.class, () -> TestCompiler.newInstance(
-            this, "Bind_Bidirectional_To_Unresolvable_InverseMethod_Fails", """
-                <?import java.lang.*?>
-                <?import org.jfxcore.compiler.bindings.FunctionBindingTest.TestPane?>
-                <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          prefWidth="{fx:sync sum(doubleProp); inverseMethod=foo.doesNotExist}"/>
-            """));
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                      prefWidth="{fx:sync sum(doubleProp); inverseMethod=foo.doesNotExist}"/>
+        """));
 
         assertEquals(ErrorCode.CLASS_NOT_FOUND, ex.getDiagnostic().getCode());
     }
 
     @Test
     public void Bind_Bidirectional_To_Static_Method_With_Two_Parameters_Fails() {
-        MarkupException ex = assertThrows(MarkupException.class, () -> TestCompiler.newInstance(
-            this, "Bind_Bidirectional_To_Static_Method_With_Two_Parameters_Fails", """
-                <?import java.lang.*?>
-                <?import org.jfxcore.compiler.bindings.FunctionBindingTest.TestPane?>
-                <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          prefWidth="{fx:sync String.format('%s', doubleProp)}"/>
-            """));
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                      prefWidth="{fx:sync String.format('%s', doubleProp)}"/>
+        """));
 
         assertEquals(ErrorCode.INVALID_BIDIRECTIONAL_METHOD_PARAM_COUNT, ex.getDiagnostic().getCode());
     }
 
     @Test
     public void Bind_Bidirectional_To_Instance_Method_With_Two_Parameters_Fails() {
-        MarkupException ex = assertThrows(MarkupException.class, () -> TestCompiler.newInstance(
-            this, "Bind_Bidirectional_To_Instance_Method_With_Two_Parameters_Fails", """
-                <?import org.jfxcore.compiler.bindings.FunctionBindingTest.TestPane?>
-                <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          prefWidth="{fx:sync add(invariantDoubleVal, doubleProp)}"/>
-            """));
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                      prefWidth="{fx:sync add(invariantDoubleVal, doubleProp)}"/>
+        """));
 
         assertEquals(ErrorCode.INVALID_BIDIRECTIONAL_METHOD_PARAM_COUNT, ex.getDiagnostic().getCode());
     }
 
     @Test
     public void Bind_Bidirectional_To_Indirect_DoubleProperty() {
-        BidirectionalTestPane root = TestCompiler.newInstance(
-            this, "Bind_Bidirectional_To_Indirect_DoubleProperty", """
-                <?import org.jfxcore.compiler.bindings.FunctionBindingTest.*?>
-                <BidirectionalTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          id="{fx:sync doubleToString(indirect.doubleProp)}"/>
-            """);
+        BidirectionalTestPane root = compileAndRun("""
+            <BidirectionalTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                                   id="{fx:sync doubleToString(indirect.doubleProp)}"/>
+        """);
 
         assertEquals("1.0", root.getId());
     }
 
     @Test
     public void Bind_Bidirectional_To_Indirect_StringProperty() {
-        BidirectionalTestPane root = TestCompiler.newInstance(
-            this, "Bind_Bidirectional_To_Indirect_StringProperty", """
-                <?import org.jfxcore.compiler.bindings.FunctionBindingTest.*?>
-                <BidirectionalTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          prefWidth="{fx:sync stringToDouble(indirect.stringProp)}"/>
-            """);
+        BidirectionalTestPane root = compileAndRun("""
+            <BidirectionalTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                                   prefWidth="{fx:sync stringToDouble(indirect.stringProp)}"/>
+        """);
 
         assertEquals(1.0, root.getPrefWidth(), 0.001);
     }
 
     @Test
     public void Bind_Bidirectional_To_NullIndirect_DoubleProperty() {
-        BidirectionalTestPane root = TestCompiler.newInstance(
-            this, "Bind_Bidirectional_To_NullIndirect_DoubleProperty", """
-                <?import org.jfxcore.compiler.bindings.FunctionBindingTest.*?>
-                <BidirectionalTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          id="{fx:sync doubleToString(nullIndirect.doubleProp)}"/>
-            """);
+        BidirectionalTestPane root = compileAndRun("""
+            <BidirectionalTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                                   id="{fx:sync doubleToString(nullIndirect.doubleProp)}"/>
+        """);
 
         assertEquals("0.0", root.getId());
     }
 
     @Test
     public void Bind_Bidirectional_To_NullIndirect_StringProperty() {
-        BidirectionalTestPane root = TestCompiler.newInstance(
-            this, "Bind_Bidirectional_To_NullIndirect_StringProperty", """
-                <?import org.jfxcore.compiler.bindings.FunctionBindingTest.*?>
-                <BidirectionalTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          prefWidth="{fx:sync stringToDouble(nullIndirect.stringProp)}"/>
-            """);
+        BidirectionalTestPane root = compileAndRun("""
+            <BidirectionalTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                                   prefWidth="{fx:sync stringToDouble(nullIndirect.stringProp)}"/>
+        """);
 
         assertEquals(0.0, root.getPrefWidth(), 0.001);
     }
 
     @Test
     public void Bind_Bidirectional_To_Method_With_InverseMethod() {
-        BidirectionalTestPane root = TestCompiler.newInstance(
-            this, "Bind_Bidirectional_To_Method_With_InverseMethod", """
-                <?import org.jfxcore.compiler.bindings.FunctionBindingTest.*?>
-                <BidirectionalTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          id="{fx:sync doubleToString(doubleProp)}"
-                          prefWidth="{fx:sync stringToDouble(stringProp)}"
-                          visible="{fx:sync instanceNot(boolProp)}"/>
-            """);
+        BidirectionalTestPane root = compileAndRun("""
+            <BidirectionalTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                                   id="{fx:sync doubleToString(doubleProp)}"
+                                   prefWidth="{fx:sync stringToDouble(stringProp)}"
+                                   visible="{fx:sync instanceNot(boolProp)}"/>
+        """);
 
         assertEquals(1, root.doubleToStringCalls);
         assertEquals(1, root.stringToDoubleCalls);
@@ -1165,12 +1002,10 @@ public class FunctionBindingTest extends MethodReferencedSupport {
 
     @Test
     public void Bind_Bidirectional_To_Static_Method_With_InverseMethod() {
-        BidirectionalTestPane root = TestCompiler.newInstance(
-            this, "Bind_Bidirectional_To_Static_Method_With_InverseMethod", """
-                <?import org.jfxcore.compiler.bindings.FunctionBindingTest.*?>
-                <BidirectionalTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          visible="{fx:sync BidirectionalTestPane.staticNot(boolProp)}"/>
-            """);
+        BidirectionalTestPane root = compileAndRun("""
+            <BidirectionalTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                                   visible="{fx:sync BidirectionalTestPane.staticNot(boolProp)}"/>
+        """);
 
         assertTrue(root.isVisible());
         assertFalse(root.boolProp.get());
@@ -1180,12 +1015,10 @@ public class FunctionBindingTest extends MethodReferencedSupport {
 
     @Test
     public void Bind_Bidirectional_To_Instance_Method_With_Static_InverseMethod() {
-        BidirectionalTestPane root = TestCompiler.newInstance(
-            this, "Bind_Bidirectional_To_Instance_Method_With_Static_InverseMethod", """
-                <?import org.jfxcore.compiler.bindings.FunctionBindingTest.*?>
-                <BidirectionalTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          visible="{fx:sync instanceNot2(boolProp)}"/>
-            """);
+        BidirectionalTestPane root = compileAndRun("""
+            <BidirectionalTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                                   visible="{fx:sync instanceNot2(boolProp)}"/>
+        """);
 
         assertTrue(root.isVisible());
         assertFalse(root.boolProp.get());
@@ -1195,12 +1028,10 @@ public class FunctionBindingTest extends MethodReferencedSupport {
 
     @Test
     public void Bind_Bidirectional_To_Method_With_Custom_InverseMethod() {
-        BidirectionalTestPane root = TestCompiler.newInstance(
-            this, "Bind_Bidirectional_To_Method_With_Custom_InverseMethod", """
-                <?import org.jfxcore.compiler.bindings.FunctionBindingTest.*?>
-                <BidirectionalTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          visible="{fx:sync instanceNot(boolProp); inverseMethod=customInverseMethod}"/>
-            """);
+        BidirectionalTestPane root = compileAndRun("""
+            <BidirectionalTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                                   visible="{fx:sync instanceNot(boolProp); inverseMethod=customInverseMethod}"/>
+        """);
 
         assertTrue(root.isVisible());
         root.setVisible(false);
@@ -1209,12 +1040,10 @@ public class FunctionBindingTest extends MethodReferencedSupport {
 
     @Test
     public void Bind_Bidirectional_To_Indirect_Method_With_Indirect_Custom_InverseMethod() {
-        BidirectionalTestPane root = TestCompiler.newInstance(
-            this, "Bind_Bidirectional_To_Indirect_Method_With_Indirect_Custom_InverseMethod", """
-                <?import org.jfxcore.compiler.bindings.FunctionBindingTest.*?>
-                <BidirectionalTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          visible="{fx:sync c1.c2.instanceNot(boolProp); inverseMethod=c1.c2.customInverseMethodIndirect}"/>
-            """);
+        BidirectionalTestPane root = compileAndRun("""
+            <BidirectionalTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                                   visible="{fx:sync c1.c2.instanceNot(boolProp); inverseMethod=c1.c2.customInverseMethodIndirect}"/>
+        """);
 
         assertTrue(root.isVisible());
         root.setVisible(false);
@@ -1223,12 +1052,10 @@ public class FunctionBindingTest extends MethodReferencedSupport {
 
     @Test
     public void Bind_Bidirectional_To_Statically_Resolvable_Indirect_Method_With_Indirect_Custom_InverseMethod() {
-        BidirectionalTestPane root = TestCompiler.newInstance(
-            this, "Bind_Bidirectional_To_Statically_Resolvable_Indirect_Method_With_Indirect_Custom_InverseMethod", """
-                <?import org.jfxcore.compiler.bindings.FunctionBindingTest.*?>
-                <BidirectionalTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          visible="{fx:sync static_c1.c2.instanceNot(boolProp); inverseMethod=static_c1.c2.customInverseMethodIndirect}"/>
-            """);
+        BidirectionalTestPane root = compileAndRun("""
+            <BidirectionalTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                                   visible="{fx:sync static_c1.c2.instanceNot(boolProp); inverseMethod=static_c1.c2.customInverseMethodIndirect}"/>
+        """);
 
         assertTrue(root.isVisible());
         root.setVisible(false);
@@ -1237,12 +1064,10 @@ public class FunctionBindingTest extends MethodReferencedSupport {
 
     @Test
     public void Bind_Bidirectional_To_Method_With_InverseConstructor() {
-        BidirectionalTestPane root = TestCompiler.newInstance(
-            this, "Bind_Bidirectional_To_Method_With_InverseConstructor", """
-                <?import org.jfxcore.compiler.bindings.FunctionBindingTest.*?>
-                <BidirectionalTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          prefWidth="{fx:sync doubleContainerToDouble(doubleContainer); inverseMethod=DoubleContainer}"/>
-            """);
+        BidirectionalTestPane root = compileAndRun("""
+            <BidirectionalTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                                   prefWidth="{fx:sync doubleContainerToDouble(doubleContainer); inverseMethod=DoubleContainer}"/>
+        """);
 
         assertEquals(5, root.getPrefWidth(), 0.001);
         root.setPrefWidth(4);
@@ -1251,12 +1076,10 @@ public class FunctionBindingTest extends MethodReferencedSupport {
 
     @Test
     public void Bind_Bidirectional_To_Method_With_Qualified_InverseConstructor() {
-        BidirectionalTestPane root = TestCompiler.newInstance(
-            this, "Bind_Bidirectional_To_Method_With_Qualified_InverseConstructor", """
-                <?import org.jfxcore.compiler.bindings.FunctionBindingTest.*?>
-                <BidirectionalTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          prefWidth="{fx:sync doubleContainerToDouble(doubleContainer); inverseMethod=BidirectionalTestPane.DoubleContainer}"/>
-            """);
+        BidirectionalTestPane root = compileAndRun("""
+            <BidirectionalTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                                   prefWidth="{fx:sync doubleContainerToDouble(doubleContainer); inverseMethod=BidirectionalTestPane.DoubleContainer}"/>
+        """);
 
         assertEquals(5, root.getPrefWidth(), 0.001);
         root.setPrefWidth(4);
@@ -1265,12 +1088,10 @@ public class FunctionBindingTest extends MethodReferencedSupport {
 
     @Test
     public void Bind_Bidirectional_To_Constructor_With_InverseMethod() {
-        BidirectionalTestPane root = TestCompiler.newInstance(
-            this, "Bind_Bidirectional_To_Constructor_With_InverseMethod", """
-                <?import org.jfxcore.compiler.bindings.FunctionBindingTest.*?>
-                <BidirectionalTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          doubleContainer="{fx:sync DoubleContainer(doubleProp); inverseMethod=doubleContainerToDouble}"/>
-            """);
+        BidirectionalTestPane root = compileAndRun("""
+            <BidirectionalTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                                   doubleContainer="{fx:sync DoubleContainer(doubleProp); inverseMethod=doubleContainerToDouble}"/>
+        """);
 
         assertEquals(1, root.doubleProp.get(), 0.001);
         assertEquals(1, root.doubleContainer.get().value, 0.001);
@@ -1284,12 +1105,10 @@ public class FunctionBindingTest extends MethodReferencedSupport {
 
     @Test
     public void Bind_Bidirectional_To_Constructor_With_Qualified_InverseMethod() {
-        BidirectionalTestPane root = TestCompiler.newInstance(
-            this, "Bind_Bidirectional_To_Constructor_With_Qualified_InverseMethod", """
-                <?import org.jfxcore.compiler.bindings.FunctionBindingTest.*?>
-                <BidirectionalTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          doubleContainer="{fx:sync DoubleContainer(doubleProp); inverseMethod=DoubleContainer.doubleContainerToDouble}"/>
-            """);
+        BidirectionalTestPane root = compileAndRun("""
+            <BidirectionalTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                                   doubleContainer="{fx:sync DoubleContainer(doubleProp); inverseMethod=DoubleContainer.doubleContainerToDouble}"/>
+        """);
 
         assertEquals(1, root.doubleProp.get(), 0.001);
         assertEquals(1, root.doubleContainer.get().value, 0.001);
@@ -1303,39 +1122,33 @@ public class FunctionBindingTest extends MethodReferencedSupport {
 
     @Test
     public void Bind_Bidirectional_To_Method_Without_InverseMethod_Fails() {
-        MarkupException ex = assertThrows(MarkupException.class, () -> TestCompiler.newInstance(
-            this, "Bind_Bidirectional_To_Method_Without_InverseMethod_Fails", """
-                <?import javafx.fxml.*?>
-                <?import org.jfxcore.compiler.bindings.FunctionBindingTest.*?>
-                <BidirectionalTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          id="{fx:sync noInverseMethod(doubleProp)}"/>
-            """));
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <?import javafx.fxml.*?>
+            <BidirectionalTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                                   id="{fx:sync noInverseMethod(doubleProp)}"/>
+        """));
 
         assertEquals(ErrorCode.METHOD_NOT_INVERTIBLE, ex.getDiagnostic().getCode());
     }
 
     @Test
     public void Bind_Bidirectional_To_Method_With_Incompatible_ReturnType_Fails() {
-        MarkupException ex = assertThrows(MarkupException.class, () -> TestCompiler.newInstance(
-            this, "Bind_Bidirectional_To_Method_With_Incompatible_ReturnType_Fails", """
-                <?import javafx.fxml.*?>
-                <?import org.jfxcore.compiler.bindings.FunctionBindingTest.*?>
-                <BidirectionalTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          id="{fx:sync noInverseMethod(doubleProp); inverseMethod=invalidInverseMethod}"/>
-            """));
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <?import javafx.fxml.*?>
+            <BidirectionalTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                                   id="{fx:sync noInverseMethod(doubleProp); inverseMethod=invalidInverseMethod}"/>
+        """));
 
         assertEquals(ErrorCode.INCOMPATIBLE_RETURN_VALUE, ex.getDiagnostic().getCode());
     }
 
     @Test
     public void Bind_Bidirectional_To_Method_With_Invalid_Custom_InverseMethod2_Fails() {
-        MarkupException ex = assertThrows(MarkupException.class, () -> TestCompiler.newInstance(
-            this, "Bind_Bidirectional_To_Method_With_Invalid_Custom_InverseMethod2_Fails", """
-                <?import javafx.fxml.*?>
-                <?import org.jfxcore.compiler.bindings.FunctionBindingTest.*?>
-                <BidirectionalTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          id="{fx:sync noInverseMethod(doubleProp); inverseMethod=java.lang.String.format}"/>
-            """));
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <?import javafx.fxml.*?>
+            <BidirectionalTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                                   id="{fx:sync noInverseMethod(doubleProp); inverseMethod=java.lang.String.format}"/>
+        """));
 
         assertEquals(ErrorCode.CANNOT_BIND_FUNCTION, ex.getDiagnostic().getCode());
         assertEquals(2, ex.getDiagnostic().getCauses().length);
@@ -1345,39 +1158,33 @@ public class FunctionBindingTest extends MethodReferencedSupport {
 
     @Test
     public void Bind_Bidirectional_To_Method_With_Nonexistent_Custom_InverseMethod_Fails() {
-        MarkupException ex = assertThrows(MarkupException.class, () -> TestCompiler.newInstance(
-            this, "Bind_Bidirectional_To_Method_With_Nonexistent_Custom_InverseMethod_Fails", """
-                <?import javafx.fxml.*?>
-                <?import org.jfxcore.compiler.bindings.FunctionBindingTest.*?>
-                <BidirectionalTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          id="{fx:sync noInverseMethod(doubleProp); inverseMethod=doesNotExist}"/>
-            """));
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <?import javafx.fxml.*?>
+            <BidirectionalTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                                   id="{fx:sync noInverseMethod(doubleProp); inverseMethod=doesNotExist}"/>
+        """));
 
         assertEquals(ErrorCode.METHOD_NOT_FOUND, ex.getDiagnostic().getCode());
     }
 
     @Test
     public void Bind_Bidirectional_To_Method_With_ReadOnlyProperty_Argument_Fails() {
-        MarkupException ex = assertThrows(MarkupException.class, () -> TestCompiler.newInstance(
-            this, "Bind_Bidirectional_To_Method_With_ReadOnlyProperty_Argument_Fails", """
-                <?import javafx.fxml.*?>
-                <?import org.jfxcore.compiler.bindings.FunctionBindingTest.*?>
-                <BidirectionalTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          id="{fx:sync instanceNot(readOnlyObservableBool)}"/>
-            """));
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <?import javafx.fxml.*?>
+            <BidirectionalTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                                   id="{fx:sync instanceNot(readOnlyObservableBool)}"/>
+        """));
 
         assertEquals(ErrorCode.INVALID_BIDIRECTIONAL_BINDING_SOURCE, ex.getDiagnostic().getCode());
     }
 
     @Test
     public void Bind_Bidirectional_To_Method_With_Unsuitable_Parameter_Fails() {
-        MarkupException ex = assertThrows(MarkupException.class, () -> TestCompiler.newInstance(
-            this, "Bind_Bidirectional_To_Method_With_Unsuitable_Parameter_Fails", """
-                <?import javafx.fxml.*?>
-                <?import org.jfxcore.compiler.bindings.FunctionBindingTest.*?>
-                <BidirectionalTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          id="{fx:sync instanceNot(instanceNot(boolProp))}"/>
-            """));
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <?import javafx.fxml.*?>
+            <BidirectionalTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                                   id="{fx:sync instanceNot(instanceNot(boolProp))}"/>
+        """));
 
         assertEquals(ErrorCode.INVALID_BIDIRECTIONAL_METHOD_PARAM_KIND, ex.getDiagnostic().getCode());
     }
@@ -1421,12 +1228,10 @@ public class FunctionBindingTest extends MethodReferencedSupport {
 
     @Test
     public void Overloaded_Method_Is_Selected_Correctly() {
-        OverloadTestPane root = TestCompiler.newInstance(
-            this, "Overloaded_Method_Is_Selected_Correctly", """
-                <?import org.jfxcore.compiler.bindings.FunctionBindingTest.OverloadTestPane?>
-                <OverloadTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          id="{fx:bind overloadedMethod('ignored')}" stringProp="{fx:bind overloadedMethod(0)}"/>
-            """);
+        OverloadTestPane root = compileAndRun("""
+            <OverloadTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                              id="{fx:bind overloadedMethod('ignored')}" stringProp="{fx:bind overloadedMethod(0)}"/>
+        """);
 
         assertEquals("String", root.getId());
         assertEquals("Object", root.stringProp.get());
@@ -1434,12 +1239,10 @@ public class FunctionBindingTest extends MethodReferencedSupport {
 
     @Test
     public void Ambiguous_Method_Call_Fails() {
-        MarkupException ex = assertThrows(MarkupException.class, () -> TestCompiler.newInstance(
-            this, "Ambiguous_Method_Call_Fails", """
-                <?import org.jfxcore.compiler.bindings.FunctionBindingTest.OverloadTestPane?>
-                <OverloadTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          id="{fx:bind overloadedMethod(d, d, d)}"/>
-            """));
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <OverloadTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                              id="{fx:bind overloadedMethod(d, d, d)}"/>
+        """));
 
         assertEquals(ErrorCode.AMBIGUOUS_METHOD_CALL, ex.getDiagnostic().getCode());
     }
@@ -1455,35 +1258,29 @@ public class FunctionBindingTest extends MethodReferencedSupport {
 
     @Test
     public void Bind_Once_To_Generic_Method_Of_Raw_Type_Works() {
-        GenericTestPane<?> root = TestCompiler.newInstance(
-            this, "Bind_Once_To_Generic_Method_Of_Raw_Type_Works", """
-                <?import org.jfxcore.compiler.bindings.FunctionBindingTest.*?>
-                <GenericTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                        id="{fx:once stringify(prefWidth)}"/>
-            """);
+        GenericTestPane<?> root = compileAndRun("""
+            <GenericTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                             id="{fx:once stringify(prefWidth)}"/>
+        """);
 
         assertEquals("123.0", root.getId());
     }
 
     @Test
     public void Bind_Once_To_Generic_Method_Argument_Out_Of_Bound_Fails() {
-        MarkupException ex = assertThrows(MarkupException.class, () -> TestCompiler.newInstance(
-            this, "Bind_Once_To_Generic_Method_Argument_Out_Of_Bound_Fails", """
-                <?import org.jfxcore.compiler.bindings.FunctionBindingTest.*?>
-                <GenericTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                        fx:typeArguments="java.lang.String" id="{fx:once stringify(prefWidth)}"/>
-            """));
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <GenericTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                             fx:typeArguments="java.lang.String" id="{fx:once stringify(prefWidth)}"/>
+        """));
 
         assertEquals(ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT, ex.getDiagnostic().getCode());
     }
 
     @Test
     public void Bind_Unidirectional_To_Generic_Method_Of_Raw_Type_Works() {
-        GenericTestPane<?> root = TestCompiler.newInstance(
-            this, "Bind_Unidirectional_To_Generic_Method_Of_Raw_Type_Works", """
-                <?import org.jfxcore.compiler.bindings.FunctionBindingTest.*?>
+        GenericTestPane<?> root = compileAndRun("""
                 <GenericTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                        id="{fx:bind stringify(prefWidth)}"/>
+                                 id="{fx:bind stringify(prefWidth)}"/>
             """);
 
         assertEquals("123.0", root.getId());
@@ -1491,12 +1288,10 @@ public class FunctionBindingTest extends MethodReferencedSupport {
 
     @Test
     public void Bind_Unidirectional_To_Generic_Method_Argument_Out_Of_Bound_Fails() {
-        MarkupException ex = assertThrows(MarkupException.class, () -> TestCompiler.newInstance(
-            this, "Bind_Unidirectional_To_Generic_Method_Argument_Out_Of_Bound_Fails", """
-                <?import org.jfxcore.compiler.bindings.FunctionBindingTest.*?>
-                <GenericTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                        fx:typeArguments="java.lang.String" id="{fx:bind stringify(prefWidth)}"/>
-            """));
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <GenericTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                             fx:typeArguments="java.lang.String" id="{fx:bind stringify(prefWidth)}"/>
+        """));
 
         assertEquals(ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT, ex.getDiagnostic().getCode());
     }

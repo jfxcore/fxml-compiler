@@ -16,9 +16,8 @@ import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 import org.jfxcore.compiler.diagnostic.ErrorCode;
 import org.jfxcore.compiler.diagnostic.MarkupException;
-import org.jfxcore.compiler.util.MethodReferencedSupport;
+import org.jfxcore.compiler.util.CompilerTestBase;
 import org.jfxcore.compiler.util.Reflection;
-import org.jfxcore.compiler.util.TestCompiler;
 import org.jfxcore.compiler.util.TestExtension;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -28,70 +27,66 @@ import static org.junit.jupiter.api.Assertions.*;
 
 @SuppressWarnings("HttpUrlsUsage")
 @ExtendWith(TestExtension.class)
-public class InstantiationTest {
+public class InstantiationTest extends CompilerTestBase {
 
     @Nested
-    public class DefaultConstructorTest {
+    public class DefaultConstructorTest extends CompilerTestBase {
         @Test
         public void FxId_Sets_IDProperty_If_Not_Present() {
-            GridPane root = TestCompiler.newInstance(
-                this, "FxId_Sets_IDProperty_If_Not_Present", """
-                    <?import javafx.scene.layout.*?>
-                    <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
-                        <GridPane fx:id="pane0"/>
-                    </GridPane>
-                """);
+            GridPane root = compileAndRun("""
+                <?import javafx.scene.layout.*?>
+                <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                    <GridPane fx:id="pane0"/>
+                </GridPane>
+            """);
 
             assertEquals("pane0", root.getChildren().get(0).getId());
         }
 
         @Test
         public void FxId_Does_Not_Set_IDProperty_If_Already_Present() {
-            GridPane root = TestCompiler.newInstance(
-                this, "FxId_Does_Not_Set_IDProperty_If_Already_Present", """
-                    <?import javafx.scene.layout.*?>
-                    <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
-                        <GridPane fx:id="pane0" id="foo"/>
-                    </GridPane>
-                """);
+            GridPane root = compileAndRun("""
+                <?import javafx.scene.layout.*?>
+                <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                    <GridPane fx:id="pane0" id="foo"/>
+                </GridPane>
+            """);
 
             assertEquals("foo", root.getChildren().get(0).getId());
         }
 
         @Test
         public void Duplicate_Property_Assignment_Fails() {
-            MarkupException ex = assertThrows(MarkupException.class, () -> TestCompiler.newInstance(
-                this, "Duplicate_Property_Assignment_Fails", """
-                    <?import javafx.scene.layout.*?>
-                    <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
-                        <GridPane id="foo" id="bar"/>
-                    </GridPane>
-                """));
+            MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+                <?import javafx.scene.layout.*?>
+                <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                    <GridPane id="foo" id="bar"/>
+                </GridPane>
+            """));
 
             assertEquals(ErrorCode.DUPLICATE_PROPERTY, ex.getDiagnostic().getCode());
         }
     }
 
     @Nested
-    public class NamedArgsConstructorTest {
+    public class NamedArgsConstructorTest extends CompilerTestBase {
         @Test
         public void Insets_Is_Instantiated_With_First_NamedArgs_Constructor() {
-            GridPane root = TestCompiler.newInstance(
-                this, "Insets_Is_Instantiated_With_NamedArgs_Constructor", """
-                    <?import javafx.scene.layout.*?>
-                    <?import javafx.geometry.*?>
-                    <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
-                        <fx:define>
-                            <Insets fx:id="insets1" left="1" top="2" right="3" bottom="4"/>
-                            <Insets fx:id="insets2">
-                                <left>1</left>
-                                <top>2</top>
-                                <right>3</right>
-                                <bottom>4</bottom>
-                            </Insets>
-                        </fx:define>
-                    </GridPane>
-                """);
+            GridPane root = compileAndRun("""
+                <?import javafx.scene.layout.*?>
+                <?import javafx.geometry.*?>
+                <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                    <fx:define>
+                        <Insets fx:id="insets1" left="1" top="2" right="3" bottom="4"/>
+                        <Insets fx:id="insets2">
+                            <left>1</left>
+                            <top>2</top>
+                            <right>3</right>
+                            <bottom>4</bottom>
+                        </Insets>
+                    </fx:define>
+                </GridPane>
+            """);
 
             Insets insets1 = (Insets)root.getProperties().get("insets1");
             Insets insets2 = (Insets)root.getProperties().get("insets2");
@@ -107,14 +102,13 @@ public class InstantiationTest {
 
         @Test
         public void Insets_Is_Instantiated_With_Second_NamedArgs_Constructor() {
-            GridPane root = TestCompiler.newInstance(
-                this, "Insets_Is_Instantiated_With_Second_NamedArgs_Constructor", """
-                    <?import javafx.scene.layout.*?>
-                    <?import javafx.geometry.*?>
-                    <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
-                        <padding><Insets fx:id="insets" topRightBottomLeft="1.5"/></padding>
-                    </GridPane>
-                """);
+            GridPane root = compileAndRun("""
+                <?import javafx.scene.layout.*?>
+                <?import javafx.geometry.*?>
+                <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                    <padding><Insets fx:id="insets" topRightBottomLeft="1.5"/></padding>
+                </GridPane>
+            """);
 
             assertEquals(1.5, root.getPadding().getLeft(), 0.001);
             assertEquals(1.5, root.getPadding().getTop(), 0.001);
@@ -124,14 +118,13 @@ public class InstantiationTest {
 
         @Test
         public void Insets_Cannot_Be_Instantiated_With_Missing_NamedArgs() {
-            MarkupException ex = assertThrows(MarkupException.class, () -> TestCompiler.newInstance(
-                this, "Insets_Cannot_Be_Instantiated_With_Missing_NamedArgs", """
-                    <?import javafx.scene.layout.*?>
-                    <?import javafx.geometry.*?>
-                    <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
-                        <padding><Insets fx:id="insets" left="1" top="2"/></padding>
-                    </GridPane>
-                """));
+            MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+                <?import javafx.scene.layout.*?>
+                <?import javafx.geometry.*?>
+                <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                    <padding><Insets fx:id="insets" left="1" top="2"/></padding>
+                </GridPane>
+            """));
 
             assertEquals(ErrorCode.CONSTRUCTOR_NOT_FOUND, ex.getDiagnostic().getCode());
             assertEquals(2, ex.getDiagnostic().getCauses().length);
@@ -146,34 +139,30 @@ public class InstantiationTest {
 
         @Test
         public void Object_Is_Instantiated_With_NamedArgs_Constructor_Using_Element_Notation() {
-            GridPane root = TestCompiler.newInstance(
-                this, "Object_Is_Instantiated_With_NamedArgs_Constructor_Using_Element_Notation", """
-                    <?import javafx.scene.control.*?>
-                    <?import javafx.scene.layout.*?>
-                    <?import org.jfxcore.compiler.InstantiationTest.NamedArgsConstructorTest.*?>
-                    <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
-                        <MultiArgCtorObject>
-                            <arg1><GridPane/></arg1>
-                            <arg2><Button/></arg2>
-                        </MultiArgCtorObject>
-                    </GridPane>
-                """);
+            GridPane root = compileAndRun("""
+                <?import javafx.scene.control.*?>
+                <?import javafx.scene.layout.*?>
+                <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                    <MultiArgCtorObject>
+                        <arg1><GridPane/></arg1>
+                        <arg2><Button/></arg2>
+                    </MultiArgCtorObject>
+                </GridPane>
+            """);
 
             assertTrue(root.getChildren().get(0) instanceof MultiArgCtorObject);
         }
 
         @Test
         public void Missing_NamedArg_Param_Throws_Exception() {
-            MarkupException ex = assertThrows(MarkupException.class, () -> TestCompiler.newInstance(
-                this, "Missing_NamedArg_Param_Throws_Exception", """
-                    <?import javafx.scene.layout.*?>
-                    <?import org.jfxcore.compiler.InstantiationTest.NamedArgsConstructorTest.*?>
-                    <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
-                        <MultiArgCtorObject>
-                            <arg1><GridPane/></arg1>
-                        </MultiArgCtorObject>
-                    </GridPane>
-                """));
+            MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+                <?import javafx.scene.layout.*?>
+                <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                    <MultiArgCtorObject>
+                        <arg1><GridPane/></arg1>
+                    </MultiArgCtorObject>
+                </GridPane>
+            """));
 
             assertEquals(ErrorCode.CONSTRUCTOR_NOT_FOUND, ex.getDiagnostic().getCode());
             assertEquals(1, ex.getDiagnostic().getCauses().length);
@@ -193,14 +182,12 @@ public class InstantiationTest {
 
         @Test
         public void DefaultConstructor_Is_Selected_When_NamedArgConstructor_Is_Invalid() {
-            GridPane root = TestCompiler.newInstance(
-                this, "DefaultConstructor_Is_Selected_When_NamedArgConstructor_Is_Invalid", """
-                    <?import javafx.scene.layout.*?>
-                    <?import org.jfxcore.compiler.InstantiationTest.NamedArgsConstructorTest.*?>
-                    <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml" id="foo">
-                        <MyButton data="{fx:bind id}"/>
-                    </GridPane>
-                """);
+            GridPane root = compileAndRun("""
+                <?import javafx.scene.layout.*?>
+                <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml" id="foo">
+                    <MyButton data="{fx:bind id}"/>
+                </GridPane>
+            """);
 
             assertTrue(((MyButton)root.getChildren().get(0)).defaultCtorCalled);
             assertEquals(((MyButton)root.getChildren().get(0)).data.get(), "foo");
@@ -215,16 +202,14 @@ public class InstantiationTest {
 
         @Test
         public void Object_Is_Instantiated_With_Varargs_Constructor() {
-            GridPane root = TestCompiler.newInstance(
-                this, "Object_Is_Instantiated_With_Varargs_Constructor","""
-                    <?import javafx.scene.layout.*?>
-                    <?import org.jfxcore.compiler.InstantiationTest.NamedArgsConstructorTest.*?>
-                    <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
-                        <VarArgsConstructorClass>
-                            <nodes><GridPane/></nodes>
-                        </VarArgsConstructorClass>
-                    </GridPane>
-                """);
+            GridPane root = compileAndRun("""
+                <?import javafx.scene.layout.*?>
+                <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                    <VarArgsConstructorClass>
+                        <nodes><GridPane/></nodes>
+                    </VarArgsConstructorClass>
+                </GridPane>
+            """);
 
             assertTrue(((VarArgsConstructorClass)root.getChildren().get(0)).varArgsConstructorCalled);
         }
@@ -236,16 +221,14 @@ public class InstantiationTest {
 
         @Test
         public void Object_Instantiation_Fails_With_NonVarargs_Constructor() {
-            MarkupException ex = assertThrows(MarkupException.class, () -> TestCompiler.newInstance(
-                this, "Object_Instantiation_Fails_With_NonVarargs_Constructor","""
-                    <?import javafx.scene.layout.*?>
-                    <?import org.jfxcore.compiler.InstantiationTest.NamedArgsConstructorTest.*?>
-                    <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
-                        <ArrayConstructorClass>
-                            <nodes><GridPane/></nodes>
-                        </ArrayConstructorClass>
-                    </GridPane>
-                """));
+            MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+                <?import javafx.scene.layout.*?>
+                <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                    <ArrayConstructorClass>
+                        <nodes><GridPane/></nodes>
+                    </ArrayConstructorClass>
+                </GridPane>
+            """));
 
             assertEquals(ErrorCode.CONSTRUCTOR_NOT_FOUND, ex.getDiagnostic().getCode());
             assertEquals(1, ex.getDiagnostic().getCauses().length);
@@ -262,14 +245,12 @@ public class InstantiationTest {
 
         @Test
         public void NamedArg_With_DefaultValue_Can_Be_Omitted() {
-            GridPane root = TestCompiler.newInstance(
-                this, "NamedArg_With_DefaultValue_Can_Be_Omitted","""
-                    <?import javafx.scene.layout.*?>
-                    <?import org.jfxcore.compiler.InstantiationTest.NamedArgsConstructorTest.*?>
-                    <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
-                        <NamedArgWithDefaultValueClass x="1"/>
-                    </GridPane>
-                """);
+            GridPane root = compileAndRun("""
+                <?import javafx.scene.layout.*?>
+                <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                    <NamedArgWithDefaultValueClass x="1"/>
+                </GridPane>
+            """);
 
             var inst = (NamedArgWithDefaultValueClass)root.getChildren().get(0);
             assertEquals(1, inst.x, 0.001);
@@ -278,7 +259,7 @@ public class InstantiationTest {
     }
 
     @Nested
-    public class GenericsTest {
+    public class GenericsTest extends CompilerTestBase {
         @SuppressWarnings("unused")
         public static class MyData<T> {
             public MyData(@NamedArg("value") T value) { this.value = value; this.value2 = null; }
@@ -293,34 +274,30 @@ public class InstantiationTest {
 
         @Test
         public void Object_Is_Instantiated_With_Generic_NamedArg() {
-            GridPane root = TestCompiler.newInstance(
-                this, "Object_Is_Instantiated_With_Generic_NamedArg", """
-                    <?import javafx.scene.layout.*?>
-                    <?import org.jfxcore.compiler.InstantiationTest.GenericsTest.*?>
-                    <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
-                        <MyButton fx:typeArguments="java.lang.String">
-                            <data>
-                                <MyData fx:typeArguments="java.lang.String" value="foo"/>
-                            </data>
-                        </MyButton>
-                    </GridPane>
-                """);
+            GridPane root = compileAndRun("""
+                <?import javafx.scene.layout.*?>
+                <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                    <MyButton fx:typeArguments="java.lang.String">
+                        <data>
+                            <MyData fx:typeArguments="java.lang.String" value="foo"/>
+                        </data>
+                    </MyButton>
+                </GridPane>
+            """);
 
             assertEquals(((MyButton<?>)root.getChildren().get(0)).data.value, "foo");
         }
 
         @Test
         public void RawType_Cannot_Be_Assigned_To_Typed_Element() {
-            MarkupException ex = assertThrows(MarkupException.class, () -> TestCompiler.newInstance(
-                this, "RawType_Cannot_Be_Assigned_To_Typed_Element", """
-                    <?import javafx.scene.layout.*?>
-                    <?import org.jfxcore.compiler.InstantiationTest.GenericsTest.*?>
-                    <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
-                        <MyButton fx:typeArguments="java.lang.String">
-                            <data><MyData value="foo"/></data>
-                        </MyButton>
-                    </GridPane>
-                """));
+            MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+                <?import javafx.scene.layout.*?>
+                <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                    <MyButton fx:typeArguments="java.lang.String">
+                        <data><MyData value="foo"/></data>
+                    </MyButton>
+                </GridPane>
+            """));
 
             assertEquals(ErrorCode.CONSTRUCTOR_NOT_FOUND, ex.getDiagnostic().getCode());
             assertEquals(1, ex.getDiagnostic().getCauses().length);
@@ -329,16 +306,14 @@ public class InstantiationTest {
 
         @Test
         public void Incompatible_GenericType_Cannot_Be_Assigned_To_Typed_Element() {
-            MarkupException ex = assertThrows(MarkupException.class, () -> TestCompiler.newInstance(
-                this, "Incompatible_GenericType_Cannot_Be_Assigned_To_Typed_Element", """
-                    <?import javafx.scene.layout.*?>
-                    <?import org.jfxcore.compiler.InstantiationTest.GenericsTest.*?>
-                    <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
-                        <MyButton fx:typeArguments="java.lang.String">
-                            <data><MyData fx:typeArguments="Double" value="foo"/></data>
-                        </MyButton>
-                    </GridPane>
-                """));
+            MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+                <?import javafx.scene.layout.*?>
+                <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                    <MyButton fx:typeArguments="java.lang.String">
+                        <data><MyData fx:typeArguments="Double" value="foo"/></data>
+                    </MyButton>
+                </GridPane>
+            """));
 
             assertEquals(ErrorCode.CONSTRUCTOR_NOT_FOUND, ex.getDiagnostic().getCode());
             assertEquals(1, ex.getDiagnostic().getCauses().length);
@@ -347,22 +322,21 @@ public class InstantiationTest {
     }
 
     @Nested
-    public class CoercionTest {
+    public class CoercionTest extends CompilerTestBase {
         @Test
         public void Instantiation_By_Value_Coercion() {
-            GridPane root = TestCompiler.newInstance(
-                this, "Instantiation_By_Value_Coercion","""
-                    <?import javafx.scene.layout.*?>
-                    <?import javafx.geometry.*?>
-                    <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
-                        <fx:define>
-                            <Insets fx:id="insets1">1,2,3,4</Insets>
-                        </fx:define>
-                        <padding>
-                            <Insets fx:id="insets">1</Insets>
-                        </padding>
-                    </GridPane>
-                """);
+            GridPane root = compileAndRun("""
+                <?import javafx.scene.layout.*?>
+                <?import javafx.geometry.*?>
+                <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                    <fx:define>
+                        <Insets fx:id="insets1">1,2,3,4</Insets>
+                    </fx:define>
+                    <padding>
+                        <Insets fx:id="insets">1</Insets>
+                    </padding>
+                </GridPane>
+            """);
 
             Insets insets1 = (Insets)root.getProperties().get("insets1");
             Insets insets2 = root.getPadding();
@@ -378,15 +352,14 @@ public class InstantiationTest {
 
         @Test
         public void Instantiation_By_Argument_Coercion_To_Static_Field_On_TargetType() {
-            GridPane root = TestCompiler.newInstance(
-                this, "Instantiation_By_Argument_Coercion_To_Static_Field_On_TargetType", """
-                    <?import javafx.scene.layout.*?>
-                    <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
-                        <fx:define>
-                            <BackgroundFill fx:id="bf" fill="{fx:null}" radii="EMPTY" insets="0"/>
-                        </fx:define>
-                    </GridPane>
-                """);
+            GridPane root = compileAndRun("""
+                <?import javafx.scene.layout.*?>
+                <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                    <fx:define>
+                        <BackgroundFill fx:id="bf" fill="{fx:null}" radii="EMPTY" insets="0"/>
+                    </fx:define>
+                </GridPane>
+            """);
 
             BackgroundFill fill = (BackgroundFill)root.getProperties().get("bf");
             assertSame(CornerRadii.EMPTY, fill.getRadii());
@@ -394,15 +367,14 @@ public class InstantiationTest {
 
         @Test
         public void Instantiation_By_Argument_Coercion_To_Insets() {
-            GridPane root = TestCompiler.newInstance(
-                this, "Instantiation_By_Argument_Coercion_To_Insets", """
-                    <?import javafx.scene.layout.*?>
-                    <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
-                        <fx:define>
-                            <BackgroundFill fx:id="bf" fill="{fx:null}" radii="{fx:null}" insets="1"/>
-                        </fx:define>
-                    </GridPane>
-                """);
+            GridPane root = compileAndRun("""
+                <?import javafx.scene.layout.*?>
+                <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                    <fx:define>
+                        <BackgroundFill fx:id="bf" fill="{fx:null}" radii="{fx:null}" insets="1"/>
+                    </fx:define>
+                </GridPane>
+            """);
 
             BackgroundFill fill = (BackgroundFill)root.getProperties().get("bf");
             assertEquals(1, fill.getInsets().getTop(), 0.001);
@@ -413,15 +385,14 @@ public class InstantiationTest {
 
         @Test
         public void Instantiation_By_Argument_Coercion_Of_Comma_Separated_List_To_Insets() {
-            GridPane root = TestCompiler.newInstance(
-                this, "Instantiation_By_Argument_Coercion_Of_Comma_Separated_List_To_Insets", """
-                    <?import javafx.scene.layout.*?>
-                    <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
-                        <fx:define>
-                            <BackgroundFill fx:id="bf" fill="{fx:null}" radii="{fx:null}" insets="1,2,3,4"/>
-                        </fx:define>
-                    </GridPane>
-                """);
+            GridPane root = compileAndRun("""
+                <?import javafx.scene.layout.*?>
+                <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                    <fx:define>
+                        <BackgroundFill fx:id="bf" fill="{fx:null}" radii="{fx:null}" insets="1,2,3,4"/>
+                    </fx:define>
+                </GridPane>
+            """);
 
             BackgroundFill fill = (BackgroundFill)root.getProperties().get("bf");
             assertEquals(1, fill.getInsets().getTop(), 0.001);
@@ -432,32 +403,30 @@ public class InstantiationTest {
 
         @Test
         public void BindingExpression_Cannot_Be_Coerced_To_Constructor_Argument() {
-            MarkupException ex = assertThrows(MarkupException.class, () -> TestCompiler.newInstance(
-                this, "BindingExpression_Cannot_Be_Coerced_To_Constructor_Argument", """
-                    <?import javafx.scene.layout.*?>
-                    <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
-                        <fx:define>
-                            <BackgroundFill fx:id="bf" fill="{fx:bind test}" radii="EMPTY" insets="0"/>
-                        </fx:define>
-                    </GridPane>
-                """));
+            MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+                <?import javafx.scene.layout.*?>
+                <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                    <fx:define>
+                        <BackgroundFill fx:id="bf" fill="{fx:bind test}" radii="EMPTY" insets="0"/>
+                    </fx:define>
+                </GridPane>
+            """));
 
             assertEquals(ErrorCode.EXPRESSION_NOT_APPLICABLE, ex.getDiagnostic().getCode());
         }
 
         @Test
         public void AssignmentExpression_Can_Be_Coerced_To_Constructor_Argument() {
-            GridPane root = TestCompiler.newInstance(
-                this, "AssignmentExpression_Can_Be_Coerced_To_Constructor_Argument", """
-                    <?import javafx.scene.layout.*?>
-                    <?import javafx.scene.paint.*?>
-                    <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
-                        <fx:define>
-                            <Color fx:id="col">red</Color>
-                            <BackgroundFill fx:id="bf" fill="{fx:once col}" radii="EMPTY" insets="0"/>
-                        </fx:define>
-                    </GridPane>
-                """);
+            GridPane root = compileAndRun("""
+                <?import javafx.scene.layout.*?>
+                <?import javafx.scene.paint.*?>
+                <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                    <fx:define>
+                        <Color fx:id="col">red</Color>
+                        <BackgroundFill fx:id="bf" fill="{fx:once col}" radii="EMPTY" insets="0"/>
+                    </fx:define>
+                </GridPane>
+            """);
 
             var backgroundFill = (BackgroundFill)root.getProperties().get("bf");
             assertEquals(Color.RED, backgroundFill.getFill());
@@ -465,108 +434,107 @@ public class InstantiationTest {
     }
 
     @Nested
-    public class FxValueTest extends MethodReferencedSupport {
+    public class FxValueTest extends CompilerTestBase {
         FxValueTest() {
             super("org.jfxcore.compiler.classes.FxValueTest");
         }
 
         @Test
         public void Object_Is_Instantiated_With_ValueOf_Method() {
-            Button root = TestCompiler.newInstance(
-                this, "Object_Is_Instantiated_With_ValueOf_Method", """
-                    <?import javafx.scene.control.*?>
-                    <?import javafx.scene.paint.*?>
-                    <Button xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
-                        <textFill>
-                            <Color fx:value="red"/>
-                        </textFill>
-                    </Button>
-                """);
-            assertReferenced("Object_Is_Instantiated_With_ValueOf_Method", root, "valueOf");
+            Button root = compileAndRun("""
+                <?import javafx.scene.control.*?>
+                <?import javafx.scene.paint.*?>
+                <Button xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                    <textFill>
+                        <Color fx:value="red"/>
+                    </textFill>
+                </Button>
+            """);
+
+            assertReferenced(root, "valueOf");
             assertEquals(javafx.scene.paint.Color.RED, root.getTextFill());
         }
 
         @Test
         public void ValueOf_And_Child_Content_Cannot_Be_Used_At_Same_Time() {
-            MarkupException ex = assertThrows(MarkupException.class, () -> TestCompiler.newInstance(
-                this, "ValueOf_And_Child_Content_Cannot_Be_Used_At_Same_Time", """
-                    <?import javafx.scene.control.*?>
-                    <?import javafx.scene.paint.*?>
-                    <Button xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
-                        <textFill>
-                            <Color fx:value="red"><Button/></Color>
-                        </textFill>
-                    </Button>
-                """));
+            MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+                <?import javafx.scene.control.*?>
+                <?import javafx.scene.paint.*?>
+                <Button xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                    <textFill>
+                        <Color fx:value="red"><Button/></Color>
+                    </textFill>
+                </Button>
+            """));
+
             assertEquals(ErrorCode.VALUEOF_CANNOT_HAVE_CONTENT, ex.getDiagnostic().getCode());
         }
 
         @Test
         public void Object_Is_Instantiated_With_InContext_ValueOf_Method() {
-            Button root = TestCompiler.newInstance(
-                this, "Object_Is_Instantiated_With_InContext_ValueOf_Method", """
-                    <?import javafx.scene.control.*?>
-                    <?import javafx.scene.paint.*?>
-                    <Button xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                            textFill="{fx:value red}"/>
-                """);
-            assertReferenced("Object_Is_Instantiated_With_InContext_ValueOf_Method", root, "valueOf");
+            Button root = compileAndRun("""
+                <?import javafx.scene.control.*?>
+                <?import javafx.scene.paint.*?>
+                <Button xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                        textFill="{fx:value red}"/>
+            """);
+
+            assertReferenced(root, "valueOf");
             assertEquals(javafx.scene.paint.Color.RED, root.getTextFill());
         }
 
         @Test
         public void InContext_ValueOf_As_Child_Content_Fails() {
-            MarkupException ex = assertThrows(MarkupException.class, () -> TestCompiler.newInstance(
-                this, "InContext_ValueOf_As_Child_Content_Fails", """
-                    <?import javafx.scene.layout.*?>
-                    <?import javafx.scene.paint.*?>
-                    <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
-                        <children>
-                            <fx:value>red</fx:value>
-                        </children>
-                    </GridPane>
-                """));
+            MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+                <?import javafx.scene.layout.*?>
+                <?import javafx.scene.paint.*?>
+                <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                    <children>
+                        <fx:value>red</fx:value>
+                    </children>
+                </GridPane>
+            """));
+
             assertEquals(ErrorCode.VALUEOF_METHOD_NOT_FOUND, ex.getDiagnostic().getCode());
         }
 
         @Test
         public void LiteralObject_Is_Instantiated_With_FxValue() {
-            GridPane root = TestCompiler.newInstance(
-                this, "LiteralObject_Is_Instantiated_With_FxValue", """
-                    <?import java.lang.*?>
-                    <?import javafx.scene.layout.*?>
-                    <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
-                        <minHeight><Double fx:value="5.5"/></minHeight>
-                    </GridPane>
-                """);
-            assertReferenced("LiteralObject_Is_Instantiated_With_FxValue", root, "valueOf");
+            GridPane root = compileAndRun("""
+                <?import java.lang.*?>
+                <?import javafx.scene.layout.*?>
+                <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                    <minHeight><Double fx:value="5.5"/></minHeight>
+                </GridPane>
+            """);
+
+            assertReferenced(root, "valueOf");
             assertEquals(5.5, root.getMinHeight(), 0.001);
         }
 
         @Test
         public void Object_Is_Instantiated_With_Invalid_FxValue_Throws_Exception() {
-            MarkupException ex = assertThrows(MarkupException.class, () -> TestCompiler.newInstance(
-                    this, "Object_Is_Instantiated_With_Invalid_FxValue_Throws_Exception", """
-                    <?import java.lang.*?>
-                    <?import javafx.scene.control.*?>
-                    <Button xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
-                        <minHeight><Double><fx:value><Double fx:value="5.5D"/></fx:value></Double></minHeight>
-                    </Button>
-                """));
+            MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+                <?import java.lang.*?>
+                <?import javafx.scene.control.*?>
+                <Button xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                    <minHeight><Double><fx:value><Double fx:value="5.5D"/></fx:value></Double></minHeight>
+                </Button>
+            """));
+
             assertEquals(ErrorCode.PROPERTY_MUST_CONTAIN_TEXT, ex.getDiagnostic().getCode());
         }
     }
 
     @Test
     public void Incompatible_Constructor_Param_Throws_Exception() {
-        MarkupException ex = assertThrows(MarkupException.class, () -> TestCompiler.newInstance(
-            this, "Incompatible_Constructor_Param_Throws_Exception", """
-                <?import javafx.scene.layout.*?>
-                <?import javafx.geometry.*?>
-                <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
-                    <padding><Insets>foo</Insets></padding>
-                </GridPane>
-            """));
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <?import javafx.scene.layout.*?>
+            <?import javafx.geometry.*?>
+            <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                <padding><Insets>foo</Insets></padding>
+            </GridPane>
+        """));
 
         assertEquals(ErrorCode.CONSTRUCTOR_NOT_FOUND, ex.getDiagnostic().getCode());
         assertEquals(2, ex.getDiagnostic().getCauses().length);
@@ -576,19 +544,19 @@ public class InstantiationTest {
 
     @Test
     public void Nested_Elements_Are_Instantiated_Correctly() {
-        GridPane root = TestCompiler.newInstance(this, "Nested_Elements_Are_Instantiated_Correctly", """
-                <?import javafx.scene.layout.*?>
-                <?import javafx.geometry.*?>
-                <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
-                    <GridPane fx:id="pane0">
+        GridPane root = compileAndRun("""
+            <?import javafx.scene.layout.*?>
+            <?import javafx.geometry.*?>
+            <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                <GridPane fx:id="pane0">
+                    <GridPane/>
+                    <GridPane/>
+                    <GridPane fx:id="pane1">
                         <GridPane/>
-                        <GridPane/>
-                        <GridPane fx:id="pane1">
-                            <GridPane/>
-                        </GridPane>
                     </GridPane>
                 </GridPane>
-            """);
+            </GridPane>
+        """);
 
         assertEquals(1, root.getChildren().size());
         assertEquals(3, Reflection.<GridPane>getFieldValue(root, "pane0").getChildren().size());
@@ -597,17 +565,15 @@ public class InstantiationTest {
 
     @Test
     public void Incompatible_Element_In_Collection_Throws_Exception() {
-        MarkupException ex = assertThrows(
-            MarkupException.class,
-            () -> TestCompiler.newInstance(this, "Incompatible_Element_In_Collection_Throws_Exception", """
-                <?import javafx.scene.layout.*?>
-                <?import javafx.geometry.*?>
-                <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
-                    <GridPane/>
-                    <GridPane/>
-                    <Insets>10</Insets>
-                </GridPane>
-            """));
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <?import javafx.scene.layout.*?>
+            <?import javafx.geometry.*?>
+            <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                <GridPane/>
+                <GridPane/>
+                <Insets>10</Insets>
+            </GridPane>
+        """));
 
         assertEquals(ErrorCode.CANNOT_ADD_ITEM_INCOMPATIBLE_TYPE, ex.getDiagnostic().getCode());
     }
