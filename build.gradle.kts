@@ -29,8 +29,8 @@ sourceSets {
 java {
     withSourcesJar()
     withJavadocJar()
-    sourceCompatibility = JavaVersion.VERSION_16
-    targetCompatibility = JavaVersion.VERSION_16
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
 }
 
 configurations["compilerTestImplementation"].extendsFrom(configurations.implementation.get())
@@ -85,11 +85,10 @@ tasks.shadowJar {
     archiveClassifier.set("")
     include("*.jar")
     include("META-INF/services/org.jfxcore.*")
-    include("org/**/*.*")
+    include("org/jfxcore/**/*.*")
     include("kotlinx/**/*.*")
     include("javassist/**/*.*")
     relocate("javassist", "org.jfxcore.javassist")
-    relocate("org.jetbrains", "org.jfxcore.jetbrains")
     relocate("kotlinx", "org.jfxcore.kotlinx")
     dependencies {
         exclude(dependency("org.jetbrains.kotlin:kotlin-stdlib"))
