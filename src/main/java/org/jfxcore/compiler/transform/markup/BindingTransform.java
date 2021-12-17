@@ -69,7 +69,7 @@ public class BindingTransform implements Transform {
             return node;
         }
 
-        ValueNode pathNode = (ValueNode)objectNode.getUserData("path").getSingleValue(context);
+        ValueNode pathNode = (ValueNode)objectNode.getProperty("path").getSingleValue(context);
         PropertyNode inverseMethodNode = objectNode.findProperty("inverseMethod");
         BindingContextNode bindingSourceNode = createBindingContextNode(context, pathNode.getSourceInfo());
 

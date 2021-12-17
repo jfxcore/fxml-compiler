@@ -56,11 +56,6 @@ public class ParserErrors {
             ErrorCode.UNKNOWN_NAMESPACE, namespace));
     }
 
-    public static MarkupException namespaceNotSpecified(SourceInfo sourceInfo) {
-        throw new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
-            ErrorCode.NAMESPACE_NOT_SPECIFIED));
-    }
-
     public static MarkupException elementCannotStartWithLowercaseLetter(SourceInfo sourceInfo, String name) {
         throw new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
             ErrorCode.ELEMENT_CANNOT_START_WITH_LOWERCASE_LETTER, name));

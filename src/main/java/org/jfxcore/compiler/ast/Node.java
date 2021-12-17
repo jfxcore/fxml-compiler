@@ -24,9 +24,9 @@ public interface Node {
 
     boolean isMarkedForRemoval();
 
-    void setProperty(Object key, Object value);
+    void setNodeData(NodeDataKey key, Object value);
 
-    Object getProperty(Object key);
+    Object getNodeData(NodeDataKey key);
 
     @SuppressWarnings("unchecked")
     static <T extends Node> Collection<T> deepClone(Collection<T> collection) {

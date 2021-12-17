@@ -91,7 +91,7 @@ public class ObjectNode extends AbstractNode implements ValueNode {
         return null;
     }
 
-    public PropertyNode getUserData(String name) {
+    public PropertyNode getProperty(String name) {
         PropertyNode propertyNode = findProperty(name);
 
         if (propertyNode == null) {

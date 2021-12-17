@@ -20,7 +20,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import static org.jfxcore.compiler.parse.MeTokenType.*;
+import static org.jfxcore.compiler.parse.CurlyTokenType.*;
 
 public class MeParser {
 
@@ -30,13 +30,13 @@ public class MeParser {
 
     public MeParser(String source, String intrinsicPrefix) {
         this.source = source;
-        this.intrinsicPrefix = intrinsicPrefix + ":";
+        this.intrinsicPrefix = intrinsicPrefix != null ? intrinsicPrefix + ":" : null;
         this.sourceOffset = new Location(0, 0);
     }
 
     public MeParser(String source, String intrinsicPrefix, Location sourceOffset) {
         this.source = source;
-        this.intrinsicPrefix = intrinsicPrefix + ":";
+        this.intrinsicPrefix = intrinsicPrefix != null ? intrinsicPrefix + ":" : null;
         this.sourceOffset = sourceOffset;
     }
 
@@ -46,11 +46,11 @@ public class MeParser {
             return null;
         }
 
-        CurlyTokenizer tokenizer = new CurlyTokenizer(source, intrinsicPrefix, sourceOffset);
+        MeTokenizer tokenizer = new MeTokenizer(source, sourceOffset);
         TokenInfo tokenInfo = getNextToken(tokenizer, false);
 
         if (tokenInfo.type != NodeType.OBJECT) {
-            tokenizer = new CurlyTokenizer(source, intrinsicPrefix, sourceOffset);
+            tokenizer = new MeTokenizer(source, sourceOffset);
             throw ParserErrors.invalidExpression(
                 SourceInfo.span(tokenizer.getFirst().getSourceInfo(), tokenizer.getLast().getSourceInfo()));
         }
@@ -63,11 +63,11 @@ public class MeParser {
         return root;
     }
 
-    private ObjectNode parseObjectExpression(TokenInfo tokenInfo, CurlyTokenizer tokenizer) {
+    private ObjectNode parseObjectExpression(TokenInfo tokenInfo, MeTokenizer tokenizer) {
         MeToken identifier = tokenInfo.token;
         SourceInfo identifierSourceInfo = identifier.getSourceInfo();
-        boolean intrinsic = identifier.getValue().startsWith(intrinsicPrefix);
-        String name = cleanIdentifier(identifier.getValue());
+        boolean intrinsic = intrinsicPrefix != null && identifier.getValue().startsWith(intrinsicPrefix);
+        String name = cleanIdentifier(identifier.getValue(), identifierSourceInfo);
 
         var typeNode = new TypeNode(name, intrinsic ? intrinsicPrefix + name : name, intrinsic, identifierSourceInfo);
         List<PropertyNode> properties = new ArrayList<>();
@@ -111,10 +111,10 @@ public class MeParser {
         return new ObjectNode(typeNode, properties, children, totalSourceInfo);
     }
 
-    private PropertyNode parsePropertyExpression(MeToken identifier, CurlyTokenizer tokenizer) {
+    private PropertyNode parsePropertyExpression(MeToken identifier, MeTokenizer tokenizer) {
         SourceInfo sourceInfo = identifier.getSourceInfo();
-        boolean intrinsic = identifier.getValue().startsWith(intrinsicPrefix);
-        String name = cleanIdentifier(identifier.getValue());
+        boolean intrinsic = intrinsicPrefix != null && identifier.getValue().startsWith(intrinsicPrefix);
+        String name = cleanIdentifier(identifier.getValue(), sourceInfo);
         List<ValueNode> children = new ArrayList<>();
         TokenInfo tokenInfo;
 
@@ -134,7 +134,7 @@ public class MeParser {
     }
 
     private ValueNode parseValueExpression(
-        CurlyTokenizer tokenizer, boolean allowObjectExpression, boolean isFunctionExpression) {
+            MeTokenizer tokenizer, boolean allowObjectExpression, boolean isFunctionExpression) {
         List<ValueNode> result = new ArrayList<>();
         List<ValueNode> current = new ArrayList<>();
         TokenInfo tokenInfo;
@@ -159,11 +159,12 @@ public class MeParser {
 
                         current.clear();
                     } else {
-                        if (token.getType() == IDENTIFIER && token.getValue().startsWith(intrinsicPrefix)) {
+                        if (token.getType() == IDENTIFIER && intrinsicPrefix != null
+                                && token.getValue().startsWith(intrinsicPrefix)) {
                             current.add(
                                 new ObjectNode(
                                     new TypeNode(
-                                        cleanIdentifier(token.getValue()),
+                                        cleanIdentifier(token.getValue(), token.getSourceInfo()),
                                         token.getValue(),
                                         true,
                                         tokenInfo.token.getSourceInfo()),
@@ -235,7 +236,7 @@ public class MeParser {
             result, SourceInfo.span(result.get(0).getSourceInfo(), result.get(result.size() - 1).getSourceInfo()));
     }
 
-    private FunctionNode parseFunctionExpression(MeToken identifier, CurlyTokenizer tokenizer) {
+    private FunctionNode parseFunctionExpression(MeToken identifier, MeTokenizer tokenizer) {
         List<ValueNode> args = new ArrayList<>();
 
         do {
@@ -255,11 +256,19 @@ public class MeParser {
             args, SourceInfo.span(identifier.getSourceInfo(), tokenizer.getLastRemoved().getSourceInfo()));
     }
 
-    private String cleanIdentifier(String identifier) {
-        return identifier.startsWith(intrinsicPrefix) ? identifier.substring(intrinsicPrefix.length()) : identifier;
+    private String cleanIdentifier(String identifier, SourceInfo sourceInfo) {
+        if (intrinsicPrefix != null && identifier.startsWith(intrinsicPrefix)) {
+            return identifier.substring(intrinsicPrefix.length());
+        }
+
+        if (identifier.contains(":")) {
+            throw ParserErrors.unknownNamespace(sourceInfo, identifier.split(":")[0]);
+        }
+
+        return identifier;
     }
 
-    private boolean eatSemicolons(CurlyTokenizer tokenizer) {
+    private boolean eatSemicolons(MeTokenizer tokenizer) {
         boolean result = false;
 
         while (tokenizer.peekSemi() != null) {
@@ -270,7 +279,7 @@ public class MeParser {
         return result;
     }
 
-    private TokenInfo getNextToken(CurlyTokenizer tokenizer, boolean allowDoubleColon) {
+    private TokenInfo getNextToken(MeTokenizer tokenizer, boolean allowDoubleColon) {
         MeToken token;
         if ((token = tokenizer.poll(OPEN_CURLY)) != null) {
             MeToken identifier = tokenizer.pollQualifiedIdentifier(false);
@@ -321,16 +330,16 @@ public class MeParser {
             tokenizer.addFirst(identifier);
         }
 
-        MeTokenClass tokenClass = tokenizer.peekNotNull().getType().getTokenClass();
+        CurlyTokenClass tokenClass = tokenizer.peekNotNull().getType().getTokenClass();
 
-        if (tokenClass != MeTokenClass.DELIMITER && tokenClass != MeTokenClass.SEMI) {
+        if (tokenClass != CurlyTokenClass.DELIMITER && tokenClass != CurlyTokenClass.SEMI) {
             return new TokenInfo(NodeType.VALUE, tokenizer.peekNotNull());
         }
 
         return new TokenInfo(NodeType.OTHER, tokenizer.peekNotNull());
     }
 
-    private MeToken concatDoubleColons(MeToken identifier, CurlyTokenizer tokenizer) {
+    private MeToken concatDoubleColons(MeToken identifier, MeTokenizer tokenizer) {
         MeToken[] nextTokens = tokenizer.peekAhead(2);
 
         if (nextTokens != null && nextTokens[0].getType() == COLON && nextTokens[1].getType() == COLON) {
