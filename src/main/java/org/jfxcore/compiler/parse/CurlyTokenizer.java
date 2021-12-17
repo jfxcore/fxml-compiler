@@ -7,15 +7,13 @@ import org.jfxcore.compiler.diagnostic.Location;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.diagnostic.errors.ParserErrors;
 import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
  * Tokenizer for curly-based markup that is used in markup extensions and stylesheets.
  */
-public class CurlyTokenizer extends AbstractTokenizer<MeTokenType, MeToken> {
+public abstract class CurlyTokenizer<TToken extends CurlyToken> extends AbstractTokenizer<CurlyTokenType, TToken> {
 
     private static final Pattern TOKENIZER_PATTERN = Pattern.compile(
         "\"[^\"\\\\]*(\\\\(.|\\n)[^\"\\\\]*)*\"|'[^'\\\\]*(\\\\(.|\\n)[^'\\\\]*)*'|" + // quoted strings
@@ -30,15 +28,17 @@ public class CurlyTokenizer extends AbstractTokenizer<MeTokenType, MeToken> {
         Pattern.DOTALL
     );
 
-    private final String intrinsicPrefix;
     private final Location sourceOffset;
 
-    public CurlyTokenizer(String text, String intrinsicPrefix, Location sourceOffset) {
-        super(text, MeToken.class);
-        this.intrinsicPrefix = intrinsicPrefix;
+    protected CurlyTokenizer(Class<TToken> tokenClass, String text, Location sourceOffset) {
+        super(text, tokenClass);
         this.sourceOffset = sourceOffset;
         tokenize(text);
     }
+
+    protected abstract TToken parseToken(String value, String line, SourceInfo sourceInfo);
+
+    protected abstract TToken newToken(CurlyTokenType type, String value, String line, SourceInfo sourceInfo);
 
     public String getSourceText(SourceInfo sourceInfo) {
         StringBuilder builder = new StringBuilder();
@@ -72,9 +72,9 @@ public class CurlyTokenizer extends AbstractTokenizer<MeTokenType, MeToken> {
         return builder.toString();
     }
 
-    public MeToken peekSemi() {
-        MeToken token = peek();
-        if (token != null && token.getType().getTokenClass() == MeTokenClass.SEMI) {
+    public TToken peekSemi() {
+        TToken token = peek();
+        if (token != null && token.getType().getTokenClass() == CurlyTokenClass.SEMI) {
             return token;
         }
 
@@ -82,7 +82,7 @@ public class CurlyTokenizer extends AbstractTokenizer<MeTokenType, MeToken> {
     }
 
     private void tokenize(String text) {
-        ArrayDeque<MeToken> tokens = new ArrayDeque<>();
+        ArrayDeque<TToken> tokens = new ArrayDeque<>();
         Matcher matcher = TOKENIZER_PATTERN.matcher(text);
         int lastPosition = 0;
         boolean eatLine = false;
@@ -101,8 +101,8 @@ public class CurlyTokenizer extends AbstractTokenizer<MeTokenType, MeToken> {
 
             if (isNewline(value)) {
                 SourceInfo sourceInfo = getSourceInfo(start, end);
-                MeToken newToken = new MeToken(
-                    MeTokenType.NEWLINE,
+                TToken newToken = newToken(
+                    CurlyTokenType.NEWLINE,
                     value,
                     getLines().get(sourceInfo.getStart().getLine()),
                     SourceInfo.offset(sourceInfo, sourceOffset));
@@ -139,8 +139,7 @@ public class CurlyTokenizer extends AbstractTokenizer<MeTokenType, MeToken> {
             }
 
             SourceInfo sourceInfo = getSourceInfo(start, end);
-            MeToken newToken = MeToken.parse(
-                intrinsicPrefix,
+            TToken newToken = parseToken(
                 value,
                 getLines().get(sourceInfo.getStart().getLine()),
                 SourceInfo.offset(sourceInfo, sourceOffset));
@@ -150,83 +149,32 @@ public class CurlyTokenizer extends AbstractTokenizer<MeTokenType, MeToken> {
         }
 
         tokens = preprocessSemis(tokens);
-        tokens = preprocessIntrinsicIdentifiers(tokens);
 
-        if (!tokens.isEmpty() && tokens.getLast().getType().getTokenClass() == MeTokenClass.SEMI) {
+        if (!tokens.isEmpty() && tokens.getLast().getType().getTokenClass() == CurlyTokenClass.SEMI) {
             tokens.removeLast();
         }
 
         addAll(tokens);
     }
 
-    // Concatenates prefixes and identifiers.
-    private ArrayDeque<MeToken> preprocessIntrinsicIdentifiers(ArrayDeque<MeToken> tokens) {
-        ArrayDeque<MeToken> newTokens = new ArrayDeque<>(tokens.size());
-        List<MeToken> tempTokens = new ArrayList<>();
-
-        while (!tokens.isEmpty()) {
-            MeToken current = tokens.remove();
-            tempTokens.add(current);
-
-            while (intrinsicPrefix.startsWith(current.getValue()) && !intrinsicPrefix.equals(current.getValue())) {
-                MeToken next = tokens.poll();
-                if (next == null) {
-                    break;
-                }
-
-                current = new MeToken(
-                    MeTokenType.UNKNOWN,
-                    current.getValue() + next.getValue(),
-                    current.getLine(),
-                    current.getSourceInfo());
-
-                tempTokens.add(next);
-            }
-
-            if (intrinsicPrefix.equals(current.getValue()) && isIdentifierToken(tokens.peek())) {
-                MeToken identifier = tokens.remove();
-                MeToken newToken = new MeToken(
-                    MeTokenType.IDENTIFIER,
-                    intrinsicPrefix + identifier.getValue(),
-                    current.getLine(),
-                    SourceInfo.span(current.getSourceInfo(), identifier.getSourceInfo()));
-                newTokens.add(newToken);
-            } else {
-                newTokens.addAll(tempTokens);
-            }
-
-            tempTokens.clear();
-        }
-
-        return newTokens;
-    }
-
-    private boolean isIdentifierToken(MeToken token) {
-        if (token == null) {
-            return false;
-        }
-
-        return token.getType() == MeTokenType.IDENTIFIER || token.getValue().equals("class");
-    }
-
     // Removes SEMI tokens where we don't need them.
-    private ArrayDeque<MeToken> preprocessSemis(ArrayDeque<MeToken> tokens) {
-        ArrayDeque<MeToken> newTokens = new ArrayDeque<>(tokens.size());
-        MeToken last = null;
+    private ArrayDeque<TToken> preprocessSemis(ArrayDeque<TToken> tokens) {
+        ArrayDeque<TToken> newTokens = new ArrayDeque<>(tokens.size());
+        TToken last = null;
         boolean newline;
         boolean semi = true;
         boolean empty = true;
 
         while (!tokens.isEmpty()) {
-            MeToken token = tokens.poll();
+            TToken token = tokens.poll();
 
-            if (token.getType().getTokenClass() == MeTokenClass.SEMI) {
+            if (token.getType().getTokenClass() == CurlyTokenClass.SEMI) {
                 if (semi) {
                     continue;
                 }
 
                 semi = true;
-                newline = token.getType() == MeTokenType.NEWLINE;
+                newline = token.getType() == CurlyTokenType.NEWLINE;
             } else {
                 newline = false;
                 semi = false;
@@ -238,9 +186,9 @@ public class CurlyTokenizer extends AbstractTokenizer<MeTokenType, MeToken> {
                     continue;
                 }
 
-                MeToken next = tokens.peek();
+                TToken next = tokens.peek();
 
-                while (next != null && next.getType() == MeTokenType.NEWLINE) {
+                while (next != null && next.getType() == CurlyTokenType.NEWLINE) {
                     tokens.remove();
                     next = tokens.peek();
                 }
@@ -248,7 +196,7 @@ public class CurlyTokenizer extends AbstractTokenizer<MeTokenType, MeToken> {
                 if (next != null && removeNewlineBefore(next.getType())) {
                     continue;
                 }
-            } else if (semi && last.getType() == MeTokenType.OPEN_CURLY) {
+            } else if (semi && last.getType() == CurlyTokenType.OPEN_CURLY) {
                 continue;
             }
 
@@ -263,19 +211,19 @@ public class CurlyTokenizer extends AbstractTokenizer<MeTokenType, MeToken> {
         return newTokens;
     }
 
-    private boolean removeNewlineAfter(MeTokenType type) {
-        return type == MeTokenType.OPEN_CURLY
-            || type == MeTokenType.OPEN_BRACKET
-            || type == MeTokenType.OPEN_PAREN
-            || type == MeTokenType.DOT
-            || type == MeTokenType.COLON
-            || type == MeTokenType.COMMA;
+    private boolean removeNewlineAfter(CurlyTokenType type) {
+        return type == CurlyTokenType.OPEN_CURLY
+            || type == CurlyTokenType.OPEN_BRACKET
+            || type == CurlyTokenType.OPEN_PAREN
+            || type == CurlyTokenType.DOT
+            || type == CurlyTokenType.COLON
+            || type == CurlyTokenType.COMMA;
     }
 
-    private boolean removeNewlineBefore(MeTokenType type) {
-        return type == MeTokenType.DOT
-            || type == MeTokenType.COLON
-            || type == MeTokenType.COMMA;
+    private boolean removeNewlineBefore(CurlyTokenType type) {
+        return type == CurlyTokenType.DOT
+            || type == CurlyTokenType.COLON
+            || type == CurlyTokenType.COMMA;
     }
 
 }

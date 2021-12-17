@@ -173,6 +173,9 @@ public class XmlReader {
         for (Attribute attribute : attributes) {
             if (attribute.name.prefix != null) {
                 String uri = namespaceStack.getFirst().get(attribute.name.prefix);
+                if (uri == null) {
+                    throw ParserErrors.unknownNamespace(attribute.sourceInfo, attribute.name.prefix);
+                }
 
                 Attr attr = element.getAttributeNodeNS(uri, attribute.name.toString());
                 if (attr != null) {

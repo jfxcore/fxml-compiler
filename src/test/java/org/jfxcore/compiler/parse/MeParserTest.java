@@ -4,10 +4,12 @@
 package org.jfxcore.compiler.parse;
 
 import org.jfxcore.compiler.ast.PropertyNode;
+import org.jfxcore.compiler.ast.text.BooleanNode;
 import org.jfxcore.compiler.ast.text.CompositeNode;
 import org.jfxcore.compiler.ast.text.FunctionNode;
 import org.jfxcore.compiler.ast.text.ListNode;
 import org.jfxcore.compiler.ast.ObjectNode;
+import org.jfxcore.compiler.ast.text.NumberNode;
 import org.jfxcore.compiler.ast.text.TextNode;
 import org.jfxcore.compiler.diagnostic.ErrorCode;
 import org.jfxcore.compiler.diagnostic.MarkupException;
@@ -262,6 +264,40 @@ public class MeParserTest extends TestBase {
         PropertyNode prefWidth = ((ObjectNode)root.getChildren().get(0)).findProperty("prefWidth");
         TextNode listNode = (TextNode)((ObjectNode)prefWidth.getValues().get(0)).getChildren().get(0);
         assertEquals("parent[GridPane:1]/prefWidth", listNode.getText());
+    }
+
+    @Test
+    public void Intrinsic_Namespace_Is_Detected_When_Intrinsic_Prefix_Is_Specified() {
+        ObjectNode root = new MeParser("{GridPane prefWidth={fx:once foo}}", "fx").tryParseObject();
+        assertTrue(((ObjectNode)root.getProperty("prefWidth").getValues().get(0)).getType().isIntrinsic());
+
+        root = new MeParser("{GridPane prefWidth={foo:once foo}}", "foo").tryParseObject();
+        assertTrue(((ObjectNode)root.getProperty("prefWidth").getValues().get(0)).getType().isIntrinsic());
+    }
+
+    @Test
+    public void Invalid_Intrinsic_Namespace_Fails() {
+        MarkupException ex = assertThrows(MarkupException.class,
+            () -> new MeParser("{GridPane prefWidth={foo:once foo}}", "bar").tryParseObject());
+
+        assertEquals(ErrorCode.UNKNOWN_NAMESPACE, ex.getDiagnostic().getCode());
+
+        ex = assertThrows(MarkupException.class,
+            () -> new MeParser("{GridPane prefWidth={fx:once foo}}", null).tryParseObject());
+
+        assertEquals(ErrorCode.UNKNOWN_NAMESPACE, ex.getDiagnostic().getCode());
+    }
+
+    @Test
+    public void Literal_Is_Parsed_As_Boolean() {
+        ObjectNode root = new MeParser("{Foo bar=true}", null).tryParseObject();
+        assertTrue(root.getProperty("bar").getValues().get(0) instanceof BooleanNode);
+    }
+
+    @Test
+    public void Literal_Is_Parsed_As_Number() {
+        ObjectNode root = new MeParser("{Foo bar=5.0}", null).tryParseObject();
+        assertTrue(root.getProperty("bar").getValues().get(0) instanceof NumberNode);
     }
 
 }

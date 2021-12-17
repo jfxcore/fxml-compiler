@@ -213,7 +213,7 @@ public class FxmlParser {
             }
         }
 
-        String prefix = getFxmlNamespacePrefix(node, sourceInfo);
+        String prefix = getFxmlNamespacePrefix(node);
 
         if (node instanceof Attr) {
             sourceInfo = (SourceInfo)node.getUserData(XmlReader.ATTR_VALUE_SOURCE_INFO_KEY);
@@ -230,7 +230,7 @@ public class FxmlParser {
     }
 
     @SuppressWarnings("unchecked")
-    private String getFxmlNamespacePrefix(Node node, SourceInfo sourceInfo) {
+    private String getFxmlNamespacePrefix(Node node) {
         if (node instanceof Element element) {
             var prefixMap = (Map<String, String>)element.getUserData(XmlReader.NAMESPACE_TO_PREFIX_MAP_KEY);
             if (prefixMap != null && prefixMap.get(FxmlNamespace.FXML) != null) {
@@ -239,11 +239,11 @@ public class FxmlParser {
         }
 
         Node parent = node instanceof Attr ? ((Attr)node).getOwnerElement() : node.getParentNode();
-        if (parent == null) {
-            throw ParserErrors.namespaceNotSpecified(sourceInfo);
+        if (parent != null) {
+            return getFxmlNamespacePrefix(parent);
         }
 
-        return getFxmlNamespacePrefix(parent, sourceInfo);
+        return null;
     }
 
     private PropertyNode createPropertyNode(

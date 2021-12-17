@@ -5,7 +5,7 @@ package org.jfxcore.compiler.ast.expression;
 
 import javassist.CtClass;
 import org.jfxcore.compiler.ast.BindingMode;
-import org.jfxcore.compiler.ast.PropertyKey;
+import org.jfxcore.compiler.ast.NodeDataKey;
 import org.jfxcore.compiler.ast.emit.EmitConvertToBooleanBindingNode;
 import org.jfxcore.compiler.ast.emit.EmitConvertToBooleanNode;
 import org.jfxcore.compiler.ast.emit.ValueEmitterNode;
@@ -51,7 +51,7 @@ public enum Operator {
                 return new EmitConvertToBooleanBindingNode(child, this, child.getSourceInfo());
 
             case BIDIRECTIONAL:
-                child.setProperty(PropertyKey.BIND_BIDIRECTIONAL_NEGATED, Boolean.TRUE);
+                child.setNodeData(NodeDataKey.BIND_BIDIRECTIONAL_NEGATED, Boolean.TRUE);
                 return child;
 
             default:

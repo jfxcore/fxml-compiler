@@ -34,7 +34,7 @@ public class UrlIntrinsicTransform implements Transform {
         }
 
         Resolver resolver = new Resolver(node.getSourceInfo());
-        PropertyNode value = ((ObjectNode)node).getUserData("value");
+        PropertyNode value = ((ObjectNode)node).getProperty("value");
         PropertyNode property = context.getParent().as(PropertyNode.class);
         if (property == null) {
             return new EmitUrlNode(

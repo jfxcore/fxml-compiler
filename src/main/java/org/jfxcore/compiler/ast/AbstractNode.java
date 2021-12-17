@@ -12,7 +12,7 @@ import java.util.Map;
 public abstract class AbstractNode implements Node {
 
     private final transient SourceInfo sourceInfo;
-    private final transient Map<Object, Object> userData = new HashMap<>();
+    private final transient Map<NodeDataKey, Object> userData = new HashMap<>();
     private transient boolean markedForRemoval;
 
     public AbstractNode(SourceInfo sourceInfo) {
@@ -35,12 +35,12 @@ public abstract class AbstractNode implements Node {
     }
 
     @Override
-    public void setProperty(Object key, Object value) {
+    public void setNodeData(NodeDataKey key, Object value) {
         userData.put(key, value);
     }
 
     @Override
-    public Object getProperty(Object key) {
+    public Object getNodeData(NodeDataKey key) {
         return userData.get(key);
     }
 
