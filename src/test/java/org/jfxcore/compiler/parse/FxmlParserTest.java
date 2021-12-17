@@ -6,6 +6,8 @@ package org.jfxcore.compiler.parse;
 import org.jfxcore.compiler.ast.DocumentNode;
 import org.jfxcore.compiler.ast.ObjectNode;
 import org.jfxcore.compiler.ast.text.TextNode;
+import org.jfxcore.compiler.diagnostic.ErrorCode;
+import org.jfxcore.compiler.diagnostic.MarkupException;
 import org.junit.jupiter.api.Test;
 import org.jfxcore.compiler.TestBase;
 
@@ -47,6 +49,29 @@ public class FxmlParserTest extends TestBase {
             """).parseDocument();
 
         assertEquals("CDATA section: <![CDATA[...]]>", ((ObjectNode)document.getRoot()).getTextContent().getText());
+    }
+
+    @Test
+    public void FxNamespace_Is_Not_Required() {
+        DocumentNode document = new FxmlParser("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <?import javafx.scene.layout.*?>
+                <GridPane xmlns="http://jfxcore.org/javafx" prefWidth="10"/>
+            """).parseDocument();
+
+        //noinspection ConstantConditions
+        assertEquals("10", ((ObjectNode)document.getRoot()).findProperty("prefWidth").getTextValue(null));
+    }
+
+    @Test
+    public void Unknown_Namespace_Fails() {
+        MarkupException ex = assertThrows(MarkupException.class, () -> new FxmlParser("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <?import javafx.scene.layout.*?>
+                <GridPane xmlns="http://jfxcore.org/javafx" foo:prefWidth="10"/>
+            """).parseDocument());
+
+        assertEquals(ErrorCode.UNKNOWN_NAMESPACE, ex.getDiagnostic().getCode());
     }
 
     @Test

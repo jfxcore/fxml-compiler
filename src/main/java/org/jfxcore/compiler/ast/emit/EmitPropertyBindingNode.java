@@ -6,7 +6,7 @@ package org.jfxcore.compiler.ast.emit;
 import javassist.CtClass;
 import org.jfxcore.compiler.ast.AbstractNode;
 import org.jfxcore.compiler.ast.BindingMode;
-import org.jfxcore.compiler.ast.PropertyKey;
+import org.jfxcore.compiler.ast.NodeDataKey;
 import org.jfxcore.compiler.ast.ValueNode;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.ast.Visitor;
@@ -76,7 +76,7 @@ public class EmitPropertyBindingNode extends AbstractNode implements EmitterNode
             .ext_invoke(checkNotNull(propertyInfo.getPropertyGetter()))
             .aload(local);
 
-        if (child.getProperty(PropertyKey.BIND_BIDIRECTIONAL_NEGATED) == Boolean.TRUE) {
+        if (child.getNodeData(NodeDataKey.BIND_BIDIRECTIONAL_NEGATED) == Boolean.TRUE) {
             throw GeneralErrors.unsupported("Negated bidirectional bindings are not supported.");
         } else if (bindingMode.isContent()) {
             emitBindContent(code, true);

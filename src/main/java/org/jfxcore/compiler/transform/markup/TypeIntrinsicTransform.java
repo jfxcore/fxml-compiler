@@ -33,7 +33,7 @@ public class TypeIntrinsicTransform implements Transform {
             return node;
         }
 
-        PropertyNode propertyNode = ((ObjectNode)node).getUserData("name");
+        PropertyNode propertyNode = ((ObjectNode)node).getProperty("name");
         Resolver resolver = new Resolver(propertyNode.getSourceInfo());
         CtClass clazz = resolver.resolveClassAgainstImports(propertyNode.getTextValue(context));
         TypeInstance typeInstance = resolver.getTypeInstance(clazz);

@@ -13,10 +13,10 @@ import org.jfxcore.compiler.ast.text.TextNode;
 import org.jfxcore.compiler.diagnostic.MarkupException;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.diagnostic.errors.GeneralErrors;
-import org.jfxcore.compiler.parse.CurlyTokenizer;
-import org.jfxcore.compiler.parse.MeToken;
-import org.jfxcore.compiler.parse.MeTokenClass;
-import org.jfxcore.compiler.parse.MeTokenType;
+import org.jfxcore.compiler.parse.CssTokenizer;
+import org.jfxcore.compiler.parse.CurlyToken;
+import org.jfxcore.compiler.parse.CurlyTokenClass;
+import org.jfxcore.compiler.parse.CurlyTokenType;
 import org.jfxcore.compiler.transform.Transform;
 import org.jfxcore.compiler.transform.TransformContext;
 import org.jfxcore.compiler.transform.common.ResolveTypeTransform;
@@ -168,20 +168,20 @@ public class StylesheetTransform implements Transform {
 
     private String formatStylesheet(TextNode source) {
         StringBuilder builder = new StringBuilder();
-        CurlyTokenizer tokenizer = new CurlyTokenizer(source.getText(), "", source.getSourceInfo().getStart());
-        MeToken last = null;
+        CssTokenizer tokenizer = new CssTokenizer(source.getText(), source.getSourceInfo().getStart());
+        CurlyToken last = null;
 
         while (!tokenizer.isEmpty()) {
-            MeToken token = tokenizer.peekNotNull();
+            CurlyToken token = tokenizer.peekNotNull();
 
-            if (token.getType() == MeTokenType.NEWLINE) {
+            if (token.getType() == CurlyTokenType.NEWLINE) {
                 tokenizer.remove();
                 continue;
             }
 
             if (last != null
-                    && last.getType().getTokenClass() == MeTokenClass.LITERAL
-                    && token.getType().getTokenClass() == MeTokenClass.LITERAL) {
+                    && last.getType().getTokenClass() == CurlyTokenClass.LITERAL
+                    && token.getType().getTokenClass() == CurlyTokenClass.LITERAL) {
                 builder.append(' ');
             }
 
