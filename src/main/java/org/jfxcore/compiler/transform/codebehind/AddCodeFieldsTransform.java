@@ -56,7 +56,23 @@ public class AddCodeFieldsTransform implements Transform {
         context.getIds().add(id);
 
         ObjectNode root = (ObjectNode)context.getDocument().getRoot();
-        TextNode valueNode = new TextNode(objectNode.getType().getMarkupName(), idNode.getSourceInfo());
+        TextNode valueNode;
+
+        if (objectNode.getType() instanceof ResolvedTypeNode resolvedTypeNode) {
+            valueNode = new TextNode(resolvedTypeNode.getTypeInstance().getJavaName(), idNode.getSourceInfo());
+        } else {
+            PropertyNode typeArgsNode = objectNode.findIntrinsicProperty(Intrinsics.TYPE_ARGUMENTS);
+            if (typeArgsNode != null) {
+                var typeArgs = typeArgsNode.getValues().stream().map(value -> ((TextNode)value).getText()).toList();
+                valueNode = new TextNode(
+                    objectNode.getType().getMarkupName() +
+                        "<" + String.join(", ", typeArgs) + ">",
+                    idNode.getSourceInfo());
+            } else {
+                valueNode = new TextNode(objectNode.getType().getMarkupName(), idNode.getSourceInfo());
+            }
+        }
+
         root.getProperties().add(new AddCodeFieldNode(id, valueNode, Modifier.PROTECTED, idNode.getSourceInfo()));
 
         return node;
