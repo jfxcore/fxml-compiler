@@ -44,11 +44,6 @@ public class ObjectInitializationErrors {
             ErrorCode.CANNOT_ASSIGN_CONSTANT, targetType.getJavaName(), assignType.getJavaName()));
     }
 
-    public static MarkupException constantCannotHaveContent(SourceInfo sourceInfo) {
-        return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
-            ErrorCode.CONSTANT_CANNOT_HAVE_CONTENT));
-    }
-
     public static MarkupException constantCannotBeModified(SourceInfo sourceInfo) {
         return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
             ErrorCode.CONSTANT_CANNOT_BE_MODIFIED));
@@ -67,6 +62,11 @@ public class ObjectInitializationErrors {
     public static MarkupException objectMustContainText(SourceInfo sourceInfo, CtClass type) {
         return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
             ErrorCode.OBJECT_MUST_CONTAIN_TEXT, type.getName()));
+    }
+
+    public static MarkupException objectCannotHaveContent(SourceInfo sourceInfo, CtClass type) {
+        return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
+            ErrorCode.OBJECT_CANNOT_HAVE_CONTENT, type.getName()));
     }
 
 }
