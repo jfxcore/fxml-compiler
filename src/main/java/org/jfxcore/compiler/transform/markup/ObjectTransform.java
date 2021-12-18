@@ -74,6 +74,11 @@ public class ObjectTransform implements Transform {
         Node parentNode = context.getParent(0);
 
         if (parentNode instanceof EmitInitializeRootNode || parentNode instanceof TemplateContentNode) {
+            if (objectNode.getChildren().size() > 0) {
+                throw ObjectInitializationErrors.objectCannotHaveContent(
+                    node.getSourceInfo(), TypeHelper.getJvmType(node));
+            }
+
             return new EmitObjectNode(
                 null,
                 TypeHelper.getTypeInstance(objectNode),
@@ -84,7 +89,15 @@ public class ObjectTransform implements Transform {
                 objectNode.getSourceInfo());
         }
 
-        return createNode(context, objectNode);
+        ValueNode result = createNode(context, objectNode);
+
+        // The previous call to 'createNode' should have consumed all children
+        if (objectNode.getChildren().size() > 0) {
+            throw ObjectInitializationErrors.objectCannotHaveContent(
+                node.getSourceInfo(), TypeHelper.getJvmType(node));
+        }
+
+        return result;
     }
 
     private ValueNode createNode(TransformContext context, ObjectNode node) {
@@ -198,10 +211,6 @@ public class ObjectTransform implements Transform {
 
     private ValueNode createConstantNode(
             TransformContext context, ObjectNode objectNode, PropertyNode constantProperty) {
-        if (!objectNode.getChildren().isEmpty()) {
-            throw ObjectInitializationErrors.constantCannotHaveContent(constantProperty.getSourceInfo());
-        }
-
         PropertyNode valueNode = objectNode.getProperties().stream()
             .filter(p -> p.isIntrinsic(Intrinsics.VALUE)).findFirst().orElse(null);
 

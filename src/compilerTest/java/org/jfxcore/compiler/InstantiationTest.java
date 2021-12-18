@@ -578,4 +578,36 @@ public class InstantiationTest extends CompilerTestBase {
         assertEquals(ErrorCode.CANNOT_ADD_ITEM_INCOMPATIBLE_TYPE, ex.getDiagnostic().getCode());
     }
 
+    @Test
+    public void Root_ChildContent_Without_DefaultProperty_Throws_Exception() {
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <?import javafx.scene.layout.*?>
+            <?import javafx.scene.control.*?>
+            <ComboBox xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                <String>foo</String>
+                <String>bar</String>
+                <String>baz</String>
+            </ComboBox>
+        """));
+
+        assertEquals(ErrorCode.OBJECT_CANNOT_HAVE_CONTENT, ex.getDiagnostic().getCode());
+    }
+
+    @Test
+    public void ChildContent_Without_DefaultProperty_Throws_Exception() {
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <?import javafx.scene.layout.*?>
+            <?import javafx.scene.control.*?>
+            <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                <ComboBox>
+                    <String>foo</String>
+                    <String>bar</String>
+                    <String>baz</String>
+                </ComboBox>
+            </GridPane>
+        """));
+
+        assertEquals(ErrorCode.OBJECT_CANNOT_HAVE_CONTENT, ex.getDiagnostic().getCode());
+    }
+
 }

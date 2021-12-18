@@ -562,7 +562,7 @@ public class PropertyAssignmentTest {
                 </Button>
             """));
 
-            assertEquals(ErrorCode.CONSTANT_CANNOT_HAVE_CONTENT, ex.getDiagnostic().getCode());
+            assertEquals(ErrorCode.OBJECT_CANNOT_HAVE_CONTENT, ex.getDiagnostic().getCode());
         }
 
         @Test

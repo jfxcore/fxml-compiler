@@ -98,12 +98,18 @@ public class ValueEmitterFactory {
 
         String text = ((TextNode)node.getChildren().get(0)).getText();
 
-        return newLiteralValue(
+        ValueEmitterNode result = newLiteralValue(
             findAndRemoveId(node),
             text,
             Collections.emptyList(),
             TypeHelper.getTypeInstance(node),
             node.getSourceInfo());
+
+        if (result != null) {
+            node.getChildren().clear();
+        }
+
+        return result;
     }
 
     /**
@@ -555,7 +561,12 @@ public class ValueEmitterFactory {
             return null;
         }
 
-        return newObjectByCoercion(objectNode, childText, objectNode.getProperties(), targetType);
+        EmitObjectNode result = newObjectByCoercion(objectNode, childText, objectNode.getProperties(), targetType);
+        if (result != null) {
+            objectNode.getChildren().clear();
+        }
+
+        return result;
     }
 
     /**
