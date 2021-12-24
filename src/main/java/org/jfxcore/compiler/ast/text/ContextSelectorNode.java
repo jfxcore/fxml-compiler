@@ -45,7 +45,7 @@ public class ContextSelectorNode extends TextNode {
         selector = (TextNode)selector.accept(visitor);
 
         if (searchType != null) {
-            searchType = (TextNode) searchType.accept(visitor);
+            searchType = (TextNode)searchType.accept(visitor);
         }
 
         if (level != null) {
