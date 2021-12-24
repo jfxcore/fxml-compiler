@@ -9,6 +9,7 @@ import javafx.beans.property.StringProperty;
 import javafx.geometry.Insets;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
+import javafx.scene.control.Spinner;
 import javafx.scene.layout.BackgroundFill;
 import javafx.scene.layout.CornerRadii;
 import javafx.scene.layout.GridPane;
@@ -255,6 +256,28 @@ public class InstantiationTest extends CompilerTestBase {
             var inst = (NamedArgWithDefaultValueClass)root.getChildren().get(0);
             assertEquals(1, inst.x, 0.001);
             assertEquals(5, inst.y, 0.001);
+        }
+
+        @Test
+        public void Spinner_Can_Be_Instantiated_With_Named_Args() {
+            GridPane root = compileAndRun("""
+                <?import javafx.scene.layout.*?>
+                <?import javafx.scene.control.*?>
+                <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                    <Spinner fx:typeArguments="Integer" min="0" max="10" initialValue="5"/>
+                    <Spinner fx:typeArguments="Double" min="0" max="10" initialValue="5"/>
+                    <Spinner fx:typeArguments="Double" min="0.0" max="10" initialValue="5"/>
+                </GridPane>
+            """);
+
+            Spinner<?> spinner1 = (Spinner<?>)root.getChildren().get(0);
+            assertTrue(spinner1.getValue() instanceof Integer);
+
+            Spinner<?> spinner2 = (Spinner<?>)root.getChildren().get(1);
+            assertTrue(spinner2.getValue() instanceof Integer);
+
+            Spinner<?> spinner3 = (Spinner<?>)root.getChildren().get(2);
+            assertTrue(spinner3.getValue() instanceof Double);
         }
     }
 
