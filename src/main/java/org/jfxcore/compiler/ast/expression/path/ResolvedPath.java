@@ -108,10 +108,16 @@ public class ResolvedPath {
                                 .limit(segments.size() - 1)
                                 .map(PathSegmentNode::getText)
                                 .collect(Collectors.joining("."));
-                            var declaringClass = resolver.resolveClassAgainstImports(declaringClassName);
+
+                            SourceInfo declaringClassSourceInfo = SourceInfo.span(
+                                segments.get(0).getSourceInfo(), segments.get(segments.size() - 2).getSourceInfo());
+
+                            var declaringClass = new Resolver(declaringClassSourceInfo)
+                                .resolveClassAgainstImports(declaringClassName);
 
                             throw SymbolResolutionErrors.memberNotFound(
-                                sourceInfo, declaringClass, segments.get(segments.size() - 1).getText());
+                                segments.get(segments.size() - 1).getSourceInfo(),
+                                declaringClass, segments.get(segments.size() - 1).getText());
                         }
 
                         throw SymbolResolutionErrors.memberNotFound(
@@ -283,14 +289,19 @@ public class ResolvedPath {
             }
 
             attachedProperty = true;
-            propertyName = subPath.getSegments().get(subPath.getSegments().size() - 1).getText();
+            List<PathSegmentNode> segments = subPath.getSegments();
+            propertyName = segments.get(segments.size() - 1).getText();
 
-            String declaringClassName = subPath.getSegments().stream()
-                .limit(subPath.getSegments().size() - 1)
+            String declaringClassName = segments.stream()
+                .limit(segments.size() - 1)
                 .map(PathSegmentNode::getText)
                 .collect(Collectors.joining("."));
 
-            declaringClass = resolver.resolveClassAgainstImports(declaringClassName);
+            SourceInfo declaringClassSourceInfo = SourceInfo.span(
+                segments.get(0).getSourceInfo(), segments.get(segments.size() - 2).getSourceInfo());
+
+            declaringClass = new Resolver(declaringClassSourceInfo).resolveClassAgainstImports(declaringClassName);
+            resolver = new Resolver(segments.get(segments.size() - 1).getSourceInfo());
         }
 
         boolean selectObservable = segment.isObservableSelector() && !suppressObservableSelector;
