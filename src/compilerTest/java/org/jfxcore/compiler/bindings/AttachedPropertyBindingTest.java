@@ -261,7 +261,7 @@ public class AttachedPropertyBindingTest extends CompilerTestBase {
     }
 
     @Test
-    public void Bind_Unidirectional_To_Nested_Attached_Property() {
+    public void Bind_Unidirectional_To_Chained_Attached_Property() {
         Pane root = compileAndRun("""
             <?import javafx.scene.layout.*?>
             <?import javafx.scene.control.*?>

@@ -41,7 +41,7 @@ public class FunctionNode extends TextNode {
     @Override
     public void acceptChildren(Visitor visitor) {
         super.acceptChildren(visitor);
-        path = (PathNode) path.accept(visitor);
+        path = (PathNode)path.accept(visitor);
         acceptChildren(arguments, visitor);
     }
 
