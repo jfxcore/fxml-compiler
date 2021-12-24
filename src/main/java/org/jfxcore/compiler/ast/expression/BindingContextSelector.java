@@ -4,7 +4,27 @@
 package org.jfxcore.compiler.ast.expression;
 
 public enum BindingContextSelector {
-    DEFAULT,
-    TEMPLATED_ITEM,
-    PARENT
+    DEFAULT(""),
+    TEMPLATED_ITEM("item"),
+    PARENT("parent");
+
+    BindingContextSelector(String name) {
+        this.name = name;
+    }
+
+    private final String name;
+
+    public String getName() {
+        return name;
+    }
+
+    public static BindingContextSelector parse(String name) {
+        for (BindingContextSelector selector : values()) {
+            if (selector.name.equals(name)) {
+                return selector;
+            }
+        }
+
+        throw new IllegalArgumentException("name");
+    }
 }

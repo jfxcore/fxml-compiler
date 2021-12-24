@@ -10,11 +10,8 @@ import org.jfxcore.compiler.ast.DocumentNode;
 import org.jfxcore.compiler.ast.Node;
 import org.jfxcore.compiler.ast.TemplateContentNode;
 import org.jfxcore.compiler.ast.Visitor;
-import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.util.ArrayStack;
 import org.jfxcore.compiler.util.CompilationContext;
-import org.jfxcore.compiler.util.Resolver;
-import org.jfxcore.compiler.util.TypeInstance;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
@@ -26,8 +23,8 @@ public class TransformContext {
 
     private final ArrayStack<Node> parents = new ArrayStack<>();
     private final List<String> ids = new ArrayList<>();
-    private final TypeInstance markupClass;
-    private final TypeInstance bindingContextClass;
+    private final CtClass markupClass;
+    private final CtClass bindingContextClass;
 
     public TransformContext(
             List<String> imports,
@@ -38,13 +35,11 @@ public class TransformContext {
         context.setClassPool(classPool);
         context.setImports(imports);
 
-        Resolver resolver = new Resolver(SourceInfo.none());
-
         if (codeBehindClass != null && markupClass != null) {
-            this.markupClass = resolver.getTypeInstance(markupClass);
-            this.bindingContextClass = resolver.getTypeInstance(codeBehindClass);
+            this.markupClass = markupClass;
+            this.bindingContextClass = codeBehindClass;
         } else if (markupClass != null) {
-            this.markupClass = this.bindingContextClass = resolver.getTypeInstance(markupClass);
+            this.markupClass = this.bindingContextClass = markupClass;
         } else {
             this.markupClass = null;
             this.bindingContextClass = null;
@@ -55,18 +50,18 @@ public class TransformContext {
         return ids;
     }
 
-    public TypeInstance getMarkupClass() {
+    public CtClass getMarkupClass() {
         return markupClass;
     }
 
-    public @Nullable TypeInstance getBindingContextClass() {
+    public @Nullable CtClass getBindingContextClass() {
         ListIterator<Node> it = parents.listIterator(parents.size());
 
         while (it.hasPrevious()) {
             Node node = it.previous();
 
-            if (node instanceof TemplateContentNode) {
-                return ((TemplateContentNode)node).getBindingContextClass();
+            if (node instanceof TemplateContentNode templateContentNode) {
+                return templateContentNode.getBindingContextClass().jvmType();
             }
         }
 

@@ -31,18 +31,8 @@ public class ParserErrors {
             ErrorCode.EXPECTED_IDENTIFIER));
     }
 
-    public static MarkupException expectedIdentifier(SourceInfo sourceInfo) {
-        return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
-            ErrorCode.EXPECTED_IDENTIFIER));
-    }
-
     public static MarkupException expectedToken(AbstractToken<?> token, String value) {
         return new MarkupException(token.getSourceInfo(), Diagnostic.newDiagnostic(
-            ErrorCode.EXPECTED_TOKEN, value));
-    }
-
-    public static MarkupException expectedToken(SourceInfo sourceInfo, String value) {
-        return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
             ErrorCode.EXPECTED_TOKEN, value));
     }
 
@@ -64,6 +54,11 @@ public class ParserErrors {
     public static MarkupException invalidExpression(SourceInfo sourceInfo) {
         throw new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
             ErrorCode.INVALID_EXPRESSION));
+    }
+
+    public static MarkupException unexpectedExpression(SourceInfo sourceInfo) {
+        return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
+            ErrorCode.UNEXPECTED_EXPRESSION));
     }
 
 }

@@ -43,7 +43,7 @@ public class NameHelper {
         return "$" + methodName;
     }
 
-    public static String getPropertyName(String name) {
+    public static String getPropertyGetterName(String name) {
         return name + "Property";
     }
 

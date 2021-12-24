@@ -21,6 +21,37 @@ import static org.junit.jupiter.api.Assertions.*;
 public class MeParserTest extends TestBase {
 
     @Test
+    public void Parse_Simple_Identifier() {
+        var obj = new MeParser("{foo}", "fx").tryParseObject();
+        assertFalse(obj.getType().isIntrinsic());
+        assertEquals("foo", obj.getType().getName());
+        assertEquals("foo", obj.getType().getMarkupName());
+    }
+
+    @Test
+    public void Parse_Fully_Qualified_Identifier() {
+        var obj = new MeParser("{foo.bar.baz}", "fx").tryParseObject();
+        assertFalse(obj.getType().isIntrinsic());
+        assertEquals("foo.bar.baz", obj.getType().getName());
+        assertEquals("foo.bar.baz", obj.getType().getMarkupName());
+    }
+
+    @Test
+    public void Parse_Namespace_With_Identifier() {
+        var obj = new MeParser("{fx:foo}", "fx").tryParseObject();
+        assertTrue(obj.getType().isIntrinsic());
+        assertEquals("foo", obj.getType().getName());
+        assertEquals("fx:foo", obj.getType().getMarkupName());
+    }
+
+    @Test
+    public void Parse_Namespace_With_Fully_Qualified_Identifier_Fails() {
+        MarkupException ex = assertThrows(MarkupException.class,
+            () -> new MeParser("{fx:foo.bar.baz}", "fx").tryParseObject());
+        assertEquals(ErrorCode.UNEXPECTED_TOKEN, ex.getDiagnostic().getCode());
+    }
+
+    @Test
     public void Non_Extension_Returns_Null() {
         String markup = """
             foo
@@ -67,7 +98,7 @@ public class MeParserTest extends TestBase {
         assertEquals("baz(123px,5.0,qux quux)", ((TextNode)(list.getValues().get(1))).getText());
 
         FunctionNode funcNode = (FunctionNode)list.getValues().get(1);
-        assertEquals("baz", funcNode.getName().getText());
+        assertEquals("baz", funcNode.getPath().getText());
         assertEquals(3, funcNode.getArguments().size());
         assertEquals("123px", ((TextNode)funcNode.getArguments().get(0)).getText());
         assertEquals("5.0", ((TextNode)funcNode.getArguments().get(1)).getText());
@@ -223,23 +254,9 @@ public class MeParserTest extends TestBase {
     }
 
     @Test
-    public void Missing_Delimiter_Between_Property_And_Content_Throws() {
-        String markup = """
-            {Pane
-                fx:id=pane0 {Pane}
-            }
-        """;
-
-        MarkupException ex = assertThrows(
-            MarkupException.class, () -> new MeParser(markup, "fx").tryParseObject());
-
-        assertEquals(ErrorCode.UNEXPECTED_TOKEN, ex.getDiagnostic().getCode());
-    }
-
-    @Test
     public void Property_And_Content_On_Same_Line() {
         String markup = """
-            { GridPane fx:id=pane0 foo; { GridPane fx:id=pane0 } }
+            { GridPane fx:bar=pane0 foo; { GridPane fx:bar=pane0 } }
         """;
 
         ObjectNode root = new MeParser(markup, "fx").tryParseObject();

@@ -13,6 +13,7 @@ import org.jfxcore.compiler.TestBase;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+@SuppressWarnings("HttpUrlsUsage")
 public class FxmlParserTest extends TestBase {
 
     @Test

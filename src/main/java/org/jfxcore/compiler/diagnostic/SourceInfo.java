@@ -42,7 +42,7 @@ public final class SourceInfo {
 
         SourceInfo start = new SourceInfo(sourceInfo.start.getLine(), sourceInfo.start.getColumn() + 1), end;
 
-        if (sourceInfo.end.getColumn() == 0) {
+        if (sourceInfo.end.getColumn() == 0 && CompilationContext.isCurrent()) {
             CompilationSource source = CompilationContext.getCurrent().getCompilationSource();
             end = new SourceInfo(
                 sourceInfo.end.getLine() - 1,
@@ -85,7 +85,7 @@ public final class SourceInfo {
     public SourceInfo(int line, int column) {
         start = end = new Location(line, column);
 
-        if (line >= 0) {
+        if (line >= 0 && CompilationContext.isCurrent()) {
             sourceLines = CompilationContext.getCurrent().getCompilationSource().getSourceLines(false);
             lineText = sourceLines.length > 0 ? sourceLines[line] : null;
         } else {
@@ -98,7 +98,7 @@ public final class SourceInfo {
         start = new Location(line, column);
         end = new Location(endLine, endColumn);
 
-        if (line >= 0) {
+        if (line >= 0 && CompilationContext.isCurrent()) {
             sourceLines = CompilationContext.getCurrent().getCompilationSource().getSourceLines(false);
             lineText = sourceLines.length > 0 ? sourceLines[line] : null;
         } else {

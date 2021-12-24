@@ -51,6 +51,8 @@ public class CurlyToken extends AbstractToken<CurlyTokenType> {
                 return CurlyTokenType.EQUALS;
             case "*":
                 return CurlyTokenType.STAR;
+            case "/":
+                return CurlyTokenType.SLASH;
             default:
                 if (token.length() > 1 && (token.startsWith("'") && token.endsWith("'")
                         || token.startsWith("\"") && token.endsWith("\""))) {

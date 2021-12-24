@@ -3,6 +3,7 @@
 
 package org.jfxcore.compiler.parse;
 
+import org.jfxcore.compiler.ast.intrinsic.IntrinsicProperty;
 import org.jfxcore.compiler.diagnostic.Diagnostic;
 import org.jfxcore.compiler.diagnostic.ErrorCode;
 import org.jfxcore.compiler.diagnostic.MarkupException;
@@ -41,6 +42,13 @@ public class FxmlParser {
         Intrinsics.ID,
         Intrinsics.TYPE,
         Intrinsics.STYLESHEET
+    };
+
+    // Intrinsic properties that are always interpreted as paths.
+    private static final IntrinsicProperty[] PATH_INTRINSICS = new IntrinsicProperty[] {
+        Intrinsics.BIND.findProperty("path"),
+        Intrinsics.ONCE.findProperty("path"),
+        Intrinsics.SYNC.findProperty("path")
     };
 
     private final String source;
@@ -204,23 +212,53 @@ public class FxmlParser {
     }
 
     private ValueNode nodeFromText(Node node, String text, SourceInfo sourceInfo) {
-        Node parent = node.getParentNode();
-        if (parent instanceof Element && FxmlNamespace.FXML.equals(parent.getNamespaceURI())) {
-            for (Intrinsic intrinsic : VERBATIM_INTRINSICS) {
-                if (intrinsic.getName().equals(parent.getLocalName())) {
-                    return new TextNode(text, sourceInfo);
+        boolean parseAsPath = false;
+
+        if (node.getParentNode() instanceof Element parent) {
+            if (FxmlNamespace.FXML.equals(parent.getNamespaceURI())) {
+                for (Intrinsic intrinsic : VERBATIM_INTRINSICS) {
+                    if (intrinsic.getName().equals(parent.getLocalName())) {
+                        return new TextNode(text, sourceInfo);
+                    }
+                }
+            }
+
+            if (parent.getParentNode() instanceof Element parent2
+                    && FxmlNamespace.FXML.equals(parent2.getNamespaceURI())) {
+                for (IntrinsicProperty intrinsicProperty : PATH_INTRINSICS) {
+                    if (intrinsicProperty.getIntrinsic().getName().equals(parent2.getLocalName())
+                            && intrinsicProperty.getName().equals(parent.getLocalName())) {
+                        parseAsPath = true;
+                        break;
+                    }
                 }
             }
         }
 
         String prefix = getFxmlNamespacePrefix(node);
 
-        if (node instanceof Attr) {
+        if (node instanceof Attr attr) {
             sourceInfo = (SourceInfo)node.getUserData(XmlReader.ATTR_VALUE_SOURCE_INFO_KEY);
+
+            if (!parseAsPath && FxmlNamespace.FXML.equals(attr.getOwnerElement().getNamespaceURI())) {
+                for (IntrinsicProperty intrinsicProperty : PATH_INTRINSICS) {
+                    if (intrinsicProperty.getIntrinsic().getName().equals(attr.getOwnerElement().getLocalName())
+                            && intrinsicProperty.getName().equals(attr.getLocalName())) {
+                        parseAsPath = true;
+                        break;
+                    }
+                }
+            }
         }
 
         if (text.length() > 1) {
-            ValueNode value = new MeParser(text, prefix, sourceInfo.getStart()).tryParseObject();
+            var parser = new MeParser(text, prefix, sourceInfo.getStart());
+
+            if (parseAsPath) {
+                return parser.parsePath();
+            }
+
+            ValueNode value = parser.tryParseObject();
             if (value != null) {
                 return value;
             }

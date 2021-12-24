@@ -284,30 +284,33 @@ abstract class AbstractFunctionEmitterFactory {
             @Nullable TypeInstance returnType,
             Collection<Node> arguments,
             boolean preferObservable) {
-        String methodFullName = pathExpression.getPath();
         String methodName;
         CtClass declaringClass;
         ResolvedPath resolvedPath = null;
         boolean maybeInstanceMethod;
         boolean isConstructor = false;
 
-        if (methodFullName.contains(".")) {
+        if (pathExpression.getSegments().size() > 1) {
             maybeInstanceMethod = false;
-            int idx = methodFullName.lastIndexOf('.');
-            String className = methodFullName.substring(0, idx);
-            methodName = methodFullName.substring(idx + 1);
+
+            // If we assume that the path points to a method, we limit path resolution to all but the
+            // last segment of the path (since method names are not part of the resolvable path).
+            int limit = pathExpression.getSegments().size() - 1;
+            methodName = pathExpression.getSegments().get(limit).getText();
+            String className;
 
             try {
-                resolvedPath = pathExpression.resolvePath(false, true);
+                resolvedPath = pathExpression.resolvePath(false, limit);
                 className = resolvedPath.getValueTypeInstance().getJavaName();
                 maybeInstanceMethod = true;
             } catch (MarkupException ignored) {
                 // If we don't have a valid path expression, the only other possible interpretation would be
                 // a static method call. Since a static method call is not resolved by a path expression, we
                 // check that only the default binding context selector is used.
-                BindingContextSelector selector = pathExpression.getSource().getSelector();
+                className = pathExpression.getSimplePath(limit);
+                BindingContextSelector selector = pathExpression.getBindingContext().getSelector();
                 if (selector != BindingContextSelector.DEFAULT && selector != BindingContextSelector.TEMPLATED_ITEM) {
-                    throw BindingSourceErrors.bindingContextNotApplicable(pathExpression.getSource().getSourceInfo());
+                    throw BindingSourceErrors.bindingContextNotApplicable(pathExpression.getBindingContext().getSourceInfo());
                 }
             }
 
@@ -315,13 +318,14 @@ abstract class AbstractFunctionEmitterFactory {
             declaringClass = resolver.tryResolveClassAgainstImports(className);
 
             if (declaringClass == null) {
-                declaringClass = resolver.resolveClass(methodFullName);
+                className = pathExpression.getSimplePath();
+                declaringClass = resolver.resolveClass(className);
                 isConstructor = true;
             }
         } else {
             maybeInstanceMethod = true;
-            methodName = methodFullName;
-            declaringClass = pathExpression.getSource().getType().getJvmType();
+            methodName = pathExpression.getSimplePath();
+            declaringClass = pathExpression.getBindingContext().getType().getJvmType();
         }
 
         List<TypeInstance> argumentTypes = arguments.stream()
@@ -353,7 +357,7 @@ abstract class AbstractFunctionEmitterFactory {
         // If no applicable methods were found, we treat the identifier as the name of a class and
         // see if there is a constructor that accepts our arguments.
         var resolver = new Resolver(pathExpression.getSourceInfo());
-        CtClass ctorClass = resolver.tryResolveClass(methodFullName);
+        CtClass ctorClass = resolver.tryResolveClass(pathExpression.getSimplePath());
         if (ctorClass == null) {
             ctorClass = resolver.tryResolveClassAgainstImports(methodName);
         }
@@ -431,7 +435,7 @@ abstract class AbstractFunctionEmitterFactory {
         }
 
         if (!Modifier.isStatic(method.getModifiers())) {
-            BindingContextNode bindingSource = pathExpression.getSource();
+            BindingContextNode bindingSource = pathExpression.getBindingContext();
             return List.of(bindingSource.toSegment().toValueEmitter(bindingSource.getSourceInfo()));
         }
 

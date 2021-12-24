@@ -6,69 +6,88 @@ package org.jfxcore.compiler.ast.expression;
 import org.jfxcore.compiler.ast.AbstractNode;
 import org.jfxcore.compiler.ast.BindingMode;
 import org.jfxcore.compiler.ast.Visitor;
+import org.jfxcore.compiler.ast.expression.path.ResolvedPath;
 import org.jfxcore.compiler.ast.expression.util.ObservablePathEmitterFactory;
 import org.jfxcore.compiler.ast.expression.util.SimplePathEmitterFactory;
-import org.jfxcore.compiler.ast.expression.path.ResolvedPath;
+import org.jfxcore.compiler.ast.text.PathSegmentNode;
+import org.jfxcore.compiler.ast.text.TextNode;
+import org.jfxcore.compiler.ast.text.TextSegmentNode;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
+import org.jfxcore.compiler.diagnostic.errors.ParserErrors;
 import org.jfxcore.compiler.util.TypeInstance;
 
-import java.util.Arrays;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 import java.util.Objects;
-import java.util.regex.MatchResult;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 public class PathExpressionNode extends AbstractNode implements ExpressionNode {
 
-    private static final Pattern PATH_SPLIT_PATTERN = Pattern.compile(
-        "::\\p{javaJavaIdentifierStart}\\p{javaJavaIdentifierPart}*|" +
-        "\\p{javaJavaIdentifierStart}\\p{javaJavaIdentifierPart}*");
-
     private final Operator operator;
-    private final String path;
-    private BindingContextNode source;
+    private final List<PathSegmentNode> segments;
+    private BindingContextNode bindingContext;
     private ResolvedPath resolvedPath;
     private ResolvedPath resolvedObservablePath;
 
     public PathExpressionNode(
-            Operator operator, BindingContextNode source, String path, SourceInfo sourceInfo) {
+            Operator operator,
+            BindingContextNode bindingContext,
+            Collection<? extends PathSegmentNode> segments,
+            SourceInfo sourceInfo) {
         super(sourceInfo);
         this.operator = checkNotNull(operator);
-        this.path = checkNotNull(path);
-        this.source = checkNotNull(source);
+        this.bindingContext = checkNotNull(bindingContext);
+        this.segments = new ArrayList<>(checkNotNull(segments));
     }
 
     public Operator getOperator() {
         return operator;
     }
 
-    public BindingContextNode getSource() {
-        return source;
+    public BindingContextNode getBindingContext() {
+        return bindingContext;
     }
 
-    public String getPath() {
-        return path;
+    public List<PathSegmentNode> getSegments() {
+        return segments;
+    }
+
+    public boolean isSimplePath() {
+        return segments.stream().noneMatch(
+            segment -> segment.isObservableSelector() || !(segment instanceof TextSegmentNode));
+    }
+
+    public String getSimplePath() {
+        return getSimplePath(Integer.MAX_VALUE);
+    }
+
+    public String getSimplePath(int limit) {
+        if (!isSimplePath()) {
+            throw ParserErrors.invalidExpression(getSourceInfo());
+        }
+
+        return segments.stream()
+            .limit(limit)
+            .map(TextNode::getText)
+            .collect(Collectors.joining("."));
     }
 
     public ResolvedPath resolvePath(boolean preferObservable) {
-        return resolvePath(preferObservable, false);
+        return resolvePath(preferObservable, Integer.MAX_VALUE);
     }
 
-    public ResolvedPath resolvePath(boolean preferObservable, boolean assumeMethod) {
-        // If we assume that the path points to a method (i.e. the last segment is the method name),
-        // we drop the last segment because it will not be part of the path.
-        String[] path = getSplitPath();
-        if (assumeMethod) {
-            path = Arrays.copyOf(path, path.length - 1);
-        }
-        
+    public ResolvedPath resolvePath(boolean preferObservable, int limit) {
         if (preferObservable) {
             if (resolvedObservablePath != null) {
                 return resolvedObservablePath;
             }
 
             return resolvedObservablePath = ResolvedPath.parse(
-                source.toSegment(), path, true, getSourceInfo());
+                bindingContext.toSegment(),
+                segments.stream().limit(limit).toList(),
+                true,
+                getSourceInfo());
         }
 
         if (resolvedPath != null) {
@@ -76,16 +95,10 @@ public class PathExpressionNode extends AbstractNode implements ExpressionNode {
         }
 
         return resolvedPath = ResolvedPath.parse(
-            source.toSegment(), path, false, getSourceInfo());
-    }
-
-    private String[] getSplitPath() {
-        return PATH_SPLIT_PATTERN
-            .matcher(this.path)
-            .results()
-            .map(MatchResult::group)
-            .collect(Collectors.toList())
-            .toArray(String[]::new);
+            bindingContext.toSegment(),
+            segments.stream().limit(limit).toList(),
+            false,
+            getSourceInfo());
     }
 
     @Override
@@ -106,12 +119,13 @@ public class PathExpressionNode extends AbstractNode implements ExpressionNode {
     @Override
     public void acceptChildren(Visitor visitor) {
         super.acceptChildren(visitor);
-        source = (BindingContextNode)source.accept(visitor);
+        bindingContext = (BindingContextNode) bindingContext.accept(visitor);
+        acceptChildren(segments, visitor);
     }
 
     @Override
     public PathExpressionNode deepClone() {
-        return new PathExpressionNode(operator, source.deepClone(), path, getSourceInfo());
+        return new PathExpressionNode(operator, bindingContext.deepClone(), deepClone(segments), getSourceInfo());
     }
 
     @Override
@@ -120,13 +134,13 @@ public class PathExpressionNode extends AbstractNode implements ExpressionNode {
         if (o == null || getClass() != o.getClass()) return false;
         PathExpressionNode that = (PathExpressionNode)o;
         return operator == that.operator &&
-            path.equals(that.path) &&
-            source.equals(that.source);
+            bindingContext.equals(that.bindingContext) &&
+            segments.equals(that.segments);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(operator, path, source);
+        return Objects.hash(operator, bindingContext, segments);
     }
 
 }

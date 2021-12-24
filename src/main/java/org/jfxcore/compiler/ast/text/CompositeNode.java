@@ -21,11 +21,19 @@ public class CompositeNode extends TextNode {
     public CompositeNode(Collection<? extends ValueNode> values, SourceInfo sourceInfo) {
         super(format(values), sourceInfo);
         this.values = new ArrayList<>(AbstractNode.checkNotNull(values));
+
+        if (values.size() < 2) {
+            throw new IllegalArgumentException("values");
+        }
     }
 
     private CompositeNode(Collection<? extends ValueNode> values, TypeNode type, SourceInfo sourceInfo) {
         super(format(values), false, type, sourceInfo);
         this.values = new ArrayList<>(AbstractNode.checkNotNull(values));
+
+        if (values.size() < 2) {
+            throw new IllegalArgumentException("values");
+        }
     }
 
     public List<ValueNode> getValues() {

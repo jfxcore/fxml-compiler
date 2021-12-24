@@ -217,13 +217,15 @@ public abstract class CurlyTokenizer<TToken extends CurlyToken> extends Abstract
             || type == CurlyTokenType.OPEN_PAREN
             || type == CurlyTokenType.DOT
             || type == CurlyTokenType.COLON
-            || type == CurlyTokenType.COMMA;
+            || type == CurlyTokenType.COMMA
+            || type == CurlyTokenType.EQUALS;
     }
 
     private boolean removeNewlineBefore(CurlyTokenType type) {
         return type == CurlyTokenType.DOT
             || type == CurlyTokenType.COLON
-            || type == CurlyTokenType.COMMA;
+            || type == CurlyTokenType.COMMA
+            || type == CurlyTokenType.EQUALS;
     }
 
 }

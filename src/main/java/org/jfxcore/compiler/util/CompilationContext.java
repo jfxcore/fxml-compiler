@@ -24,6 +24,10 @@ public class CompilationContext extends HashMap<Object, Object> {
         compilationSource = sourceFile;
     }
 
+    public static boolean isCurrent() {
+        return current != null;
+    }
+
     public static CompilationContext getCurrent() {
         if (current == null) {
             throw new IllegalStateException();

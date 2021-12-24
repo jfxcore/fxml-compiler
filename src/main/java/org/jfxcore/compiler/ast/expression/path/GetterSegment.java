@@ -17,6 +17,7 @@ public class GetterSegment extends Segment {
 
     private final CtMethod getter;
     private final boolean requireNonNull;
+    private final boolean attachedPropertyGetter;
 
     public GetterSegment(
             String name,
@@ -24,14 +25,20 @@ public class GetterSegment extends Segment {
             TypeInstance type,
             TypeInstance valueType,
             CtMethod getter,
+            boolean attachedPropertyGetter,
             ObservableKind observableKind) {
         super(name, displayName, type, valueType, observableKind);
         this.getter = Objects.requireNonNull(getter);
         this.requireNonNull = observableKind.isNonNull();
+        this.attachedPropertyGetter = attachedPropertyGetter;
     }
 
     public CtMethod getGetter() {
         return getter;
+    }
+
+    public boolean isAttachedPropertyGetter() {
+        return attachedPropertyGetter;
     }
 
     @Override
@@ -55,12 +62,14 @@ public class GetterSegment extends Segment {
         if (o == null || getClass() != o.getClass()) return false;
         if (!super.equals(o)) return false;
         GetterSegment that = (GetterSegment)o;
-        return TypeHelper.equals(getter, that.getter) && requireNonNull == that.requireNonNull;
+        return TypeHelper.equals(getter, that.getter)
+            && requireNonNull == that.requireNonNull
+            && attachedPropertyGetter == that.attachedPropertyGetter;
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(super.hashCode(), TypeHelper.hashCode(getter), requireNonNull);
+        return Objects.hash(super.hashCode(), TypeHelper.hashCode(getter), requireNonNull, attachedPropertyGetter);
     }
 
 }

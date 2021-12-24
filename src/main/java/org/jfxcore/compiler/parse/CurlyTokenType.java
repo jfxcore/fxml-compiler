@@ -11,9 +11,9 @@ public enum CurlyTokenType implements TokenType {
     NUMBER(CurlyTokenClass.LITERAL),
     BOOLEAN(CurlyTokenClass.LITERAL),
     IDENTIFIER(CurlyTokenClass.LITERAL),
-    OPEN_CURLY("{", CurlyTokenClass.DELIMITER),
+    OPEN_CURLY("{", CurlyTokenClass.NONE),
     CLOSE_CURLY("}", CurlyTokenClass.DELIMITER),
-    OPEN_PAREN("(", CurlyTokenClass.DELIMITER),
+    OPEN_PAREN("(", CurlyTokenClass.NONE),
     CLOSE_PAREN(")", CurlyTokenClass.DELIMITER),
     OPEN_BRACKET("[", CurlyTokenClass.NONE),
     CLOSE_BRACKET("]", CurlyTokenClass.NONE),
@@ -23,7 +23,8 @@ public enum CurlyTokenType implements TokenType {
     STAR("*", CurlyTokenClass.NONE),
     COMMA(",", CurlyTokenClass.NONE),
     COLON(":", CurlyTokenClass.NONE),
-    EQUALS("=", CurlyTokenClass.NONE);
+    EQUALS("=", CurlyTokenClass.DELIMITER),
+    SLASH("/", CurlyTokenClass.NONE);
 
     CurlyTokenType(CurlyTokenClass tokenClass) {
         this.symbol = null;

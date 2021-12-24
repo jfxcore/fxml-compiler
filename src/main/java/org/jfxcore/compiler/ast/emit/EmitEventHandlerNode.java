@@ -12,7 +12,7 @@ import org.jfxcore.compiler.generate.EventHandlerGenerator;
 import org.jfxcore.compiler.generate.Generator;
 import org.jfxcore.compiler.util.Bytecode;
 import org.jfxcore.compiler.util.Resolver;
-import org.jfxcore.compiler.util.TypeInstance;
+import org.jfxcore.compiler.util.TypeHelper;
 import java.util.Objects;
 
 import static org.jfxcore.compiler.util.Classes.*;
@@ -20,12 +20,12 @@ import static org.jfxcore.compiler.util.Descriptors.*;
 
 public class EmitEventHandlerNode extends AbstractNode implements ValueEmitterNode {
 
-    private final TypeInstance declaringClass;
-    private final TypeInstance eventType;
+    private final CtClass declaringClass;
+    private final CtClass eventType;
     private final String eventHandlerName;
     private final ResolvedTypeNode type;
 
-    public EmitEventHandlerNode(TypeInstance declaringClass, TypeInstance eventType, String eventHandlerName, SourceInfo sourceInfo) {
+    public EmitEventHandlerNode(CtClass declaringClass, CtClass eventType, String eventHandlerName, SourceInfo sourceInfo) {
         super(sourceInfo);
         this.declaringClass = checkNotNull(declaringClass);
         this.eventType = checkNotNull(eventType);
@@ -43,15 +43,15 @@ public class EmitEventHandlerNode extends AbstractNode implements ValueEmitterNo
         Bytecode code = context.getOutput();
 
         var generator = new EventHandlerGenerator(
-            context.getBindingContextClass(), eventType.jvmType(), eventHandlerName);
+            context.getBindingContextClass(), eventType, eventHandlerName);
 
         CtClass handlerClass = Generator.emit(context, generator);
 
         code.anew(handlerClass)
             .dup()
             .aload(0)
-            .checkcast(declaringClass.jvmType())
-            .invokespecial(handlerClass, MethodInfo.nameInit, constructor(declaringClass.jvmType()));
+            .checkcast(declaringClass)
+            .invokespecial(handlerClass, MethodInfo.nameInit, constructor(declaringClass));
     }
 
     @Override
@@ -64,15 +64,16 @@ public class EmitEventHandlerNode extends AbstractNode implements ValueEmitterNo
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         EmitEventHandlerNode that = (EmitEventHandlerNode)o;
-        return declaringClass.equals(that.declaringClass) &&
-            eventType.equals(that.eventType) &&
+        return TypeHelper.equals(declaringClass, that.declaringClass) &&
+            TypeHelper.equals(eventType, that.eventType) &&
             eventHandlerName.equals(that.eventHandlerName) &&
             type.equals(that.type);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(declaringClass, eventType, eventHandlerName, type);
+        return Objects.hash(
+            TypeHelper.hashCode(declaringClass), TypeHelper.hashCode(eventType), eventHandlerName, type);
     }
 
 }

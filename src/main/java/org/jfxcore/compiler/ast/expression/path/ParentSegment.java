@@ -4,23 +4,20 @@
 package org.jfxcore.compiler.ast.expression.path;
 
 import javassist.CtClass;
-import org.jetbrains.annotations.Nullable;
+import org.jfxcore.compiler.ast.emit.EmitGetParentNode;
 import org.jfxcore.compiler.ast.emit.ValueEmitterNode;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
-import org.jfxcore.compiler.ast.emit.EmitGetParentNode;
 import org.jfxcore.compiler.util.ExceptionHelper;
 import org.jfxcore.compiler.util.ObservableKind;
 import org.jfxcore.compiler.util.TypeInstance;
 
 public class ParentSegment extends Segment {
 
-    private final TypeInstance searchType;
-    private final Integer level;
+    private final int parentIndex;
 
-    public ParentSegment(TypeInstance type, @Nullable TypeInstance searchType, @Nullable Integer level) {
+    public ParentSegment(TypeInstance type, int parentIndex) {
         super("<parent>", "<parent>", type, type, ObservableKind.NONE);
-        this.searchType = searchType;
-        this.level = level;
+        this.parentIndex = parentIndex;
     }
 
     @Override
@@ -30,7 +27,7 @@ public class ParentSegment extends Segment {
 
     @Override
     public ValueEmitterNode toEmitter(SourceInfo sourceInfo) {
-        return new EmitGetParentNode(getTypeInstance(), searchType, level, sourceInfo);
+        return new EmitGetParentNode(getTypeInstance(), parentIndex, sourceInfo);
     }
 
 }
