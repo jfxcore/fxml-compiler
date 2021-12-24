@@ -262,10 +262,14 @@ public class ValueEmitterFactory {
         try {
             TypeInstance type = TypeHelper.getTypeInstance(objectNode);
             CtConstructor constructor = type.jvmType().getConstructor(Descriptors.constructor());
-            return createObjectNode(objectNode, constructor, Collections.emptyList());
-        } catch (NotFoundException ex) {
-            return null;
+
+            if (Modifier.isPublic(constructor.getModifiers())) {
+                return createObjectNode(objectNode, constructor, Collections.emptyList());
+            }
+        } catch (NotFoundException ignored) {
         }
+
+        return null;
     }
 
     /**
@@ -278,7 +282,6 @@ public class ValueEmitterFactory {
         TypeInstance type = TypeHelper.getTypeInstance(objectNode);
         NamedArgsConstructor[] namedArgsConstructors = findNamedArgsConstructors(objectNode, diagnostics);
 
-        outer:
         for (NamedArgsConstructor namedArgsConstructor : namedArgsConstructors) {
             List<ValueNode> arguments = new ArrayList<>();
             int argIndex = -1;
@@ -305,7 +308,7 @@ public class ValueEmitterFactory {
                     }
 
                     if (synthesizedNode == null) {
-                        break outer;
+                        break;
                     }
 
                     arguments.add(synthesizedNode);
@@ -333,7 +336,7 @@ public class ValueEmitterFactory {
                                     TypeHelper.getTypeInstance(propertyNode.getValues().get(0)).getJavaName()),
                                 propertyNode.getValues().get(0).getSourceInfo()));
 
-                        break outer;
+                        break;
                     }
                 }
 
@@ -627,7 +630,8 @@ public class ValueEmitterFactory {
         Resolver resolver = new Resolver(sourceInfo);
 
         outer: for (CtConstructor constructor : type.jvmType().getConstructors()) {
-            if (resolver.getParameterTypes(constructor, List.of(type)).length != literals.length) {
+            if (!Modifier.isPublic(constructor.getModifiers())
+                    || resolver.getParameterTypes(constructor, List.of(type)).length != literals.length) {
                 continue;
             }
 
@@ -665,7 +669,11 @@ public class ValueEmitterFactory {
         Resolver resolver = new Resolver(objectNode.getSourceInfo());
 
         // Enumerate all constructors that have named arguments
-        for (CtConstructor constructor : type.jvmType().getDeclaredConstructors()) {
+        for (CtConstructor constructor : type.jvmType().getConstructors()) {
+            if (!Modifier.isPublic(constructor.getModifiers())) {
+                continue;
+            }
+
             List<NamedArgParam> namedArgs = new ArrayList<>();
 
             ParameterAnnotationsAttribute attr = (ParameterAnnotationsAttribute)constructor
@@ -704,7 +712,7 @@ public class ValueEmitterFactory {
             }
         }
 
-        Map<Integer, NamedArgsConstructor> constructorOrder = new TreeMap<>(Comparator.reverseOrder());
+        Map<Integer, List<NamedArgsConstructor>> constructorOrder = new TreeMap<>(Comparator.reverseOrder());
 
         for (NamedArgsConstructor constructor : namedArgsConstructors) {
             NamedArgParam[] namedArgs = constructor.namedArgs();
@@ -718,7 +726,7 @@ public class ValueEmitterFactory {
             }
 
             if (matches == namedArgs.length) {
-                constructorOrder.put(matches, constructor);
+                constructorOrder.computeIfAbsent(matches, x -> new ArrayList<>()).add(constructor);
             } else {
                 var argTypes = Arrays.stream(namedArgs).map(NamedArgParam::type).toArray(TypeInstance[]::new);
                 var argNames = Arrays.stream(namedArgs).map(NamedArgParam::name).toArray(String[]::new);
@@ -734,7 +742,7 @@ public class ValueEmitterFactory {
         }
 
         if (!constructorOrder.isEmpty()) {
-            return constructorOrder.values().toArray(new NamedArgsConstructor[0]);
+            return constructorOrder.values().iterator().next().toArray(new NamedArgsConstructor[0]);
         }
 
         return new NamedArgsConstructor[0];
