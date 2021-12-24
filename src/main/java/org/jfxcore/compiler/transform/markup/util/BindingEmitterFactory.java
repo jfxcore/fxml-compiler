@@ -182,11 +182,6 @@ public class BindingEmitterFactory {
     private static void checkPreconditions(
             PropertyNode propertyNode, PropertyInfo propertyInfo, BindingMode bindingMode) {
         if (bindingMode.isObservable()) {
-            if (propertyInfo.isAttached()) {
-                throw PropertyAssignmentErrors.invalidBindingTarget(
-                    propertyNode.getSourceInfo(), propertyInfo);
-            }
-
             if (bindingMode.isContent()) {
                 if (!propertyInfo.isContentBindable(bindingMode)) {
                     throw PropertyAssignmentErrors.invalidContentBindingTarget(

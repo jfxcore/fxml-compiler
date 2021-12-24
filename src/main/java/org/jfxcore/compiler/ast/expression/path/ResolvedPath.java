@@ -23,11 +23,13 @@ import kotlinx.metadata.jvm.KotlinClassMetadata;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jfxcore.compiler.ast.emit.ValueEmitterNode;
+import org.jfxcore.compiler.ast.text.PathSegmentNode;
+import org.jfxcore.compiler.ast.text.SubPathSegmentNode;
 import org.jfxcore.compiler.diagnostic.Diagnostic;
 import org.jfxcore.compiler.diagnostic.ErrorCode;
 import org.jfxcore.compiler.diagnostic.MarkupException;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
-import org.jfxcore.compiler.diagnostic.errors.BindingSourceErrors;
+import org.jfxcore.compiler.diagnostic.errors.ParserErrors;
 import org.jfxcore.compiler.diagnostic.errors.SymbolResolutionErrors;
 import org.jfxcore.compiler.util.Classes;
 import org.jfxcore.compiler.util.NameHelper;
@@ -36,7 +38,6 @@ import org.jfxcore.compiler.util.Resolver;
 import org.jfxcore.compiler.util.TypeHelper;
 import org.jfxcore.compiler.util.TypeInstance;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
@@ -56,7 +57,7 @@ public class ResolvedPath {
     private final List<Segment> segments;
 
     public static ResolvedPath parse(
-            Segment firstSegment, String[] path, boolean preferObservable, SourceInfo sourceInfo) {
+            Segment firstSegment, List<PathSegmentNode> path, boolean preferObservable, SourceInfo sourceInfo) {
         return new ResolvedPath(firstSegment, path, preferObservable, sourceInfo);
     }
 
@@ -65,67 +66,67 @@ public class ResolvedPath {
         this.segments = segments;
     }
 
-    private ResolvedPath(Segment firstSegment, String[] path, boolean preferObservable, SourceInfo sourceInfo) {
+    private ResolvedPath(Segment firstSegment, List<PathSegmentNode> path, boolean preferObservable, SourceInfo sourceInfo) {
         this.sourceInfo = sourceInfo;
-        this.segments = new ArrayList<>(path.length + 1);
+        this.segments = new ArrayList<>(path.size() + 1);
         this.segments.add(firstSegment);
 
-        if (path.length > 0 && path[0].equals("this")) {
-            if (path.length == 1) {
+        if (path.size() > 0 && path.get(0).equals("this")) {
+            if (path.size() == 1) {
                 return;
             }
 
-            path = Arrays.copyOfRange(path, 1, path.length);
+            path = path.stream().skip(1).toList();
         }
 
-        for (String part : path) {
+        for (PathSegmentNode part : path) {
             if (part.equals("this")) {
-                throw BindingSourceErrors.invalidBindingExpression(sourceInfo);
+                throw ParserErrors.invalidExpression(sourceInfo);
             }
         }
 
+        if (path.size() == 0) {
+            throw ParserErrors.invalidExpression(sourceInfo);
+        }
+
         try {
-            if (path.length > 0) {
-                Resolver resolver = new Resolver(sourceInfo);
-                CtClass currentHostType = segments.get(0).getValueTypeInstance().jvmType();
+            Resolver resolver = new Resolver(sourceInfo);
+            CtClass currentHostType = segments.get(0).getValueTypeInstance().jvmType();
 
-                for (String segment : path) {
-                    Segment source = getValueSource(resolver, segment, currentHostType, preferObservable);
+            for (PathSegmentNode segment : path) {
+                Segment source = getValueSource(resolver, segment, currentHostType, preferObservable, false);
 
-                    if (source == null) {
-                        if (segment.startsWith("::") && getValueSource(
-                                resolver, segment.substring(2), currentHostType, preferObservable) != null) {
-                            throw SymbolResolutionErrors.invalidInvariantReference(
-                                sourceInfo, currentHostType, segment.substring(2));
-                        } else {
+                if (source == null) {
+                    if (segment.isObservableSelector() && getValueSource(
+                            resolver, segment, currentHostType, preferObservable, true) != null) {
+                        throw SymbolResolutionErrors.invalidInvariantReference(
+                            sourceInfo, currentHostType, segment.getText());
+                    } else {
+                        if (segment instanceof SubPathSegmentNode subPathSegment) {
+                            var segments = subPathSegment.getSegments();
+                            var declaringClassName = segments.stream()
+                                .limit(segments.size() - 1)
+                                .map(PathSegmentNode::getText)
+                                .collect(Collectors.joining("."));
+                            var declaringClass = resolver.resolveClassAgainstImports(declaringClassName);
+
                             throw SymbolResolutionErrors.memberNotFound(
-                                sourceInfo, currentHostType, segment);
+                                sourceInfo, declaringClass, segments.get(segments.size() - 1).getText());
                         }
-                    }
 
-                    segments.add(source);
-                    currentHostType = source.getValueTypeInstance().jvmType();
-                }
-
-                // If the path includes static segments (i.e. static fields or static getters), we can
-                // remove everything before the last static segment, as we don't need those segments
-                // to resolve the path at runtime.
-                for (int i = segments.size() - 1; i >= 0; --i) {
-                    boolean isStatic =
-                        segments.get(i) instanceof FieldSegment fieldSegment
-                            && Modifier.isStatic(fieldSegment.getField().getModifiers())
-                        || segments.get(i) instanceof GetterSegment getterSegment
-                            && Modifier.isStatic(getterSegment.getGetter().getModifiers());
-
-                    if (isStatic) {
-                        segments.subList(0, i).clear();
-                        break;
+                        throw SymbolResolutionErrors.memberNotFound(
+                            sourceInfo, currentHostType, segment.getText());
                     }
                 }
+
+                segments.add(source);
+                currentHostType = source.getValueTypeInstance().jvmType();
             }
         } catch (NotFoundException ex) {
             throw SymbolResolutionErrors.notFound(sourceInfo, ex.getMessage());
         }
+
+        optimizePath();
     }
 
     public ResolvedPath subPath(int from, int to) {
@@ -235,44 +236,93 @@ public class ResolvedPath {
         return segments.hashCode();
     }
 
+    /**
+     * If the path includes static segments (i.e. static fields or static getters), we can
+     * remove everything before the last static segment, as we don't need those segments
+     * to resolve the path at runtime.
+     * Note that we don't remove attached property getters, only regular static getters.
+     */
+    private void optimizePath() {
+        for (int i = segments.size() - 1; i >= 0; --i) {
+            boolean isStatic =
+                segments.get(i) instanceof FieldSegment fieldSegment
+                    && Modifier.isStatic(fieldSegment.getField().getModifiers())
+                || segments.get(i) instanceof GetterSegment getterSegment
+                    && !getterSegment.isAttachedPropertyGetter()
+                    && Modifier.isStatic(getterSegment.getGetter().getModifiers());
+
+            if (isStatic) {
+                segments.subList(0, i).clear();
+                break;
+            }
+        }
+    }
+
     private Segment getValueSource(
-            Resolver resolver, String propertyName, CtClass declaringClass, boolean preferObservable)
+            Resolver resolver,
+            PathSegmentNode segment,
+            CtClass declaringClass,
+            boolean preferObservable,
+            boolean suppressObservableSelector)
                 throws NotFoundException {
         ResolveSegmentMethod[] methods = new ResolveSegmentMethod[] {
-            this::getPathSegmentFromField,
-            this::getPathSegmentFromGetter,
-            this::getPathSegmentFromKotlinDelegate
+                this::getPathSegmentFromField,
+                this::getPathSegmentFromGetter,
+                this::getPathSegmentFromKotlinDelegate
         };
 
-        boolean selectObservable = false;
+        boolean attachedProperty = false;
+        CtClass receiverClass = declaringClass;
+        String propertyName = segment.getText();
 
-        if (propertyName.startsWith("::")) {
-            selectObservable = true;
-            propertyName = propertyName.substring(2);
+        if (segment instanceof SubPathSegmentNode subPath) {
+            for (PathSegmentNode subSegment : subPath.getSegments()) {
+                if (subSegment instanceof SubPathSegmentNode || subSegment.isObservableSelector()) {
+                    throw ParserErrors.invalidExpression(segment.getSourceInfo());
+                }
+            }
+
+            attachedProperty = true;
+            propertyName = subPath.getSegments().get(subPath.getSegments().size() - 1).getText();
+
+            String declaringClassName = subPath.getSegments().stream()
+                .limit(subPath.getSegments().size() - 1)
+                .map(PathSegmentNode::getText)
+                .collect(Collectors.joining("."));
+
+            declaringClass = resolver.resolveClassAgainstImports(declaringClassName);
         }
 
+        boolean selectObservable = segment.isObservableSelector() && !suppressObservableSelector;
         String propertyNameUpper = Character.toUpperCase(propertyName.charAt(0)) + propertyName.substring(1);
         SegmentMap segments = new SegmentMap();
 
         for (ResolveSegmentMethod method : methods) {
             segments.tryAdd(
-                method.resolve(resolver, propertyName, declaringClass, selectObservable),
+                method.resolve(
+                    resolver, propertyName, declaringClass, receiverClass, attachedProperty, selectObservable),
                 0, preferObservable, selectObservable);
 
             segments.tryAdd(
-                method.resolve(resolver, String.format("%sProperty", propertyName), declaringClass, selectObservable),
+                method.resolve(
+                    resolver, String.format("%sProperty", propertyName), declaringClass, receiverClass,
+                    attachedProperty, selectObservable),
                 1, preferObservable, selectObservable);
 
             segments.tryAdd(
-                method.resolve(resolver, String.format("get%s", propertyNameUpper), declaringClass, selectObservable),
+                method.resolve(
+                    resolver, String.format("get%s", propertyNameUpper), declaringClass, receiverClass,
+                    attachedProperty, selectObservable),
                 2, false, selectObservable);
 
             segments.tryAdd(
-                method.resolve(resolver, String.format("is%s", propertyNameUpper), declaringClass, selectObservable),
+                method.resolve(
+                    resolver, String.format("is%s", propertyNameUpper), declaringClass, receiverClass,
+                    attachedProperty, selectObservable),
                 3, false, selectObservable);
         }
 
-        Iterator<SegmentInfo> it =  segments.values().iterator();
+        Iterator<SegmentInfo> it = segments.values().iterator();
         if (it.hasNext()) {
             return it.next().segment;
         }
@@ -308,8 +358,14 @@ public class ResolvedPath {
             Resolver resolver,
             String propertyName,
             CtClass declaringClass,
+            CtClass receiverClass,
+            boolean attachedProperty,
             boolean selectObservable)
                 throws NotFoundException {
+        if (attachedProperty) {
+            return null;
+        }
+
         CtField field = resolver.tryResolveField(declaringClass, propertyName);
         if (field == null) {
             return null;
@@ -344,9 +400,14 @@ public class ResolvedPath {
             Resolver resolver,
             String propertyName,
             CtClass declaringClass,
+            CtClass receiverClass,
+            boolean attachedProperty,
             boolean selectObservable)
                 throws NotFoundException {
-        CtMethod getter = resolver.tryResolveGetter(declaringClass, propertyName, true, null);
+        CtMethod getter = attachedProperty ?
+            resolver.tryResolveAttachedGetter(declaringClass, receiverClass, propertyName, true) :
+            resolver.tryResolveGetter(declaringClass, propertyName, true, null);
+
         if (getter == null) {
             return null;
         }
@@ -368,7 +429,7 @@ public class ResolvedPath {
 
         if (selectObservable) {
             return new SegmentInfo(
-                new GetterSegment(getter.getName(), propertyName, type, type, getter, ObservableKind.NONE),
+                new GetterSegment(getter.getName(), propertyName, type, type, getter, attachedProperty, ObservableKind.NONE),
                 true);
         }
 
@@ -376,7 +437,7 @@ public class ResolvedPath {
             resolver.findObservableArgument(type) : type;
 
         return new SegmentInfo(
-            new GetterSegment(getter.getName(), propertyName, type, valueType, getter, observableKind),
+            new GetterSegment(getter.getName(), propertyName, type, valueType, getter, attachedProperty, observableKind),
             observableKind.isReadOnly());
     }
 
@@ -384,7 +445,13 @@ public class ResolvedPath {
             Resolver resolver,
             String propertyName,
             CtClass declaringClass,
+            CtClass receiverClass,
+            boolean attachedProperty,
             boolean selectObservable) throws NotFoundException {
+        if (attachedProperty) {
+            return null;
+        }
+
         KotlinDelegateInfo delegateInfo = getKotlinDelegateInfo(resolver, declaringClass, propertyName);
         if (delegateInfo == null) {
             return null;
@@ -546,6 +613,8 @@ public class ResolvedPath {
             Resolver resolver,
             String propertyName,
             CtClass declaringClass,
+            CtClass receiverClass,
+            boolean attachedProperty,
             boolean selectObservable) throws NotFoundException;
     }
 

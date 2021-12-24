@@ -3,7 +3,6 @@
 
 package org.jfxcore.compiler.ast.expression;
 
-import org.jetbrains.annotations.Nullable;
 import org.jfxcore.compiler.ast.AbstractNode;
 import org.jfxcore.compiler.util.TypeInstance;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
@@ -17,33 +16,18 @@ import java.util.Objects;
 public class BindingContextNode extends AbstractNode {
 
     private final BindingContextSelector selector;
-    private final TypeInstance searchType;
-    private final Integer level;
+    private final int parentIndex;
     private ResolvedTypeNode type;
 
     public BindingContextNode(
             BindingContextSelector selector,
             TypeInstance type,
-            @Nullable TypeInstance searchType,
-            @Nullable Integer level,
+            int parentIndex,
             SourceInfo sourceInfo) {
         super(sourceInfo);
         this.type = new ResolvedTypeNode(checkNotNull(type), sourceInfo);
         this.selector = checkNotNull(selector);
-        this.searchType = searchType;
-        this.level = level;
-    }
-
-    public BindingContextNode(
-            BindingContextSelector selector,
-            TypeInstance type,
-            @Nullable Integer level,
-            SourceInfo sourceInfo) {
-        super(sourceInfo);
-        this.type = new ResolvedTypeNode(checkNotNull(type), sourceInfo);
-        this.selector = checkNotNull(selector);
-        this.searchType = null;
-        this.level = level;
+        this.parentIndex = parentIndex;
     }
 
     public BindingContextSelector getSelector() {
@@ -56,8 +40,7 @@ public class BindingContextNode extends AbstractNode {
 
     public Segment toSegment() {
         return switch (selector) {
-            case DEFAULT -> new ParentSegment(type.getTypeInstance(), null, null);
-            case PARENT -> new ParentSegment(type.getTypeInstance(), searchType, level);
+            case DEFAULT, PARENT -> new ParentSegment(type.getTypeInstance(), parentIndex);
             case TEMPLATED_ITEM -> new ParamSegment(type.getTypeInstance());
         };
     }
@@ -70,7 +53,7 @@ public class BindingContextNode extends AbstractNode {
 
     @Override
     public BindingContextNode deepClone() {
-        return new BindingContextNode(selector, type.getTypeInstance(), searchType, level, getSourceInfo());
+        return new BindingContextNode(selector, type.getTypeInstance(), parentIndex, getSourceInfo());
     }
 
     @Override
@@ -79,14 +62,13 @@ public class BindingContextNode extends AbstractNode {
         if (o == null || getClass() != o.getClass()) return false;
         BindingContextNode that = (BindingContextNode)o;
         return selector == that.selector &&
-            Objects.equals(level, that.level) &&
-            Objects.equals(searchType, that.searchType) &&
+            parentIndex == that.parentIndex &&
             type.equals(that.type);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(selector, searchType, level, type);
+        return Objects.hash(selector, parentIndex, type);
     }
 
 }

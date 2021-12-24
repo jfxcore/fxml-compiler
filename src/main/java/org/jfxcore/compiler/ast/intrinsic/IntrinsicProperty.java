@@ -10,6 +10,7 @@ public class IntrinsicProperty {
 
     private final String name;
     private final boolean isDefault;
+    Intrinsic intrinsic;
 
     public IntrinsicProperty(String name, Supplier<CtClass> type) {
         this.name = name;
@@ -19,6 +20,10 @@ public class IntrinsicProperty {
     public IntrinsicProperty(String name, Supplier<CtClass> type, boolean isDefault) {
         this.name = name;
         this.isDefault = isDefault;
+    }
+
+    public Intrinsic getIntrinsic() {
+        return intrinsic;
     }
 
     public String getName() {

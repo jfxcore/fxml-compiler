@@ -3,21 +3,27 @@
 
 package org.jfxcore.compiler.parse;
 
+import org.jetbrains.annotations.Nullable;
 import org.jfxcore.compiler.ast.ObjectNode;
 import org.jfxcore.compiler.ast.PropertyNode;
 import org.jfxcore.compiler.ast.TypeNode;
 import org.jfxcore.compiler.ast.ValueNode;
-import org.jfxcore.compiler.ast.text.BooleanNode;
 import org.jfxcore.compiler.ast.text.CompositeNode;
+import org.jfxcore.compiler.ast.text.ContextSelectorNode;
+import org.jfxcore.compiler.ast.text.BooleanNode;
 import org.jfxcore.compiler.ast.text.FunctionNode;
 import org.jfxcore.compiler.ast.text.ListNode;
 import org.jfxcore.compiler.ast.text.NumberNode;
+import org.jfxcore.compiler.ast.text.PathNode;
+import org.jfxcore.compiler.ast.text.PathSegmentNode;
+import org.jfxcore.compiler.ast.text.SubPathSegmentNode;
+import org.jfxcore.compiler.ast.text.TextSegmentNode;
 import org.jfxcore.compiler.ast.text.TextNode;
 import org.jfxcore.compiler.diagnostic.Location;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.diagnostic.errors.ParserErrors;
+
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 import static org.jfxcore.compiler.parse.CurlyTokenType.*;
@@ -28,16 +34,23 @@ public class MeParser {
     private final String intrinsicPrefix;
     private final Location sourceOffset;
 
-    public MeParser(String source, String intrinsicPrefix) {
+    public MeParser(String source, @Nullable String intrinsicPrefix) {
         this.source = source;
-        this.intrinsicPrefix = intrinsicPrefix != null ? intrinsicPrefix + ":" : null;
+        this.intrinsicPrefix = intrinsicPrefix;
         this.sourceOffset = new Location(0, 0);
     }
 
-    public MeParser(String source, String intrinsicPrefix, Location sourceOffset) {
+    public MeParser(String source, @Nullable String intrinsicPrefix, Location sourceOffset) {
         this.source = source;
-        this.intrinsicPrefix = intrinsicPrefix != null ? intrinsicPrefix + ":" : null;
+        this.intrinsicPrefix = intrinsicPrefix;
         this.sourceOffset = sourceOffset;
+    }
+
+    public ValueNode parsePath() {
+        MeTokenizer tokenizer = new MeTokenizer(source.trim(), sourceOffset);
+        PathNode pathNode = parsePath(tokenizer, true);
+        return tokenizer.size() > 0 && tokenizer.peekNotNull().getType() == OPEN_PAREN ?
+            parseFunctionExpression(tokenizer, pathNode) : pathNode;
     }
 
     public ObjectNode tryParseObject() {
@@ -47,342 +60,309 @@ public class MeParser {
         }
 
         MeTokenizer tokenizer = new MeTokenizer(source, sourceOffset);
-        TokenInfo tokenInfo = getNextToken(tokenizer, false);
-
-        if (tokenInfo.type != NodeType.OBJECT) {
-            tokenizer = new MeTokenizer(source, sourceOffset);
-            throw ParserErrors.invalidExpression(
-                SourceInfo.span(tokenizer.getFirst().getSourceInfo(), tokenizer.getLast().getSourceInfo()));
-        }
-
-        ObjectNode root = parseObjectExpression(tokenInfo, tokenizer);
-        if (!tokenizer.isEmpty()) {
-            return null;
-        }
-
-        return root;
+        return parseObjectExpression(tokenizer);
     }
 
-    private ObjectNode parseObjectExpression(TokenInfo tokenInfo, MeTokenizer tokenizer) {
-        MeToken identifier = tokenInfo.token;
-        SourceInfo identifierSourceInfo = identifier.getSourceInfo();
-        boolean intrinsic = intrinsicPrefix != null && identifier.getValue().startsWith(intrinsicPrefix);
-        String name = cleanIdentifier(identifier.getValue(), identifierSourceInfo);
-
-        var typeNode = new TypeNode(name, intrinsic ? intrinsicPrefix + name : name, intrinsic, identifierSourceInfo);
-        List<PropertyNode> properties = new ArrayList<>();
-        List<ValueNode> children = new ArrayList<>();
-
-        loop: while (!tokenizer.isEmpty()) {
-            TokenInfo info;
-
-            switch ((info = getNextToken(tokenizer, false)).type) {
-                case VALUE: children.add(parseValueExpression(tokenizer, true, false)); break;
-                case FUNCTION: children.add(parseFunctionExpression(info.token, tokenizer)); break;
-                case PROPERTY: properties.add(parsePropertyExpression(info.token, tokenizer)); break;
-                case OBJECT:
-                    ValueNode node = parseObjectExpression(info, tokenizer);
-
-                    if (tokenizer.poll(COMMA) != null) {
-                        List<ValueNode> values = new ArrayList<>();
-                        values.add(node);
-                        node = parseValueExpression(tokenizer, true, false);
-                        if (node instanceof ListNode) {
-                            values.addAll(((ListNode)node).getValues());
-                        } else {
-                            values.add(node);
-                        }
-
-                        children.add(new ListNode(values,
-                            SourceInfo.span(values.get(0).getSourceInfo(), values.get(values.size() - 1).getSourceInfo())));
-                    } else {
-                        children.add(node);
-                    }
-                    break;
-
-                default: if (!eatSemicolons(tokenizer)) break loop;
-            }
-        }
-
-        tokenizer.remove(CLOSE_CURLY);
-
-        SourceInfo startSourceInfo = tokenInfo.curlySourceInfo != null ? tokenInfo.curlySourceInfo : identifierSourceInfo;
-        SourceInfo totalSourceInfo = SourceInfo.span(startSourceInfo, tokenizer.getLastRemoved().getSourceInfo());
-        return new ObjectNode(typeNode, properties, children, totalSourceInfo);
-    }
-
-    private PropertyNode parsePropertyExpression(MeToken identifier, MeTokenizer tokenizer) {
-        SourceInfo sourceInfo = identifier.getSourceInfo();
-        boolean intrinsic = intrinsicPrefix != null && identifier.getValue().startsWith(intrinsicPrefix);
-        String name = cleanIdentifier(identifier.getValue(), sourceInfo);
-        List<ValueNode> children = new ArrayList<>();
-        TokenInfo tokenInfo;
-
-        switch ((tokenInfo = getNextToken(tokenizer, false)).type) {
-            case VALUE: children.add(parseValueExpression(tokenizer, false, false)); break;
-            case OBJECT: children.add(parseObjectExpression(tokenInfo, tokenizer)); break;
-            case FUNCTION: children.add(parseFunctionExpression(tokenInfo.token, tokenizer)); break;
-            default: throw ParserErrors.unexpectedToken(tokenizer.peekNotNull());
-        }
-
-        return new PropertyNode(
-            name.split("\\."),
-            intrinsic ? intrinsicPrefix + name : name,
-            children,
-            intrinsic,
-            SourceInfo.span(sourceInfo, tokenizer.getLastRemoved().getSourceInfo()));
-    }
-
-    private ValueNode parseValueExpression(
-            MeTokenizer tokenizer, boolean allowObjectExpression, boolean isFunctionExpression) {
-        List<ValueNode> result = new ArrayList<>();
-        List<ValueNode> current = new ArrayList<>();
-        TokenInfo tokenInfo;
-
-        loop: while (!tokenizer.isEmpty()) {
-            switch ((tokenInfo = getNextToken(tokenizer, true)).type) {
-                case VALUE:
-                    if (isFunctionExpression && tokenizer.peek(COMMA) != null) {
-                        break loop;
-                    }
-
-                    MeToken token = tokenizer.remove();
-
-                    if (token.getType() == COMMA) {
-                        if (current.size() == 1) {
-                            result.add(current.get(0));
-                        } else if (current.size() > 1) {
-                            SourceInfo start = current.get(0).getSourceInfo();
-                            SourceInfo end = current.get(current.size() - 1).getSourceInfo();
-                            result.add(new CompositeNode(current, SourceInfo.span(start, end)));
-                        }
-
-                        current.clear();
-                    } else {
-                        if (token.getType() == IDENTIFIER && intrinsicPrefix != null
-                                && token.getValue().startsWith(intrinsicPrefix)) {
-                            current.add(
-                                new ObjectNode(
-                                    new TypeNode(
-                                        cleanIdentifier(token.getValue(), token.getSourceInfo()),
-                                        token.getValue(),
-                                        true,
-                                        tokenInfo.token.getSourceInfo()),
-                                    Collections.emptyList(),
-                                    Collections.emptyList(),
-                                    tokenInfo.token.getSourceInfo()));
-                        } else {
-                            if (token.getType() == NUMBER) {
-                                current.add(new NumberNode(token.getValue(), token.getSourceInfo()));
-                            } else if (token.getType() == BOOLEAN) {
-                                current.add(new BooleanNode(token.getValue(), token.getSourceInfo()));
-                            } else if (token.getType() == STRING) {
-                                current.add(TextNode.createRawUnresolved(token.getValue(), token.getSourceInfo()));
-                            } else {
-                                current.add(new TextNode(token.getValue(), token.getSourceInfo()));
-                            }
-                        }
-                    }
-                    break;
-
-                case FUNCTION:
-                    current.add(parseFunctionExpression(tokenInfo.token, tokenizer));
-                    break;
-
-                case OBJECT:
-                    if (allowObjectExpression) {
-                        current.add(parseObjectExpression(tokenInfo, tokenizer));
-                        break;
-                    }
-
-                    throw ParserErrors.unexpectedToken(tokenizer.getLastRemoved());
-
-                case PROPERTY:
-                    throw ParserErrors.unexpectedToken(tokenizer.getLastRemoved());
-
-                case OTHER:
-                    if (isFunctionExpression && tokenizer.peek(CLOSE_PAREN) != null
-                            || !isFunctionExpression && tokenizer.peek(CLOSE_CURLY) != null) {
-                        break loop;
-                    }
-
-                    if (tokenizer.peekSemi() != null && !isFunctionExpression) {
-                        tokenizer.remove();
-                        break loop;
-                    }
-
-                    throw ParserErrors.unexpectedToken(tokenInfo.token);
-
-                default:
-                    throw ParserErrors.unexpectedToken(tokenInfo.token);
-            }
-        }
-
-        if (current.size() == 1) {
-            result.add(current.get(0));
-        } else if (current.size() > 1) {
-            SourceInfo start = current.get(0).getSourceInfo();
-            SourceInfo end = current.get(current.size() - 1).getSourceInfo();
-            result.add(new CompositeNode(current, SourceInfo.span(start, end)));
-        }
-
-        if (result.size() == 0) {
-            throw ParserErrors.unexpectedToken(tokenizer.getLastRemoved());
-        } else if (result.size() == 1) {
-            return result.get(0);
-        }
-
-        return new ListNode(
-            result, SourceInfo.span(result.get(0).getSourceInfo(), result.get(result.size() - 1).getSourceInfo()));
-    }
-
-    private FunctionNode parseFunctionExpression(MeToken identifier, MeTokenizer tokenizer) {
-        List<ValueNode> args = new ArrayList<>();
+    private ValueNode parseExpression(MeTokenizer tokenizer) {
+        List<ValueNode> list = new ArrayList<>();
+        List<ValueNode> values = new ArrayList<>();
+        CurlyTokenClass nextTokenClass;
 
         do {
-            TokenInfo tokenInfo;
+            values.add(parseSingleExpression(tokenizer));
 
-            switch ((tokenInfo = getNextToken(tokenizer, false)).type) {
-                case VALUE: args.add(parseValueExpression(tokenizer, false, true)); break;
-                case OBJECT: args.add(parseObjectExpression(tokenInfo, tokenizer)); break;
-                case FUNCTION: args.add(parseFunctionExpression(tokenInfo.token, tokenizer)); break;
+            if (tokenizer.peekNotNull().getType() == COMMA) {
+                tokenizer.remove(COMMA);
+                list.add(compositeNode(values));
+                values.clear();
             }
-        } while (tokenizer.poll(COMMA) != null);
 
-        tokenizer.remove(CLOSE_PAREN);
+            nextTokenClass = tokenizer.peekNotNull().getType().getTokenClass();
+        } while (nextTokenClass != CurlyTokenClass.SEMI && nextTokenClass != CurlyTokenClass.DELIMITER);
+
+        if (!values.isEmpty()) {
+            list.add(compositeNode(values));
+        }
+
+        if (list.size() == 1) {
+            return list.get(0);
+        }
+
+        return listNode(list);
+    }
+
+    private ValueNode parseSingleExpression(MeTokenizer tokenizer) {
+        return switch (tokenizer.peekNotNull().getType()) {
+            case NUMBER -> {
+                MeToken number = tokenizer.remove(NUMBER);
+                yield new NumberNode(number.getValue(), number.getSourceInfo());
+            }
+
+            case BOOLEAN -> {
+                MeToken bool = tokenizer.remove(BOOLEAN);
+                yield new BooleanNode(bool.getValue(), bool.getSourceInfo());
+            }
+
+            case STRING -> {
+                MeToken string = tokenizer.remove(STRING);
+                yield TextNode.createRawUnresolved(string.getValue(), string.getSourceInfo());
+            }
+
+            case IDENTIFIER -> {
+                PathNode path = parsePath(tokenizer, true);
+                yield tokenizer.peekNotNull().getType() == OPEN_PAREN ? parseFunctionExpression(tokenizer, path) : path;
+            }
+
+            case OPEN_CURLY -> parseObjectExpression(tokenizer);
+
+            default -> {
+                MeToken token = tokenizer.remove();
+                if (token.getType().getTokenClass() == CurlyTokenClass.DELIMITER) {
+                    throw ParserErrors.unexpectedToken(token);
+                }
+
+                yield new TextNode(token.getValue(), token.getSourceInfo());
+            }
+        };
+    }
+
+    private ObjectNode parseObjectExpression(MeTokenizer tokenizer) {
+        MeToken openCurly = tokenizer.remove(OPEN_CURLY);
+        TextNode name = parseIdentifier(tokenizer);
+        String cleanName = cleanIdentifier(name.getText(), name.getSourceInfo());
+        List<ValueNode> children = new ArrayList<>();
+        List<PropertyNode> properties = new ArrayList<>();
+        eatSemis(tokenizer);
+
+        while (tokenizer.peek(CLOSE_CURLY) == null) {
+            tokenizer.mark();
+            ValueNode key = parseExpression(tokenizer);
+
+            if (tokenizer.poll(EQUALS) != null) {
+                tokenizer.resetToMark();
+                properties.add(parsePropertyExpression(tokenizer));
+            } else {
+                tokenizer.forgetMark();
+                children.add(key);
+            }
+
+            eatSemis(tokenizer);
+        }
+
+        MeToken closeCurly = tokenizer.remove(CLOSE_CURLY);
+
+        return new ObjectNode(
+            new TypeNode(cleanName, name.getText(), !cleanName.equals(name.getText()), name.getSourceInfo()),
+            properties, children, SourceInfo.span(openCurly.getSourceInfo(), closeCurly.getSourceInfo()));
+    }
+
+    private PropertyNode parsePropertyExpression(MeTokenizer tokenizer) {
+        TextNode propertyName = parseIdentifier(tokenizer);
+        tokenizer.remove(EQUALS);
+        ValueNode value = parseExpression(tokenizer);
+
+        return new PropertyNode(
+            propertyName.getText().split("\\."),
+            propertyName.getText(),
+            value,
+            false,
+            SourceInfo.span(propertyName.getSourceInfo(), value.getSourceInfo()));
+    }
+
+    private FunctionNode parseFunctionExpression(MeTokenizer tokenizer, PathNode functionName) {
+        tokenizer.remove(OPEN_PAREN);
+        ValueNode arguments = parseExpression(tokenizer);
+        MeToken lastToken = tokenizer.remove(CLOSE_PAREN);
 
         return new FunctionNode(
-            new TextNode(identifier.getValue(), identifier.getSourceInfo()),
-            args, SourceInfo.span(identifier.getSourceInfo(), tokenizer.getLastRemoved().getSourceInfo()));
+            functionName,
+            arguments instanceof ListNode listNode ? listNode.getValues() : List.of(arguments),
+            SourceInfo.span(functionName.getSourceInfo(), lastToken.getSourceInfo()));
     }
 
-    private String cleanIdentifier(String identifier, SourceInfo sourceInfo) {
-        if (intrinsicPrefix != null && identifier.startsWith(intrinsicPrefix)) {
-            return identifier.substring(intrinsicPrefix.length());
-        }
+    private TextNode parseIdentifier(MeTokenizer tokenizer) {
+        var text = new StringBuilder();
+        SourceInfo start = tokenizer.peekNotNull().getSourceInfo(), end;
+        MeToken identifier = null;
 
-        if (identifier.contains(":")) {
-            throw ParserErrors.unknownNamespace(sourceInfo, identifier.split(":")[0]);
-        }
-
-        return identifier;
-    }
-
-    private boolean eatSemicolons(MeTokenizer tokenizer) {
-        boolean result = false;
-
-        while (tokenizer.peekSemi() != null) {
-            tokenizer.remove();
-            result = true;
-        }
-
-        return result;
-    }
-
-    private TokenInfo getNextToken(MeTokenizer tokenizer, boolean allowDoubleColon) {
-        MeToken token;
-        if ((token = tokenizer.poll(OPEN_CURLY)) != null) {
-            MeToken identifier = tokenizer.pollQualifiedIdentifier(false);
-            if (identifier != null) {
-                return new TokenInfo(token.getSourceInfo(), NodeType.OBJECT, identifier);
+        do {
+            if (identifier != null && isIntrinsicIdentifier(identifier.getValue(), identifier.getSourceInfo())) {
+                throw ParserErrors.unexpectedToken(tokenizer.peekNotNull());
             }
 
-            tokenizer.addFirst(token);
+            if (!text.isEmpty()) {
+                text.append(tokenizer.remove(DOT).getValue());
+            }
+
+            identifier = tokenizer.remove(IDENTIFIER);
+            end = identifier.getSourceInfo();
+            text.append(identifier.getValue());
+        } while (tokenizer.peek(DOT) != null);
+
+        return new TextNode(text.toString(), SourceInfo.span(start, end));
+    }
+
+    private PathNode parsePath(MeTokenizer tokenizer, boolean allowContextSelector) {
+        var segments = new ArrayList<PathSegmentNode>();
+        SourceInfo start = tokenizer.peekNotNull().getSourceInfo(), end;
+        ContextSelectorNode bindingContextSelector = null;
+        boolean continueParsing;
+
+        if (allowContextSelector) {
+            bindingContextSelector = tryParseContextSelector(tokenizer);
         }
 
-        MeToken identifier = tokenizer.pollQualifiedIdentifier(false);
+        do {
+            boolean colonSelector = false;
 
-        if (identifier == null && allowDoubleColon) {
-            identifier = concatDoubleColons(null, tokenizer);
-        }
-
-        if (identifier != null) {
-            if (tokenizer.poll(EQUALS) != null) {
-                return new TokenInfo(NodeType.PROPERTY, identifier);
+            if (!segments.isEmpty() && tokenizer.poll(DOT) == null) {
+                tokenizer.remove(COLON);
+                tokenizer.remove(COLON);
+                colonSelector = true;
             }
 
             if (tokenizer.poll(OPEN_PAREN) != null) {
-                return new TokenInfo(NodeType.FUNCTION, identifier);
+                PathNode path = parsePath(tokenizer, false);
+                segments.add(new SubPathSegmentNode(colonSelector, path.getSegments(), path.getSourceInfo()));
+                end = tokenizer.remove(CLOSE_PAREN).getSourceInfo();
+            } else {
+                var identifier = tokenizer.remove(IDENTIFIER);
+                end = identifier.getSourceInfo();
+                segments.add(new TextSegmentNode(
+                    colonSelector, new TextNode(identifier.getValue(), identifier.getSourceInfo())));
             }
 
-            if (allowDoubleColon) {
-                token = null;
+            continueParsing = tokenizer.peek(DOT) != null;
+            if (!continueParsing) {
+                var tokens = tokenizer.peekAhead(2);
+                continueParsing = tokens != null && tokens[0].getType() == COLON && tokens[1].getType() == COLON;
+            }
+        } while (continueParsing);
 
-                do {
-                    if (token != null) {
-                        identifier = new MeToken(
-                            IDENTIFIER,
-                            identifier.getValue() + token.getValue(),
-                            identifier.getLine(),
-                            SourceInfo.span(identifier.getSourceInfo(), token.getSourceInfo()));
-                    }
+        return new PathNode(bindingContextSelector, segments, SourceInfo.span(start, end));
+    }
 
-                    MeToken newIdentifier = concatDoubleColons(identifier, tokenizer);
-                    if (newIdentifier != null) {
-                        identifier = newIdentifier;
-                        token = tokenizer.pollQualifiedIdentifier(false);
-                    } else {
-                        token = null;
-                    }
-                } while (token != null);
+    private ContextSelectorNode tryParseContextSelector(MeTokenizer tokenizer) {
+        ContextSelectorNode result = null;
+        tokenizer.mark();
+
+        try {
+            MeToken contextName = tokenizer.poll(IDENTIFIER);
+            if (contextName == null) {
+                return null;
             }
 
-            tokenizer.addFirst(identifier);
+            if (tokenizer.poll(SLASH) != null) {
+                return result = new ContextSelectorNode(
+                    new TextNode(contextName.getValue(), contextName.getSourceInfo()),
+                    null, null, contextName.getSourceInfo());
+            }
+
+            if (tokenizer.poll(OPEN_BRACKET) == null) {
+                return null;
+            }
+
+            TextNode typeName = null;
+            NumberNode depth = null;
+
+            if (tokenizer.peek(IDENTIFIER) != null) {
+                typeName = parseIdentifier(tokenizer);
+            } else if (tokenizer.peek(NUMBER) != null) {
+                var token = tokenizer.remove(NUMBER);
+                depth = new NumberNode(token.getValue(), token.getSourceInfo());
+            } else {
+                return null;
+            }
+
+            if (depth != null) {
+                if (!tokenizer.containsAhead(CLOSE_BRACKET, SLASH)) {
+                    return null;
+                }
+
+                var token = tokenizer.remove(CLOSE_BRACKET);
+                tokenizer.remove(SLASH);
+
+                return result = new ContextSelectorNode(
+                    new TextNode(contextName.getValue(), contextName.getSourceInfo()),
+                    null,
+                    depth,
+                    SourceInfo.span(contextName.getSourceInfo(), token.getSourceInfo()));
+            }
+
+            if (tokenizer.containsAhead(CLOSE_BRACKET, SLASH)) {
+                var token = tokenizer.remove(CLOSE_BRACKET);
+                tokenizer.remove(SLASH);
+
+                return result = new ContextSelectorNode(
+                    new TextNode(contextName.getValue(), contextName.getSourceInfo()),
+                    typeName,
+                    null,
+                    SourceInfo.span(contextName.getSourceInfo(), token.getSourceInfo()));
+            }
+
+            if (!tokenizer.containsAhead(COLON, NUMBER, CLOSE_BRACKET, SLASH)) {
+                return null;
+            }
+
+            tokenizer.remove(COLON);
+            var token = tokenizer.remove(NUMBER);
+            depth = new NumberNode(token.getValue(), token.getSourceInfo());
+            token = tokenizer.remove(CLOSE_BRACKET);
+            tokenizer.remove(SLASH);
+
+            var sourceInfo = SourceInfo.span(contextName.getSourceInfo(), token.getSourceInfo());
+
+            return result = new ContextSelectorNode(
+                new TextNode(contextName.getValue(), contextName.getSourceInfo()), typeName, depth, sourceInfo);
+        } finally {
+            if (result != null) {
+                tokenizer.forgetMark();
+            } else {
+                tokenizer.resetToMark();
+            }
         }
-
-        CurlyTokenClass tokenClass = tokenizer.peekNotNull().getType().getTokenClass();
-
-        if (tokenClass != CurlyTokenClass.DELIMITER && tokenClass != CurlyTokenClass.SEMI) {
-            return new TokenInfo(NodeType.VALUE, tokenizer.peekNotNull());
-        }
-
-        return new TokenInfo(NodeType.OTHER, tokenizer.peekNotNull());
     }
 
-    private MeToken concatDoubleColons(MeToken identifier, MeTokenizer tokenizer) {
-        MeToken[] nextTokens = tokenizer.peekAhead(2);
-
-        if (nextTokens != null && nextTokens[0].getType() == COLON && nextTokens[1].getType() == COLON) {
+    private void eatSemis(MeTokenizer tokenizer) {
+        while (tokenizer.peekSemi() != null) {
             tokenizer.remove();
-            tokenizer.remove();
-
-            MeToken first = identifier != null ? identifier : nextTokens[0];
-
-            return new MeToken(
-                IDENTIFIER,
-                (identifier != null ? identifier.getValue() : "") + "::",
-                first.getLine(),
-                SourceInfo.span(first.getSourceInfo(), nextTokens[1].getSourceInfo()));
-        }
-
-        return null;
-    }
-
-    private static class TokenInfo {
-        // For object expressions, indicates the location of the opening curly brace
-        final SourceInfo curlySourceInfo;
-        final NodeType type;
-        final MeToken token;
-
-        public TokenInfo(NodeType type, MeToken token) {
-            this.curlySourceInfo = null;
-            this.type = type;
-            this.token = token;
-        }
-
-        public TokenInfo(SourceInfo curlySourceInfo, NodeType type, MeToken token) {
-            this.curlySourceInfo = curlySourceInfo;
-            this.type = type;
-            this.token = token;
         }
     }
 
-    private enum NodeType {
-        OTHER,
-        OBJECT,
-        PROPERTY,
-        FUNCTION,
-        VALUE
+    private boolean isIntrinsicIdentifier(String identifier, SourceInfo sourceInfo) {
+        return !cleanIdentifier(identifier, sourceInfo).equals(identifier);
+    }
+
+    private String cleanIdentifier(String identifier, SourceInfo sourceInfo) {
+        int index = identifier.indexOf(":");
+
+        if (index >= 0) {
+            String namespace = identifier.substring(0, index).trim();
+
+            if (!namespace.equals(intrinsicPrefix)) {
+                throw ParserErrors.unknownNamespace(sourceInfo, identifier.split(":")[0]);
+            }
+        }
+
+        return index >= 0 ? identifier.substring(index + 1) : identifier;
+    }
+
+    private ValueNode listNode(List<? extends ValueNode> values) {
+        if (values.size() == 1) {
+            return values.get(0);
+        }
+
+        return new ListNode(
+            values, SourceInfo.span(values.get(0).getSourceInfo(), values.get(values.size() - 1).getSourceInfo()));
+    }
+
+    private ValueNode compositeNode(List<? extends ValueNode> values) {
+        if (values.size() == 1) {
+            return values.get(0);
+        }
+
+        return new CompositeNode(
+            values, SourceInfo.span(values.get(0).getSourceInfo(), values.get(values.size() - 1).getSourceInfo()));
     }
 
 }

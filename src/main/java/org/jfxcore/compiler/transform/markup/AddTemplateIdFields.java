@@ -52,7 +52,7 @@ public class AddTemplateIdFields implements Transform {
 
         ExceptionHelper.unchecked(
             idNode.getSourceInfo(), () -> addField(
-                context.getBindingContextClass().jvmType(), TypeHelper.getJvmType(objectNode),
+                context.getBindingContextClass(), TypeHelper.getJvmType(objectNode),
                 id, idNode.getSourceInfo()));
 
         return node;

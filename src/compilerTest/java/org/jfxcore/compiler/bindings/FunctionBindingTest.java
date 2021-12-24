@@ -145,6 +145,38 @@ public class FunctionBindingTest extends CompilerTestBase {
     }
 
     @Test
+    public void Bind_Once_To_Static_Method_With_Invariant_Param_ElementSyntax1() {
+        TestPane root = compileAndRun("""
+            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                <id>
+                    <fx:once path="String.format('foo-%s', invariantDoubleVal)"/>
+                </id>
+            </TestPane>
+        """);
+
+        assertFalse(root.idProperty().isBound());
+        assertEquals("foo-1.0", root.getId());
+    }
+
+    @Test
+    public void Bind_Once_To_Static_Method_With_Invariant_Param_ElementSyntax2() {
+        TestPane root = compileAndRun("""
+            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                <id>
+                    <fx:once>
+                        <path>
+                            String.format('foo-%s', invariantDoubleVal)
+                        </path>
+                    </fx:once>
+                </id>
+            </TestPane>
+        """);
+
+        assertFalse(root.idProperty().isBound());
+        assertEquals("foo-1.0", root.getId());
+    }
+
+    @Test
     public void Bind_Once_To_Static_Method_With_Observable_Param() {
         TestPane root = compileAndRun("""
             <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"

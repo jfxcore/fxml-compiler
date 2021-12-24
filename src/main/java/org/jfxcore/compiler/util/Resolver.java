@@ -110,9 +110,9 @@ public class Resolver {
         List<String> imports = CompilationContext.getCurrent().getImports();
 
         for (String potentialClassName : getPotentialClassNames(imports, typeName)) {
-            CtClass nodeClass = tryResolveClass(potentialClassName);
-            if (nodeClass != null) {
-                return nodeClass;
+            CtClass ctclass = tryResolveClass(potentialClassName);
+            if (ctclass != null) {
+                return ctclass;
             }
         }
 
@@ -257,12 +257,16 @@ public class Resolver {
             return (PropertyInfo)entry.value();
         }
 
-        boolean attached = propertyName.contains(".");
-        if (attached) {
+        boolean attached = false;
+
+        if (propertyName.contains(".")) {
             String[] parts = propertyName.split("\\.");
-            if (parts.length == 2 && Character.isUpperCase(parts[0].charAt(0))) {
-                declaringClass = getTypeInstance(resolveClassAgainstImports(parts[0]));
-                propertyName = parts[1];
+            String className = String.join(".", Arrays.copyOf(parts, parts.length - 1));
+            CtClass clazz = tryResolveClassAgainstImports(className);
+            if (clazz != null) {
+                declaringClass = getTypeInstance(clazz);
+                propertyName = parts[parts.length - 1];
+                attached = true;
             } else {
                 return null;
             }
@@ -270,7 +274,9 @@ public class Resolver {
 
         TypeInstance typeInstance = null;
         TypeInstance observableTypeInstance = null;
-        CtMethod propertyGetter = tryResolvePropertyGetter(declaringClass.jvmType(), propertyName);
+        CtMethod propertyGetter = attached ?
+            tryResolveAttachedPropertyGetter(declaringClass.jvmType(), propertyName) :
+            tryResolvePropertyGetter(declaringClass.jvmType(), propertyName);
 
         // If we have a property getter, extract the type of the generic parameter.
         // For primitive wrappers like ObservableBooleanValue, we define the type of the property
@@ -297,7 +303,7 @@ public class Resolver {
         // If we didn't find a property getter in the previous step, this selects the first getter that matches by name,
         // or in case this is an attached property, matches by name and signature.
         CtMethod getter = attached ?
-            tryResolveStaticPropertyGetter(declaringClass.jvmType(), propertyName) :
+            tryResolveAttachedGetter(declaringClass.jvmType(), propertyName) :
             tryResolveGetter(declaringClass.jvmType(), propertyName, false, typeInstance != null ? typeInstance.jvmType() : null);
 
         try {
@@ -316,7 +322,7 @@ public class Resolver {
             CtMethod setter = null;
             if (getter != null) {
                 setter = attached ?
-                    tryResolveStaticPropertySetter(declaringClass.jvmType(), propertyName, getter.getReturnType()) :
+                    tryResolveAttachedSetter(declaringClass.jvmType(), propertyName, getter.getReturnType()) :
                     tryResolveSetter(declaringClass.jvmType(), propertyName, false, getter.getReturnType());
             }
 
@@ -485,7 +491,7 @@ public class Resolver {
      *
      * @return The method, or {@code null} if no setter can be found.
      */
-    public CtMethod tryResolveStaticPropertySetter(CtClass type, String name, @Nullable CtClass paramType) {
+    public CtMethod tryResolveAttachedSetter(CtClass type, String name, @Nullable CtClass paramType) {
         CacheKey key = new CacheKey("tryResolveStaticPropertySetter", type, name, paramType);
         CacheEntry entry = getCache().get(key);
         if (entry.found() && cacheEnabled) {
@@ -520,8 +526,22 @@ public class Resolver {
      *
      * @return The method, or {@code null} if no getter can be found.
      */
-    public CtMethod tryResolveStaticPropertyGetter(CtClass type, String name) {
-        CacheKey key = new CacheKey("tryResolveStaticPropertyGetter", type, name);
+    public CtMethod tryResolveAttachedGetter(CtClass declaringClass, String name) {
+        return tryResolveAttachedGetter(declaringClass, Classes.NodeType(), name, false);
+    }
+
+    /**
+     * Returns the getter for the specified static property (i.e. a method like GridPane.getRowIndex).
+     *
+     * @param declaringClass the class that declares the getter method
+     * @param receiverClass the parameter of the getter method (usually a subclass of Node)
+     * @param name the name of the property
+     * @param verbatim if {@code true}, only methods matching the name exactly are considered
+     * @return The method, or {@code null} if no getter can be found.
+     */
+    public CtMethod tryResolveAttachedGetter(
+            CtClass declaringClass, CtClass receiverClass, String name, boolean verbatim) {
+        CacheKey key = new CacheKey("tryResolveStaticPropertyGetter", declaringClass, name);
         CacheEntry entry = getCache().get(key);
         if (entry.found() && cacheEnabled) {
             return (CtMethod)entry.value();
@@ -530,15 +550,16 @@ public class Resolver {
         String getterName1 = NameHelper.getGetterName(name, false);
         String getterName2 = NameHelper.getGetterName(name, true);
 
-        CtMethod method = findMethod(type, m -> {
+        CtMethod method = findMethod(declaringClass, m -> {
             int modifiers = m.getModifiers();
 
             try {
                 if (Modifier.isPublic(modifiers)
                         && Modifier.isStatic(modifiers)
-                        && (m.getName().equals(getterName1) || m.getName().equals(getterName2))
+                        && verbatim ? m.getName().equals(name) :
+                            (m.getName().equals(getterName1) || m.getName().equals(getterName2))
                         && m.getParameterTypes().length == 1
-                        && m.getParameterTypes()[0].subtypeOf(Classes.NodeType())
+                        && receiverClass.subtypeOf(m.getParameterTypes()[0])
                         && !TypeHelper.equals(m.getReturnType(), CtClass.voidType)
                         && !isSynthetic(m)) {
                     return true;
@@ -554,37 +575,66 @@ public class Resolver {
     }
 
     /**
-     * Returns a property getter method for the specified property node (i.e. a method like Button.textProperty()).
+     * Returns a property getter method for the specified property (i.e. a method like Button.textProperty()).
      *
      * @return The method, or {@code null} if no getter can be found.
      */
-    public CtMethod tryResolvePropertyGetter(CtClass type, String name) {
-        CacheKey key = new CacheKey("tryResolvePropertyGetter", type, name);
+    public CtMethod tryResolvePropertyGetter(CtClass declaringClass, String name) {
+        CacheKey key = new CacheKey("tryResolvePropertyGetter", declaringClass, name);
         CacheEntry entry = getCache().get(key);
         if (entry.found() && cacheEnabled) {
             return (CtMethod)entry.value();
         }
 
-        CtMethod method = resolvePropertyGetterImpl(type, NameHelper.getPropertyName(name));
+        CtMethod method = resolvePropertyGetterImpl(declaringClass, null, NameHelper.getPropertyGetterName(name));
         if (method == null) {
-            method = resolvePropertyGetterImpl(type, name);
+            method = resolvePropertyGetterImpl(declaringClass, null, name);
         }
 
         getCache().put(key, method);
         return method;
     }
 
-    private CtMethod resolvePropertyGetterImpl(CtClass type, String methodName) {
-        return findMethod(type, m -> {
+    /**
+     * Returns an attached property getter method for the specified property.
+     *
+     * @return The method, or {@code null} if no getter can be found.
+     */
+    public CtMethod tryResolveAttachedPropertyGetter(CtClass declaringClass, String name) {
+        CacheKey key = new CacheKey("tryResolveAttachedPropertyGetter", declaringClass, name);
+        CacheEntry entry = getCache().get(key);
+        if (entry.found() && cacheEnabled) {
+            return (CtMethod)entry.value();
+        }
+
+        CtMethod method = resolvePropertyGetterImpl(
+            declaringClass, Classes.NodeType(), NameHelper.getPropertyGetterName(name));
+
+        if (method == null) {
+            method = resolvePropertyGetterImpl(declaringClass, Classes.NodeType(), name);
+        }
+
+        getCache().put(key, method);
+        return method;
+    }
+
+    private CtMethod resolvePropertyGetterImpl(
+            CtClass declaringClass, @Nullable CtClass receiverClass, String methodName) {
+        return findMethod(declaringClass, m -> {
             int modifiers = m.getModifiers();
 
             try {
                 if (Modifier.isPublic(modifiers)
                         && m.getName().equals(methodName)
-                        && m.getParameterTypes().length == 0
                         && m.getReturnType().subtypeOf(Classes.ObservableValueType())
                         && !isSynthetic(m)) {
-                    return true;
+                    CtClass[] paramTypes = m.getParameterTypes();
+
+                    if (receiverClass != null) {
+                        return paramTypes.length == 1 && receiverClass.subtypeOf(paramTypes[0]);
+                    } else {
+                        return paramTypes.length == 0;
+                    }
                 }
             } catch (NotFoundException ignored) {
             }
@@ -593,14 +643,14 @@ public class Resolver {
         });
     }
 
-    public CtMethod tryResolveValueOfMethod(CtClass type) {
-        CacheKey key = new CacheKey("tryResolveValueOfMethod", type);
+    public CtMethod tryResolveValueOfMethod(CtClass declaringClass) {
+        CacheKey key = new CacheKey("tryResolveValueOfMethod", declaringClass);
         CacheEntry entry = getCache().get(key);
         if (entry.found() && cacheEnabled) {
             return (CtMethod)entry.value();
         }
 
-        for (CtMethod method : type.getDeclaredMethods()) {
+        for (CtMethod method : declaringClass.getDeclaredMethods()) {
             if (!Modifier.isPublic(method.getModifiers())
                     || !Modifier.isStatic(method.getModifiers())
                     || !method.getName().equals("valueOf")
@@ -615,7 +665,7 @@ public class Resolver {
                 }
 
                 CtClass retType = method.getReturnType();
-                if (!retType.subtypeOf(type)) {
+                if (!retType.subtypeOf(declaringClass)) {
                     continue;
                 }
             } catch (NotFoundException ex) {

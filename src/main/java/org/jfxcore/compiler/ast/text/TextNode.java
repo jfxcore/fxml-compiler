@@ -12,6 +12,7 @@ import org.jfxcore.compiler.ast.Visitor;
 import org.jfxcore.compiler.util.Classes;
 import org.jfxcore.compiler.util.Resolver;
 import org.jfxcore.compiler.util.TypeInstance;
+import java.util.Objects;
 
 public class TextNode extends AbstractNode implements ValueNode {
 
@@ -72,6 +73,21 @@ public class TextNode extends AbstractNode implements ValueNode {
     @Override
     public TextNode deepClone() {
         return new TextNode(text, rawText, type.deepClone(), getSourceInfo());
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        TextNode textNode = (TextNode)o;
+        return rawText == textNode.rawText
+            && Objects.equals(text, textNode.text)
+            && Objects.equals(type, textNode.type);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(rawText, text, type);
     }
 
 }

@@ -20,6 +20,10 @@ public class Intrinsic {
         this.type = type;
         this.usage = usage;
         this.properties = Arrays.asList(properties);
+
+        for (IntrinsicProperty property : properties) {
+            property.intrinsic = this;
+        }
     }
 
     public String getName() {

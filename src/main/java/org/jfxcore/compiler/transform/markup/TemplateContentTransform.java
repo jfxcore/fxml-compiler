@@ -89,7 +89,7 @@ public class TemplateContentTransform implements Transform {
                 throw GeneralErrors.rootClassCannotBeFinal(node.getSourceInfo(), superType);
             }
 
-            contextClass = context.getMarkupClass().jvmType().makeNestedClass(className, true);
+            contextClass = context.getMarkupClass().makeNestedClass(className, true);
             contextClass.setSuperclass(superType);
             contextClass.setModifiers(Modifier.PRIVATE | Modifier.STATIC | Modifier.FINAL);
         }
@@ -98,7 +98,7 @@ public class TemplateContentTransform implements Transform {
     }
 
     private CtClass findClass(TransformContext context, String name) throws Exception {
-        for (CtClass clazz : context.getMarkupClass().jvmType().getNestedClasses()) {
+        for (CtClass clazz : context.getMarkupClass().getNestedClasses()) {
             if (clazz.getSimpleName().equals(name)) {
                 return clazz;
             }

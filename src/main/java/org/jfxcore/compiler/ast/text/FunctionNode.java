@@ -10,27 +10,28 @@ import org.jfxcore.compiler.ast.Visitor;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 public class FunctionNode extends TextNode {
 
-    private TextNode name;
+    private PathNode path;
     private final List<ValueNode> arguments;
 
-    public FunctionNode(TextNode name, Collection<? extends ValueNode> arguments, SourceInfo sourceInfo) {
-        super(format(name, arguments), sourceInfo);
-        this.name = name;
+    public FunctionNode(PathNode path, Collection<? extends ValueNode> arguments, SourceInfo sourceInfo) {
+        super(format(path, arguments), sourceInfo);
+        this.path = path;
         this.arguments = new ArrayList<>(checkNotNull(arguments));
     }
 
-    private FunctionNode(TextNode name, Collection<? extends ValueNode> arguments, TypeNode type, SourceInfo sourceInfo) {
-        super(format(name, arguments), false, type, sourceInfo);
-        this.name = name;
+    private FunctionNode(PathNode path, Collection<? extends ValueNode> arguments, TypeNode type, SourceInfo sourceInfo) {
+        super(format(path, arguments), false, type, sourceInfo);
+        this.path = path;
         this.arguments = new ArrayList<>(checkNotNull(arguments));
     }
 
-    public TextNode getName() {
-        return name;
+    public PathNode getPath() {
+        return path;
     }
 
     public List<ValueNode> getArguments() {
@@ -40,13 +41,28 @@ public class FunctionNode extends TextNode {
     @Override
     public void acceptChildren(Visitor visitor) {
         super.acceptChildren(visitor);
-        name = (TextNode)name.accept(visitor);
+        path = (PathNode) path.accept(visitor);
         acceptChildren(arguments, visitor);
     }
 
     @Override
     public FunctionNode deepClone() {
-        return new FunctionNode(name.deepClone(), deepClone(arguments), getType(), getSourceInfo());
+        return new FunctionNode(path.deepClone(), deepClone(arguments), getType(), getSourceInfo());
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        if (!super.equals(o)) return false;
+        FunctionNode that = (FunctionNode) o;
+        return Objects.equals(path, that.path)
+            && Objects.equals(arguments, that.arguments);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(super.hashCode(), path, arguments);
     }
 
     private static String format(TextNode name, Collection<? extends ValueNode> arguments) {

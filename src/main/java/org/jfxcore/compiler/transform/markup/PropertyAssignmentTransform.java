@@ -85,7 +85,15 @@ public class PropertyAssignmentTransform implements Transform {
             List<ValueEmitterNode> nodes = new ArrayList<>();
 
             for (int i = 0; i < names.length - 1; ++i) {
-                propertyInfo = resolver.resolveProperty(declaringType, names[i]);
+                propertyInfo = resolver.tryResolveProperty(declaringType, names[i]);
+                if (propertyInfo == null) {
+                    // If we fail to resolve the first segment, format the error message to include the
+                    // entire chain of names. This makes for a better diagnostic in case the user meant
+                    // to specify the name of an attached property that couldn't be resolved.
+                    String name = i == 0 ? propertyNode.getName() : names[i];
+                    throw SymbolResolutionErrors.propertyNotFound(sourceInfo, declaringType.jvmType(), name);
+                }
+
                 boolean hasGetter = propertyInfo.getGetter() != null;
 
                 ValueEmitterNode emitter = new EmitInvokeGetterNode(
@@ -352,7 +360,7 @@ public class PropertyAssignmentTransform implements Transform {
 
             return new EmitEventHandlerNode(
                 context.getBindingContextClass(),
-                targetType.getArguments().get(0),
+                targetType.getArguments().get(0).jvmType(),
                 textNode.getText().trim().substring(1),
                 node.getSourceInfo());
         }

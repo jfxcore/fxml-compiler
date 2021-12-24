@@ -65,7 +65,7 @@ public class Intrinsics {
         new IntrinsicProperty("path", Classes::StringType, true),
         new IntrinsicProperty("content", () -> CtClass.booleanType));
 
-    public static final Intrinsic BIND_BIDIRECTIONAL = new Intrinsic(
+    public static final Intrinsic SYNC = new Intrinsic(
         "sync", () -> CtClass.voidType, Usage.ELEMENT,
         new IntrinsicProperty("path", Classes::StringType, true),
         new IntrinsicProperty("content", () -> CtClass.booleanType),
@@ -73,7 +73,7 @@ public class Intrinsics {
 
     private static final List<Intrinsic> NODES = List.of(
         NULL, CLASS, CLASS_MODIFIER, CLASS_PARAMETERS, ID, VALUE, CONSTANT, TYPE_ARGUMENTS, ITEM_TYPE, DEFINE,
-        STYLESHEET, REFERENCE, TYPE, URL, ONCE, BIND, BIND_BIDIRECTIONAL);
+        STYLESHEET, REFERENCE, TYPE, URL, ONCE, BIND, SYNC);
 
     public static Intrinsic find(ObjectNode node) {
         if (node.getType().isIntrinsic()){

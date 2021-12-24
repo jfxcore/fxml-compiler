@@ -3,7 +3,9 @@
 
 package org.jfxcore.compiler.util;
 
+import javafx.beans.property.StringProperty;
 import javafx.beans.value.ObservableValue;
+import javafx.scene.Node;
 import javassist.CtConstructor;
 import javassist.CtMethod;
 import org.jfxcore.compiler.diagnostic.ErrorCode;
@@ -151,6 +153,37 @@ public class ResolverTest extends TestBase {
         });
 
         assertEquals(ErrorCode.TYPE_ARGUMENT_OUT_OF_BOUND, ex.getDiagnostic().getCode());
+    }
+
+    public static class AttachedPropertyHolder {
+        public static String getFoo(Node node) { return null; }
+        public static void setFoo(Node node, String value) {}
+
+        public static String getBar(Node node) { return null; }
+        public static void setBar(Node node, String value) {}
+        public static StringProperty barProperty(Node node) { return null; }
+    }
+
+    @Test
+    public void Detect_Attached_NonObservable_Property() {
+        var resolver = new Resolver(SourceInfo.none());
+        var property = resolver.resolveProperty(
+            null, AttachedPropertyHolder.class.getName() + ".foo");
+        assertTrue(property.isAttached());
+        assertFalse(property.isObservable());
+        assertEquals("foo", property.getName());
+    }
+
+    @Test
+    @SuppressWarnings("ConstantConditions")
+    public void Detect_Attached_Observable_Property() {
+        var resolver = new Resolver(SourceInfo.none());
+        var property = resolver.resolveProperty(
+            null, AttachedPropertyHolder.class.getName() + ".bar");
+        assertTrue(property.isAttached());
+        assertTrue(property.isObservable());
+        assertEquals("barProperty", property.getPropertyGetter().getName());
+        assertEquals("bar", property.getName());
     }
 
 }

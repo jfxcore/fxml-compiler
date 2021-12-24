@@ -5,13 +5,11 @@ package org.jfxcore.compiler.diagnostic.errors;
 
 import javassist.CtBehavior;
 import javassist.CtClass;
-import javassist.CtMethod;
 import org.jfxcore.compiler.diagnostic.Diagnostic;
 import org.jfxcore.compiler.diagnostic.ErrorCode;
 import org.jfxcore.compiler.diagnostic.MarkupException;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.util.NameHelper;
-import java.util.Arrays;
 
 import static org.jfxcore.compiler.diagnostic.errors.FormatHelper.formatPropertyName;
 
@@ -72,11 +70,6 @@ public class BindingSourceErrors {
             ErrorCode.INVALID_BIDIRECTIONAL_METHOD_PARAM_KIND));
     }
 
-    public static MarkupException invalidBindingExpression(SourceInfo sourceInfo) {
-        return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
-            ErrorCode.INVALID_BINDING_EXPRESSION));
-    }
-
     public static MarkupException bindingContextNotApplicable(SourceInfo sourceInfo) {
         return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
             ErrorCode.BINDING_CONTEXT_NOT_APPLICABLE));
@@ -100,21 +93,6 @@ public class BindingSourceErrors {
     public static MarkupException methodNotInvertible(SourceInfo sourceInfo, CtBehavior method) {
         return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
             ErrorCode.METHOD_NOT_INVERTIBLE, NameHelper.getLongMethodSignature(method)));
-    }
-
-    public static MarkupException invalidInverseMethod(
-            SourceInfo sourceInfo, CtBehavior method, CtBehavior[] inverseMethods) {
-        if (inverseMethods.length == 1) {
-            return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
-                ErrorCode.INVALID_INVERSE_METHOD,
-                NameHelper.getLongMethodSignature(inverseMethods[0]),
-                NameHelper.getLongMethodSignature(method)));
-        }
-
-        return new MarkupException(sourceInfo, Diagnostic.newDiagnosticVariantCauses(
-            ErrorCode.INVALID_INVERSE_METHOD, "overloaded",
-            Arrays.stream(inverseMethods).map(NameHelper::getLongMethodSignature).toArray(String[]::new),
-            NameHelper.getLongMethodSignature(method)));
     }
 
     public static MarkupException invalidInverseMethod(

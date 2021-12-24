@@ -3,29 +3,181 @@
 
 package org.jfxcore.compiler.parse;
 
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.diagnostic.errors.ParserErrors;
 import java.lang.reflect.Array;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
 public abstract class AbstractTokenizer<TTokenType extends TokenType, TToken extends AbstractToken<TTokenType>>
         extends ArrayDeque<TToken> {
 
+    private enum OperationType {
+        ADD_FIRST, ADD_LAST, REMOVE_FIRST, REMOVE_LAST
+    }
+
+    private final class Operation {
+        final OperationType type;
+        final TToken value;
+
+        Operation(OperationType type, TToken value) {
+            this.type = type;
+            this.value = value;
+        }
+
+        @Override
+        public String toString() {
+            return type.toString() + ": " + value;
+        }
+    }
+
+    private final class State {
+        final List<Operation> operations = new ArrayList<>();
+        final List<TToken> skippedTokens;
+        final TToken lastRemoved;
+
+        State(List<TToken> skippedTokens, TToken lastRemoved) {
+            this.skippedTokens = skippedTokens.isEmpty() ? Collections.emptyList() : new ArrayList<>(skippedTokens);
+            this.lastRemoved = lastRemoved;
+        }
+
+        void undo() {
+            AbstractTokenizer.this.suppressRecording = true;
+
+            for (int i = operations.size() - 1; i >= 0; --i) {
+                switch (operations.get(i).type) {
+                    case ADD_FIRST -> AbstractTokenizer.this.removeFirst();
+                    case ADD_LAST -> AbstractTokenizer.this.removeLast();
+                    case REMOVE_FIRST -> AbstractTokenizer.this.addFirst(operations.get(i).value);
+                    case REMOVE_LAST -> AbstractTokenizer.this.addLast(operations.get(i).value);
+                }
+            }
+
+            AbstractTokenizer.this.suppressRecording = false;
+        }
+    }
+
+    private final ArrayDeque<State> storedStates = new ArrayDeque<>();
     private final Class<TToken> tokenClass;
     private final List<Line> lines;
     private final List<String> textLines;
     private final List<TToken> skippedTokens;
     private TToken lastRemoved;
+    private boolean suppressRecording;
 
     AbstractTokenizer(String text, Class<TToken> tokenClass) {
         this.tokenClass = tokenClass;
         lines = splitLines(text);
         textLines = lines.stream().map(line -> line.value).collect(Collectors.toList());
         skippedTokens = new ArrayList<>();
+    }
+
+    public void mark() {
+        storedStates.push(new State(skippedTokens, lastRemoved));
+    }
+
+    public void resetToMark() {
+        if (storedStates.isEmpty()) {
+            throw new IllegalStateException();
+        }
+
+        State storedState = storedStates.pop();
+        storedState.undo();
+        skippedTokens.clear();
+        skippedTokens.addAll(storedState.skippedTokens);
+        lastRemoved = storedState.lastRemoved;
+    }
+
+    public void forgetMark() {
+        State forgot = storedStates.pop();
+        State top = storedStates.peek();
+
+        if (top != null) {
+            top.operations.addAll(forgot.operations);
+        }
+    }
+
+    @Override
+    public TToken pollFirst() {
+        TToken token = super.pollFirst();
+        State storedState = storedStates.peek();
+
+        if (!suppressRecording && token != null && storedState != null) {
+            storedState.operations.add(new Operation(OperationType.REMOVE_FIRST, token));
+        }
+
+        return token;
+    }
+
+    @Override
+    public TToken pollLast() {
+        TToken token = super.pollLast();
+        State storedState = storedStates.peek();
+
+        if (!suppressRecording && token != null && storedState != null) {
+            storedState.operations.add(new Operation(OperationType.REMOVE_LAST, token));
+        }
+
+        return token;
+    }
+
+    @Override
+    public TToken removeFirst() {
+        TToken token = super.removeFirst();
+        State storedState = storedStates.peek();
+
+        if (!suppressRecording && storedState != null) {
+            storedState.operations.add(new Operation(OperationType.REMOVE_FIRST, token));
+        }
+
+        return token;
+    }
+
+    @Override
+    public TToken removeLast() {
+        TToken token = super.removeLast();
+        State storedState = storedStates.peek();
+
+        if (!suppressRecording && storedState != null) {
+            storedState.operations.add(new Operation(OperationType.REMOVE_LAST, token));
+        }
+
+        return token;
+    }
+
+    @Override
+    public void addFirst(@NotNull TToken token) {
+        super.addFirst(token);
+        State storedState = storedStates.peek();
+
+        if (!suppressRecording && storedState != null) {
+            storedState.operations.add(new Operation(OperationType.ADD_FIRST, token));
+        }
+    }
+
+    @Override
+    public void addLast(@NotNull TToken token) {
+        super.addLast(token);
+        State storedState = storedStates.peek();
+
+        if (!suppressRecording && storedState != null) {
+            storedState.operations.add(new Operation(OperationType.ADD_LAST, token));
+        }
+    }
+
+    @Override
+    public boolean removeFirstOccurrence(Object o) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public boolean removeLastOccurrence(Object o) {
+        throw new UnsupportedOperationException();
     }
 
     public TToken getLastRemoved() {
@@ -48,20 +200,24 @@ public abstract class AbstractTokenizer<TTokenType extends TokenType, TToken ext
 
     public TToken peekNotNullSkipWS() {
         try {
+            suppressRecording = true;
             skipWS();
             return peekNotNull();
         } finally {
             restoreWS();
+            suppressRecording = false;
         }
     }
 
     @Nullable
     public TToken peekSkipWS() {
         try {
+            suppressRecording = true;
             skipWS();
             return peek();
         } finally {
             restoreWS();
+            suppressRecording = false;
         }
     }
 
@@ -78,10 +234,12 @@ public abstract class AbstractTokenizer<TTokenType extends TokenType, TToken ext
     @Nullable
     public TToken peekSkipWS(TTokenType expected) {
         try {
+            suppressRecording = true;
             skipWS();
             return peek(expected);
         } finally {
             restoreWS();
+            suppressRecording = false;
         }
     }
 
@@ -95,6 +253,8 @@ public abstract class AbstractTokenizer<TTokenType extends TokenType, TToken ext
         TToken[] tokens = (TToken[])Array.newInstance(tokenClass, count);
 
         try {
+            suppressRecording = true;
+
             for (int i = 0; i < count; ++i) {
                 TToken token = remove();
                 tokens[i] = token;
@@ -104,6 +264,8 @@ public abstract class AbstractTokenizer<TTokenType extends TokenType, TToken ext
             for (int i = 0; i < count; ++i) {
                 addFirst(removeLast());
             }
+
+            suppressRecording = false;
         }
 
         return tokens;
@@ -117,6 +279,8 @@ public abstract class AbstractTokenizer<TTokenType extends TokenType, TToken ext
         int added = 0;
 
         try {
+            suppressRecording = true;
+
             for (int i = 0; i < count; ++i) {
                 List<TToken> skipped = skipWS();
                 size -= skipped.size();
@@ -142,6 +306,8 @@ public abstract class AbstractTokenizer<TTokenType extends TokenType, TToken ext
             for (int i = 0; i < added; ++i) {
                 addFirst(removeLast());
             }
+
+            suppressRecording = false;
         }
 
         return tokens;
@@ -180,6 +346,8 @@ public abstract class AbstractTokenizer<TTokenType extends TokenType, TToken ext
         int added = 0;
 
         try {
+            suppressRecording = true;
+
             for (TTokenType type : expected) {
                 List<TToken> skipped = skipWS();
                 size -= skipped.size();
@@ -208,6 +376,8 @@ public abstract class AbstractTokenizer<TTokenType extends TokenType, TToken ext
             for (int i = 0; i < added; ++i) {
                 addFirst(removeLast());
             }
+
+            suppressRecording = false;
         }
 
         return true;
@@ -248,7 +418,6 @@ public abstract class AbstractTokenizer<TTokenType extends TokenType, TToken ext
     }
 
     @Override
-    @SuppressWarnings("NullableProblems")
     public TToken remove() {
         TToken token = super.poll();
         if (token != null) {

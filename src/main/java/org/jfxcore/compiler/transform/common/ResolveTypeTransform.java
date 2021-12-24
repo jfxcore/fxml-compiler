@@ -4,6 +4,7 @@
 package org.jfxcore.compiler.transform.common;
 
 import javassist.CtClass;
+import org.jfxcore.compiler.ast.DocumentNode;
 import org.jfxcore.compiler.ast.Node;
 import org.jfxcore.compiler.ast.ObjectNode;
 import org.jfxcore.compiler.ast.PropertyNode;
@@ -123,6 +124,11 @@ public class ResolveTypeTransform implements Transform {
             }
         } else {
             type = resolver.getTypeInstance(objectTypeClass, Collections.emptyList());
+        }
+
+        CtClass bindingContextType = context.getBindingContextClass();
+        if (bindingContextType != null && context.getParent(objectNode) instanceof DocumentNode) {
+            type = new TypeInstance(bindingContextType, Collections.emptyList(), List.of(type));
         }
 
         return new ResolvedTypeNode(

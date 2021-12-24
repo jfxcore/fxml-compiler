@@ -12,6 +12,7 @@ import org.jfxcore.compiler.util.StringHelper;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 public class ListNode extends TextNode {
@@ -41,6 +42,20 @@ public class ListNode extends TextNode {
     @Override
     public ListNode deepClone() {
         return new ListNode(deepClone(values), getType(), getSourceInfo());
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        if (!super.equals(o)) return false;
+        ListNode listNode = (ListNode) o;
+        return Objects.equals(values, listNode.values);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(super.hashCode(), values);
     }
 
     private static String format(Collection<? extends ValueNode> arguments) {
