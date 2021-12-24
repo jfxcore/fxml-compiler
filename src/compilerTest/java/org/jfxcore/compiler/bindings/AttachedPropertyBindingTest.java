@@ -51,6 +51,8 @@ public class AttachedPropertyBindingTest extends CompilerTestBase {
 
         Label label = (Label)root.getChildren().get(1);
         assertEquals("foo", label.getText());
+        assertReferenced(root, "getText");
+        assertNotReferenced(root, "textProperty");
     }
 
     @Test
@@ -66,6 +68,8 @@ public class AttachedPropertyBindingTest extends CompilerTestBase {
 
         Label label = (Label)root.getChildren().get(1);
         assertEquals("foo", label.getText());
+        assertReferenced(root, "getText");
+        assertNotReferenced(root, "textProperty");
     }
 
     @Test
@@ -82,6 +86,8 @@ public class AttachedPropertyBindingTest extends CompilerTestBase {
 
         Label label = (Label)root.getChildren().get(1);
         assertEquals("foo", label.getText());
+        assertReferenced(root, "getText");
+        assertNotReferenced(root, "textProperty");
     }
 
     @Test
@@ -104,6 +110,9 @@ public class AttachedPropertyBindingTest extends CompilerTestBase {
 
         TextSource.setText(pane, "bar");
         assertEquals("bar", label.getText());
+
+        assertReferenced(root, "textProperty");
+        assertNotReferenced(root, "getText");
     }
 
     @Test
@@ -126,6 +135,9 @@ public class AttachedPropertyBindingTest extends CompilerTestBase {
 
         label.setText("baz");
         assertEquals("baz", TextSource.getText(pane));
+
+        assertReferenced(root, "textProperty");
+        assertNotReferenced(root, "getText");
     }
 
     @Test
@@ -148,6 +160,9 @@ public class AttachedPropertyBindingTest extends CompilerTestBase {
 
         label.setText("baz");
         assertEquals("baz", TextSource.getText(pane));
+
+        assertReferenced(root, "textProperty");
+        assertNotReferenced(root, "getText");
     }
 
     @Test
@@ -170,6 +185,9 @@ public class AttachedPropertyBindingTest extends CompilerTestBase {
 
         label.setText("baz");
         assertEquals("baz", TextSource.getText(pane));
+
+        assertReferenced(root, "textProperty");
+        assertNotReferenced(root, "getText");
     }
 
     @Test
@@ -192,6 +210,9 @@ public class AttachedPropertyBindingTest extends CompilerTestBase {
 
         label.setText("baz");
         assertEquals("baz", TextSource.getText(pane));
+
+        assertReferenced(root, "textProperty");
+        assertNotReferenced(root, "getText");
     }
 
     @Test
