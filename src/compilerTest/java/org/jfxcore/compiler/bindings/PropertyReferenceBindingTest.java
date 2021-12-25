@@ -55,7 +55,8 @@ public class PropertyReferenceBindingTest extends CompilerTestBase {
 
     @SuppressWarnings("unused")
     public static class TestPane extends Pane {
-        private final ObjectProperty<TestContext> context = new SimpleObjectProperty<>(new TestContext());
+        private final ObjectProperty<TestContext> context = new SimpleObjectProperty<>(
+            this, "context", new TestContext());
 
         public ObjectProperty<TestContext> contextProperty() {
             return context;
@@ -121,6 +122,16 @@ public class PropertyReferenceBindingTest extends CompilerTestBase {
         assertTrue(root.isVisible());
         root.invariantContext.doublePropEx.subProp.add("foo");
         assertFalse(root.isVisible());
+    }
+
+    @Test
+    public void Select_PropertyReference_Directly() {
+        TestPane root = compileAndRun("""
+            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                      id="{fx:bind ::context.name}"/>
+        """);
+
+        assertEquals("context", root.getId());
     }
 
 }

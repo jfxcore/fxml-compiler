@@ -116,6 +116,11 @@ public class MeParser {
             case OPEN_CURLY -> parseObjectExpression(tokenizer);
 
             default -> {
+                if (tokenizer.containsAhead(COLON, COLON)) {
+                    PathNode path = parsePath(tokenizer, true);
+                    yield tokenizer.peekNotNull().getType() == OPEN_PAREN ? parseFunctionExpression(tokenizer, path) : path;
+                }
+
                 MeToken token = tokenizer.remove();
                 if (token.getType().getTokenClass() == CurlyTokenClass.DELIMITER) {
                     throw ParserErrors.unexpectedToken(token);
@@ -206,7 +211,6 @@ public class MeParser {
         var segments = new ArrayList<PathSegmentNode>();
         SourceInfo start = tokenizer.peekNotNull().getSourceInfo(), end;
         ContextSelectorNode bindingContextSelector = null;
-        boolean continueParsing;
 
         if (allowContextSelector) {
             bindingContextSelector = tryParseContextSelector(tokenizer);
@@ -215,10 +219,11 @@ public class MeParser {
         do {
             boolean colonSelector = false;
 
-            if (!segments.isEmpty() && tokenizer.poll(DOT) == null) {
-                tokenizer.remove(COLON);
+            if (tokenizer.poll(COLON) != null) {
                 tokenizer.remove(COLON);
                 colonSelector = true;
+            } else if (!segments.isEmpty()) {
+                tokenizer.remove(DOT);
             }
 
             if (tokenizer.poll(OPEN_PAREN) != null) {
@@ -231,13 +236,7 @@ public class MeParser {
                 segments.add(new TextSegmentNode(
                     colonSelector, new TextNode(identifier.getValue(), identifier.getSourceInfo())));
             }
-
-            continueParsing = tokenizer.peek(DOT) != null;
-            if (!continueParsing) {
-                var tokens = tokenizer.peekAhead(2);
-                continueParsing = tokens != null && tokens[0].getType() == COLON && tokens[1].getType() == COLON;
-            }
-        } while (continueParsing);
+        } while (tokenizer.peek(DOT) != null || tokenizer.containsAhead(COLON, COLON));
 
         return new PathNode(bindingContextSelector, segments, SourceInfo.span(start, end));
     }
