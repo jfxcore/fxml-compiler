@@ -35,7 +35,7 @@ public class BindingEmitterFactory {
         checkPreconditions(propertyNode, propertyInfo, bindingNode.getMode());
 
         if (bindingNode.getMode().isObservable()) {
-            return createPropertyBindingEmitter(propertyNode, bindingNode, propertyInfo);
+            return createPropertyBindingEmitter(bindingNode, propertyInfo);
         }
 
         return createPropertyAssignmentEmitter(bindingNode, propertyInfo);
@@ -99,8 +99,7 @@ public class BindingEmitterFactory {
         return new EmitPropertySetterNode(propertyInfo, value, bindingMode.isContent(), sourceInfo);
     }
 
-    private static EmitterNode createPropertyBindingEmitter(
-            PropertyNode propertyNode, BindingNode bindingNode, PropertyInfo propertyInfo) {
+    private static EmitterNode createPropertyBindingEmitter(BindingNode bindingNode, PropertyInfo propertyInfo) {
         BindingMode bindingMode = bindingNode.getMode();
         TypeInstance targetType = propertyInfo.getValueTypeInstance();
         ValueEmitterNode value;
@@ -141,16 +140,16 @@ public class BindingEmitterFactory {
 
             if (bindingMode.isUnidirectional() && !targetType.isAssignableFrom(sourceType)) {
                 throw BindingSourceErrors.cannotConvertSourceType(
-                    propertyNode.getSourceInfo(), result.getValueType().getJavaName(), targetType.getJavaName());
+                    bindingNode.getSourceInfo(), result.getValueType().getJavaName(), targetType.getJavaName());
             }
             else if (bindingMode.isBidirectional() && !targetType.equals(sourceType)) {
                 throw BindingSourceErrors.sourceTypeMismatch(
-                    propertyNode.getSourceInfo(), result.getValueType().getJavaName(), targetType.getJavaName());
+                    bindingNode.getSourceInfo(), result.getValueType().getJavaName(), targetType.getJavaName());
             }
         } else if (bindingMode.isBidirectional()) {
             if (!targetType.equals(result.getValueType())) {
                 throw BindingSourceErrors.sourceTypeMismatch(
-                    propertyNode.getSourceInfo(), result.getValueType().getJavaName(), targetType.getJavaName());
+                    bindingNode.getSourceInfo(), result.getValueType().getJavaName(), targetType.getJavaName());
             }
 
             value = result.getValue();
@@ -172,7 +171,7 @@ public class BindingEmitterFactory {
             }
             else {
                 throw BindingSourceErrors.cannotConvertSourceType(
-                    propertyNode.getSourceInfo(), result.getValueType().getJavaName(), targetType.getJavaName());
+                    bindingNode.getSourceInfo(), result.getValueType().getJavaName(), targetType.getJavaName());
             }
         }
 

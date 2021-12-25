@@ -17,6 +17,7 @@ import org.jfxcore.compiler.util.TestExtension;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
+import static org.jfxcore.compiler.util.MoreAssertions.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 @SuppressWarnings({"HttpUrlsUsage", "DuplicatedCode"})
@@ -227,6 +228,7 @@ public class AttachedPropertyBindingTest extends CompilerTestBase {
         """));
 
         assertEquals(ErrorCode.MEMBER_NOT_FOUND, ex.getDiagnostic().getCode());
+        assertCodeHighlight("nonexistent", ex);
     }
 
     @Test
@@ -241,6 +243,9 @@ public class AttachedPropertyBindingTest extends CompilerTestBase {
         """));
 
         assertEquals(ErrorCode.PROPERTY_NOT_FOUND, ex.getDiagnostic().getCode());
+        assertCodeHighlight("""
+            TextSource.nonexistent="{fx:bind lbl.text}"
+        """.trim(), ex);
     }
 
     @Test
@@ -255,6 +260,7 @@ public class AttachedPropertyBindingTest extends CompilerTestBase {
         """));
 
         assertEquals(ErrorCode.INVALID_EXPRESSION, ex.getDiagnostic().getCode());
+        assertCodeHighlight("TextSource.(TextSource.text)", ex);
     }
 
     @SuppressWarnings("unused")

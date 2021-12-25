@@ -84,9 +84,11 @@ public class ValidateIntrinsicsTransform implements Transform {
             }
         }
 
-        if (propertyNode.isIntrinsic(Intrinsics.ID) &&
-                !NameHelper.isJavaIdentifier(propertyNode.getTextValueNotEmpty(context))) {
-            throw GeneralErrors.invalidId(propertyNode.getSourceInfo(), propertyNode.getTextValueNotEmpty(context));
+        if (propertyNode.isIntrinsic(Intrinsics.ID)) {
+            String value = propertyNode.getTextValueNotEmpty(context);
+            if (!NameHelper.isJavaIdentifier(value)) {
+                throw GeneralErrors.invalidId(propertyNode.getSingleValue(context).getSourceInfo(), value);
+            }
         }
 
         return propertyNode;

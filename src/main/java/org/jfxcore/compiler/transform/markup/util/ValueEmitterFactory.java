@@ -623,7 +623,7 @@ public class ValueEmitterFactory {
             constructor.params(),
             children,
             EmitObjectNode.CreateKind.CONSTRUCTOR,
-            textNode.getSourceInfo());
+            objectNode != null ? objectNode.getSourceInfo() : textNode.getSourceInfo());
     }
 
     private static ConstructorWithParams findConstructor(TypeInstance type, String[] literals, SourceInfo sourceInfo) {

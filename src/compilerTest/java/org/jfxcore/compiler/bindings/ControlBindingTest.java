@@ -15,6 +15,7 @@ import org.jfxcore.compiler.util.TestExtension;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
+import static org.jfxcore.compiler.util.MoreAssertions.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 @SuppressWarnings("HttpUrlsUsage")
@@ -33,6 +34,7 @@ public class ControlBindingTest extends CompilerTestBase {
         """));
 
         assertEquals(ErrorCode.CANNOT_CONVERT_SOURCE_TYPE, ex.getDiagnostic().getCode());
+        assertCodeHighlight("{fx:once btn.text}", ex);
     }
 
     @Test
@@ -122,6 +124,7 @@ public class ControlBindingTest extends CompilerTestBase {
         """));
 
         assertEquals(ErrorCode.CANNOT_CONVERT_SOURCE_TYPE, ex.getDiagnostic().getCode());
+        assertCodeHighlight("{fx:bind btn.text}", ex);
     }
 
     @Test
@@ -156,6 +159,7 @@ public class ControlBindingTest extends CompilerTestBase {
         """));
 
         assertEquals(ErrorCode.SOURCE_TYPE_MISMATCH, ex.getDiagnostic().getCode());
+        assertCodeHighlight("{fx:sync btn.text}", ex);
     }
 
     @Test

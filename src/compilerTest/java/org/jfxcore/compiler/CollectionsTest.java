@@ -18,6 +18,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import static org.jfxcore.compiler.util.MoreAssertions.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 @SuppressWarnings("HttpUrlsUsage")
@@ -66,6 +67,7 @@ public class CollectionsTest {
             """));
 
             assertEquals(ErrorCode.CANNOT_ADD_ITEM_INCOMPATIBLE_TYPE, ex.getDiagnostic().getCode());
+            assertCodeHighlight("<String>foo</String>", ex);
         }
 
         @Test
@@ -106,6 +108,7 @@ public class CollectionsTest {
             """));
 
             assertEquals(ErrorCode.CANNOT_ADD_ITEM_INCOMPATIBLE_TYPE, ex.getDiagnostic().getCode());
+            assertCodeHighlight("<String>foo</String>", ex);
         }
 
         @Test
@@ -161,6 +164,9 @@ public class CollectionsTest {
             """));
 
             assertEquals(ErrorCode.UNSUPPORTED_MAP_KEY_TYPE, ex.getDiagnostic().getCode());
+            assertCodeHighlight("""
+                <HashMap fx:typeArguments="Integer,String">
+            """.trim(), ex);
         }
 
         @Test
@@ -178,6 +184,7 @@ public class CollectionsTest {
             """));
 
             assertEquals(ErrorCode.CANNOT_ADD_ITEM_INCOMPATIBLE_TYPE, ex.getDiagnostic().getCode());
+            assertCodeHighlight("<String>foo</String>", ex);
         }
     }
 
@@ -219,6 +226,7 @@ public class CollectionsTest {
             """));
 
             assertEquals(ErrorCode.UNSUPPORTED_MAP_KEY_TYPE, ex.getDiagnostic().getCode());
+            assertCodeHighlight("<String>foo</String>", ex);
         }
 
         @Test

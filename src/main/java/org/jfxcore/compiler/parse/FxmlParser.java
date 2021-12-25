@@ -187,7 +187,7 @@ public class FxmlParser {
                 element.getLocalName(),
                 element.getNodeName(),
                 FxmlNamespace.FXML.equals(namespace),
-                getSourceInfo(element)),
+                (SourceInfo)element.getUserData(XmlReader.ELEMENT_NAME_SOURCE_INFO_KEY)),
             properties, children, getSourceInfo(element));
     }
 

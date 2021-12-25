@@ -19,6 +19,7 @@ import org.jfxcore.compiler.util.TestExtension;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
+import static org.jfxcore.compiler.util.MoreAssertions.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 @SuppressWarnings("HttpUrlsUsage")
@@ -116,6 +117,7 @@ public class MarkupExtensionTest extends CompilerTestBase {
         """));
 
         assertEquals(ErrorCode.INCOMPATIBLE_PROPERTY_TYPE, ex.getDiagnostic().getCode());
+        assertCodeHighlight("{fx:url image.jpg}", ex);
     }
 
     @Test
@@ -128,6 +130,7 @@ public class MarkupExtensionTest extends CompilerTestBase {
         """));
 
         assertEquals(ErrorCode.PROPERTY_MUST_CONTAIN_TEXT, ex.getDiagnostic().getCode());
+        assertCodeHighlight("{fx:bind foo}", ex);
     }
 
     @Test
@@ -188,6 +191,7 @@ public class MarkupExtensionTest extends CompilerTestBase {
         """));
 
         assertEquals(ErrorCode.INCOMPATIBLE_PROPERTY_TYPE, ex.getDiagnostic().getCode());
+        assertCodeHighlight("{fx:type TextField}", ex);
     }
 
     @Test
@@ -212,6 +216,7 @@ public class MarkupExtensionTest extends CompilerTestBase {
         """));
 
         assertEquals(ErrorCode.INCOMPATIBLE_PROPERTY_TYPE, ex.getDiagnostic().getCode());
+        assertCodeHighlight("{fx:null}", ex);
     }
 
 }

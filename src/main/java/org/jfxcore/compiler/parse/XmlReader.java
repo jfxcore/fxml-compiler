@@ -31,6 +31,7 @@ import static org.jfxcore.compiler.parse.XmlTokenType.*;
 public class XmlReader {
 
     public final static String SOURCE_INFO_KEY = XmlReader.class.getName() + "$sourceInfo";
+    public final static String ELEMENT_NAME_SOURCE_INFO_KEY = XmlReader.class.getName() + "$elemNameSourceInfo";
     public final static String ATTR_VALUE_SOURCE_INFO_KEY = XmlReader.class.getName() + "$attrValueSourceInfo";
     public final static String NAMESPACE_TO_PREFIX_MAP_KEY = XmlReader.class.getName() + "$namespaceToPrefix";
 
@@ -221,6 +222,7 @@ public class XmlReader {
             end = tokenizer.removeSkipWS(CLOSE_BRACKET).getSourceInfo();
         }
 
+        element.setUserData(ELEMENT_NAME_SOURCE_INFO_KEY, name.sourceInfo, null);
         element.setUserData(SOURCE_INFO_KEY, SourceInfo.span(start, end), null);
         namespaceStack.pop();
 

@@ -124,8 +124,7 @@ abstract class AbstractFunctionEmitterFactory {
 
         if (bidirectional) {
             if (argumentValues.size() != 1) {
-                throw BindingSourceErrors.invalidBidirectionalMethodParamCount(
-                    SourceInfo.span(methodArguments));
+                throw BindingSourceErrors.invalidBidirectionalMethodParamCount(functionExpression.getSourceInfo());
             } else {
                 Node argNode = functionExpression.getArguments().get(0);
                 if (!(argNode instanceof PathExpressionNode)) {
@@ -319,8 +318,12 @@ abstract class AbstractFunctionEmitterFactory {
 
             if (declaringClass == null) {
                 className = pathExpression.getSimplePath();
-                declaringClass = resolver.resolveClass(className);
+                declaringClass = resolver.tryResolveClass(className);
                 isConstructor = true;
+
+                if (declaringClass == null) {
+                    throw SymbolResolutionErrors.notFound(pathExpression.getSourceInfo(), className);
+                }
             }
         } else {
             maybeInstanceMethod = true;

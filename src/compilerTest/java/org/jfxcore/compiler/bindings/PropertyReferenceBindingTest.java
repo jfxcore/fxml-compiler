@@ -20,6 +20,7 @@ import org.jfxcore.compiler.util.TestExtension;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
+import static org.jfxcore.compiler.util.MoreAssertions.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 @SuppressWarnings("HttpUrlsUsage")
@@ -73,6 +74,7 @@ public class PropertyReferenceBindingTest extends CompilerTestBase {
         """));
 
         assertEquals(ErrorCode.INVALID_INVARIANT_REFERENCE, ex.getDiagnostic().getCode());
+        assertCodeHighlight("boolVal", ex);
     }
 
     @Test
@@ -84,6 +86,17 @@ public class PropertyReferenceBindingTest extends CompilerTestBase {
 
         assertTrue(root.idProperty().isBound());
         assertEquals("boolProp", root.getId());
+    }
+
+    @Test
+    public void Bind_Unidirectional_To_Invariant_Property_Fails() {
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                      id="{fx:bind context::boolProp::name}"/>
+        """));
+
+        assertEquals(ErrorCode.INVALID_INVARIANT_REFERENCE, ex.getDiagnostic().getCode());
+        assertCodeHighlight("name", ex);
     }
 
     @Test

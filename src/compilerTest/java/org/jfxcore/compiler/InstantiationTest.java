@@ -24,6 +24,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
+import static org.jfxcore.compiler.util.MoreAssertions.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 @SuppressWarnings("HttpUrlsUsage")
@@ -131,6 +132,9 @@ public class InstantiationTest extends CompilerTestBase {
             assertEquals(2, ex.getDiagnostic().getCauses().length);
             assertEquals(ErrorCode.NUM_FUNCTION_ARGUMENTS_MISMATCH, ex.getDiagnostic().getCauses()[0].getCode());
             assertEquals(ErrorCode.NUM_FUNCTION_ARGUMENTS_MISMATCH, ex.getDiagnostic().getCauses()[1].getCode());
+            assertCodeHighlight("""
+                <Insets fx:id="insets" left="1" top="2"/>
+            """.trim(), ex);
         }
 
         @SuppressWarnings("unused")
@@ -168,6 +172,7 @@ public class InstantiationTest extends CompilerTestBase {
             assertEquals(ErrorCode.CONSTRUCTOR_NOT_FOUND, ex.getDiagnostic().getCode());
             assertEquals(1, ex.getDiagnostic().getCauses().length);
             assertEquals(ErrorCode.NUM_FUNCTION_ARGUMENTS_MISMATCH, ex.getDiagnostic().getCauses()[0].getCode());
+            assertCodeHighlight("<MultiArgCtorObject>", ex);
         }
 
         @SuppressWarnings("unused")
@@ -234,6 +239,7 @@ public class InstantiationTest extends CompilerTestBase {
             assertEquals(ErrorCode.CONSTRUCTOR_NOT_FOUND, ex.getDiagnostic().getCode());
             assertEquals(1, ex.getDiagnostic().getCauses().length);
             assertEquals(ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT, ex.getDiagnostic().getCauses()[0].getCode());
+            assertCodeHighlight("<ArrayConstructorClass>", ex);
         }
 
         public static class NamedArgWithDefaultValueClass extends Rectangle {
@@ -325,6 +331,9 @@ public class InstantiationTest extends CompilerTestBase {
             assertEquals(ErrorCode.CONSTRUCTOR_NOT_FOUND, ex.getDiagnostic().getCode());
             assertEquals(1, ex.getDiagnostic().getCauses().length);
             assertEquals(ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT, ex.getDiagnostic().getCauses()[0].getCode());
+            assertCodeHighlight("""
+                <MyButton fx:typeArguments="java.lang.String">
+            """.trim(), ex);
         }
 
         @Test
@@ -341,6 +350,9 @@ public class InstantiationTest extends CompilerTestBase {
             assertEquals(ErrorCode.CONSTRUCTOR_NOT_FOUND, ex.getDiagnostic().getCode());
             assertEquals(1, ex.getDiagnostic().getCauses().length);
             assertEquals(ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT, ex.getDiagnostic().getCauses()[0].getCode());
+            assertCodeHighlight("""
+                <MyButton fx:typeArguments="java.lang.String">
+            """.trim(), ex);
         }
     }
 
@@ -436,6 +448,7 @@ public class InstantiationTest extends CompilerTestBase {
             """));
 
             assertEquals(ErrorCode.EXPRESSION_NOT_APPLICABLE, ex.getDiagnostic().getCode());
+            assertCodeHighlight("{fx:bind test}", ex);
         }
 
         @Test
@@ -491,6 +504,9 @@ public class InstantiationTest extends CompilerTestBase {
             """));
 
             assertEquals(ErrorCode.VALUEOF_CANNOT_HAVE_CONTENT, ex.getDiagnostic().getCode());
+            assertCodeHighlight("""
+                fx:value="red"
+            """.trim(), ex);
         }
 
         @Test
@@ -519,6 +535,7 @@ public class InstantiationTest extends CompilerTestBase {
             """));
 
             assertEquals(ErrorCode.VALUEOF_METHOD_NOT_FOUND, ex.getDiagnostic().getCode());
+            assertCodeHighlight("<fx:value>red</fx:value>", ex);
         }
 
         @Test
@@ -546,6 +563,9 @@ public class InstantiationTest extends CompilerTestBase {
             """));
 
             assertEquals(ErrorCode.PROPERTY_MUST_CONTAIN_TEXT, ex.getDiagnostic().getCode());
+            assertCodeHighlight("""
+                <Double fx:value="5.5D"/>
+            """.trim(), ex);
         }
     }
 
@@ -563,6 +583,7 @@ public class InstantiationTest extends CompilerTestBase {
         assertEquals(2, ex.getDiagnostic().getCauses().length);
         assertEquals(ErrorCode.NUM_FUNCTION_ARGUMENTS_MISMATCH, ex.getDiagnostic().getCauses()[0].getCode());
         assertEquals(ErrorCode.NUM_FUNCTION_ARGUMENTS_MISMATCH, ex.getDiagnostic().getCauses()[1].getCode());
+        assertCodeHighlight("<Insets>foo</Insets>", ex);
     }
 
     @Test
@@ -599,6 +620,7 @@ public class InstantiationTest extends CompilerTestBase {
         """));
 
         assertEquals(ErrorCode.CANNOT_ADD_ITEM_INCOMPATIBLE_TYPE, ex.getDiagnostic().getCode());
+        assertCodeHighlight("<Insets>10</Insets>", ex);
     }
 
     @Test
@@ -606,7 +628,7 @@ public class InstantiationTest extends CompilerTestBase {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.scene.layout.*?>
             <?import javafx.scene.control.*?>
-            <ComboBox xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+            <ComboBox xmlns="http://jfxcore.org/javafx">
                 <String>foo</String>
                 <String>bar</String>
                 <String>baz</String>
@@ -614,7 +636,9 @@ public class InstantiationTest extends CompilerTestBase {
         """));
 
         assertEquals(ErrorCode.OBJECT_CANNOT_HAVE_CONTENT, ex.getDiagnostic().getCode());
-    }
+        assertCodeHighlight("""
+            <ComboBox xmlns="http://jfxcore.org/javafx">
+        """.trim(), ex);    }
 
     @Test
     public void ChildContent_Without_DefaultProperty_Throws_Exception() {
@@ -631,6 +655,7 @@ public class InstantiationTest extends CompilerTestBase {
         """));
 
         assertEquals(ErrorCode.OBJECT_CANNOT_HAVE_CONTENT, ex.getDiagnostic().getCode());
+        assertCodeHighlight("<ComboBox>", ex);
     }
 
 }
