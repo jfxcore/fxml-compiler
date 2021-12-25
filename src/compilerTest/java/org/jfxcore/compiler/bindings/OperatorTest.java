@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
+import static org.jfxcore.compiler.util.MoreAssertions.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 @SuppressWarnings("HttpUrlsUsage")
@@ -151,6 +152,7 @@ public class OperatorTest extends CompilerTestBase {
         """));
 
         assertEquals(ErrorCode.EXPRESSION_NOT_INVERTIBLE, ex.getDiagnostic().getCode());
+        assertCodeHighlight("invariantContext.doubleVal", ex);
     }
 
     @Test
@@ -162,6 +164,7 @@ public class OperatorTest extends CompilerTestBase {
         """));
 
         assertEquals(ErrorCode.EXPRESSION_NOT_INVERTIBLE, ex.getDiagnostic().getCode());
+        assertCodeHighlight("invariantContext.doubleVal", ex);
     }
 
     @Test
@@ -174,6 +177,7 @@ public class OperatorTest extends CompilerTestBase {
         """));
 
         assertEquals(ErrorCode.EXPRESSION_NOT_INVERTIBLE, ex.getDiagnostic().getCode());
+        assertCodeHighlight("OperatorTest.doubleToString(invariantContext.doubleVal)", ex);
     }
 
     @Test
@@ -186,6 +190,7 @@ public class OperatorTest extends CompilerTestBase {
         """));
 
         assertEquals(ErrorCode.EXPRESSION_NOT_INVERTIBLE, ex.getDiagnostic().getCode());
+        assertCodeHighlight("OperatorTest.doubleToString(invariantContext.doubleVal)", ex);
     }
 
     @Test

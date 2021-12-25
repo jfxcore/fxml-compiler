@@ -23,6 +23,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import java.text.DecimalFormat;
 
+import static org.jfxcore.compiler.util.MoreAssertions.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 @SuppressWarnings("HttpUrlsUsage")
@@ -111,6 +112,7 @@ public class FunctionBindingTest extends CompilerTestBase {
         """));
 
         assertEquals(ErrorCode.CANNOT_CONVERT_SOURCE_TYPE, ex.getDiagnostic().getCode());
+        assertCodeHighlight("{fx:once String.format('foo-%s', invariantDoubleVal)}", ex);
     }
 
     @Test
@@ -121,6 +123,7 @@ public class FunctionBindingTest extends CompilerTestBase {
         """));
 
         assertEquals(ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT, ex.getDiagnostic().getCode());
+        assertCodeHighlight("stringProp", ex);
     }
 
     @Test
@@ -131,6 +134,7 @@ public class FunctionBindingTest extends CompilerTestBase {
         """));
 
         assertEquals(ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT, ex.getDiagnostic().getCode());
+        assertCodeHighlight("stringProp", ex);
     }
 
     @Test
@@ -344,6 +348,7 @@ public class FunctionBindingTest extends CompilerTestBase {
         assertEquals(ErrorCode.NUM_FUNCTION_ARGUMENTS_MISMATCH, ex.getDiagnostic().getCauses()[0].getCode());
         assertEquals(ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT, ex.getDiagnostic().getCauses()[1].getCode());
         assertEquals(ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT, ex.getDiagnostic().getCauses()[2].getCode());
+        assertCodeHighlight("Stringifier", ex);
     }
 
     @Test
@@ -399,6 +404,7 @@ public class FunctionBindingTest extends CompilerTestBase {
         """));
 
         assertEquals(ErrorCode.METHOD_NOT_FOUND, ex.getDiagnostic().getCode());
+        assertCodeHighlight("parent[1]/add", ex);
     }
 
     @Test
@@ -411,6 +417,7 @@ public class FunctionBindingTest extends CompilerTestBase {
         """));
 
         assertEquals(ErrorCode.BINDING_CONTEXT_NOT_APPLICABLE, ex.getDiagnostic().getCode());
+        assertCodeHighlight("parent", ex);
     }
 
     @Test
@@ -444,6 +451,7 @@ public class FunctionBindingTest extends CompilerTestBase {
         """));
 
         assertEquals(ErrorCode.NOT_FOUND, ex.getDiagnostic().getCode());
+        assertCodeHighlight("{fx:constant POSITIVE_INFINITY}", ex);
     }
 
     @Test
@@ -454,6 +462,7 @@ public class FunctionBindingTest extends CompilerTestBase {
         """));
 
         assertEquals(ErrorCode.EXPRESSION_NOT_APPLICABLE, ex.getDiagnostic().getCode());
+        assertCodeHighlight("{fx:bind doubleProp}", ex);
     }
 
     @Test
@@ -464,6 +473,7 @@ public class FunctionBindingTest extends CompilerTestBase {
         """));
 
         assertEquals(ErrorCode.EXPRESSION_NOT_APPLICABLE, ex.getDiagnostic().getCode());
+        assertCodeHighlight("{fx:once doubleProp}", ex);
     }
 
     @Test
@@ -474,6 +484,7 @@ public class FunctionBindingTest extends CompilerTestBase {
         """));
 
         assertEquals(ErrorCode.CANNOT_CONVERT_SOURCE_TYPE, ex.getDiagnostic().getCode());
+        assertCodeHighlight("{fx:bind String.format('foo-%s', invariantDoubleVal)}", ex);
     }
 
     @Test
@@ -484,6 +495,7 @@ public class FunctionBindingTest extends CompilerTestBase {
         """));
 
         assertEquals(ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT, ex.getDiagnostic().getCode());
+        assertCodeHighlight("stringProp", ex);
     }
 
     @Test
@@ -600,6 +612,7 @@ public class FunctionBindingTest extends CompilerTestBase {
         """));
 
         assertEquals(ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT, ex.getDiagnostic().getCode());
+        assertCodeHighlight("stringProp", ex);
     }
 
     @Test
@@ -659,6 +672,7 @@ public class FunctionBindingTest extends CompilerTestBase {
         assertEquals(ErrorCode.NUM_FUNCTION_ARGUMENTS_MISMATCH, ex.getDiagnostic().getCauses()[0].getCode());
         assertEquals(ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT, ex.getDiagnostic().getCauses()[1].getCode());
         assertEquals(ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT, ex.getDiagnostic().getCauses()[2].getCode());
+        assertCodeHighlight("Stringifier", ex);
     }
 
     @Test
@@ -679,6 +693,7 @@ public class FunctionBindingTest extends CompilerTestBase {
         """));
 
         assertEquals(ErrorCode.CANNOT_BIND_FUNCTION, ex.getDiagnostic().getCode());
+        assertCodeHighlight("String", ex);
     }
 
     @Test
@@ -769,6 +784,7 @@ public class FunctionBindingTest extends CompilerTestBase {
         """));
 
         assertEquals(ErrorCode.METHOD_NOT_FOUND, ex.getDiagnostic().getCode());
+        assertCodeHighlight("parent[1]/add", ex);
     }
 
     @Test
@@ -781,6 +797,7 @@ public class FunctionBindingTest extends CompilerTestBase {
         """));
 
         assertEquals(ErrorCode.BINDING_CONTEXT_NOT_APPLICABLE, ex.getDiagnostic().getCode());
+        assertCodeHighlight("parent", ex);
     }
 
     @Test
@@ -802,6 +819,7 @@ public class FunctionBindingTest extends CompilerTestBase {
         """));
 
         assertEquals(ErrorCode.EXPRESSION_NOT_APPLICABLE, ex.getDiagnostic().getCode());
+        assertCodeHighlight("{fx:bind doubleProp}", ex);
     }
 
     @Test
@@ -812,6 +830,7 @@ public class FunctionBindingTest extends CompilerTestBase {
         """));
 
         assertEquals(ErrorCode.EXPRESSION_NOT_APPLICABLE, ex.getDiagnostic().getCode());
+        assertCodeHighlight("{fx:once doubleProp}", ex);
     }
 
     @SuppressWarnings("unused")
@@ -925,7 +944,8 @@ public class FunctionBindingTest extends CompilerTestBase {
                       prefWidth="{fx:sync sum(doubleProp); inverseMethod=foo.doesNotExist}"/>
         """));
 
-        assertEquals(ErrorCode.CLASS_NOT_FOUND, ex.getDiagnostic().getCode());
+        assertEquals(ErrorCode.NOT_FOUND, ex.getDiagnostic().getCode());
+        assertCodeHighlight("foo.doesNotExist", ex);
     }
 
     @Test
@@ -936,6 +956,7 @@ public class FunctionBindingTest extends CompilerTestBase {
         """));
 
         assertEquals(ErrorCode.INVALID_BIDIRECTIONAL_METHOD_PARAM_COUNT, ex.getDiagnostic().getCode());
+        assertCodeHighlight("String.format('%s', doubleProp)", ex);
     }
 
     @Test
@@ -946,6 +967,7 @@ public class FunctionBindingTest extends CompilerTestBase {
         """));
 
         assertEquals(ErrorCode.INVALID_BIDIRECTIONAL_METHOD_PARAM_COUNT, ex.getDiagnostic().getCode());
+        assertCodeHighlight("add(invariantDoubleVal, doubleProp)", ex);
     }
 
     @Test
@@ -1161,6 +1183,7 @@ public class FunctionBindingTest extends CompilerTestBase {
         """));
 
         assertEquals(ErrorCode.METHOD_NOT_INVERTIBLE, ex.getDiagnostic().getCode());
+        assertCodeHighlight("noInverseMethod", ex);
     }
 
     @Test
@@ -1172,6 +1195,7 @@ public class FunctionBindingTest extends CompilerTestBase {
         """));
 
         assertEquals(ErrorCode.INCOMPATIBLE_RETURN_VALUE, ex.getDiagnostic().getCode());
+        assertCodeHighlight("invalidInverseMethod", ex);
     }
 
     @Test
@@ -1186,6 +1210,7 @@ public class FunctionBindingTest extends CompilerTestBase {
         assertEquals(2, ex.getDiagnostic().getCauses().length);
         assertEquals(ErrorCode.NUM_FUNCTION_ARGUMENTS_MISMATCH, ex.getDiagnostic().getCauses()[0].getCode());
         assertEquals(ErrorCode.NUM_FUNCTION_ARGUMENTS_MISMATCH, ex.getDiagnostic().getCauses()[1].getCode());
+        assertCodeHighlight("java.lang.String.format", ex);
     }
 
     @Test
@@ -1197,6 +1222,7 @@ public class FunctionBindingTest extends CompilerTestBase {
         """));
 
         assertEquals(ErrorCode.METHOD_NOT_FOUND, ex.getDiagnostic().getCode());
+        assertCodeHighlight("doesNotExist", ex);
     }
 
     @Test
@@ -1208,6 +1234,7 @@ public class FunctionBindingTest extends CompilerTestBase {
         """));
 
         assertEquals(ErrorCode.INVALID_BIDIRECTIONAL_BINDING_SOURCE, ex.getDiagnostic().getCode());
+        assertCodeHighlight("readOnlyObservableBool", ex);
     }
 
     @Test
@@ -1219,6 +1246,7 @@ public class FunctionBindingTest extends CompilerTestBase {
         """));
 
         assertEquals(ErrorCode.INVALID_BIDIRECTIONAL_METHOD_PARAM_KIND, ex.getDiagnostic().getCode());
+        assertCodeHighlight("instanceNot(boolProp)", ex);
     }
 
     @SuppressWarnings("unused")
@@ -1277,6 +1305,7 @@ public class FunctionBindingTest extends CompilerTestBase {
         """));
 
         assertEquals(ErrorCode.AMBIGUOUS_METHOD_CALL, ex.getDiagnostic().getCode());
+        assertCodeHighlight("overloadedMethod", ex);
     }
 
     @SuppressWarnings("unused")
@@ -1306,6 +1335,7 @@ public class FunctionBindingTest extends CompilerTestBase {
         """));
 
         assertEquals(ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT, ex.getDiagnostic().getCode());
+        assertCodeHighlight("prefWidth", ex);
     }
 
     @Test
@@ -1326,6 +1356,7 @@ public class FunctionBindingTest extends CompilerTestBase {
         """));
 
         assertEquals(ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT, ex.getDiagnostic().getCode());
+        assertCodeHighlight("prefWidth", ex);
     }
 
 }

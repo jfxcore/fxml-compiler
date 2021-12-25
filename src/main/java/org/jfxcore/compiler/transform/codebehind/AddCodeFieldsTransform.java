@@ -50,7 +50,7 @@ public class AddCodeFieldsTransform implements Transform {
         String id = idNode.getTextValueNotEmpty(context);
 
         if (context.getIds().contains(id)) {
-            throw GeneralErrors.duplicateId(idNode.getSourceInfo(), id);
+            throw GeneralErrors.duplicateId(idNode.getSingleValue(context).getSourceInfo(), id);
         }
 
         context.getIds().add(id);

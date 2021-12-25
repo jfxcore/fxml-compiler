@@ -3,6 +3,8 @@
 
 package org.jfxcore.compiler.util;
 
+import org.jfxcore.compiler.diagnostic.MarkupException;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -11,6 +13,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -62,6 +65,27 @@ public class MoreAssertions {
         if (l1 != null && !Objects.equals(new ArrayList<>(l1), new ArrayList<>(l2))) {
             fail("Lists not equal.");
         }
+    }
+
+    private static final Pattern HAT_PATTERN = Pattern.compile("^\\s*\\^+\\s*$");
+
+    public static void assertCodeHighlight(String expected, MarkupException exception) {
+        String[] lines = StringHelper.splitLines(exception.getMessageWithSourceInfo(), false);
+        for (int i = 0; i < lines.length; ++i) {
+            String line = lines[i];
+            if (HAT_PATTERN.matcher(line).matches()) {
+                int first = line.indexOf('^');
+                int last = line.lastIndexOf('^');
+                String actual = lines[i - 1].substring(first, last + 1);
+                if (actual.equals(expected)) {
+                    return;
+                }
+
+                fail("Expected: " + expected + ", actual: " + actual);
+            }
+        }
+
+        fail("Expected: " + expected + ", actual: <none>");
     }
 
 }

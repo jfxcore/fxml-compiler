@@ -100,7 +100,7 @@ public class ResolvedPath {
                     if (segment.isObservableSelector() && getValueSource(
                             resolver, segment, currentHostType, preferObservable, true) != null) {
                         throw SymbolResolutionErrors.invalidInvariantReference(
-                            sourceInfo, currentHostType, segment.getText());
+                            segment.getSourceInfo(), currentHostType, segment.getText());
                     } else {
                         if (segment instanceof SubPathSegmentNode subPathSegment) {
                             var segments = subPathSegment.getSegments();
@@ -121,7 +121,7 @@ public class ResolvedPath {
                         }
 
                         throw SymbolResolutionErrors.memberNotFound(
-                            sourceInfo, currentHostType, segment.getText());
+                            segment.getSourceInfo(), currentHostType, segment.getText());
                     }
                 }
 

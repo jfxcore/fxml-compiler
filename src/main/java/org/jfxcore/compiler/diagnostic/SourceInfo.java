@@ -74,7 +74,7 @@ public final class SourceInfo {
     }
 
     public static SourceInfo after(SourceInfo sourceInfo) {
-        return new SourceInfo(sourceInfo.end.getLine(), sourceInfo.end.getColumn() + 1);
+        return new SourceInfo(sourceInfo.end.getLine(), sourceInfo.end.getColumn());
     }
 
     private final Location start;
@@ -125,10 +125,10 @@ public final class SourceInfo {
                 if (i < end.getLine()) {
                     builder.append(line.substring(start.getColumn()));
                 } else {
-                    builder.append(line, start.getColumn(), end.getColumn() + 1);
+                    builder.append(line, start.getColumn(), end.getColumn());
                 }
             } else if (i == end.getLine()) {
-                builder.append(line, 0, end.getColumn() + 1);
+                builder.append(line, 0, end.getColumn());
             } else {
                 builder.append(line);
             }
@@ -157,7 +157,7 @@ public final class SourceInfo {
     }
 
     /**
-     * The location of the last character.
+     * The location after the last character.
      */
     public Location getEnd() {
         return end;
@@ -178,11 +178,10 @@ public final class SourceInfo {
             return true;
         }
 
-        if (!(o instanceof SourceInfo)) {
+        if (!(o instanceof SourceInfo that)) {
             return false;
         }
 
-        SourceInfo that = (SourceInfo)o;
         return Objects.equals(start, that.start) && Objects.equals(end, that.end);
     }
 

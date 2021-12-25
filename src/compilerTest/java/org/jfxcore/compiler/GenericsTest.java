@@ -15,6 +15,7 @@ import org.jfxcore.compiler.util.TestExtension;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
+import static org.jfxcore.compiler.util.MoreAssertions.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 @SuppressWarnings("HttpUrlsUsage")
@@ -71,6 +72,7 @@ public class GenericsTest extends CompilerTestBase {
         """));
 
         assertEquals(ErrorCode.CANNOT_COERCE_PROPERTY_VALUE, ex.getDiagnostic().getCode());
+        assertCodeHighlight("foo", ex);
 
         ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.scene.layout.*?>
@@ -80,6 +82,7 @@ public class GenericsTest extends CompilerTestBase {
         """));
 
         assertEquals(ErrorCode.CANNOT_COERCE_PROPERTY_VALUE, ex.getDiagnostic().getCode());
+        assertCodeHighlight("foo", ex);
     }
 
     @Test
@@ -92,6 +95,7 @@ public class GenericsTest extends CompilerTestBase {
         """));
 
         assertEquals(ErrorCode.CLASS_NOT_FOUND, ex.getDiagnostic().getCode());
+        assertCodeHighlight("foobar", ex);
     }
 
     @Test
@@ -104,6 +108,9 @@ public class GenericsTest extends CompilerTestBase {
         """));
 
         assertEquals(ErrorCode.PROPERTY_CANNOT_BE_EMPTY, ex.getDiagnostic().getCode());
+        assertCodeHighlight("""
+            fx:typeArguments=""
+        """.trim(), ex);
     }
 
     @Test
@@ -116,6 +123,9 @@ public class GenericsTest extends CompilerTestBase {
         """));
 
         assertEquals(ErrorCode.PROPERTY_CANNOT_BE_EMPTY, ex.getDiagnostic().getCode());
+        assertCodeHighlight("""
+            fx:typeArguments=""
+        """.trim(), ex);
     }
 
     @Test
@@ -128,6 +138,7 @@ public class GenericsTest extends CompilerTestBase {
         """));
 
         assertEquals(ErrorCode.NUM_TYPE_ARGUMENTS_MISMATCH, ex.getDiagnostic().getCode());
+        assertCodeHighlight("GenericObject".trim(), ex);
     }
 
     @SuppressWarnings({"unused", "unchecked"})
@@ -191,6 +202,7 @@ public class GenericsTest extends CompilerTestBase {
         """));
 
         assertEquals(ErrorCode.TYPE_ARGUMENT_OUT_OF_BOUND, ex.getDiagnostic().getCode());
+        assertCodeHighlight("GenericDoubleObject", ex);
     }
 
     @Test
@@ -203,6 +215,7 @@ public class GenericsTest extends CompilerTestBase {
         """));
 
         assertEquals(ErrorCode.CANNOT_PARAMETERIZE_TYPE, ex.getDiagnostic().getCode());
+        assertCodeHighlight("GridPane", ex);
     }
 
     @SuppressWarnings({"unused", "unchecked"})

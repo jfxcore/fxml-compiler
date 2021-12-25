@@ -15,6 +15,7 @@ import org.jfxcore.compiler.util.TestExtension;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
+import static org.jfxcore.compiler.util.MoreAssertions.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 @SuppressWarnings("HttpUrlsUsage")
@@ -145,6 +146,7 @@ public class DefineBlockTest extends CompilerTestBase {
         """));
 
         assertEquals(ErrorCode.DUPLICATE_ID, ex.getDiagnostic().getCode());
+        assertCodeHighlight("m0", ex);
     }
 
     @Test
@@ -160,6 +162,7 @@ public class DefineBlockTest extends CompilerTestBase {
         """));
 
         assertEquals(ErrorCode.DUPLICATE_ID, ex.getDiagnostic().getCode());
+        assertCodeHighlight("m0", ex);
     }
 
 }

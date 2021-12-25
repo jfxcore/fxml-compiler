@@ -27,6 +27,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import java.util.ArrayList;
 import java.util.List;
 
+import static org.jfxcore.compiler.util.MoreAssertions.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 @SuppressWarnings({"HttpUrlsUsage", "DuplicatedCode"})
@@ -128,6 +129,7 @@ public class BindingPathTest extends CompilerTestBase {
         """));
 
         assertEquals(ErrorCode.PROPERTY_NOT_FOUND, ex.getDiagnostic().getCode());
+        assertCodeHighlight("foo=bar", ex);
     }
 
     @Test
@@ -138,6 +140,7 @@ public class BindingPathTest extends CompilerTestBase {
         """));
 
         assertEquals(ErrorCode.MEMBER_NOT_FOUND, ex.getDiagnostic().getCode());
+        assertCodeHighlight("nonexistent", ex);
     }
 
     @Test
@@ -148,6 +151,7 @@ public class BindingPathTest extends CompilerTestBase {
         """));
 
         assertEquals(ErrorCode.CANNOT_CONVERT_SOURCE_TYPE, ex.getDiagnostic().getCode());
+        assertCodeHighlight("{fx:once rawProp}", ex);
     }
 
     @Test
@@ -302,6 +306,9 @@ public class BindingPathTest extends CompilerTestBase {
         """));
 
         assertEquals(ErrorCode.CANNOT_MODIFY_READONLY_PROPERTY, ex.getDiagnostic().getCode());
+        assertCodeHighlight("""
+            notBindable="{fx:once invariantContext.boolVal}"
+        """.trim(), ex);
     }
 
     @Test
@@ -464,6 +471,9 @@ public class BindingPathTest extends CompilerTestBase {
         """));
 
         assertEquals(ErrorCode.CANNOT_MODIFY_READONLY_PROPERTY, ex.getDiagnostic().getCode());
+        assertCodeHighlight("""
+            notBindable="{fx:bind invariantContext.boolVal}"
+        """.trim(), ex);
     }
 
     @Test
@@ -475,6 +485,9 @@ public class BindingPathTest extends CompilerTestBase {
         """));
 
         assertEquals(ErrorCode.INVALID_BINDING_TARGET, ex.getDiagnostic().getCode());
+        assertCodeHighlight("""
+            GridPane.margin="{fx:bind context.margin}"
+        """.trim(), ex);
     }
 
     @Test
@@ -485,6 +498,7 @@ public class BindingPathTest extends CompilerTestBase {
         """));
 
         assertEquals(ErrorCode.INVALID_BIDIRECTIONAL_BINDING_SOURCE, ex.getDiagnostic().getCode());
+        assertCodeHighlight("simpleDoubleVal", ex);
     }
 
     @Test
@@ -495,6 +509,7 @@ public class BindingPathTest extends CompilerTestBase {
         """));
 
         assertEquals(ErrorCode.INVALID_BIDIRECTIONAL_BINDING_SOURCE, ex.getDiagnostic().getCode());
+        assertCodeHighlight("invariantContext.invariantBoolVal", ex);
     }
 
     @Test
@@ -543,6 +558,7 @@ public class BindingPathTest extends CompilerTestBase {
         """));
 
         assertEquals(ErrorCode.INVALID_BIDIRECTIONAL_BINDING_SOURCE, ex.getDiagnostic().getCode());
+        assertCodeHighlight("context.invariantBoolVal", ex);
     }
 
     @Test
@@ -582,6 +598,9 @@ public class BindingPathTest extends CompilerTestBase {
         """));
 
         assertEquals(ErrorCode.CANNOT_MODIFY_READONLY_PROPERTY, ex.getDiagnostic().getCode());
+        assertCodeHighlight("""
+            notBindable="{fx:sync invariantContext.boolVal}"
+        """.trim(), ex);
     }
 
     @Test
@@ -593,6 +612,9 @@ public class BindingPathTest extends CompilerTestBase {
         """));
 
         assertEquals(ErrorCode.INVALID_BINDING_TARGET, ex.getDiagnostic().getCode());
+        assertCodeHighlight("""
+            GridPane.margin="{fx:sync context.margin}"
+        """.trim(), ex);
     }
 
 }

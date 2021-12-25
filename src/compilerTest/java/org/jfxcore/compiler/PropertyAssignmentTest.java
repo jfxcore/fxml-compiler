@@ -20,6 +20,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import java.util.List;
 
+import static org.jfxcore.compiler.util.MoreAssertions.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 @SuppressWarnings("HttpUrlsUsage")
@@ -40,6 +41,7 @@ public class PropertyAssignmentTest {
             """));
 
             assertEquals(ErrorCode.DUPLICATE_PROPERTY, ex.getDiagnostic().getCode());
+            assertCodeHighlight("<prefWidth>20</prefWidth>", ex);
         }
 
         @Test
@@ -47,13 +49,14 @@ public class PropertyAssignmentTest {
             MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
                 <?import javafx.scene.layout.*?>
                 <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
-                    <GridPane prefWidth="10">
-                        <prefWidth>20</prefWidth>
-                    </GridPane>
+                    <GridPane prefWidth="10" prefWidth="20"/>
                 </GridPane>
             """));
 
             assertEquals(ErrorCode.DUPLICATE_PROPERTY, ex.getDiagnostic().getCode());
+            assertCodeHighlight("""
+                prefWidth="20"
+            """.trim(), ex);
         }
 
         @Test
@@ -61,13 +64,15 @@ public class PropertyAssignmentTest {
             MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
                 <?import javafx.scene.layout.*?>
                 <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
-                    <GridPane prefWidth="10">
+                    <GridPane>
+                        <prefWidth>10</prefWidth>
                         <prefWidth>20</prefWidth>
                     </GridPane>
                 </GridPane>
             """));
 
             assertEquals(ErrorCode.DUPLICATE_PROPERTY, ex.getDiagnostic().getCode());
+            assertCodeHighlight("<prefWidth>20</prefWidth>", ex);
         }
 
         @Test
@@ -80,6 +85,7 @@ public class PropertyAssignmentTest {
             """));
 
             assertEquals(ErrorCode.PROPERTY_CANNOT_BE_EMPTY, ex.getDiagnostic().getCode());
+            assertCodeHighlight("<minHeight></minHeight>", ex);
         }
 
         @Test
@@ -92,6 +98,9 @@ public class PropertyAssignmentTest {
             """));
 
             assertEquals(ErrorCode.PROPERTY_CANNOT_HAVE_MULTIPLE_VALUES, ex.getDiagnostic().getCode());
+            assertCodeHighlight("""
+                <minHeight><Double fx:constant="NEGATIVE_INFINITY"/>5.0</minHeight>
+            """.trim(), ex);
         }
     }
 
@@ -228,6 +237,7 @@ public class PropertyAssignmentTest {
             """));
 
             assertEquals(ErrorCode.CANNOT_COERCE_PROPERTY_VALUE, ex.getDiagnostic().getCode());
+            assertCodeHighlight("SUPPLIER", ex);
         }
 
         @Test
@@ -264,6 +274,7 @@ public class PropertyAssignmentTest {
             """));
 
             assertEquals(ErrorCode.CANNOT_COERCE_PROPERTY_VALUE, ex.getDiagnostic().getCode());
+            assertCodeHighlight("1,2", ex);
         }
 
         @Test
@@ -478,6 +489,7 @@ public class PropertyAssignmentTest {
             """));
 
             assertEquals(ErrorCode.CANNOT_COERCE_PROPERTY_VALUE, ex.getDiagnostic().getCode());
+            assertCodeHighlight("10,10", ex);
         }
 
         @Test
@@ -492,6 +504,7 @@ public class PropertyAssignmentTest {
             """));
 
             assertEquals(ErrorCode.INCOMPATIBLE_PROPERTY_TYPE, ex.getDiagnostic().getCode());
+            assertCodeHighlight("<String>10</String>", ex);
         }
 
         @Test
@@ -563,6 +576,9 @@ public class PropertyAssignmentTest {
             """));
 
             assertEquals(ErrorCode.OBJECT_CANNOT_HAVE_CONTENT, ex.getDiagnostic().getCode());
+            assertCodeHighlight("""
+                <Double fx:constant="NEGATIVE_INFINITY">5.0</Double>
+            """.trim(), ex);
         }
 
         @Test
@@ -575,6 +591,9 @@ public class PropertyAssignmentTest {
             """));
 
             assertEquals(ErrorCode.CONFLICTING_PROPERTIES, ex.getDiagnostic().getCode());
+            assertCodeHighlight("""
+                fx:value="5.0"
+            """.trim(), ex);
         }
 
         @Test
@@ -606,6 +625,9 @@ public class PropertyAssignmentTest {
             """));
 
             assertEquals(ErrorCode.CANNOT_ASSIGN_CONSTANT, ex.getDiagnostic().getCode());
+            assertCodeHighlight("""
+                fx:constant="javafx.scene.control.TableView.CONSTRAINED_RESIZE_POLICY"
+            """.trim(), ex);
         }
     }
 

@@ -32,7 +32,7 @@ public class TypeTokenizer extends AbstractTokenizer<TypeTokenType, TypeToken> {
         while (matcher.find()) {
             String token = matcher.group();
             int start = matcher.start();
-            int end = matcher.end() - 1;
+            int end = matcher.end();
 
             String excess = text.substring(lastPosition, start);
             int firstNonWhitespace = -1;
@@ -51,7 +51,7 @@ public class TypeTokenizer extends AbstractTokenizer<TypeTokenType, TypeToken> {
 
             SourceInfo sourceInfo = getSourceInfo(start, end);
             tokens.add(new TypeToken(token, getLines().get(sourceInfo.getStart().getLine()), sourceInfo));
-            lastPosition = end + 1;
+            lastPosition = end;
         }
 
         addAll(tokens);

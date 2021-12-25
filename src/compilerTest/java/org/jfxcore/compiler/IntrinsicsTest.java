@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import java.lang.reflect.Constructor;
 
+import static org.jfxcore.compiler.util.MoreAssertions.assertCodeHighlight;
 import static org.junit.jupiter.api.Assertions.*;
 
 @SuppressWarnings("HttpUrlsUsage")
@@ -30,6 +31,7 @@ public class IntrinsicsTest extends CompilerTestBase {
         """));
 
         assertEquals(ErrorCode.DUPLICATE_ID, ex.getDiagnostic().getCode());
+        assertCodeHighlight("pane0", ex);
     }
 
     @Test
@@ -42,6 +44,7 @@ public class IntrinsicsTest extends CompilerTestBase {
         """));
 
         assertEquals(ErrorCode.INVALID_ID, ex.getDiagnostic().getCode());
+        assertCodeHighlight("foo bar", ex);
     }
 
     @Test
@@ -54,6 +57,9 @@ public class IntrinsicsTest extends CompilerTestBase {
         """));
 
         assertEquals(ErrorCode.UNKNOWN_INTRINSIC, ex.getDiagnostic().getCode());
+        assertCodeHighlight("""
+            fx:foo="foo"
+        """.trim(), ex);
     }
 
     @Test
@@ -66,6 +72,9 @@ public class IntrinsicsTest extends CompilerTestBase {
         """));
 
         assertEquals(ErrorCode.UNEXPECTED_INTRINSIC, ex.getDiagnostic().getCode());
+        assertCodeHighlight("""
+            fx:class="java.lang.String"
+        """.trim(), ex);
     }
 
     @Test

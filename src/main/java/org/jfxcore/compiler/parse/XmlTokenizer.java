@@ -29,9 +29,7 @@ public class XmlTokenizer extends AbstractTokenizer<XmlTokenType, XmlToken> {
 
         while (matcher.find()) {
             String value = matcher.group();
-            int start = matcher.start();
-            int end = matcher.end() - 1;
-            SourceInfo sourceInfo = getSourceInfo(start, end);
+            SourceInfo sourceInfo = getSourceInfo(matcher.start(), matcher.end());
             tokens.add(new XmlToken(value, getLines().get(sourceInfo.getStart().getLine()), sourceInfo));
         }
 

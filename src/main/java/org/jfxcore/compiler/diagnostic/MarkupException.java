@@ -38,7 +38,7 @@ public class MarkupException extends RuntimeException {
             builder.append(System.lineSeparator()).append(System.lineSeparator());
             builder.append(lineText).append(System.lineSeparator());
             builder.append(" ".repeat(sourceInfo.getStart().getColumn()));
-            builder.append("^".repeat(cols + 1));
+            builder.append("^".repeat(Math.max(1, cols)));
         }
 
         return builder.toString();

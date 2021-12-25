@@ -90,7 +90,7 @@ public abstract class CurlyTokenizer<TToken extends CurlyToken> extends Abstract
         while (matcher.find()) {
             String value = matcher.group();
             int start = matcher.start();
-            int end = matcher.end() - 1;
+            int end = matcher.end();
 
             if (eatLine && !isNewline(value)) {
                 lastPosition = start + value.length();

@@ -13,6 +13,7 @@ import org.jfxcore.compiler.util.TestExtension;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
+import static org.jfxcore.compiler.util.MoreAssertions.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 @SuppressWarnings("HttpUrlsUsage")
@@ -163,6 +164,7 @@ public class BindingSourceTest extends CompilerTestBase {
         """));
 
         assertEquals(ErrorCode.PARENT_TYPE_NOT_FOUND, ex.getDiagnostic().getCode());
+        assertCodeHighlight("parent[Button]", ex);
     }
 
     @Test
@@ -176,6 +178,7 @@ public class BindingSourceTest extends CompilerTestBase {
         """));
 
         assertEquals(ErrorCode.PARENT_INDEX_OUT_OF_BOUNDS, ex.getDiagnostic().getCode());
+        assertCodeHighlight("parent[-1]", ex);
 
         ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.scene.control.*?>
@@ -186,6 +189,7 @@ public class BindingSourceTest extends CompilerTestBase {
         """));
 
         assertEquals(ErrorCode.PARENT_INDEX_OUT_OF_BOUNDS, ex.getDiagnostic().getCode());
+        assertCodeHighlight("parent[2]", ex);
     }
 
     @Test
@@ -214,6 +218,7 @@ public class BindingSourceTest extends CompilerTestBase {
         """));
 
         assertEquals(ErrorCode.EXPECTED_IDENTIFIER, ex.getDiagnostic().getCode());
+        assertCodeHighlight("0123", ex);
     }
 
     @Test
