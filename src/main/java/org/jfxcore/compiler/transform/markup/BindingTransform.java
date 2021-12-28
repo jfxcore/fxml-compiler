@@ -213,13 +213,23 @@ public class BindingTransform implements Transform {
                 throw ParserErrors.unexpectedExpression(contextSelectorNode.getLevel().getSourceInfo());
             }
 
-            if (contextSelectorNode.getType() != null) {
-                throw ParserErrors.unexpectedExpression(contextSelectorNode.getType().getSourceInfo());
+            if (contextSelectorNode.getSearchType() != null) {
+                throw ParserErrors.unexpectedExpression(contextSelectorNode.getSearchType().getSourceInfo());
             }
         }
 
         return switch (bindingContextSelector) {
             case DEFAULT -> throw new IllegalArgumentException();
+
+            case SELF -> {
+                ParentInfo parentInfo = findParent(context, null, 0, contextSelectorNode.getSourceInfo());
+
+                yield new BindingContextNode(
+                    bindingContextSelector,
+                    parentInfo.type(),
+                    parentInfo.parentStackIndex(),
+                    contextSelectorNode.getSourceInfo());
+            }
 
             case PARENT -> {
                 Integer level = null;

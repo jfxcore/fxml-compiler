@@ -40,7 +40,7 @@ public class BindingContextNode extends AbstractNode {
 
     public Segment toSegment() {
         return switch (selector) {
-            case DEFAULT, PARENT -> new ParentSegment(type.getTypeInstance(), parentIndex);
+            case DEFAULT, SELF, PARENT -> new ParentSegment(type.getTypeInstance(), parentIndex);
             case TEMPLATED_ITEM -> new ParamSegment(type.getTypeInstance());
         };
     }
