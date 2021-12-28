@@ -234,4 +234,44 @@ public class BindingSourceTest extends CompilerTestBase {
         assertSame(root, ((Button)root.getChildren().get(0)).getGraphic());
     }
 
+    @Test
+    public void Invalid_Selector_Fails() {
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <?import javafx.scene.layout.*?>
+            <Pane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                <Pane prefHeight="{fx:bind foobar/prefWidth}"/>
+            </Pane>
+        """));
+
+        assertEquals(ErrorCode.UNEXPECTED_EXPRESSION, ex.getDiagnostic().getCode());
+        assertCodeHighlight("foobar", ex);
+    }
+
+    @Test
+    public void Bind_To_Property_With_Self_Selector() {
+        Pane root = compileAndRun("""
+            <?import javafx.scene.layout.*?>
+            <Pane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                <Pane prefWidth="123" prefHeight="{fx:bind self/prefWidth}"/>
+            </Pane>
+        """);
+
+        Pane pane = (Pane)root.getChildren().get(0);
+        assertEquals(123D, pane.getPrefHeight(), 0.001);
+        assertEquals(123D, pane.getPrefWidth(), 0.001);
+    }
+
+    @Test
+    public void Self_Selector_Cannot_Be_Used_With_SearchLevel() {
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <?import javafx.scene.layout.*?>
+            <Pane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                <Pane prefWidth="123" prefHeight="{fx:bind self[2]/prefWidth}"/>
+            </Pane>
+        """));
+
+        assertEquals(ErrorCode.UNEXPECTED_EXPRESSION, ex.getDiagnostic().getCode());
+        assertCodeHighlight("2", ex);
+    }
+
 }

@@ -5,8 +5,9 @@ package org.jfxcore.compiler.ast.expression;
 
 public enum BindingContextSelector {
     DEFAULT(""),
-    TEMPLATED_ITEM("item"),
-    PARENT("parent");
+    SELF("self"),
+    PARENT("parent"),
+    TEMPLATED_ITEM("item");
 
     BindingContextSelector(String name) {
         this.name = name;
