@@ -45,7 +45,7 @@ import static org.jfxcore.compiler.util.ExceptionHelper.unchecked;
  */
 public class StylesheetTransform implements Transform {
 
-    private static final String DATA_URI_PREFIX = "data:application/octet-stream;base64,";
+    private static final String DATA_URI_PREFIX = "data:application/octet-stream;charset=utf-8;base64,";
 
     @Override
     public Set<Class<? extends Transform>> getDependsOn() {
