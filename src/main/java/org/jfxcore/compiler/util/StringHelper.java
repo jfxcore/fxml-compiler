@@ -19,6 +19,18 @@ public class StringHelper {
     private static final Pattern XML_ESCAPE_PATTERN = Pattern.compile(
         "(?:&gt;)|(?:&lt;)|(?:&amp;)|(?:&quot;)|(?:&apos;)|(?:&#x?[\\da-fA-F]+;)");
 
+    public static String quote(String value) {
+        if (value.isEmpty()) {
+            return "\"\"";
+        }
+
+        if (value.contains("\"")) {
+            return "'" + value + "'";
+        }
+
+        return "\"" + value + "\"";
+    }
+
     public static String unquote(String value) {
         if (value.startsWith("\"") && value.endsWith("\"")
                 || value.startsWith("'") && value.endsWith("'")) {
@@ -106,7 +118,7 @@ public class StringHelper {
     }
 
     public static String concatValues(Collection<String> values) {
-        Iterator<String> it = values.iterator();
+        Iterator<String> it = values.stream().filter(v -> !v.isEmpty()).iterator();
         if (!it.hasNext()) {
             return "";
         }
