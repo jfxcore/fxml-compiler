@@ -6,7 +6,6 @@ package org.jfxcore.compiler.parse;
 import org.jfxcore.compiler.ast.intrinsic.IntrinsicProperty;
 import org.jfxcore.compiler.diagnostic.Diagnostic;
 import org.jfxcore.compiler.diagnostic.ErrorCode;
-import org.jfxcore.compiler.diagnostic.MarkupException;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.ast.DocumentNode;
 import org.jfxcore.compiler.ast.ObjectNode;
@@ -70,43 +69,37 @@ public class FxmlParser {
     }
 
     public DocumentNode parseDocument() {
-        try {
-            Document document = new XmlReader(source).getDocument();
-            NodeList nodes = document.getChildNodes();
-            List<String> imports = new ArrayList<>();
+        Document document = new XmlReader(source).getDocument();
+        NodeList nodes = document.getChildNodes();
+        List<String> imports = new ArrayList<>();
 
-            for (int i = 0; i < nodes.getLength(); ++i) {
-                Node node = nodes.item(i);
-                if (node instanceof ProcessingInstruction pi) {
-                    if ("import".equals(pi.getTarget())) {
-                        imports.add(pi.getData());
-                    }
+        for (int i = 0; i < nodes.getLength(); ++i) {
+            Node node = nodes.item(i);
+            if (node instanceof ProcessingInstruction pi) {
+                if ("import".equals(pi.getTarget())) {
+                    imports.add(pi.getData());
                 }
             }
-
-            Element rootElement = document.getDocumentElement();
-            String namespace = rootElement.getNamespaceURI();
-
-            if (namespace == null) {
-                throw new FxmlParseAbortException(
-                    getSourceInfo(rootElement),
-                    Diagnostic.newDiagnostic(ErrorCode.NAMESPACE_NOT_SPECIFIED));
-            } else if (!namespace.startsWith(FxmlNamespace.JAVAFX)) {
-                throw new FxmlParseAbortException(
-                    getSourceInfo(rootElement),
-                    Diagnostic.newDiagnostic(ErrorCode.UNKNOWN_NAMESPACE, rootElement.getNamespaceURI()));
-            }
-
-            if (!imports.contains("java.lang.*")) {
-                imports.add(0, "java.lang.*");
-            }
-
-            return new DocumentNode(documentFile, imports, parseElementNode(rootElement));
-        } catch (MarkupException ex) {
-            throw ex;
-        } catch (Exception ex) {
-            throw GeneralErrors.internalError(ex.getMessage());
         }
+
+        Element rootElement = document.getDocumentElement();
+        String namespace = rootElement.getNamespaceURI();
+
+        if (namespace == null) {
+            throw new FxmlParseAbortException(
+                getSourceInfo(rootElement),
+                Diagnostic.newDiagnostic(ErrorCode.NAMESPACE_NOT_SPECIFIED));
+        } else if (!namespace.startsWith(FxmlNamespace.JAVAFX)) {
+            throw new FxmlParseAbortException(
+                getSourceInfo(rootElement),
+                Diagnostic.newDiagnostic(ErrorCode.UNKNOWN_NAMESPACE, rootElement.getNamespaceURI()));
+        }
+
+        if (!imports.contains("java.lang.*")) {
+            imports.add(0, "java.lang.*");
+        }
+
+        return new DocumentNode(documentFile, imports, parseElementNode(rootElement));
     }
 
     private ObjectNode parseElementNode(Element element) {

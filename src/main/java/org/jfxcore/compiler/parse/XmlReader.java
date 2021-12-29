@@ -4,9 +4,9 @@
 package org.jfxcore.compiler.parse;
 
 import org.jfxcore.compiler.diagnostic.SourceInfo;
-import org.jfxcore.compiler.diagnostic.errors.GeneralErrors;
 import org.jfxcore.compiler.diagnostic.errors.ParserErrors;
 import org.jfxcore.compiler.diagnostic.errors.PropertyAssignmentErrors;
+import org.jfxcore.compiler.util.ExceptionHelper;
 import org.jfxcore.compiler.util.StringHelper;
 import org.w3c.dom.Attr;
 import org.w3c.dom.Document;
@@ -45,7 +45,7 @@ public class XmlReader {
         try {
             document = DocumentBuilderFactory.newInstance().newDocumentBuilder().newDocument();
         } catch (ParserConfigurationException ex) {
-            throw GeneralErrors.internalError(ex.getMessage());
+            throw ExceptionHelper.unchecked(ex);
         }
 
         XmlToken token = tokenizer.peek();

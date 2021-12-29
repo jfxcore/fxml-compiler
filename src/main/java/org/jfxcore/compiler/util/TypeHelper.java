@@ -39,7 +39,6 @@ import org.jfxcore.compiler.ast.ResolvedTypeNode;
 import org.jfxcore.compiler.ast.TypeNode;
 import org.jfxcore.compiler.ast.ValueNode;
 import org.jfxcore.compiler.diagnostic.Location;
-import org.jfxcore.compiler.diagnostic.errors.GeneralErrors;
 import org.jfxcore.compiler.parse.TypeParser;
 
 import static org.jfxcore.compiler.util.Classes.*;
@@ -382,8 +381,7 @@ public class TypeHelper {
                 SignatureAttribute.toMethodSignature(method.getSignature());
             SignatureAttribute.Type type = signature.getParameterTypes()[paramIndex];
 
-            if (type instanceof SignatureAttribute.ArrayType) {
-                SignatureAttribute.ArrayType arrayType = (SignatureAttribute.ArrayType)type;
+            if (type instanceof SignatureAttribute.ArrayType arrayType) {
                 if (arrayType.getDimension() != 1) {
                     return null;
                 }
@@ -394,7 +392,7 @@ public class TypeHelper {
 
             return null;
         } catch (BadBytecode ex) {
-            throw GeneralErrors.internalError(ex.getMessage());
+            throw ExceptionHelper.unchecked(ex);
         }
     }
 

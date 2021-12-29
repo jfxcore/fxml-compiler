@@ -183,7 +183,7 @@ public class Resolver {
         } catch (NotFoundException ex) {
             throw SymbolResolutionErrors.notFound(sourceInfo, ex.getMessage());
         } catch (BadBytecode ex) {
-            throw GeneralErrors.internalError(ex.getMessage());
+            throw ExceptionHelper.unchecked(ex);
         }
     }
 
@@ -237,7 +237,7 @@ public class Resolver {
         } catch (NotFoundException ex) {
             throw SymbolResolutionErrors.notFound(sourceInfo, ex.getMessage());
         } catch (BadBytecode ex) {
-            throw GeneralErrors.internalError(ex.getMessage());
+            throw ExceptionHelper.unchecked(ex);
         }
     }
 
@@ -339,6 +339,30 @@ public class Resolver {
     }
 
     /**
+     * Returns the public field with the specified name.
+     */
+    public CtField resolveField(CtClass ctclass, String name) {
+        CtField field = tryResolveField(ctclass, name);
+        if (field == null) {
+            throw SymbolResolutionErrors.memberNotFound(sourceInfo, ctclass, name);
+        }
+
+        return field;
+    }
+
+    /**
+     * Returns the field with the specified name.
+     */
+    public CtField resolveField(CtClass ctclass, String name, boolean publicOnly) {
+        CtField field = tryResolveField(ctclass, name, publicOnly);
+        if (field == null) {
+            throw SymbolResolutionErrors.memberNotFound(sourceInfo, ctclass, name);
+        }
+
+        return field;
+    }
+
+    /**
      * Returns the public field with the specified name, or {@code null} if no such public field can be found.
      */
     public CtField tryResolveField(CtClass ctclass, String name) {
@@ -397,6 +421,23 @@ public class Resolver {
         }
 
         return methods.toArray(new CtMethod[0]);
+    }
+
+    /**
+     * Returns a getter method with a name corresponding to the specified name.
+     *
+     * If {@code verbatim} is true, only returns methods that match the name exactly; otherwise, also returns getter
+     * methods with names like getMethodName or isMethodName.
+     *
+     * If {@code returnType} is non-null, only getter methods returning this type are considered.
+     */
+    public CtMethod resolveGetter(CtClass type, String name, boolean verbatim, @Nullable CtClass returnType) {
+        CtMethod method = tryResolveGetter(type, name, verbatim, returnType);
+        if (method == null) {
+            throw SymbolResolutionErrors.methodNotFound(sourceInfo, type, name);
+        }
+
+        return method;
     }
 
     /**
@@ -823,7 +864,7 @@ public class Resolver {
         } catch (NotFoundException ex) {
             throw SymbolResolutionErrors.notFound(sourceInfo, ex.getMessage());
         } catch (BadBytecode ex) {
-            throw GeneralErrors.internalError(ex.getMessage());
+            throw ExceptionHelper.unchecked(ex);
         }
     }
 
@@ -849,7 +890,7 @@ public class Resolver {
         } catch (NotFoundException ex) {
             throw SymbolResolutionErrors.notFound(sourceInfo, ex.getMessage());
         } catch (BadBytecode ex) {
-            throw GeneralErrors.internalError(ex.getMessage());
+            throw ExceptionHelper.unchecked(ex);
         }
     }
 
@@ -883,7 +924,7 @@ public class Resolver {
         } catch (NotFoundException ex) {
             throw SymbolResolutionErrors.notFound(sourceInfo, ex.getMessage());
         } catch (BadBytecode ex) {
-            throw GeneralErrors.internalError(ex.getMessage());
+            throw ExceptionHelper.unchecked(ex);
         }
     }
 
@@ -916,7 +957,7 @@ public class Resolver {
         } catch (NotFoundException ex) {
             throw SymbolResolutionErrors.notFound(sourceInfo, ex.getMessage());
         } catch (BadBytecode ex) {
-            throw GeneralErrors.internalError(ex.getMessage());
+            throw ExceptionHelper.unchecked(ex);
         }
     }
 

@@ -3,11 +3,8 @@
 
 package org.jfxcore.compiler.util;
 
-import javassist.CannotCompileException;
 import javassist.NotFoundException;
-import javassist.bytecode.BadBytecode;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
-import org.jfxcore.compiler.diagnostic.errors.GeneralErrors;
 import org.jfxcore.compiler.diagnostic.errors.SymbolResolutionErrors;
 
 public class ExceptionHelper {
@@ -17,12 +14,8 @@ public class ExceptionHelper {
             action.run();
         } catch (NotFoundException ex) {
             throw SymbolResolutionErrors.notFound(sourceInfo, ex.getMessage());
-        } catch (BadBytecode | CannotCompileException ex) {
-            throw GeneralErrors.internalError(ex.getMessage(), ex);
-        } catch (RuntimeException ex) {
-            throw ex;
-        } catch (Exception ex) {
-            throw new RuntimeException(ex);
+        } catch (Throwable ex) {
+            throw unchecked(ex);
         }
     }
 
@@ -31,13 +24,14 @@ public class ExceptionHelper {
             return action.get();
         } catch (NotFoundException ex) {
             throw SymbolResolutionErrors.notFound(sourceInfo, ex.getMessage());
-        } catch (BadBytecode | CannotCompileException ex) {
-            throw GeneralErrors.internalError(ex.getMessage(), ex);
-        } catch (RuntimeException ex) {
-            throw ex;
-        } catch (Exception ex) {
-            throw new RuntimeException(ex);
+        } catch (Throwable ex) {
+            throw unchecked(ex);
         }
+    }
+
+    @SuppressWarnings("unchecked")
+    public static <E extends Throwable> E unchecked(Throwable e) throws E {
+        throw (E)e;
     }
 
 }

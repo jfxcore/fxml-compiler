@@ -10,7 +10,6 @@ import org.jfxcore.compiler.ast.ObjectNode;
 import org.jfxcore.compiler.ast.PropertyNode;
 import org.jfxcore.compiler.ast.intrinsic.Intrinsics;
 import org.jfxcore.compiler.ast.text.TextNode;
-import org.jfxcore.compiler.diagnostic.MarkupException;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.diagnostic.errors.GeneralErrors;
 import org.jfxcore.compiler.parse.CssTokenizer;
@@ -82,15 +81,9 @@ public class StylesheetTransform implements Transform {
 
         byte[] stylesheet;
 
-        try {
-            TextNode source = getSourceText(node);
-            verifyStylesheet(source);
-            stylesheet = convertStylesheetToBinary(source.getText());
-        } catch (MarkupException ex) {
-            throw ex;
-        } catch (Exception ex) {
-            throw GeneralErrors.internalError(ex.getMessage());
-        }
+        TextNode source = getSourceText(node);
+        verifyStylesheet(source);
+        stylesheet = convertStylesheetToBinary(source.getText());
 
         String dataUrl = DATA_URI_PREFIX + Base64.getEncoder().encodeToString(stylesheet);
 
@@ -152,7 +145,7 @@ public class StylesheetTransform implements Transform {
             Stylesheet.convertToBinary(inputFile, outputFile);
             output = Files.readAllBytes(outputFile.toPath());
         } catch (IOException ex) {
-            throw GeneralErrors.internalError(ex);
+            throw unchecked(ex);
         } finally {
             if (inputFile != null) {
                 inputFile.delete();
