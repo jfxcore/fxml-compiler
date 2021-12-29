@@ -497,7 +497,7 @@ public abstract class AbstractTokenizer<TTokenType extends TokenType, TToken ext
                 throw ParserErrors.unexpectedEndOfFile(
                     lastRemoved != null ? SourceInfo.after(lastRemoved.getSourceInfo()) : SourceInfo.none());
             } else {
-                throw ParserErrors.expectedIdentifier(peek());
+                throw ParserErrors.expectedIdentifier(peek().getSourceInfo());
             }
         }
 
@@ -623,17 +623,27 @@ public abstract class AbstractTokenizer<TTokenType extends TokenType, TToken ext
     private void checkExpected(TToken token, TTokenType expected) {
         if (token == null) {
             TToken lastRemoved = getLastRemoved();
-            throw ParserErrors.unexpectedEndOfFile(
-                lastRemoved != null ? SourceInfo.after(lastRemoved.getSourceInfo()) : SourceInfo.none());
+            SourceInfo sourceInfo = lastRemoved != null ?
+                SourceInfo.after(lastRemoved.getSourceInfo()) : SourceInfo.none();
+
+            if (expected.isIdentifier()) {
+                throw ParserErrors.expectedIdentifier(sourceInfo);
+            }
+
+            if (expected.getSymbol() != null) {
+                throw ParserErrors.expectedToken(sourceInfo, expected.getSymbol());
+            }
+
+            throw ParserErrors.unexpectedEndOfFile(sourceInfo);
         }
 
         if (token.getType() != expected) {
             if (expected.isIdentifier()) {
-                throw ParserErrors.expectedIdentifier(token);
+                throw ParserErrors.expectedIdentifier(token.getSourceInfo());
             }
 
             if (expected.getSymbol() != null) {
-                throw ParserErrors.expectedToken(token, expected.getSymbol());
+                throw ParserErrors.expectedToken(token.getSourceInfo(), expected.getSymbol());
             }
 
             throw ParserErrors.unexpectedToken(token);

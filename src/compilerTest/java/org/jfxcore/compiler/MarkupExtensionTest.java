@@ -57,6 +57,19 @@ public class MarkupExtensionTest extends CompilerTestBase {
     }
 
     @Test
+    public void Missing_CloseCurly_Fails() {
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <?import javafx.scene.control.*?>
+            <Label xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                   text="{fx:once foo"/>
+        """));
+
+        assertEquals(ErrorCode.EXPECTED_TOKEN, ex.getDiagnostic().getCode());
+        assertTrue(ex.getDiagnostic().getMessage().contains("}"));
+        assertCodeHighlight("\"", ex);
+    }
+
+    @Test
     public void URLExtension_With_Relative_Location_Is_Evaluated_Correctly() {
         Label root = compileAndRun("""
             <?import javafx.fxml.*?>
