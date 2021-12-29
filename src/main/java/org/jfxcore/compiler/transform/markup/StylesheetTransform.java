@@ -20,6 +20,7 @@ import org.jfxcore.compiler.transform.Transform;
 import org.jfxcore.compiler.transform.TransformContext;
 import org.jfxcore.compiler.transform.common.ResolveTypeTransform;
 import org.jfxcore.compiler.util.Classes;
+import org.jfxcore.compiler.util.StringHelper;
 import org.jfxcore.compiler.util.TypeHelper;
 
 import java.io.BufferedWriter;
@@ -178,7 +179,12 @@ public class StylesheetTransform implements Transform {
                 builder.append(' ');
             }
 
-            builder.append(tokenizer.remove().getValue());
+            if (token.getType() == CurlyTokenType.STRING) {
+                builder.append(StringHelper.quote(tokenizer.remove().getValue()));
+            } else {
+                builder.append(tokenizer.remove().getValue());
+            }
+
             last = token;
         }
 

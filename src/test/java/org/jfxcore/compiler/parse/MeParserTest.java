@@ -330,4 +330,10 @@ public class MeParserTest extends TestBase {
         assertEquals(ErrorCode.UNEXPECTED_TOKEN, ex.getDiagnostic().getCode());
     }
 
+    @Test
+    public void ListContent_With_Empty_Strings_Works_Correctly() {
+        ObjectNode root = new MeParser("{Foo '', 'baz', ''}", null).parseObject();
+        assertEquals("baz", ((TextNode)root.getChildren().get(0)).getText());
+    }
+
 }

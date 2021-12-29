@@ -28,4 +28,11 @@ public class StringHelperTest {
         assertEquals("", lines[4]);
     }
 
+    @Test
+    public void Test_Quote_String() {
+        assertEquals("\"✖\"", StringHelper.quote("✖"));
+        assertEquals("\"'✖'\"", StringHelper.quote("'✖'"));
+        assertEquals("'\"✖\"'", StringHelper.quote("\"✖\""));
+    }
+
 }
