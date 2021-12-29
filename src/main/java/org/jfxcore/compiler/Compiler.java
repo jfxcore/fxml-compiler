@@ -16,7 +16,6 @@ import org.jfxcore.compiler.ast.emit.BytecodeEmitContext;
 import org.jfxcore.compiler.ast.emit.EmitInitializeRootNode;
 import org.jfxcore.compiler.diagnostic.MarkupException;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
-import org.jfxcore.compiler.diagnostic.errors.GeneralErrors;
 import org.jfxcore.compiler.diagnostic.errors.SymbolResolutionErrors;
 import org.jfxcore.compiler.parse.FxmlParseAbortException;
 import org.jfxcore.compiler.parse.FxmlParser;
@@ -26,6 +25,7 @@ import org.jfxcore.compiler.util.Bytecode;
 import org.jfxcore.compiler.util.CompilationContext;
 import org.jfxcore.compiler.util.CompilationScope;
 import org.jfxcore.compiler.util.CompilationSource;
+import org.jfxcore.compiler.util.ExceptionHelper;
 import org.jfxcore.compiler.util.FileUtil;
 import java.io.File;
 import java.io.IOException;
@@ -329,9 +329,7 @@ public class Compiler extends AbstractCompiler {
             ex.setSourceFile(inputFile.toFile());
             throw ex;
         } catch (BadBytecode | URISyntaxException | CannotCompileException ex) {
-            MarkupException m = GeneralErrors.internalError(ex.getMessage());
-            m.setSourceFile(inputFile.toFile());
-            throw m;
+            throw ExceptionHelper.unchecked(ex);
         } catch (NotFoundException ex) {
             MarkupException m = SymbolResolutionErrors.notFound(SourceInfo.none(), ex.getMessage());
             m.setSourceFile(inputFile.toFile());

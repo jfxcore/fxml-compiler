@@ -25,9 +25,6 @@ import org.jetbrains.annotations.Nullable;
 import org.jfxcore.compiler.ast.emit.ValueEmitterNode;
 import org.jfxcore.compiler.ast.text.PathSegmentNode;
 import org.jfxcore.compiler.ast.text.SubPathSegmentNode;
-import org.jfxcore.compiler.diagnostic.Diagnostic;
-import org.jfxcore.compiler.diagnostic.ErrorCode;
-import org.jfxcore.compiler.diagnostic.MarkupException;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.diagnostic.errors.ParserErrors;
 import org.jfxcore.compiler.diagnostic.errors.SymbolResolutionErrors;
@@ -558,8 +555,12 @@ public class ResolvedPath {
                                 @Nullable JvmMethodSignature setterSignature) {
                             boolean publicSetter = false;
 
-                            if (fieldSignature == null || getterSignature == null) {
-                                throw new MarkupException(sourceInfo, Diagnostic.newDiagnostic(ErrorCode.INTERNAL_ERROR));
+                            if (fieldSignature == null) {
+                                throw new NullPointerException("fieldSignature");
+                            }
+
+                            if (getterSignature == null) {
+                                throw new NullPointerException("getterSignature");
                             }
 
                             if (setterSignature != null) {
@@ -569,16 +570,8 @@ public class ResolvedPath {
                                 publicSetter = setter != null && Modifier.isPublic(setter.getModifiers());
                             }
 
-                            CtField field = resolver.tryResolveField(declaringType, fieldSignature.getName(), false);
-                            if (field == null) {
-                                throw new MarkupException(sourceInfo, Diagnostic.newDiagnostic(ErrorCode.INTERNAL_ERROR));
-                            }
-
-                            CtMethod getter = resolver.tryResolveGetter(
-                                declaringType, getterSignature.getName(), true, null);
-                            if (getter == null) {
-                                throw new MarkupException(sourceInfo, Diagnostic.newDiagnostic(ErrorCode.INTERNAL_ERROR));
-                            }
+                            CtField field = resolver.resolveField(declaringType, fieldSignature.getName(), false);
+                            CtMethod getter = resolver.resolveGetter(declaringType, getterSignature.getName(), true, null);
 
                             if (unchecked(sourceInfo, () -> field.getType().subtypeOf(Classes.ObservableValueType()))) {
                                 result[0] = new KotlinDelegateInfo(field, getter, publicSetter);

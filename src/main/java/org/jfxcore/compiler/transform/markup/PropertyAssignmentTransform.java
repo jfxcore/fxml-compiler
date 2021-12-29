@@ -232,10 +232,6 @@ public class PropertyAssignmentTransform implements Transform {
             List<ValueNode> values = new ArrayList<>();
 
             for (Node child : propertyNode.getValues()) {
-                if (!(child instanceof ValueNode)) {
-                    throw GeneralErrors.internalError();
-                }
-
                 boolean error = false;
                 TypeInstance childType = TypeHelper.getTypeInstance(child);
 

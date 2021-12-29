@@ -79,14 +79,13 @@ public class IntrinsicsTest extends CompilerTestBase {
 
     @Test
     public void Incompatible_Class_Parameters_Are_Invalid() {
-        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+        RuntimeException ex = assertThrows(RuntimeException.class, () -> compileAndRun("""
             <?import javafx.scene.layout.*?>
             <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
                       fx:classParameters="java.lang.String"/>
         """));
 
-        assertEquals(ErrorCode.INTERNAL_ERROR, ex.getDiagnostic().getCode());
-        assertEquals("compiler.err.cant.apply.symbol", ex.getDiagnostic().getMessage());
+        assertEquals("compiler.err.cant.apply.symbol", ex.getMessage());
     }
 
     @SuppressWarnings("unused")

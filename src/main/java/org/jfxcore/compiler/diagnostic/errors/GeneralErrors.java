@@ -17,26 +17,6 @@ import static org.jfxcore.compiler.diagnostic.errors.FormatHelper.formatProperty
 
 public class GeneralErrors {
 
-    public static MarkupException internalError() {
-        return new MarkupException(SourceInfo.none(), Diagnostic.newDiagnosticMessage(
-            ErrorCode.INTERNAL_ERROR, "Internal error"));
-    }
-
-    public static MarkupException internalError(String message) {
-        return new MarkupException(SourceInfo.none(), Diagnostic.newDiagnosticMessage(
-            ErrorCode.INTERNAL_ERROR, message));
-    }
-
-    public static MarkupException internalError(Throwable cause) {
-        return new MarkupException(SourceInfo.none(), Diagnostic.newDiagnosticMessage(
-            ErrorCode.INTERNAL_ERROR, "Internal error"), cause);
-    }
-
-    public static MarkupException internalError(String message, Throwable cause) {
-        return new MarkupException(SourceInfo.none(), Diagnostic.newDiagnosticMessage(
-            ErrorCode.INTERNAL_ERROR, message), cause);
-    }
-
     public static MarkupException unsupported(String message) {
         return new MarkupException(SourceInfo.none(), Diagnostic.newDiagnosticMessage(
             ErrorCode.UNSUPPORTED, message));
