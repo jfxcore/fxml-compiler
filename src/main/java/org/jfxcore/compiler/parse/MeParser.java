@@ -19,7 +19,9 @@ import org.jfxcore.compiler.ast.text.PathSegmentNode;
 import org.jfxcore.compiler.ast.text.SubPathSegmentNode;
 import org.jfxcore.compiler.ast.text.TextSegmentNode;
 import org.jfxcore.compiler.ast.text.TextNode;
+import org.jfxcore.compiler.diagnostic.ErrorCode;
 import org.jfxcore.compiler.diagnostic.Location;
+import org.jfxcore.compiler.diagnostic.MarkupException;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.diagnostic.errors.ParserErrors;
 
@@ -47,20 +49,20 @@ public class MeParser {
     }
 
     public ValueNode parsePath() {
-        MeTokenizer tokenizer = new MeTokenizer(source.trim(), sourceOffset);
+        MeTokenizer tokenizer = new MeTokenizer(source, sourceOffset);
         PathNode pathNode = parsePath(tokenizer, true);
         return tokenizer.size() > 0 && tokenizer.peekNotNull().getType() == OPEN_PAREN ?
             parseFunctionExpression(tokenizer, pathNode) : pathNode;
     }
 
-    public ObjectNode tryParseObject() {
-        String trimmed = source.trim();
-        if (!trimmed.startsWith("{") || !trimmed.endsWith("}")) {
-            return null;
+    public ObjectNode parseObject() {
+        MeTokenizer tokenizer = new MeTokenizer(source, sourceOffset);
+        ObjectNode result = parseObjectExpression(tokenizer);
+        if (!tokenizer.isEmpty()) {
+            throw ParserErrors.unexpectedToken(tokenizer.peekNotNull());
         }
 
-        MeTokenizer tokenizer = new MeTokenizer(source, sourceOffset);
-        return parseObjectExpression(tokenizer);
+        return result;
     }
 
     private ValueNode parseExpression(MeTokenizer tokenizer) {
@@ -139,19 +141,27 @@ public class MeParser {
         List<PropertyNode> properties = new ArrayList<>();
         eatSemis(tokenizer);
 
-        while (tokenizer.peek(CLOSE_CURLY) == null) {
-            tokenizer.mark();
-            ValueNode key = parseExpression(tokenizer);
+        try {
+            while (tokenizer.peek(CLOSE_CURLY) == null) {
+                tokenizer.mark();
+                ValueNode key = parseExpression(tokenizer);
 
-            if (tokenizer.poll(EQUALS) != null) {
-                tokenizer.resetToMark();
-                properties.add(parsePropertyExpression(tokenizer));
-            } else {
-                tokenizer.forgetMark();
-                children.add(key);
+                if (tokenizer.poll(EQUALS) != null) {
+                    tokenizer.resetToMark();
+                    properties.add(parsePropertyExpression(tokenizer));
+                } else {
+                    tokenizer.forgetMark();
+                    children.add(key);
+                }
+
+                eatSemis(tokenizer);
+            }
+        } catch (MarkupException ex) {
+            if (ex.getDiagnostic().getCode() == ErrorCode.UNEXPECTED_END_OF_FILE) {
+                throw ParserErrors.expectedToken(ex.getSourceInfo(), CLOSE_CURLY.getSymbol());
             }
 
-            eatSemis(tokenizer);
+            throw ex;
         }
 
         MeToken closeCurly = tokenizer.remove(CLOSE_CURLY);

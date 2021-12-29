@@ -244,20 +244,22 @@ public class FxmlParser {
             }
         }
 
+        if (parseAsPath) {
+            return new MeParser(text, prefix, sourceInfo.getStart()).parsePath();
+        }
+
         if (text.length() > 1) {
-            var parser = new MeParser(text, prefix, sourceInfo.getStart());
+            String trimmed = text.trim();
+            if (trimmed.startsWith("{")) {
+                if (trimmed.startsWith("{}")) {
+                    return new TextNode(text.substring(text.indexOf("{}") + 2), sourceInfo);
+                }
 
-            if (parseAsPath) {
-                return parser.parsePath();
-            }
-
-            ValueNode value = parser.tryParseObject();
-            if (value != null) {
-                return value;
+                return new MeParser(text, prefix, sourceInfo.getStart()).parseObject();
             }
         }
 
-        return new TextNode(unescape(text), sourceInfo);
+        return new TextNode(text, sourceInfo);
     }
 
     @SuppressWarnings("unchecked")
@@ -293,32 +295,6 @@ public class FxmlParser {
             values,
             prefix != null && FxmlNamespace.FXML.equals(namespace),
             sourceInfo);
-    }
-
-    private String unescape(String value) {
-        String trimmedValue = value.trim();
-
-        if (trimmedValue.startsWith("\\{")) {
-            return value.replaceFirst("\\\\\\{", "\\{");
-        }
-
-        if (trimmedValue.startsWith("\\$")) {
-            return value.replaceFirst("\\\\\\$", "\\$");
-        }
-
-        if (trimmedValue.startsWith("\\#")) {
-            return value.replaceFirst("\\\\#", "#");
-        }
-
-        if (trimmedValue.startsWith("\\@")) {
-            return value.replaceFirst("\\\\@", "@");
-        }
-
-        if (trimmedValue.startsWith("\\%")) {
-            return value.replaceFirst("\\\\%", "%");
-        }
-
-        return value;
     }
 
 }

@@ -122,18 +122,6 @@ public class DefineBlockTest extends CompilerTestBase {
     }
 
     @Test
-    public void Escaped_Reference_Is_Treated_As_Literal_String() {
-        Label label = compileAndRun("""
-            <?import javafx.scene.control.*?>
-            <Label xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml" text="\\$str">
-                <fx:define><String fx:id="str">Hello1</String></fx:define>
-            </Label>
-        """);
-
-        assertEquals("$str", label.getText());
-    }
-
-    @Test
     public void Duplicate_FxId_Throws_Exception() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.scene.layout.*?>

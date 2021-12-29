@@ -119,12 +119,29 @@ public class FxmlParserTest extends TestBase {
                 <Label xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
                        text1=" foo"
                        text2="  foo  "
-                       text3="bar  "/>
+                       text3="bar  "
+                       text4="foo&#x0a;bar"
+                       text5="  foo&#x0a;bar  "/>
             """).parseDocument();
 
         assertEquals(" foo", getPropertyText(document, "text1"));
         assertEquals("  foo  ", getPropertyText(document, "text2"));
         assertEquals("bar  ", getPropertyText(document, "text3"));
+        assertEquals("foo\nbar", getPropertyText(document, "text4"));
+        assertEquals("  foo\nbar  ", getPropertyText(document, "text5"));
+    }
+
+    @Test
+    public void Escaped_OpenCurly_Is_Not_Processed() {
+        DocumentNode document = new FxmlParser("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Label xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                       text1="{}foo"
+                       text2="  {} bar "/>
+            """).parseDocument();
+
+        assertEquals("foo", getPropertyText(document, "text1"));
+        assertEquals(" bar ", getPropertyText(document, "text2"));
     }
 
     private String getPropertyText(DocumentNode document, String propertyName) {
