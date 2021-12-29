@@ -127,10 +127,7 @@ public class TestCompiler extends AbstractCompiler {
                 file.delete();
             }
 
-            throw new MarkupException(
-                SourceInfo.none(),
-                org.jfxcore.compiler.diagnostic.Diagnostic.newDiagnosticMessage(
-                    ErrorCode.INTERNAL_ERROR, diagnostics.get(0).getCode()));
+            throw new RuntimeException(diagnostics.get(0).getCode());
         }
 
         try (CompilationScope ignored = new CompilationScope(context)) {
