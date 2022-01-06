@@ -1,4 +1,4 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2022, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.transform.markup;
@@ -10,9 +10,11 @@ import org.jfxcore.compiler.ast.ValueNode;
 import org.jfxcore.compiler.ast.emit.EmitLiteralNode;
 import org.jfxcore.compiler.ast.emit.EmitObjectNode;
 import org.jfxcore.compiler.ast.intrinsic.Intrinsics;
+import org.jfxcore.compiler.ast.text.TextNode;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.diagnostic.errors.GeneralErrors;
 import org.jfxcore.compiler.diagnostic.errors.ObjectInitializationErrors;
+import org.jfxcore.compiler.diagnostic.errors.ParserErrors;
 import org.jfxcore.compiler.transform.Transform;
 import org.jfxcore.compiler.transform.TransformContext;
 import org.jfxcore.compiler.util.Classes;
@@ -24,6 +26,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
+import static org.jfxcore.compiler.util.ExceptionHelper.unchecked;
+
 /**
  * Transforms the fx:value element into an {@link EmitObjectNode}.
  * Note: this transform doesn't apply to the fx:value property, which is handled by {@link ObjectTransform}.
@@ -32,7 +36,7 @@ public class ValueIntrinsicTransform implements Transform {
 
     @Override
     public Set<Class<? extends Transform>> getDependsOn() {
-        return Set.of(DefaultPropertyTransform.class);
+        return Set.of(DefaultPropertyTransform.class, ConstantIntrinsicTransform.class);
     }
 
     @Override
@@ -51,12 +55,29 @@ public class ValueIntrinsicTransform implements Transform {
         Resolver resolver = new Resolver(propertyNode.getSourceInfo());
         PropertyInfo propertyInfo = resolver.resolveProperty(parentType, propertyNode.getName());
         TypeInstance valueType = propertyInfo.getValueTypeInstance();
-        String textValue = objectNode.getTextContent().getText();
 
-        return createValueOfNode(valueType, textValue, node.getSourceInfo());
+        if (objectNode.getChildren().size() == 0) {
+            throw ParserErrors.invalidExpression(objectNode.getSourceInfo());
+        }
+
+        if (objectNode.getChildren().size() > 1) {
+            throw ParserErrors.invalidExpression(SourceInfo.span(objectNode.getChildren()));
+        }
+
+        if (!(objectNode.getChildren().get(0) instanceof ValueNode content)) {
+            throw ParserErrors.invalidExpression(objectNode.getChildren().get(0).getSourceInfo());
+        }
+
+        if (unchecked(content.getSourceInfo(), () -> !Classes.StringType().subtypeOf(TypeHelper.getJvmType(content)))) {
+            throw GeneralErrors.incompatibleValue(
+                content.getSourceInfo(), TypeHelper.getTypeInstance(content),
+                new Resolver(content.getSourceInfo()).getTypeInstance(Classes.StringType()));
+        }
+
+        return createValueOfNode(valueType, content, node.getSourceInfo());
     }
 
-    private ValueNode createValueOfNode(TypeInstance valueType, String textValue, SourceInfo sourceInfo) {
+    private ValueNode createValueOfNode(TypeInstance valueType, ValueNode content, SourceInfo sourceInfo) {
         Resolver resolver = new Resolver(sourceInfo);
         boolean hasValueOfMethod = resolver.tryResolveValueOfMethod(valueType.jvmType()) != null;
 
@@ -66,11 +87,15 @@ public class ValueIntrinsicTransform implements Transform {
                 sourceInfo, valueType.jvmType(), supertype != null ? supertype.jvmType() :  null);
         }
 
+        if (content instanceof TextNode textNode) {
+            content = new EmitLiteralNode(resolver.getTypeInstance(Classes.StringType()), textNode.getText(), sourceInfo);
+        }
+
         return new EmitObjectNode(
             null,
             valueType,
             null,
-            List.of(new EmitLiteralNode(resolver.getTypeInstance(Classes.StringType()), textValue, sourceInfo)),
+            List.of(content),
             Collections.emptyList(),
             EmitObjectNode.CreateKind.VALUE_OF,
             sourceInfo);

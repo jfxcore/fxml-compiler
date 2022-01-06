@@ -1,4 +1,4 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2022, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.diagnostic;
@@ -43,6 +43,7 @@ public enum ErrorCode {
     NUM_TYPE_ARGUMENTS_MISMATCH,
     ROOT_CLASS_CANNOT_BE_FINAL,
     INCOMPATIBLE_RETURN_VALUE,
+    INCOMPATIBLE_VALUE,
     CANNOT_ASSIGN_FUNCTION_ARGUMENT,
     NUM_FUNCTION_ARGUMENTS_MISMATCH,
     EXPRESSION_NOT_APPLICABLE,

@@ -1,4 +1,4 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2022, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler;
@@ -564,6 +564,30 @@ public class PropertyAssignmentTest {
             """);
 
             assertTrue(Double.isInfinite(button.getMinHeight()));
+        }
+
+        @Test
+        public void InContext_FxConstant_With_Invalid_Value() {
+            MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+                <?import javafx.scene.control.*?>
+                <Button xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                        minHeight="{fx:constant {fx:constant POSITIVE_INFINITY}}"/>
+            """));
+
+            assertEquals(ErrorCode.EXPECTED_IDENTIFIER, ex.getDiagnostic().getCode());
+            assertCodeHighlight("{fx:constant POSITIVE_INFINITY}", ex);
+        }
+
+        @Test
+        public void InContext_FxConstant_With_Empty_Value() {
+            MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+                <?import javafx.scene.control.*?>
+                <Button xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                        minHeight="{fx:constant}"/>
+            """));
+
+            assertEquals(ErrorCode.INVALID_EXPRESSION, ex.getDiagnostic().getCode());
+            assertCodeHighlight("{fx:constant}", ex);
         }
 
         @Test

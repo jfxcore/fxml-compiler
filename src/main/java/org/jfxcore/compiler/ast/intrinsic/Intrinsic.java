@@ -15,6 +15,10 @@ public class Intrinsic {
     private final Usage usage;
     private final List<IntrinsicProperty> properties;
 
+    public Intrinsic(String name, Usage usage, IntrinsicProperty... properties) {
+        this(name, () -> CtClass.voidType, usage, properties);
+    }
+
     public Intrinsic(String name, Supplier<CtClass> type, Usage usage, IntrinsicProperty... properties) {
         this.name = name;
         this.type = type;

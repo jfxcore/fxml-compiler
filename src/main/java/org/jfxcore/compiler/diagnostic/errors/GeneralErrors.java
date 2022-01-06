@@ -117,6 +117,13 @@ public class GeneralErrors {
             NameHelper.getLongMethodSignature(behavior), requiredType.getJavaName()));
     }
 
+    public static MarkupException incompatibleValue(
+            SourceInfo sourceInfo, TypeInstance actualType, TypeInstance requiredType) {
+        return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
+            ErrorCode.INCOMPATIBLE_VALUE,
+            actualType.getJavaName(), requiredType.getJavaName()));
+    }
+
     public static MarkupException cannotAssignFunctionArgument(
             SourceInfo sourceInfo, String methodName, int argumentIndex, String sourceType) {
         return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
