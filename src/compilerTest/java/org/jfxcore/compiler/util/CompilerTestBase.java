@@ -1,4 +1,4 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2022, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.util;
@@ -10,6 +10,8 @@ import javassist.expr.ExprEditor;
 import javassist.expr.MethodCall;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
@@ -17,17 +19,9 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-public class CompilerTestBase extends NestedTestBase {
+public class CompilerTestBase {
 
     private String cachedFileName;
-
-    public CompilerTestBase() {
-        super(null);
-    }
-
-    public CompilerTestBase(Object outerTest) {
-        super(outerTest);
-    }
 
     @BeforeEach
     public void clearCachedFileName() {
@@ -42,13 +36,23 @@ public class CompilerTestBase extends NestedTestBase {
         return TestCompiler.newInstance(getFileName(), getAdditionalImports() + fxml);
     }
 
+    private static Object getOuter(Object instance) {
+        try {
+            Field field = instance.getClass().getDeclaredField("this$0");
+            field.setAccessible(true);
+            return field.get(instance);
+        } catch (ReflectiveOperationException e) {
+            return null;
+        }
+    }
+
     private String getAdditionalImports() {
         Object importClass = this;
         var imports = new StringBuilder();
 
         do {
             imports.append("<?import %s.*?>\r\n".formatted(importClass.getClass().getCanonicalName()));
-            importClass = importClass instanceof NestedTestBase n ? n.getOuterTest() : null;
+            importClass = getOuter(importClass);
         } while (importClass != null);
 
         return imports.toString();
@@ -87,7 +91,7 @@ public class CompilerTestBase extends NestedTestBase {
 
         do {
             names.add(0, testClass.getClass().getSimpleName());
-            testClass = testClass instanceof NestedTestBase n ? n.getOuterTest() : null;
+            testClass = getOuter(testClass);
         } while (testClass != null);
 
         names.add(getMethodName());

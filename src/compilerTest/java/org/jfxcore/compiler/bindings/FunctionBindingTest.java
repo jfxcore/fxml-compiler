@@ -1,4 +1,4 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2022, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.bindings;
@@ -429,6 +429,18 @@ public class FunctionBindingTest extends CompilerTestBase {
         """);
 
         assertEquals("foo-1.0", root.getId());
+    }
+
+    @Test
+    public void Bind_Once_With_FxValue_Param_Fails() {
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <?import javafx.fxml.*?>
+            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                      id="{fx:once defaultMethod('foo-%s', {fx:value foo})}"/>
+        """));
+
+        assertEquals(ErrorCode.UNEXPECTED_INTRINSIC, ex.getDiagnostic().getCode());
+        assertCodeHighlight("{fx:value foo}", ex);
     }
 
     @Test

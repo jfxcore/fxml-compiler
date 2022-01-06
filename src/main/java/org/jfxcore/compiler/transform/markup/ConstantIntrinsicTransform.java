@@ -1,4 +1,4 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2022, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.transform.markup;
@@ -11,10 +11,10 @@ import org.jfxcore.compiler.ast.ObjectNode;
 import org.jfxcore.compiler.ast.PropertyNode;
 import org.jfxcore.compiler.ast.ValueNode;
 import org.jfxcore.compiler.ast.emit.EmitClassConstantNode;
-import org.jfxcore.compiler.ast.expression.FunctionExpressionNode;
 import org.jfxcore.compiler.ast.intrinsic.Intrinsics;
+import org.jfxcore.compiler.ast.text.TextNode;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
-import org.jfxcore.compiler.diagnostic.errors.GeneralErrors;
+import org.jfxcore.compiler.diagnostic.errors.ParserErrors;
 import org.jfxcore.compiler.diagnostic.errors.SymbolResolutionErrors;
 import org.jfxcore.compiler.transform.Transform;
 import org.jfxcore.compiler.transform.TransformContext;
@@ -53,13 +53,21 @@ public class ConstantIntrinsicTransform implements Transform {
             Resolver resolver = new Resolver(propertyNode.getSourceInfo());
             PropertyInfo propertyInfo = resolver.resolveProperty(parentType, propertyNode.getName());
             valueType = propertyInfo.getValueTypeInstance();
-        } else if (!(parentNode instanceof FunctionExpressionNode)) {
-            throw GeneralErrors.unexpectedIntrinsic(node.getSourceInfo(), objectNode.getType().getMarkupName());
         }
 
-        String textValue = objectNode.getTextContent().getText();
+        if (objectNode.getChildren().size() == 0) {
+            throw ParserErrors.invalidExpression(objectNode.getSourceInfo());
+        }
 
-        return createConstantNode(valueType, textValue, node.getSourceInfo());
+        if (objectNode.getChildren().size() > 1) {
+            throw ParserErrors.expectedIdentifier(SourceInfo.span(objectNode.getChildren()));
+        }
+
+        if (!(objectNode.getChildren().get(0) instanceof TextNode textNode)) {
+            throw ParserErrors.expectedIdentifier(objectNode.getChildren().get(0).getSourceInfo());
+        }
+
+        return createConstantNode(valueType, textNode.getText(), node.getSourceInfo());
     }
 
     private ValueNode createConstantNode(@Nullable TypeInstance valueType, String textValue, SourceInfo sourceInfo) {

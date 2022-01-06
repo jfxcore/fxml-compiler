@@ -1,4 +1,4 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2022, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler;
@@ -471,10 +471,6 @@ public class InstantiationTest extends CompilerTestBase {
 
     @Nested
     public class FxValueTest extends CompilerTestBase {
-        FxValueTest() {
-            super("org.jfxcore.compiler.classes.FxValueTest");
-        }
-
         @Test
         public void Object_Is_Instantiated_With_ValueOf_Method() {
             Button root = compileAndRun("""
@@ -536,6 +532,30 @@ public class InstantiationTest extends CompilerTestBase {
 
             assertEquals(ErrorCode.VALUEOF_METHOD_NOT_FOUND, ex.getDiagnostic().getCode());
             assertCodeHighlight("<fx:value>red</fx:value>", ex);
+        }
+
+        @Test
+        public void InContext_FxValue_With_Invalid_Constant_Value() {
+            MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+                <?import javafx.scene.control.*?>
+                <Button xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                        minHeight="{fx:value {fx:constant Double.POSITIVE_INFINITY}}"/>
+            """));
+
+            assertEquals(ErrorCode.INCOMPATIBLE_VALUE, ex.getDiagnostic().getCode());
+            assertCodeHighlight("{fx:constant Double.POSITIVE_INFINITY}", ex);
+        }
+
+        @Test
+        public void InContext_FxValue_With_Empty_Value() {
+            MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+                <?import javafx.scene.control.*?>
+                <Button xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                        minHeight="{fx:value}"/>
+            """));
+
+            assertEquals(ErrorCode.INVALID_EXPRESSION, ex.getDiagnostic().getCode());
+            assertCodeHighlight("{fx:value}", ex);
         }
 
         @Test
