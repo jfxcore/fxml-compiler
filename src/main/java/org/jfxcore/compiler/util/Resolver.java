@@ -1,4 +1,4 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2022, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.util;
@@ -65,6 +65,13 @@ public class Resolver {
      * Returns the class for the specified fully-qualified type name, or <code>null</code> if the class was not found.
      */
     public CtClass tryResolveClass(String fullyQualifiedName) {
+        int dimensions = 0;
+
+        while (fullyQualifiedName.endsWith("[]")) {
+            fullyQualifiedName = fullyQualifiedName.substring(0, fullyQualifiedName.length() - 2);
+            ++dimensions;
+        }
+
         int generic = fullyQualifiedName.indexOf('<');
         if (generic >= 0) {
             fullyQualifiedName = fullyQualifiedName.substring(0, generic);
@@ -75,7 +82,7 @@ public class Resolver {
 
         do {
             try {
-                return CompilationContext.getCurrent().getClassPool().get(className);
+                return CompilationContext.getCurrent().getClassPool().get(className + "[]".repeat(dimensions));
             } catch (NotFoundException ignored) {
             }
 
@@ -129,11 +136,20 @@ public class Resolver {
 
         List<String> res = new ArrayList<>();
         res.add(typeName);
+        boolean javaLang = false;
 
         for (String imp : imports) {
+            if (!javaLang && imp.equals("java.lang.*")) {
+                javaLang = true;
+            }
+
             if (imp.endsWith(".*")) {
                 res.add(imp.replace("*", "") + typeName);
             }
+        }
+
+        if (!javaLang) {
+            res.add("java.lang." + typeName);
         }
 
         return res;
