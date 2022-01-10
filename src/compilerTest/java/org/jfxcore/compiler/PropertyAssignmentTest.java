@@ -369,6 +369,93 @@ public class PropertyAssignmentTest {
             assertEquals(SelectionMode.MULTIPLE, root.getSelectionModel().getSelectionMode());
         }
 
+        @SuppressWarnings("unused")
+        public static class CsvArrayPane extends GridPane {
+            private int[] intArray;
+            public int[] getIntArray() { return intArray; }
+            public void setIntArray(int[] values) { intArray = values; }
+
+            private int[] varargsIntArray;
+            public int[] getVarargsIntArray() { return varargsIntArray; }
+            public void setVarargsIntArray(int... values) { varargsIntArray = values; }
+
+            private double[] doubleArray;
+            public double[] getDoubleArray() { return doubleArray; }
+            public void setDoubleArray(double[] values) { doubleArray = values; }
+
+            private double[] varargsDoubleArray;
+            public double[] getVarargsDoubleArray() { return varargsDoubleArray; }
+            public void setVarargsDoubleArray(double... values) { varargsDoubleArray = values; }
+        }
+
+        @Test
+        public void Single_Value_Is_Coerced_To_Array() {
+            CsvArrayPane root = compileAndRun("""
+                <CsvArrayPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                              doubleArray="0.5"/>
+            """);
+
+            assertEquals(1, root.getDoubleArray().length);
+            assertEquals(0.5, root.getDoubleArray()[0], 0.001);
+        }
+
+        @Test
+        public void Single_Value_Is_Coerced_To_Varargs_Array() {
+            CsvArrayPane root = compileAndRun("""
+                <CsvArrayPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                              varargsDoubleArray="0.5"/>
+            """);
+
+            assertEquals(1, root.getVarargsDoubleArray().length);
+            assertEquals(0.5, root.getVarargsDoubleArray()[0], 0.001);
+        }
+
+        @Test
+        public void Comma_Separated_String_Is_Coerced_To_Array() {
+            CsvArrayPane root = compileAndRun("""
+                <CsvArrayPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                              doubleArray="1,2,3"/>
+            """);
+
+            assertEquals(3, root.getDoubleArray().length);
+            assertEquals(1, root.getDoubleArray()[0], 0.001);
+            assertEquals(2, root.getDoubleArray()[1], 0.001);
+            assertEquals(3, root.getDoubleArray()[2], 0.001);
+        }
+
+        @Test
+        public void Comma_Separated_String_Is_Coerced_To_Varargs_Array() {
+            CsvArrayPane root = compileAndRun("""
+                <CsvArrayPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                              varargsDoubleArray="1,2,3"/>
+            """);
+
+            assertEquals(3, root.getVarargsDoubleArray().length);
+            assertEquals(1, root.getVarargsDoubleArray()[0], 0.001);
+            assertEquals(2, root.getVarargsDoubleArray()[1], 0.001);
+            assertEquals(3, root.getVarargsDoubleArray()[2], 0.001);
+        }
+
+        @Test
+        public void Comma_Separated_String_With_Inconvertible_Components_Cannot_Be_Coerced_To_Array() {
+            MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+                <CsvArrayPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                              intArray="1.5,2,3"/>
+            """));
+
+            assertEquals(ErrorCode.CANNOT_COERCE_PROPERTY_VALUE, ex.getDiagnostic().getCode());
+        }
+
+        @Test
+        public void Comma_Separated_String_With_Inconvertible_Components_Cannot_Be_Coerced_To_Varargs_Array() {
+            MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+                <CsvArrayPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                              varargsIntArray="1.5,2,3"/>
+            """));
+
+            assertEquals(ErrorCode.CANNOT_COERCE_PROPERTY_VALUE, ex.getDiagnostic().getCode());
+        }
+
         @Test
         public void Comma_Separated_String_Is_Coerced_To_Collection() {
             GridPane root = compileAndRun("""

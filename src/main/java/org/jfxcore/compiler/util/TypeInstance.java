@@ -1,4 +1,4 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2022, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.util;
@@ -72,8 +72,9 @@ public class TypeInstance {
         checkArguments(type, arguments);
 
         int dimensions = 0;
-        while (type.isArray()) {
-            type = unchecked(SourceInfo.none(), type::getComponentType);
+        CtClass t = type;
+        while (t.isArray()) {
+            t = unchecked(SourceInfo.none(), t::getComponentType);
             ++dimensions;
         }
 
@@ -92,8 +93,9 @@ public class TypeInstance {
         checkArguments(type, arguments);
 
         int dimensions = 0;
-        while (type.isArray()) {
-            type = unchecked(SourceInfo.none(), type::getComponentType);
+        CtClass t = type;
+        while (t.isArray()) {
+            t = unchecked(SourceInfo.none(), t::getComponentType);
             ++dimensions;
         }
 
@@ -169,7 +171,15 @@ public class TypeInstance {
             return this;
         }
 
-        return new TypeInstance(type, 0, arguments, superTypes, wildcard);
+        CtClass componentType = unchecked(SourceInfo.none(), type::getComponentType);
+        int dimensions = 0;
+        CtClass t = componentType;
+        while (t.isArray()) {
+            t = unchecked(SourceInfo.none(), t::getComponentType);
+            ++dimensions;
+        }
+
+        return new TypeInstance(componentType, dimensions, arguments, superTypes, wildcard);
     }
 
     /**
@@ -379,13 +389,21 @@ public class TypeInstance {
             case UPPER -> builder.append("? extends ");
         }
 
+        String className;
+
         if (javaNames) {
-            builder.append(NameHelper.getJavaClassName(SourceInfo.none(), type));
+            className = NameHelper.getJavaClassName(SourceInfo.none(), type);
         } else if (simpleNames) {
-            builder.append(type.getSimpleName());
+            className = type.getSimpleName();
         } else {
-            builder.append(type.getName());
+            className = type.getName();
         }
+
+        while (className.endsWith("[]")) {
+            className = className.substring(0, className.length() - 2);
+        }
+
+        builder.append(className);
 
         if (arguments.size() > 0) {
             builder.append('<');

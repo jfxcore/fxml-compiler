@@ -1,4 +1,4 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2022, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.emit;
@@ -222,11 +222,11 @@ public class EmitObjectNode extends ReferenceableNode {
             boolean lastParam = i == paramTypes.length - 1;
 
             if (varargs && lastParam) {
-                TypeInstance paramType = paramTypes[i];
+                TypeInstance componentType = paramTypes[i].getComponentType();
                 TypeInstance argType = TypeHelper.getTypeInstance(arguments.get(i));
 
-                if (arguments.size() > paramTypes.length || !argType.subtypeOf(paramType)) {
-                    code.newarray(paramType.jvmType(), arguments.size() - paramTypes.length + 1);
+                if (arguments.size() > paramTypes.length || !argType.subtypeOf(paramTypes[i])) {
+                    code.newarray(componentType.jvmType(), arguments.size() - paramTypes.length + 1);
 
                     for (int j = i; j < arguments.size(); ++j) {
                         argType = TypeHelper.getTypeInstance(arguments.get(j));
@@ -236,12 +236,12 @@ public class EmitObjectNode extends ReferenceableNode {
 
                         context.emit(arguments.get(j));
 
-                        code.ext_autoconv(arguments.get(i).getSourceInfo(), argType.jvmType(), paramType.jvmType())
+                        code.ext_autoconv(arguments.get(i).getSourceInfo(), argType.jvmType(), componentType.jvmType())
                             .ext_arraystore(argType.jvmType());
                     }
                 } else {
                     context.emit(arguments.get(i));
-                    code.ext_autoconv(arguments.get(i).getSourceInfo(), argType.jvmType(), paramType.jvmType());
+                    code.ext_autoconv(arguments.get(i).getSourceInfo(), argType.jvmType(), componentType.jvmType());
                 }
             } else {
                 context.emit(arguments.get(i));

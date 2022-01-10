@@ -1,4 +1,4 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2022, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.diagnostic;
@@ -25,7 +25,7 @@ public final class SourceInfo {
         return new SourceInfo(from.start.getLine(), from.start.getColumn(), to.end.getLine(), to.end.getColumn());
     }
 
-    public static SourceInfo span(Collection<Node> nodes) {
+    public static SourceInfo span(Collection<? extends Node> nodes) {
         var list = nodes.stream().map(Node::getSourceInfo).collect(Collectors.toList());
 
         if (list.isEmpty()) {

@@ -11,6 +11,8 @@ import javassist.CtMethod;
 import org.jfxcore.compiler.diagnostic.ErrorCode;
 import org.jfxcore.compiler.diagnostic.MarkupException;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.jfxcore.compiler.TestBase;
 import java.util.Collections;
@@ -20,6 +22,75 @@ import static org.junit.jupiter.api.Assertions.*;
 
 @SuppressWarnings({"unused", "rawtypes"})
 public class ResolverTest extends TestBase {
+
+    private List<String> imports;
+
+    @BeforeEach
+    public void setup() {
+        imports = CompilationContext.getCurrent().getImports();
+    }
+
+    @AfterEach
+    public void restore() {
+        CompilationContext.getCurrent().setImports(imports);
+    }
+
+    @Test
+    public void Resolve_Array_Types() {
+        Resolver resolver = new Resolver(SourceInfo.none());
+        assertEquals("java.lang.Double[]", resolver.resolveClassAgainstImports("Double[]").getName());
+        assertEquals("java.lang.Double[][]", resolver.resolveClassAgainstImports("Double[][]").getName());
+        assertEquals("java.lang.Double[][][]", resolver.resolveClassAgainstImports("Double[][][]").getName());
+    }
+
+    @Test
+    public void Resolve_Generic_Array_Types() {
+        Resolver resolver = new Resolver(SourceInfo.none());
+        assertEquals("java.lang.Comparable[]", resolver.resolveClassAgainstImports("Comparable<Double>[]").getName());
+        assertEquals("java.lang.Comparable[][]", resolver.resolveClassAgainstImports("Comparable<Double>[][]").getName());
+        assertEquals("java.lang.Comparable[][][]", resolver.resolveClassAgainstImports("Comparable<Double>[][][]").getName());
+    }
+
+    public static class Foo {
+        public static class Bar {
+            public static class Baz {}
+        }
+        public static class Double {}
+    }
+
+    @Test
+    public void Resolve_Nested_Class() {
+        Resolver resolver = new Resolver(SourceInfo.none());
+        CompilationContext.getCurrent().setImports(
+            List.of(ResolverTest.class.getName() + ".*", Foo.class.getName() + ".*", Foo.Bar.class.getName() + ".*"));
+
+        assertEquals(
+            "org.jfxcore.compiler.util.ResolverTest$Foo",
+            resolver.resolveClassAgainstImports("Foo").getName());
+        assertEquals(
+            "org.jfxcore.compiler.util.ResolverTest$Foo$Bar",
+            resolver.resolveClassAgainstImports("Bar").getName());
+        assertEquals(
+            "org.jfxcore.compiler.util.ResolverTest$Foo$Bar$Baz",
+            resolver.resolveClassAgainstImports("Baz").getName());
+    }
+
+    @Test
+    public void Resolve_Nested_Class_With_JavaLang_SimpleName() {
+        Resolver resolver = new Resolver(SourceInfo.none());
+        CompilationContext.getCurrent().setImports(
+            List.of(ResolverTest.class.getName() + ".*", Foo.class.getName() + ".*"));
+
+        assertEquals(
+            "org.jfxcore.compiler.util.ResolverTest$Foo$Double",
+            resolver.resolveClassAgainstImports("Double").getName());
+    }
+
+    @Test
+    public void Resolve_Class_With_JavaLang_SimpleName() {
+        Resolver resolver = new Resolver(SourceInfo.none());
+        assertEquals("java.lang.Double", resolver.resolveClassAgainstImports("Double").getName());
+    }
 
     public static void nonGenericParamTypes(int a, String b, Comparable c) {}
     public static void genericParamTypes(int a, Comparable<String> b, ObservableValue<Comparable<String>> c, Comparable<?> d) {}

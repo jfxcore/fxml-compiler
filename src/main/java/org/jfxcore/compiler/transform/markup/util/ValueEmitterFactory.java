@@ -17,6 +17,7 @@ import org.jfxcore.compiler.ast.Node;
 import org.jfxcore.compiler.ast.ObjectNode;
 import org.jfxcore.compiler.ast.PropertyNode;
 import org.jfxcore.compiler.ast.ValueNode;
+import org.jfxcore.compiler.ast.emit.EmitArrayNode;
 import org.jfxcore.compiler.ast.emit.EmitClassConstantNode;
 import org.jfxcore.compiler.ast.emit.EmitCollectionAdderNode;
 import org.jfxcore.compiler.ast.emit.EmitLiteralNode;
@@ -553,7 +554,7 @@ public class ValueEmitterFactory {
      *
      * @return {@link EmitObjectNode} if successful, <code>null</code> otherwise.
      */
-    public static EmitObjectNode newObjectByCoercion(ObjectNode objectNode) {
+    public static ValueEmitterNode newObjectByCoercion(ObjectNode objectNode) {
         if (objectNode.getChildren().size() != 1) {
             return null;
         }
@@ -564,7 +565,7 @@ public class ValueEmitterFactory {
             return null;
         }
 
-        EmitObjectNode result = newObjectByCoercion(objectNode, childText, objectNode.getProperties(), targetType);
+        ValueEmitterNode result = newObjectByCoercion(objectNode, childText, objectNode.getProperties(), targetType);
         if (result != null) {
             objectNode.getChildren().clear();
         }
@@ -579,11 +580,11 @@ public class ValueEmitterFactory {
      *
      * @return {@link EmitObjectNode} if successful, <code>null</code> otherwise.
      */
-    public static EmitObjectNode newObjectByCoercion(TypeInstance targetType, TextNode textNode) {
+    public static ValueEmitterNode newObjectByCoercion(TypeInstance targetType, TextNode textNode) {
         return newObjectByCoercion(null, textNode, Collections.emptyList(), targetType);
     }
 
-    private static EmitObjectNode newObjectByCoercion(
+    private static ValueEmitterNode newObjectByCoercion(
             ObjectNode objectNode, TextNode textNode, Collection<? extends Node> children, TypeInstance targetType) {
         if (TypeHelper.isPrimitiveBox(targetType.jvmType())) {
             return null;
@@ -612,7 +613,7 @@ public class ValueEmitterFactory {
             constructor = findConstructor(targetType, literals, textNode.getSourceInfo());
 
             if (constructor == null) {
-                return null;
+                return newArray(literals, targetType, textNode.getSourceInfo());
             }
         }
 
@@ -655,6 +656,25 @@ public class ValueEmitterFactory {
     }
 
     private record ConstructorWithParams(CtConstructor constructor, List<ValueEmitterNode> params) {}
+
+    private static ValueEmitterNode newArray(String[] literals, TypeInstance targetType, SourceInfo sourceInfo) {
+        if (!targetType.isArray() || targetType.getDimensions() != 1) {
+            return null;
+        }
+
+        List<ValueEmitterNode> params = new ArrayList<>();
+
+        for (String literal : literals) {
+            ValueEmitterNode param = newLiteralValue(literal, targetType.getComponentType(), sourceInfo);
+            if (param != null) {
+                params.add(param);
+            } else {
+                return null;
+            }
+        }
+
+        return new EmitArrayNode(targetType, params);
+    }
 
     /**
      * Tries to find constructors for the specified type where all formal parameters are annotated with
