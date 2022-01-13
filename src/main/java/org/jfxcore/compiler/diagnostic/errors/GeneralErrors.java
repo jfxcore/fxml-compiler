@@ -1,4 +1,4 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2022, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.diagnostic.errors;
@@ -25,6 +25,11 @@ public class GeneralErrors {
     public static MarkupException codeBehindClassNameMismatch(SourceInfo sourceInfo) {
         return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
             ErrorCode.CODEBEHIND_CLASS_NAME_MISMATCH));
+    }
+
+    public static MarkupException markupClassNameWithoutCodeBehind(SourceInfo sourceInfo, String markupName) {
+        return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
+            ErrorCode.MARKUP_CLASS_NAME_WITHOUT_CODE_BEHIND, markupName));
     }
 
     public static MarkupException unknownIntrinsic(SourceInfo sourceInfo, String name) {

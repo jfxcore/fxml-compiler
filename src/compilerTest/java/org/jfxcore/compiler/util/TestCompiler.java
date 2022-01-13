@@ -11,9 +11,6 @@ import org.jfxcore.compiler.ast.codebehind.ClassNode;
 import org.jfxcore.compiler.ast.codebehind.JavaEmitContext;
 import org.jfxcore.compiler.ast.emit.BytecodeEmitContext;
 import org.jfxcore.compiler.ast.emit.EmitInitializeRootNode;
-import org.jfxcore.compiler.diagnostic.ErrorCode;
-import org.jfxcore.compiler.diagnostic.MarkupException;
-import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.parse.FxmlParser;
 import org.jfxcore.compiler.transform.Transformer;
 import javax.tools.Diagnostic;
@@ -78,7 +75,7 @@ public class TestCompiler extends AbstractCompiler {
             new JavaEmitContext(codeBehind).emit(codeDocument);
 
             classNode = (ClassNode)codeDocument.getRoot();
-            simpleClassName = classNode.hasCodeBehind() ? classNode.getMangledClassName() : classNode.getClassName();
+            simpleClassName = classNode.hasCodeBehind() ? classNode.getMarkupClassName() : classNode.getClassName();
         } catch (RuntimeException ex) {
             throw ex;
         } catch (Exception ex) {

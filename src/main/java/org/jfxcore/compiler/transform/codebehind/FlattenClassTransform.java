@@ -1,4 +1,4 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2022, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.transform.codebehind;
@@ -17,15 +17,19 @@ import org.jfxcore.compiler.diagnostic.errors.SymbolResolutionErrors;
 import org.jfxcore.compiler.transform.Transform;
 import org.jfxcore.compiler.transform.TransformContext;
 import org.jfxcore.compiler.util.FileUtil;
+import org.jfxcore.compiler.util.NameHelper;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * Replaces the root element of the AST with a {@link ClassNode} and deletes all other nodes except {@link AddCodeFieldNode}.
+ * Replaces the root element of the AST with a {@link ClassNode} and deletes all other
+ * nodes except {@link AddCodeFieldNode}.
  */
 public class FlattenClassTransform implements Transform {
+
+    private static final String DEFAULT_MARKUP_CLASS_NAME = "%sMarkup";
 
     @Override
     public Set<Class<? extends Transform>> getDependsOn() {
@@ -39,7 +43,7 @@ public class FlattenClassTransform implements Transform {
         }
 
         PropertyNode codeBehindClass = root.findIntrinsicProperty(Intrinsics.CLASS);
-        String packageName, className;
+        String packageName, className, markupClassName;
         int classModifiers = Modifier.PUBLIC;
 
         PropertyNode classModifierNode = root.findIntrinsicProperty(Intrinsics.CLASS_MODIFIER);
@@ -92,9 +96,29 @@ public class FlattenClassTransform implements Transform {
             className = className.substring(0, className.lastIndexOf('.'));
         }
 
+        PropertyNode markupClassNameNode = root.findIntrinsicProperty(Intrinsics.MARKUP_CLASS_NAME);
+        if (markupClassNameNode != null) {
+            if (codeBehindClass == null) {
+                throw GeneralErrors.markupClassNameWithoutCodeBehind(
+                    markupClassNameNode.getSourceInfo(), markupClassNameNode.getMarkupName());
+            }
+
+            if (!NameHelper.isJavaIdentifier(markupClassNameNode.getTextValueNotEmpty(context))) {
+                throw PropertyAssignmentErrors.cannotCoercePropertyValue(
+                    markupClassNameNode.getSourceInfo(),
+                    markupClassNameNode.getMarkupName(),
+                    markupClassNameNode.getTextValueNotEmpty(context));
+            }
+
+            markupClassName = markupClassNameNode.getTextValueNotEmpty(context);
+        } else {
+            markupClassName = String.format(DEFAULT_MARKUP_CLASS_NAME, className);
+        }
+
         return new ClassNode(
             packageName,
             className,
+            markupClassName,
             classModifiers,
             params,
             codeBehindClass != null,

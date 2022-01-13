@@ -1,4 +1,4 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2022, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.codebehind;
@@ -9,14 +9,16 @@ import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.ast.ObjectNode;
 import org.jfxcore.compiler.ast.PropertyNode;
 import org.jfxcore.compiler.ast.TypeNode;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Objects;
 
 public class ClassNode extends ObjectNode implements JavaEmitterNode {
 
     private final String packageName;
     private final String className;
-    private final String mangledClassName;
+    private final String markupClassName;
     private final String[] parameters;
     private final int classModifiers;
     private final boolean hasCodeBehind;
@@ -24,6 +26,7 @@ public class ClassNode extends ObjectNode implements JavaEmitterNode {
     public ClassNode(
             @Nullable String packageName,
             String className,
+            String markupClassName,
             int classModifiers,
             String[] parameters,
             boolean hasCodeBehind,
@@ -33,7 +36,7 @@ public class ClassNode extends ObjectNode implements JavaEmitterNode {
         super(type, properties, Collections.emptyList(), sourceInfo);
         this.packageName = packageName;
         this.className = checkNotNull(className);
-        this.mangledClassName = "$markup$" + className;
+        this.markupClassName = markupClassName;
         this.classModifiers = classModifiers;
         this.parameters = parameters;
         this.hasCodeBehind = hasCodeBehind;
@@ -47,8 +50,8 @@ public class ClassNode extends ObjectNode implements JavaEmitterNode {
         return className;
     }
 
-    public String getMangledClassName() {
-        return mangledClassName;
+    public String getMarkupClassName() {
+        return markupClassName;
     }
 
     public int getClassModifiers() {
@@ -67,9 +70,7 @@ public class ClassNode extends ObjectNode implements JavaEmitterNode {
     public void emit(JavaEmitContext context) {
         String modifiers;
 
-        if (hasCodeBehind) {
-            modifiers = "abstract ";
-        } else if (Modifier.isPublic(classModifiers)) {
+        if (Modifier.isPublic(classModifiers)) {
             modifiers = "public ";
         } else if (Modifier.isProtected(classModifiers)) {
             modifiers = "protected ";
@@ -77,10 +78,15 @@ public class ClassNode extends ObjectNode implements JavaEmitterNode {
             modifiers = "";
         }
 
-        StringBuilder code = context.getOutput();
-        String className = hasCodeBehind ? mangledClassName : this.className;
+        if (hasCodeBehind) {
+            modifiers += "abstract ";
+        }
 
-        code.append(String.format("%sclass %s extends %s {\r\n", modifiers, className, getType().getMarkupName()));
+        StringBuilder code = context.getOutput();
+        String className = hasCodeBehind ? markupClassName : this.className;
+
+        code.append("@javax.annotation.processing.Generated(\"org.jfxcore:compiler\")\r\n")
+            .append(String.format("%sclass %s extends %s {\r\n", modifiers, className, getType().getMarkupName()));
 
         for (PropertyNode propertyNode : getProperties()) {
             context.emit(propertyNode);
@@ -139,8 +145,28 @@ public class ClassNode extends ObjectNode implements JavaEmitterNode {
     @Override
     public ClassNode deepClone() {
         return new ClassNode(
-            packageName, className, classModifiers, parameters, hasCodeBehind, getType(),
+            packageName, className, markupClassName, classModifiers, parameters, hasCodeBehind, getType(),
             getProperties(), getSourceInfo());
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        ClassNode other = (ClassNode)o;
+        return classModifiers == other.classModifiers
+            && hasCodeBehind == other.hasCodeBehind
+            && Objects.equals(packageName, other.packageName)
+            && Objects.equals(className, other.className)
+            && Objects.equals(markupClassName, other.markupClassName)
+            && Arrays.equals(parameters, other.parameters);
+    }
+
+    @Override
+    public int hashCode() {
+        int result = Objects.hash(packageName, className, markupClassName, classModifiers, hasCodeBehind);
+        result = 31 * result + Arrays.hashCode(parameters);
+        return result;
     }
 
 }
