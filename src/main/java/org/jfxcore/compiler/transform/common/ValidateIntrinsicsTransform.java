@@ -1,4 +1,4 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2022, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.transform.common;
@@ -10,33 +10,63 @@ import org.jfxcore.compiler.ast.PropertyNode;
 import org.jfxcore.compiler.ast.intrinsic.Intrinsic;
 import org.jfxcore.compiler.ast.intrinsic.Intrinsics;
 import org.jfxcore.compiler.diagnostic.errors.GeneralErrors;
+import org.jfxcore.compiler.diagnostic.errors.ObjectInitializationErrors;
 import org.jfxcore.compiler.diagnostic.errors.SymbolResolutionErrors;
 import org.jfxcore.compiler.transform.Transform;
 import org.jfxcore.compiler.transform.TransformContext;
 import org.jfxcore.compiler.util.NameHelper;
+import java.util.Set;
 
 /**
  * Ensures that intrinsics are well-formed.
  */
 public class ValidateIntrinsicsTransform implements Transform {
 
+    private static final Set<Intrinsic> CONFLICTING_INTRINSICS = Set.of(
+        Intrinsics.VALUE, Intrinsics.CONSTANT, Intrinsics.FACTORY);
+
     @Override
     public Node transform(TransformContext context, Node node) {
         if (node.typeEquals(ObjectNode.class)) {
-            return processObjectNode((ObjectNode)node);
+            if (((ObjectNode)node).getType().isIntrinsic()) {
+                return processIntrinsicElement((ObjectNode)node);
+            }
+
+            validateConflictingIntrinsics((ObjectNode)node);
         }
 
         if (node.typeEquals(PropertyNode.class)) {
-            return processPropertyNode(context, (PropertyNode)node);
+            return processIntrinsicAttribute(context, (PropertyNode)node);
         }
 
         return node;
     }
 
     /**
+     * Ensures that conflicting intrinsics cannot be used at the same time.
+     */
+    private void validateConflictingIntrinsics(ObjectNode objectNode) {
+        PropertyNode existingIntrinsic = null;
+
+        for (PropertyNode propertyNode : objectNode.getProperties()) {
+            Intrinsic intrinsic = propertyNode.isIntrinsic() ? Intrinsics.find(propertyNode.getName()) : null;
+            if (intrinsic == null || !CONFLICTING_INTRINSICS.contains(intrinsic)) {
+                continue;
+            }
+
+            if (existingIntrinsic == null) {
+                existingIntrinsic = propertyNode;
+            } else {
+                throw ObjectInitializationErrors.conflictingProperties(
+                    propertyNode.getSourceInfo(), propertyNode.getMarkupName(), existingIntrinsic.getMarkupName());
+            }
+        }
+    }
+
+    /**
      * Ensures that an intrinsic in element notation is valid, and all of its properties are valid.
      */
-    private ObjectNode processObjectNode(ObjectNode objectNode) {
+    private ObjectNode processIntrinsicElement(ObjectNode objectNode) {
         if (objectNode.getType().isIntrinsic()) {
             Intrinsic intrinsic = Intrinsics.find(objectNode.getType().getName());
             if (intrinsic == null) {
@@ -62,7 +92,7 @@ public class ValidateIntrinsicsTransform implements Transform {
     /**
      * Ensures that an intrinsic in attribute notation is valid.
      */
-    private PropertyNode processPropertyNode(TransformContext context, PropertyNode propertyNode) {
+    private PropertyNode processIntrinsicAttribute(TransformContext context, PropertyNode propertyNode) {
         if (propertyNode.isIntrinsic()) {
             Intrinsic intrinsic = Intrinsics.find(propertyNode.getName());
             if (intrinsic == null) {

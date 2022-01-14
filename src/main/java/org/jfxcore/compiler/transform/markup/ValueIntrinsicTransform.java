@@ -9,6 +9,7 @@ import org.jfxcore.compiler.ast.PropertyNode;
 import org.jfxcore.compiler.ast.ValueNode;
 import org.jfxcore.compiler.ast.emit.EmitLiteralNode;
 import org.jfxcore.compiler.ast.emit.EmitObjectNode;
+import org.jfxcore.compiler.ast.emit.ValueEmitterNode;
 import org.jfxcore.compiler.ast.intrinsic.Intrinsics;
 import org.jfxcore.compiler.ast.text.TextNode;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
@@ -22,8 +23,6 @@ import org.jfxcore.compiler.util.PropertyInfo;
 import org.jfxcore.compiler.util.Resolver;
 import org.jfxcore.compiler.util.TypeHelper;
 import org.jfxcore.compiler.util.TypeInstance;
-import java.util.Collections;
-import java.util.List;
 import java.util.Set;
 
 import static org.jfxcore.compiler.util.ExceptionHelper.unchecked;
@@ -64,7 +63,12 @@ public class ValueIntrinsicTransform implements Transform {
             throw ParserErrors.invalidExpression(SourceInfo.span(objectNode.getChildren()));
         }
 
-        if (!(objectNode.getChildren().get(0) instanceof ValueNode content)) {
+        ValueEmitterNode content;
+        if (objectNode.getChildren().get(0) instanceof ValueEmitterNode n) {
+            content = n;
+        } else if (objectNode.getChildren().get(0) instanceof TextNode n) {
+            content = new EmitLiteralNode(resolver.getTypeInstance(Classes.StringType()), n.getText(), n.getSourceInfo());
+        } else {
             throw ParserErrors.invalidExpression(objectNode.getChildren().get(0).getSourceInfo());
         }
 
@@ -77,7 +81,7 @@ public class ValueIntrinsicTransform implements Transform {
         return createValueOfNode(valueType, content, node.getSourceInfo());
     }
 
-    private ValueNode createValueOfNode(TypeInstance valueType, ValueNode content, SourceInfo sourceInfo) {
+    private ValueNode createValueOfNode(TypeInstance valueType, ValueEmitterNode content, SourceInfo sourceInfo) {
         Resolver resolver = new Resolver(sourceInfo);
         boolean hasValueOfMethod = resolver.tryResolveValueOfMethod(valueType.jvmType()) != null;
 
@@ -87,18 +91,10 @@ public class ValueIntrinsicTransform implements Transform {
                 sourceInfo, valueType.jvmType(), supertype != null ? supertype.jvmType() :  null);
         }
 
-        if (content instanceof TextNode textNode) {
-            content = new EmitLiteralNode(resolver.getTypeInstance(Classes.StringType()), textNode.getText(), sourceInfo);
-        }
-
-        return new EmitObjectNode(
-            null,
-            valueType,
-            null,
-            List.of(content),
-            Collections.emptyList(),
-            EmitObjectNode.CreateKind.VALUE_OF,
-            sourceInfo);
+        return EmitObjectNode
+            .valueOf(valueType, sourceInfo)
+            .value(content)
+            .create();
     }
 
 }

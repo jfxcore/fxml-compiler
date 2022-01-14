@@ -1,4 +1,4 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2022, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.transform.markup;
@@ -338,14 +338,13 @@ public class PropertyAssignmentTransform implements Transform {
                 node.getSourceInfo());
         }
 
-        return new EmitObjectNode(
-            null,
-            resolver.getTypeInstance(ObjectType()),
-            unchecked(node.getSourceInfo(), () -> ObjectType().getConstructor("()V")),
-            Collections.emptyList(),
-            Collections.emptyList(),
-            EmitObjectNode.CreateKind.CONSTRUCTOR,
-            node.getSourceInfo());
+        return EmitObjectNode
+            .constructor(
+                resolver.getTypeInstance(ObjectType()),
+                unchecked(node.getSourceInfo(), () -> ObjectType().getConstructor("()V")),
+                Collections.emptyList(),
+                node.getSourceInfo())
+            .create();
     }
 
     private ValueEmitterNode createEventHandlerNode(TransformContext context, ValueNode node, TypeInstance targetType) {

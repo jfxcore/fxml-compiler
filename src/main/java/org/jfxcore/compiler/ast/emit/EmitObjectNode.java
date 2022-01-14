@@ -3,8 +3,10 @@
 
 package org.jfxcore.compiler.ast.emit;
 
+import javassist.CtBehavior;
 import javassist.CtClass;
 import javassist.CtConstructor;
+import javassist.CtMethod;
 import javassist.Modifier;
 import javassist.bytecode.MethodInfo;
 import org.jetbrains.annotations.Nullable;
@@ -36,38 +38,232 @@ public class EmitObjectNode extends ReferenceableNode {
         NONE,
         LOAD_LOCAL,
         CONSTRUCTOR,
-        VALUE_OF
+        VALUE_OF,
+        FACTORY
     }
 
-    private final CtConstructor constructor;
+    public static class ConstructorBuilder {
+        private final TypeInstance type;
+        private final CtConstructor constructor;
+        private final Collection<? extends ValueNode> arguments;
+        private final SourceInfo sourceInfo;
+        private Collection<? extends Node> children = Collections.emptyList();
+        private String fieldName;
+
+        private ConstructorBuilder(
+                TypeInstance type,
+                CtConstructor constructor,
+                Collection<? extends ValueNode> arguments,
+                SourceInfo sourceInfo) {
+            this.type = type;
+            this.constructor = constructor;
+            this.arguments = arguments;
+            this.sourceInfo = sourceInfo;
+        }
+
+        public ConstructorBuilder children(Collection<? extends Node> children) {
+            this.children = children;
+            return this;
+        }
+
+        public ConstructorBuilder backingField(String fieldName) {
+            this.fieldName = fieldName;
+            return this;
+        }
+
+        public EmitObjectNode create() {
+            return new EmitObjectNode(
+                fieldName,
+                type,
+                constructor,
+                arguments,
+                children,
+                EmitObjectNode.CreateKind.CONSTRUCTOR,
+                sourceInfo);
+        }
+    }
+
+    public static class ValueOfBuilder {
+        private final TypeInstance type;
+        private final SourceInfo sourceInfo;
+        private ValueEmitterNode value;
+        private Collection<? extends Node> children = Collections.emptyList();
+        private String fieldName;
+
+        private ValueOfBuilder(TypeInstance type, SourceInfo sourceInfo) {
+            this.type = type;
+            this.sourceInfo = sourceInfo;
+        }
+
+        public ValueOfBuilder value(ValueEmitterNode value) {
+            this.value = value;
+            return this;
+        }
+
+        public ValueOfBuilder textValue(String value) {
+            this.value = new EmitLiteralNode(
+                new Resolver(sourceInfo).getTypeInstance(Classes.StringType()), value, sourceInfo);
+            return this;
+        }
+
+        public ValueOfBuilder children(Collection<? extends Node> children) {
+            this.children = children;
+            return this;
+        }
+
+        public ValueOfBuilder backingField(String fieldName) {
+            this.fieldName = fieldName;
+            return this;
+        }
+
+        public EmitObjectNode create() {
+            return new EmitObjectNode(
+                fieldName,
+                type,
+                null,
+                List.of(value),
+                children,
+                CreateKind.VALUE_OF,
+                sourceInfo);
+        }
+    }
+
+    public static class FactoryBuilder {
+        private final TypeInstance type;
+        private final SourceInfo sourceInfo;
+        private final CtMethod factoryMethod;
+        private Collection<? extends Node> children = Collections.emptyList();
+        private String fieldName;
+
+        private FactoryBuilder(TypeInstance type, CtMethod factoryMethod, SourceInfo sourceInfo) {
+            this.type = type;
+            this.factoryMethod = factoryMethod;
+            this.sourceInfo = sourceInfo;
+        }
+
+        public FactoryBuilder children(Collection<? extends Node> children) {
+            this.children = children;
+            return this;
+        }
+
+        public FactoryBuilder backingField(String fieldName) {
+            this.fieldName = fieldName;
+            return this;
+        }
+
+        public EmitObjectNode create() {
+            return new EmitObjectNode(
+                fieldName,
+                type,
+                factoryMethod,
+                Collections.emptyList(),
+                children,
+                CreateKind.FACTORY,
+                sourceInfo);
+        }
+    }
+
+    public static class RootObjectBuilder {
+        private final TypeInstance type;
+        private final SourceInfo sourceInfo;
+        private Collection<? extends Node> children = Collections.emptyList();
+
+        private RootObjectBuilder(TypeInstance type, SourceInfo sourceInfo) {
+            this.type = type;
+            this.sourceInfo = sourceInfo;
+        }
+
+        public RootObjectBuilder children(Collection<? extends Node> children) {
+            this.children = children;
+            return this;
+        }
+
+        public EmitObjectNode create() {
+            return new EmitObjectNode(
+                null,
+                type,
+                null,
+                Collections.emptyList(),
+                children,
+                CreateKind.NONE,
+                sourceInfo);
+        }
+    }
+
+    /**
+     * Emits an object by invoking a constructor.
+     */
+    public static ConstructorBuilder constructor(
+            TypeInstance type, CtConstructor constructor, List<? extends ValueNode> arguments, SourceInfo sourceInfo) {
+        return new ConstructorBuilder(type, constructor, arguments, sourceInfo);
+    }
+
+    /**
+     * Emits an object by invoking a T::valueOf(String)->T method.
+     */
+    public static ValueOfBuilder valueOf(TypeInstance type, SourceInfo sourceInfo) {
+        return new ValueOfBuilder(type, sourceInfo);
+    }
+
+    /**
+     * Emits an object by invoking a parameterless factory method.
+     */
+    public static FactoryBuilder factory(TypeInstance type, CtMethod factoryMethod, SourceInfo sourceInfo) {
+        return new FactoryBuilder(type, factoryMethod, sourceInfo);
+    }
+
+    /**
+     * Emits an object by loading an existing object from a local.
+     */
+    public static EmitObjectNode loadLocal(
+            TypeInstance type, ReferenceableNode referencedNode, SourceInfo sourceInfo) {
+        return new EmitObjectNode(
+            referencedNode,
+            null,
+            type,
+            null,
+            Collections.emptyList(),
+            Collections.emptyList(),
+            EmitObjectNode.CreateKind.LOAD_LOCAL,
+            sourceInfo);
+    }
+
+    /**
+     * Emits an object by loading the root object.
+     */
+    public static RootObjectBuilder loadRoot(TypeInstance type, SourceInfo sourceInfo) {
+        return new RootObjectBuilder(type, sourceInfo);
+    }
+
+    private final CtBehavior constructorOrFactoryMethod;
     private final List<ValueNode> arguments;
     private final List<Node> children;
     private final CreateKind createKind;
     private ResolvedTypeNode type;
 
-    public EmitObjectNode(
+    private EmitObjectNode(
             @Nullable String fieldName,
             TypeInstance type,
-            @Nullable CtConstructor constructor,
+            @Nullable CtBehavior constructorOrFactoryMethod,
             Collection<? extends ValueNode> arguments,
             Collection<? extends Node> children,
             CreateKind createKind,
             SourceInfo sourceInfo) {
-        this(null, fieldName, type, constructor, arguments, children, createKind, sourceInfo);
+        this(null, fieldName, type, constructorOrFactoryMethod, arguments, children, createKind, sourceInfo);
     }
 
-    public EmitObjectNode(
+    private EmitObjectNode(
             @Nullable ReferenceableNode referencedNode,
             @Nullable String fieldName,
             TypeInstance type,
-            @Nullable CtConstructor constructor,
+            @Nullable CtBehavior constructorOrFactoryMethod,
             Collection<? extends ValueNode> arguments,
             Collection<? extends Node> children,
             CreateKind createKind,
             SourceInfo sourceInfo) {
         super(referencedNode, fieldName, sourceInfo);
         this.type = new ResolvedTypeNode(checkNotNull(type), sourceInfo);
-        this.constructor = constructor;
+        this.constructorOrFactoryMethod = constructorOrFactoryMethod;
         this.arguments = new ArrayList<>(checkNotNull(arguments));
         this.children = new ArrayList<>(checkNotNull(children));
         this.createKind = checkNotNull(createKind);
@@ -76,14 +272,6 @@ public class EmitObjectNode extends ReferenceableNode {
     @Override
     public ResolvedTypeNode getType() {
         return type;
-    }
-
-    public @Nullable CtConstructor getConstructor() {
-        return constructor;
-    }
-
-    public List<ValueNode> getArguments() {
-        return arguments;
     }
 
     public List<Node> getChildren() {
@@ -205,6 +393,9 @@ public class EmitObjectNode extends ReferenceableNode {
             case VALUE_OF:
                 emitInvokeValueOf(typeClass, context.getOutput());
                 break;
+            case FACTORY:
+                emitInvokeFactoryMethod(context.getOutput());
+                break;
             default:
                 throw new UnsupportedOperationException();
         }
@@ -212,8 +403,11 @@ public class EmitObjectNode extends ReferenceableNode {
 
     private void emitInvokeConstructor(CtClass type, BytecodeEmitContext context) {
         Bytecode code = context.getOutput();
-        TypeInstance[] paramTypes = new Resolver(getSourceInfo()).getParameterTypes(constructor, Collections.emptyList());
-        boolean varargs = Modifier.isVarArgs(constructor.getModifiers());
+
+        TypeInstance[] paramTypes = new Resolver(getSourceInfo())
+            .getParameterTypes(constructorOrFactoryMethod, Collections.emptyList());
+
+        boolean varargs = Modifier.isVarArgs(constructorOrFactoryMethod.getModifiers());
 
         code.anew(type)
             .dup();
@@ -250,7 +444,7 @@ public class EmitObjectNode extends ReferenceableNode {
             }
         }
 
-        code.invokespecial(type, MethodInfo.nameInit, constructor.getSignature());
+        code.invokespecial(type, MethodInfo.nameInit, constructorOrFactoryMethod.getSignature());
     }
 
     private void emitInvokeValueOf(CtClass type, Bytecode code) {
@@ -270,6 +464,13 @@ public class EmitObjectNode extends ReferenceableNode {
         code.invokestatic(type, "valueOf", function(type, literalType));
     }
 
+    private void emitInvokeFactoryMethod(Bytecode code) {
+        code.invokestatic(
+            constructorOrFactoryMethod.getDeclaringClass(),
+            constructorOrFactoryMethod.getName(),
+            constructorOrFactoryMethod.getSignature());
+    }
+
     @Override
     public void acceptChildren(Visitor visitor) {
         super.acceptChildren(visitor);
@@ -284,7 +485,7 @@ public class EmitObjectNode extends ReferenceableNode {
             getReferencedNode(),
             getId(),
             type.getTypeInstance(),
-            constructor,
+            constructorOrFactoryMethod,
             deepClone(arguments),
             deepClone(children),
             createKind,
@@ -297,7 +498,7 @@ public class EmitObjectNode extends ReferenceableNode {
         if (o == null || getClass() != o.getClass()) return false;
         EmitObjectNode that = (EmitObjectNode)o;
         return Objects.equals(getId(), that.getId()) &&
-            TypeHelper.equals(constructor, that.constructor) &&
+            TypeHelper.equals(constructorOrFactoryMethod, that.constructorOrFactoryMethod) &&
             arguments.equals(that.arguments) &&
             children.equals(that.children) &&
             createKind == that.createKind &&
@@ -306,7 +507,8 @@ public class EmitObjectNode extends ReferenceableNode {
 
     @Override
     public int hashCode() {
-        return Objects.hash(getId(), TypeHelper.hashCode(constructor), arguments, children, createKind, type);
+        return Objects.hash(
+            getId(), TypeHelper.hashCode(constructorOrFactoryMethod), arguments, children, createKind, type);
     }
 
 }

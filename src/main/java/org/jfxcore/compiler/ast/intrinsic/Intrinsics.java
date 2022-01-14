@@ -34,6 +34,9 @@ public class Intrinsics {
     public static final Intrinsic CONSTANT = new Intrinsic(
         "constant", new Usage(true, false, true));
 
+    public static final Intrinsic FACTORY = new Intrinsic(
+        "factory", Usage.CHILD_ATTRIBUTE);
+
     public static final Intrinsic TYPE_ARGUMENTS = new Intrinsic(
         "typeArguments", Usage.ATTRIBUTE);
 
@@ -71,8 +74,8 @@ public class Intrinsics {
         new IntrinsicProperty("inverseMethod", Classes::StringType));
 
     private static final List<Intrinsic> NODES = List.of(
-        NULL, CLASS, CLASS_MODIFIER, CLASS_PARAMETERS, MARKUP_CLASS_NAME, ID, VALUE, CONSTANT, TYPE_ARGUMENTS,
-        ITEM_TYPE, DEFINE, STYLESHEET, TYPE, URL, ONCE, BIND, SYNC);
+        NULL, CLASS, CLASS_MODIFIER, CLASS_PARAMETERS, MARKUP_CLASS_NAME, ID, VALUE, CONSTANT, FACTORY,
+        TYPE_ARGUMENTS, ITEM_TYPE, DEFINE, STYLESHEET, TYPE, URL, ONCE, BIND, SYNC);
 
     public static Intrinsic find(ObjectNode node) {
         if (node.getType().isIntrinsic()){

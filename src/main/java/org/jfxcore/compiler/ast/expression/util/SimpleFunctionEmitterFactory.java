@@ -1,4 +1,4 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2022, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.expression.util;
@@ -14,7 +14,6 @@ import org.jfxcore.compiler.ast.expression.FunctionExpressionNode;
 import org.jfxcore.compiler.util.Resolver;
 import org.jfxcore.compiler.util.TypeHelper;
 import org.jfxcore.compiler.util.TypeInstance;
-import java.util.Collections;
 
 public class SimpleFunctionEmitterFactory extends AbstractFunctionEmitterFactory implements EmitterFactory {
 
@@ -31,14 +30,13 @@ public class SimpleFunctionEmitterFactory extends AbstractFunctionEmitterFactory
         ValueEmitterNode value;
 
         if (invocationInfo.method().jvmMethod() instanceof CtConstructor constructor) {
-            value = new EmitObjectNode(
-                null,
-                new Resolver(functionExpression.getSourceInfo()).getTypeInstance(constructor.getDeclaringClass()),
-                constructor,
-                invocationInfo.arguments(),
-                Collections.emptyList(),
-                EmitObjectNode.CreateKind.CONSTRUCTOR,
-                functionExpression.getSourceInfo());
+            value = EmitObjectNode
+                .constructor(
+                    new Resolver(functionExpression.getSourceInfo()).getTypeInstance(constructor.getDeclaringClass()),
+                    constructor,
+                    invocationInfo.arguments(),
+                    functionExpression.getSourceInfo())
+                .create();
         } else {
             value = new EmitMethodCallNode(
                 (CtMethod)invocationInfo.method().jvmMethod(), invocationInfo.method().receiver(),

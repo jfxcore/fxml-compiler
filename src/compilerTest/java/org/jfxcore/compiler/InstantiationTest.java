@@ -6,6 +6,7 @@ package org.jfxcore.compiler;
 import javafx.beans.NamedArg;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
+import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
@@ -23,6 +24,8 @@ import org.jfxcore.compiler.util.TestExtension;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import java.util.ArrayList;
+import java.util.List;
 
 import static org.jfxcore.compiler.util.MoreAssertions.*;
 import static org.junit.jupiter.api.Assertions.*;
@@ -586,6 +589,84 @@ public class InstantiationTest extends CompilerTestBase {
             assertCodeHighlight("""
                 <Double fx:value="5.5D"/>
             """.trim(), ex);
+        }
+    }
+
+    @Nested
+    public class FactoryTest extends CompilerTestBase {
+        @Test
+        public void ObservableArrayList_Is_Instantiated_Via_Qualified_Factory_Method() {
+            GridPane root = compileAndRun("""
+                <?import javafx.collections.*?>
+                <?import javafx.scene.layout.*?>
+                <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                    <fx:define>
+                        <ObservableList fx:id="list" fx:factory="FXCollections.observableArrayList">
+                            <String>foo</String>
+                            <String>bar</String>
+                            <String>baz</String>
+                        </ObservableList>
+                    </fx:define>
+                </GridPane>
+            """);
+
+            ObservableList<?> list = (ObservableList<?>)root.getProperties().get("list");
+            assertNotNull(list);
+            assertEquals(3, list.size());
+            assertEquals("foo", list.get(0));
+            assertEquals("bar", list.get(1));
+            assertEquals("baz", list.get(2));
+        }
+
+        @Test
+        public void Unqualified_Factory_Method_Cannot_Be_Found() {
+            MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+                <?import javafx.collections.*?>
+                <?import javafx.scene.layout.*?>
+                <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                    <fx:define>
+                        <ObservableList fx:factory="observableArrayList">
+                            <String>foo</String>
+                        </ObservableList>
+                    </fx:define>
+                </GridPane>
+            """));
+
+            assertEquals(ErrorCode.METHOD_NOT_FOUND, ex.getDiagnostic().getCode());
+            assertCodeHighlight("fx:factory=\"observableArrayList\"", ex);
+        }
+
+        @SuppressWarnings("unused")
+        public static class TestList extends javafx.collections.ObservableListBase<String> {
+            private final List<String> backingList = new ArrayList<>();
+            private TestList() {}
+            @Override public String get(int index) { return backingList.get(index); }
+            @Override public int size() { return backingList.size(); }
+            @Override public boolean add(String s) { return backingList.add(s); }
+            public static TestList newInstance() { return new TestList(); }
+        }
+
+        @Test
+        public void List_Is_Instantiated_With_Unqualified_Factory_Method() {
+            GridPane root = compileAndRun("""
+                <?import javafx.scene.layout.*?>
+                <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                    <fx:define>
+                        <TestList fx:id="list" fx:factory="newInstance">
+                            <String>foo</String>
+                            <String>bar</String>
+                            <String>baz</String>
+                        </TestList>
+                    </fx:define>
+                </GridPane>
+            """);
+
+            TestList list = (TestList)root.getProperties().get("list");
+            assertNotNull(list);
+            assertEquals(3, list.size());
+            assertEquals("foo", list.get(0));
+            assertEquals("bar", list.get(1));
+            assertEquals("baz", list.get(2));
         }
     }
 
