@@ -1,4 +1,4 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2022, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler;
@@ -115,6 +115,7 @@ public class CollectionsTest {
         public void Objects_Are_Added_To_Map() {
             GridPane root = compileAndRun("""
                 <?import java.util.*?>
+                <?import javafx.collections.*?>
                 <?import javafx.scene.layout.*?>
                 <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
                     <properties>
@@ -123,11 +124,12 @@ public class CollectionsTest {
                             <Double fx:value="123.5"/>
                         </HashMap>
                     
-                        <HashMap fx:typeArguments="String,Object" fx:id="map1">
+                        <Map fx:typeArguments="String,Object" fx:id="map1"
+                             fx:factory="FXCollections.observableHashMap">
                             <String fx:id="str0">foo</String>
                             <Double fx:id="val0" fx:value="123.5"/>
                             <String>baz</String>
-                        </HashMap>
+                        </Map>
                     </properties>
                 </GridPane>
             """);

@@ -1,4 +1,4 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2022, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.transform.markup.util;
@@ -222,14 +222,10 @@ public class ValueEmitterFactory {
                         colorField.getName(),
                         sourceInfo);
                 } else {
-                    return new EmitObjectNode(
-                        null,
-                        new TypeInstance(Classes.ColorType()),
-                        null,
-                        List.of(new EmitLiteralNode(new TypeInstance(Classes.StringType()), value, sourceInfo)),
-                        Collections.emptyList(),
-                        EmitObjectNode.CreateKind.VALUE_OF,
-                        sourceInfo);
+                    return EmitObjectNode
+                        .valueOf(new TypeInstance(Classes.ColorType()), sourceInfo)
+                        .withTextValue(value)
+                        .create();
                 }
             } catch (NullPointerException | IllegalArgumentException ex) {
                 return null;
@@ -358,150 +354,6 @@ public class ValueEmitterFactory {
     }
 
     /**
-     * Tries to create a {@link EmitObjectNode} that represents the creation of a collection type,
-     * followed by calling {@link java.util.Collection#add(Object)} for each child.
-     *
-     * @return {@link EmitObjectNode} if successful; <code>null</code> otherwise.
-     */
-    public static EmitObjectNode newCollection(ObjectNode node) {
-        if (!TypeHelper.getTypeInstance(node).subtypeOf(Classes.CollectionType())) {
-            return null;
-        }
-
-        List<Node> children = new ArrayList<>(node.getChildren());
-        node.getChildren().clear();
-        EmitObjectNode newObjectNode = ValueEmitterFactory.newDefaultObject(node);
-        if (newObjectNode == null) {
-            node.getChildren().addAll(children);
-            return null;
-        }
-
-        Resolver resolver = new Resolver(node.getSourceInfo());
-        List<TypeInstance> typeArgs = TypeHelper.getTypeInstance(node).getArguments();
-        TypeInstance itemType = typeArgs.size() > 0 ? typeArgs.get(0) : resolver.getTypeInstance(Classes.ObjectType());
-
-        for (Node child : children) {
-            if (child instanceof TextNode textNode) {
-                if (textNode.isRawText()) {
-                    ValueEmitterNode value = ValueEmitterFactory.newLiteralValue(
-                        textNode.getText(), itemType, child.getSourceInfo());
-
-                    if (value == null) {
-                        throw GeneralErrors.cannotAddItemIncompatibleType(
-                            child.getSourceInfo(),
-                            TypeHelper.getJvmType(node), TypeHelper.getJvmType(child), itemType.jvmType());
-                    }
-
-                    newObjectNode.getChildren().add(new EmitCollectionAdderNode(value));
-                } else {
-                    for (String part : textNode.getText().split(",|\\R")) {
-                        if (part.isBlank()) {
-                            continue;
-                        }
-
-                        ValueEmitterNode value = ValueEmitterFactory.newLiteralValue(
-                            part.trim(), itemType, child.getSourceInfo());
-
-                        if (value == null) {
-                            throw GeneralErrors.cannotAddItemIncompatibleType(
-                                child.getSourceInfo(),
-                                TypeHelper.getJvmType(node), TypeHelper.getJvmType(child), itemType.jvmType());
-                        }
-
-                        newObjectNode.getChildren().add(new EmitCollectionAdderNode(value));
-                    }
-                }
-            } else if (!(child instanceof ObjectNode)) {
-                throw GeneralErrors.cannotAddItemIncompatibleValue(
-                    child.getSourceInfo(), TypeHelper.getJvmType(node), child.getSourceInfo().getText());
-            } else if (!TypeHelper.getTypeInstance(child).subtypeOf(itemType)) {
-                throw GeneralErrors.cannotAddItemIncompatibleType(
-                    child.getSourceInfo(),
-                    TypeHelper.getJvmType(node), TypeHelper.getJvmType(child), itemType.jvmType());
-            } else {
-                newObjectNode.getChildren().add(new EmitCollectionAdderNode((ValueNode)child));
-            }
-        }
-
-        return newObjectNode;
-    }
-
-    /**
-     * Tries to create a {@link EmitObjectNode} that represents the creation of a map type,
-     * followed by calling {@link java.util.Map#put(Object, Object)} for each child.
-     *
-     * @return {@link EmitObjectNode} if successful; <code>null</code> otherwise.
-     */
-    public static EmitObjectNode newMap(ObjectNode node) {
-        if (!TypeHelper.getTypeInstance(node).subtypeOf(Classes.MapType())) {
-            return null;
-        }
-
-        List<Node> children = new ArrayList<>(node.getChildren());
-        node.getChildren().clear();
-        EmitObjectNode newObjectNode = ValueEmitterFactory.newDefaultObject(node);
-        if (newObjectNode == null) {
-            node.getChildren().addAll(children);
-            return null;
-        }
-
-        Resolver resolver = new Resolver(node.getSourceInfo());
-        List<TypeInstance> typeArgs = TypeHelper.getTypeInstance(node).getArguments();
-        TypeInstance keyType = typeArgs.size() > 0 ? typeArgs.get(0) : resolver.getTypeInstance(Classes.ObjectType());
-        TypeInstance itemType = typeArgs.size() > 0 ? typeArgs.get(1) : resolver.getTypeInstance(Classes.ObjectType());
-
-        for (Node child : children) {
-            if (!(child instanceof ObjectNode)) {
-                throw GeneralErrors.cannotAddItemIncompatibleValue(
-                    child.getSourceInfo(), TypeHelper.getJvmType(node), child.getSourceInfo().getText());
-            }
-
-            if (!TypeHelper.getTypeInstance(child).subtypeOf(itemType)) {
-                throw GeneralErrors.cannotAddItemIncompatibleType(
-                    child.getSourceInfo(),
-                    TypeHelper.getJvmType(node), TypeHelper.getJvmType(child), itemType.jvmType());
-            }
-
-            if (!keyType.equals(Classes.StringType()) && !keyType.equals(Classes.ObjectType())) {
-                throw GeneralErrors.unsupportedMapKeyType(node.getSourceInfo(), TypeHelper.getJvmType(node));
-            }
-
-            newObjectNode.getChildren().add(
-                new EmitMapAdderNode(createKey((ObjectNode)child, keyType), (ObjectNode)child));
-        }
-
-        return newObjectNode;
-    }
-
-    private static ValueNode createKey(ObjectNode node, TypeInstance keyType) {
-        Resolver resolver = new Resolver(node.getSourceInfo());
-        PropertyNode id = node.findIntrinsicProperty(Intrinsics.ID);
-        if (id != null) {
-            return newLiteralValue(
-                ((TextNode)id.getValues().get(0)).getText(),
-                resolver.getTypeInstance(Classes.StringType()),
-                node.getSourceInfo());
-        }
-
-        if (keyType.equals(Classes.StringType())) {
-            return ValueEmitterFactory.newLiteralValue(
-                NameHelper.getUniqueName(
-                    UUID.nameUUIDFromBytes(TypeHelper.getJvmType(node).getName().getBytes()).toString(), node),
-                resolver.getTypeInstance(Classes.StringType()),
-                node.getSourceInfo());
-        }
-
-        return new EmitObjectNode(
-            null,
-            resolver.getTypeInstance(Classes.ObjectType()),
-            unchecked(node.getSourceInfo(), () -> Classes.ObjectType().getConstructor("()V")),
-            Collections.emptyList(),
-            Collections.emptyList(),
-            EmitObjectNode.CreateKind.CONSTRUCTOR,
-            node.getSourceInfo());
-    }
-
-    /**
      * Determines whether the input argument is acceptable for the target type and returns
      * a new node that will emit the input argument.
      */
@@ -537,14 +389,11 @@ public class ValueEmitterFactory {
 
     private static EmitObjectNode createObjectNode(
             ObjectNode objectNode, CtConstructor constructor, List<ValueNode> arguments) {
-        return new EmitObjectNode(
-            findAndRemoveId(objectNode),
-            TypeHelper.getTypeInstance(objectNode),
-            constructor,
-            arguments,
-            PropertyHelper.getSorted(objectNode, objectNode.getProperties()),
-            EmitObjectNode.CreateKind.CONSTRUCTOR,
-            objectNode.getSourceInfo());
+        return EmitObjectNode
+            .constructor(TypeHelper.getTypeInstance(objectNode), constructor, arguments, objectNode.getSourceInfo())
+            .withChildren(PropertyHelper.getSorted(objectNode, objectNode.getProperties()))
+            .storeInField(findAndRemoveId(objectNode))
+            .create();
     }
 
     /**
@@ -617,14 +466,13 @@ public class ValueEmitterFactory {
             }
         }
 
-        return new EmitObjectNode(
-            objectNode != null ? findAndRemoveId(objectNode) : null,
-            targetType,
-            constructor.constructor(),
-            constructor.params(),
-            children,
-            EmitObjectNode.CreateKind.CONSTRUCTOR,
-            objectNode != null ? objectNode.getSourceInfo() : textNode.getSourceInfo());
+        SourceInfo sourceInfo = objectNode != null ? objectNode.getSourceInfo() : textNode.getSourceInfo();
+
+        return EmitObjectNode
+            .constructor(targetType, constructor.constructor(), constructor.params(), sourceInfo)
+            .storeInField(objectNode != null ? findAndRemoveId(objectNode) : null)
+            .withChildren(children)
+            .create();
     }
 
     private static ConstructorWithParams findConstructor(TypeInstance type, String[] literals, SourceInfo sourceInfo) {

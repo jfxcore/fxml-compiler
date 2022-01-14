@@ -1,18 +1,16 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2022, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.emit;
 
 import javassist.CtClass;
 import org.jetbrains.annotations.Nullable;
-import org.jfxcore.compiler.ast.AbstractNode;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.ast.ResolvedTypeNode;
 import org.jfxcore.compiler.util.Bytecode;
 import org.jfxcore.compiler.util.Resolver;
 import org.jfxcore.compiler.util.TypeHelper;
 import org.jfxcore.compiler.util.TypeInstance;
-import java.util.Collections;
 import java.util.Objects;
 
 import static org.jfxcore.compiler.util.Descriptors.*;
@@ -42,15 +40,7 @@ public class EmitClassConstantNode extends ReferenceableNode {
             throw new UnsupportedOperationException();
         }
 
-        EmitObjectNode node = new EmitObjectNode(
-            this,
-            null,
-            type.getTypeInstance(),
-            null,
-            Collections.emptyList(),
-            Collections.emptyList(),
-            EmitObjectNode.CreateKind.LOAD_LOCAL,
-            getSourceInfo());
+        EmitObjectNode node = EmitObjectNode.loadLocal(type.getTypeInstance(), this, getSourceInfo());
 
         if (type.getJvmType().isPrimitive()) {
             type = new ResolvedTypeNode(

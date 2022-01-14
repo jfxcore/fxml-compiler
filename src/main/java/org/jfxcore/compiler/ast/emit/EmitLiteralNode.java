@@ -1,4 +1,4 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2022, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.emit;
@@ -12,7 +12,6 @@ import org.jfxcore.compiler.util.Bytecode;
 import org.jfxcore.compiler.util.Resolver;
 import org.jfxcore.compiler.util.TypeHelper;
 import org.jfxcore.compiler.util.TypeInstance;
-import java.util.Collections;
 import java.util.Objects;
 
 import static javassist.CtClass.*;
@@ -59,15 +58,7 @@ public class EmitLiteralNode extends ReferenceableNode {
             throw new UnsupportedOperationException();
         }
 
-        EmitObjectNode node = new EmitObjectNode(
-            this,
-            null,
-            requestedType.getTypeInstance(),
-            null,
-            Collections.emptyList(),
-            Collections.emptyList(),
-            EmitObjectNode.CreateKind.LOAD_LOCAL,
-            getSourceInfo());
+        EmitObjectNode node = EmitObjectNode.loadLocal(requestedType.getTypeInstance(), this, getSourceInfo());
 
         if (requestedType.getJvmType().isPrimitive()) {
             requestedType = new ResolvedTypeNode(
