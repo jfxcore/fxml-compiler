@@ -19,9 +19,7 @@ import org.jfxcore.compiler.ast.PropertyNode;
 import org.jfxcore.compiler.ast.ValueNode;
 import org.jfxcore.compiler.ast.emit.EmitArrayNode;
 import org.jfxcore.compiler.ast.emit.EmitClassConstantNode;
-import org.jfxcore.compiler.ast.emit.EmitCollectionAdderNode;
 import org.jfxcore.compiler.ast.emit.EmitLiteralNode;
-import org.jfxcore.compiler.ast.emit.EmitMapAdderNode;
 import org.jfxcore.compiler.ast.emit.EmitObjectNode;
 import org.jfxcore.compiler.ast.emit.ValueEmitterNode;
 import org.jfxcore.compiler.ast.intrinsic.Intrinsics;
@@ -51,7 +49,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
-import java.util.UUID;
 
 import static org.jfxcore.compiler.util.ExceptionHelper.unchecked;
 
@@ -224,7 +221,7 @@ public class ValueEmitterFactory {
                 } else {
                     return EmitObjectNode
                         .valueOf(new TypeInstance(Classes.ColorType()), sourceInfo)
-                        .withTextValue(value)
+                        .textValue(value)
                         .create();
                 }
             } catch (NullPointerException | IllegalArgumentException ex) {
@@ -391,8 +388,8 @@ public class ValueEmitterFactory {
             ObjectNode objectNode, CtConstructor constructor, List<ValueNode> arguments) {
         return EmitObjectNode
             .constructor(TypeHelper.getTypeInstance(objectNode), constructor, arguments, objectNode.getSourceInfo())
-            .withChildren(PropertyHelper.getSorted(objectNode, objectNode.getProperties()))
-            .storeInField(findAndRemoveId(objectNode))
+            .children(PropertyHelper.getSorted(objectNode, objectNode.getProperties()))
+            .backingField(findAndRemoveId(objectNode))
             .create();
     }
 
@@ -470,8 +467,8 @@ public class ValueEmitterFactory {
 
         return EmitObjectNode
             .constructor(targetType, constructor.constructor(), constructor.params(), sourceInfo)
-            .storeInField(objectNode != null ? findAndRemoveId(objectNode) : null)
-            .withChildren(children)
+            .backingField(objectNode != null ? findAndRemoveId(objectNode) : null)
+            .children(children)
             .create();
     }
 

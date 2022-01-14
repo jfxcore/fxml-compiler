@@ -61,12 +61,12 @@ public class EmitObjectNode extends ReferenceableNode {
             this.sourceInfo = sourceInfo;
         }
 
-        public ConstructorBuilder withChildren(Collection<? extends Node> children) {
+        public ConstructorBuilder children(Collection<? extends Node> children) {
             this.children = children;
             return this;
         }
 
-        public ConstructorBuilder storeInField(String fieldName) {
+        public ConstructorBuilder backingField(String fieldName) {
             this.fieldName = fieldName;
             return this;
         }
@@ -95,23 +95,23 @@ public class EmitObjectNode extends ReferenceableNode {
             this.sourceInfo = sourceInfo;
         }
 
-        public ValueOfBuilder withValue(ValueEmitterNode value) {
+        public ValueOfBuilder value(ValueEmitterNode value) {
             this.value = value;
             return this;
         }
 
-        public ValueOfBuilder withTextValue(String value) {
+        public ValueOfBuilder textValue(String value) {
             this.value = new EmitLiteralNode(
                 new Resolver(sourceInfo).getTypeInstance(Classes.StringType()), value, sourceInfo);
             return this;
         }
 
-        public ValueOfBuilder withChildren(Collection<? extends Node> children) {
+        public ValueOfBuilder children(Collection<? extends Node> children) {
             this.children = children;
             return this;
         }
 
-        public ValueOfBuilder storeInField(String fieldName) {
+        public ValueOfBuilder backingField(String fieldName) {
             this.fieldName = fieldName;
             return this;
         }
@@ -141,12 +141,12 @@ public class EmitObjectNode extends ReferenceableNode {
             this.sourceInfo = sourceInfo;
         }
 
-        public FactoryBuilder withChildren(Collection<? extends Node> children) {
+        public FactoryBuilder children(Collection<? extends Node> children) {
             this.children = children;
             return this;
         }
 
-        public FactoryBuilder storeInField(String fieldName) {
+        public FactoryBuilder backingField(String fieldName) {
             this.fieldName = fieldName;
             return this;
         }
@@ -173,7 +173,7 @@ public class EmitObjectNode extends ReferenceableNode {
             this.sourceInfo = sourceInfo;
         }
 
-        public RootObjectBuilder withChildren(Collection<? extends Node> children) {
+        public RootObjectBuilder children(Collection<? extends Node> children) {
             this.children = children;
             return this;
         }
@@ -231,7 +231,7 @@ public class EmitObjectNode extends ReferenceableNode {
     /**
      * Emits an object by loading the root object.
      */
-    public static RootObjectBuilder rootObject(TypeInstance type, SourceInfo sourceInfo) {
+    public static RootObjectBuilder loadRoot(TypeInstance type, SourceInfo sourceInfo) {
         return new RootObjectBuilder(type, sourceInfo);
     }
 

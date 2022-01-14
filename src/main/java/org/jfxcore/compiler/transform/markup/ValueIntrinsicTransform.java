@@ -93,7 +93,7 @@ public class ValueIntrinsicTransform implements Transform {
 
         return EmitObjectNode
             .valueOf(valueType, sourceInfo)
-            .withValue(content)
+            .value(content)
             .create();
     }
 

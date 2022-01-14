@@ -85,8 +85,8 @@ public class ObjectTransform implements Transform {
             }
 
             return EmitObjectNode
-                .rootObject(TypeHelper.getTypeInstance(objectNode), objectNode.getSourceInfo())
-                .withChildren(PropertyHelper.getSorted(objectNode, objectNode.getProperties()))
+                .loadRoot(TypeHelper.getTypeInstance(objectNode), objectNode.getSourceInfo())
+                .children(PropertyHelper.getSorted(objectNode, objectNode.getProperties()))
                 .create();
         }
 
@@ -210,11 +210,11 @@ public class ObjectTransform implements Transform {
 
         return EmitObjectNode
             .valueOf(nodeType, propertyNode.getSourceInfo())
-            .withTextValue(textValue)
-            .withChildren(
+            .textValue(textValue)
+            .children(
                 Stream.concat(objectNode.getChildren().stream(), objectNode.getProperties().stream())
                       .collect(Collectors.toList()))
-            .storeInField(findAndRemoveId(context, objectNode))
+            .backingField(findAndRemoveId(context, objectNode))
             .create();
     }
 
@@ -300,8 +300,8 @@ public class ObjectTransform implements Transform {
                 TypeHelper.getTypeInstance(objectNode),
                 factoryMethod,
                 factoryProperty.getSourceInfo())
-            .storeInField(findAndRemoveId(context, objectNode))
-            .withChildren(objectNode.getProperties().stream().filter(p -> !p.isIntrinsic(Intrinsics.FACTORY)).toList())
+            .children(objectNode.getProperties().stream().filter(p -> !p.isIntrinsic(Intrinsics.FACTORY)).toList())
+            .backingField(findAndRemoveId(context, objectNode))
             .create();
     }
 
