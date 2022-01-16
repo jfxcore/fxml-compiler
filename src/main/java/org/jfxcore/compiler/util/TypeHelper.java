@@ -15,8 +15,6 @@ import javassist.CtBehavior;
 import javassist.CtClass;
 import javassist.CtField;
 import javassist.CtMember;
-import javassist.Modifier;
-import javassist.NotFoundException;
 import javassist.bytecode.BadBytecode;
 import javassist.bytecode.SignatureAttribute;
 import javassist.bytecode.annotation.Annotation;
@@ -388,23 +386,6 @@ public class TypeHelper {
         }
 
         return ((ResolvedTypeNode)typeNode).getJvmType();
-    }
-
-    public static boolean isEffectivelyPublic(CtClass type) {
-        CtClass t = type;
-        while (t != null) {
-            if (!Modifier.isPublic(t.getModifiers())) {
-                return false;
-            }
-
-            try {
-                t = t.getDeclaringClass();
-            } catch (NotFoundException e) {
-                throw ExceptionHelper.unchecked(e);
-            }
-        }
-
-        return true;
     }
 
     public static int getSlots(CtClass type) {
