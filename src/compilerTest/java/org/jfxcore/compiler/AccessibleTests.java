@@ -20,6 +20,22 @@ import static org.junit.jupiter.api.Assertions.*;
 public class AccessibleTests extends CompilerTestBase {
 
     @SuppressWarnings("unused")
+    static class InaccessiblePane extends Pane {}
+
+    @Test
+    public void NonPublic_Pane_Is_Not_Accessible() {
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <?import javafx.scene.layout.*?>
+            <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                <InaccessiblePane/>
+            </GridPane>
+        """));
+
+        assertEquals(ErrorCode.CLASS_NOT_ACCESSIBLE, ex.getDiagnostic().getCode());
+        assertCodeHighlight("InaccessiblePane", ex);
+    }
+
+    @SuppressWarnings("unused")
     public static class InaccessibleConstant {
         private static final double VALUE = 1.0;
     }
