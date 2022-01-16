@@ -1,4 +1,4 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2022, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler;
@@ -45,6 +45,12 @@ public class EventHandlerTest extends CompilerTestBase {
                 flag = true;
             }
         };
+
+        private void inaccessibleHandler() {}
+
+        void packagePrivateHandler() {
+            flag = true;
+        }
     }
 
     @Test
@@ -56,7 +62,7 @@ public class EventHandlerTest extends CompilerTestBase {
             </TestPane>
         """));
 
-        assertEquals(ErrorCode.METHOD_NOT_FOUND, ex.getDiagnostic().getCode());
+        assertEquals(ErrorCode.MEMBER_NOT_FOUND, ex.getDiagnostic().getCode());
         assertCodeHighlight("#actionHandlerNotFound", ex);
     }
 
@@ -127,6 +133,31 @@ public class EventHandlerTest extends CompilerTestBase {
         Button button = (Button)root.getChildren().get(0);
         button.getOnAction().handle(null);
         assertTrue(root.flag);
+    }
+
+    @Test
+    public void Private_EventHandler_Is_Not_Accessible() {
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <?import javafx.scene.control.*?>
+            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                <Button onAction="#inaccessibleHandler"/>
+            </TestPane>
+        """));
+
+        assertEquals(ErrorCode.MEMBER_NOT_FOUND, ex.getDiagnostic().getCode());
+    }
+
+    @Test
+    public void PackagePrivate_EventHandler_Is_Not_Accessible() {
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <?import javafx.scene.control.*?>
+            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                <Button onAction="#packagePrivateHandler"/>
+            </TestPane>
+        """));
+
+        assertEquals(ErrorCode.MEMBER_NOT_ACCESSIBLE, ex.getDiagnostic().getCode());
+        assertCodeHighlight("#packagePrivateHandler", ex);
     }
 
 }

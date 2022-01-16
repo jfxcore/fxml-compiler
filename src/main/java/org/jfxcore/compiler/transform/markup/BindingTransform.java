@@ -145,6 +145,7 @@ public class BindingTransform implements Transform {
         }
 
         return new FunctionExpressionNode(
+            context.getMarkupClass(),
             parsePathNode(context, operator, functionNode.getPath()),
             functionNode.getArguments().stream().map(arg -> parseFunctionArgumentNode(context, arg)).toList(),
             (PathExpressionNode)expression,

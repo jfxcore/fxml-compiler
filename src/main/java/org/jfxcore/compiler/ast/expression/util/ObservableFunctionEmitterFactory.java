@@ -1,4 +1,4 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2022, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.expression.util;
@@ -33,7 +33,7 @@ public class ObservableFunctionEmitterFactory
 
     @Override
     public BindingEmitterInfo newInstance(boolean bidirectional) {
-        MethodInvocationInfo invocationInfo = createMethodInvocation(functionExpression, bidirectional, true);
+        InvocationInfo invocationInfo = createInvocation(functionExpression, bidirectional, true);
         if (!invocationInfo.observable()) {
             return null;
         }
@@ -42,11 +42,10 @@ public class ObservableFunctionEmitterFactory
 
         ValueEmitterNode value = new EmitObservableFunctionNode(
             resolver.getObservableClass(valueType),
-            invocationInfo.method().jvmMethod(),
-            invocationInfo.inverseMethod() != null ? invocationInfo.inverseMethod().jvmMethod() : null,
-            invocationInfo.method().receiver(),
-            invocationInfo.inverseMethod() != null ? invocationInfo.inverseMethod().receiver() : null,
+            invocationInfo.function(),
+            invocationInfo.inverseFunction(),
             invocationInfo.arguments(),
+            functionExpression.getInvocationContext(),
             functionExpression.getSourceInfo());
 
         Operator operator = functionExpression.getPath().getOperator();
@@ -61,8 +60,8 @@ public class ObservableFunctionEmitterFactory
             value,
             valueType,
             TypeHelper.getTypeInstance(value),
-            invocationInfo.method().jvmMethod().getDeclaringClass(),
-            invocationInfo.method().jvmMethod().getName(),
+            invocationInfo.function().getBehavior().getDeclaringClass(),
+            invocationInfo.function().getBehavior().getName(),
             functionExpression.getSourceInfo());
     }
 

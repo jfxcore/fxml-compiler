@@ -94,6 +94,23 @@ public class Resolver {
         return null;
     }
 
+    public CtClass tryResolveNestedClass(CtClass enclosingType, String nestedTypeName) {
+        while (enclosingType != null) {
+            CtClass ctclass = tryResolveClass(enclosingType.getName() + "." + nestedTypeName);
+            if (ctclass != null) {
+                return ctclass;
+            }
+
+            try {
+                enclosingType = enclosingType.getSuperclass();
+            } catch (NotFoundException e) {
+                throw SymbolResolutionErrors.classNotFound(sourceInfo, e.getMessage());
+            }
+        }
+
+        return null;
+    }
+
     /**
      * Returns the class for the specified type name.
      * If the type name is fully qualified, it is resolved directly; otherwise the name is resolved
@@ -197,7 +214,7 @@ public class Resolver {
 
             return getCache().put(key, result);
         } catch (NotFoundException ex) {
-            throw SymbolResolutionErrors.notFound(sourceInfo, ex.getMessage());
+            throw SymbolResolutionErrors.classNotFound(sourceInfo, ex.getMessage());
         } catch (BadBytecode ex) {
             throw ExceptionHelper.unchecked(ex);
         }
@@ -251,7 +268,7 @@ public class Resolver {
 
             return getCache().put(key, result);
         } catch (NotFoundException ex) {
-            throw SymbolResolutionErrors.notFound(sourceInfo, ex.getMessage());
+            throw SymbolResolutionErrors.classNotFound(sourceInfo, ex.getMessage());
         } catch (BadBytecode ex) {
             throw ExceptionHelper.unchecked(ex);
         }
@@ -350,7 +367,7 @@ public class Resolver {
 
             return propertyInfo;
         } catch (NotFoundException ex) {
-            throw SymbolResolutionErrors.notFound(sourceInfo, ex.getMessage());
+            throw SymbolResolutionErrors.classNotFound(sourceInfo, ex.getMessage());
         }
     }
 
@@ -399,13 +416,15 @@ public class Resolver {
             }
         }
 
+        CtClass superclass;
         try {
-            CtClass superclass = ctclass.getSuperclass();
-            if (superclass != null) {
-                return tryResolveField(superclass, name, publicOnly);
-            }
+            superclass = ctclass.getSuperclass();
         } catch (NotFoundException ex) {
-            throw SymbolResolutionErrors.notFound(sourceInfo, ex.getMessage());
+            throw SymbolResolutionErrors.classNotFound(sourceInfo, ex.getMessage());
+        }
+
+        if (superclass != null) {
+            return tryResolveField(superclass, name, publicOnly);
         }
 
         return null;
@@ -450,7 +469,7 @@ public class Resolver {
     public CtMethod resolveGetter(CtClass type, String name, boolean verbatim, @Nullable CtClass returnType) {
         CtMethod method = tryResolveGetter(type, name, verbatim, returnType);
         if (method == null) {
-            throw SymbolResolutionErrors.methodNotFound(sourceInfo, type, name);
+            throw SymbolResolutionErrors.memberNotFound(sourceInfo, type, name);
         }
 
         return method;
@@ -708,10 +727,7 @@ public class Resolver {
         }
 
         for (CtMethod method : declaringClass.getDeclaredMethods()) {
-            if (!Modifier.isPublic(method.getModifiers())
-                    || !Modifier.isStatic(method.getModifiers())
-                    || !method.getName().equals("valueOf")
-                    || isSynthetic(method)) {
+            if (!Modifier.isStatic(method.getModifiers()) || !method.getName().equals("valueOf") || isSynthetic(method)) {
                 continue;
             }
 
@@ -726,7 +742,7 @@ public class Resolver {
                     continue;
                 }
             } catch (NotFoundException ex) {
-                throw SymbolResolutionErrors.notFound(sourceInfo, ex.getMessage());
+                throw SymbolResolutionErrors.classNotFound(sourceInfo, ex.getMessage());
             }
 
             getCache().put(key, method);
@@ -878,7 +894,7 @@ public class Resolver {
             TypeInstance typeInstance = invokeType(clazz.getDeclaringClass(), clazz, Collections.emptyList());
             return getCache().put(key, typeInstance);
         } catch (NotFoundException ex) {
-            throw SymbolResolutionErrors.notFound(sourceInfo, ex.getMessage());
+            throw SymbolResolutionErrors.classNotFound(sourceInfo, ex.getMessage());
         } catch (BadBytecode ex) {
             throw ExceptionHelper.unchecked(ex);
         }
@@ -904,7 +920,7 @@ public class Resolver {
 
             return getCache().put(key, typeInstance);
         } catch (NotFoundException ex) {
-            throw SymbolResolutionErrors.notFound(sourceInfo, ex.getMessage());
+            throw SymbolResolutionErrors.classNotFound(sourceInfo, ex.getMessage());
         } catch (BadBytecode ex) {
             throw ExceptionHelper.unchecked(ex);
         }
@@ -938,7 +954,7 @@ public class Resolver {
 
             return getCache().put(key, Objects.requireNonNullElse(typeInstance, new TypeInstance(Classes.ObjectType())));
         } catch (NotFoundException ex) {
-            throw SymbolResolutionErrors.notFound(sourceInfo, ex.getMessage());
+            throw SymbolResolutionErrors.classNotFound(sourceInfo, ex.getMessage());
         } catch (BadBytecode ex) {
             throw ExceptionHelper.unchecked(ex);
         }
@@ -971,7 +987,7 @@ public class Resolver {
 
             return getCache().put(key, Objects.requireNonNullElse(typeInstance, new TypeInstance(Classes.ObjectType())));
         } catch (NotFoundException ex) {
-            throw SymbolResolutionErrors.notFound(sourceInfo, ex.getMessage());
+            throw SymbolResolutionErrors.classNotFound(sourceInfo, ex.getMessage());
         } catch (BadBytecode ex) {
             throw ExceptionHelper.unchecked(ex);
         }

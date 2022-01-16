@@ -11,6 +11,7 @@ import org.jfxcore.compiler.ast.emit.EmitObjectNode;
 import org.jfxcore.compiler.ast.emit.ValueEmitterNode;
 import org.jfxcore.compiler.ast.expression.BindingEmitterInfo;
 import org.jfxcore.compiler.ast.expression.FunctionExpressionNode;
+import org.jfxcore.compiler.util.AccessVerifier;
 import org.jfxcore.compiler.util.Resolver;
 import org.jfxcore.compiler.util.TypeHelper;
 import org.jfxcore.compiler.util.TypeInstance;
@@ -26,10 +27,16 @@ public class SimpleFunctionEmitterFactory extends AbstractFunctionEmitterFactory
 
     @Override
     public BindingEmitterInfo newInstance() {
-        MethodInvocationInfo invocationInfo = createMethodInvocation(functionExpression, false, false);
+        InvocationInfo invocationInfo = createInvocation(functionExpression, false, false);
+
+        AccessVerifier.verifyAccessible(
+            invocationInfo.function().getBehavior(),
+            functionExpression.getInvocationContext(),
+            functionExpression.getPath().getSourceInfo());
+
         ValueEmitterNode value;
 
-        if (invocationInfo.method().jvmMethod() instanceof CtConstructor constructor) {
+        if (invocationInfo.function().getBehavior() instanceof CtConstructor constructor) {
             value = EmitObjectNode
                 .constructor(
                     new Resolver(functionExpression.getSourceInfo()).getTypeInstance(constructor.getDeclaringClass()),
@@ -39,7 +46,7 @@ public class SimpleFunctionEmitterFactory extends AbstractFunctionEmitterFactory
                 .create();
         } else {
             value = new EmitMethodCallNode(
-                (CtMethod)invocationInfo.method().jvmMethod(), invocationInfo.method().receiver(),
+                (CtMethod)invocationInfo.function().getBehavior(), invocationInfo.function().getReceiver(),
                 invocationInfo.arguments(), functionExpression.getSourceInfo());
         }
 
@@ -49,8 +56,8 @@ public class SimpleFunctionEmitterFactory extends AbstractFunctionEmitterFactory
             value,
             TypeHelper.getTypeInstance(value),
             null,
-            invocationInfo.method().jvmMethod().getDeclaringClass(),
-            invocationInfo.method().jvmMethod().getName(),
+            invocationInfo.function().getBehavior().getDeclaringClass(),
+            invocationInfo.function().getBehavior().getName(),
             functionExpression.getSourceInfo());
     }
 

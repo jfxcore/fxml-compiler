@@ -229,7 +229,7 @@ public class Compiler extends AbstractCompiler {
         } catch (BadBytecode | URISyntaxException | CannotCompileException ex) {
             throw ExceptionHelper.unchecked(ex);
         } catch (NotFoundException ex) {
-            MarkupException m = SymbolResolutionErrors.notFound(SourceInfo.none(), ex.getMessage());
+            MarkupException m = SymbolResolutionErrors.classNotFound(SourceInfo.none(), ex.getMessage());
             m.setSourceFile(inputFile.toFile());
             throw m;
         }

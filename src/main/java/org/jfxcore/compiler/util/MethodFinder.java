@@ -1,4 +1,4 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2022, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.util;
@@ -20,7 +20,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import static org.jfxcore.compiler.util.MethodFinder.InvocationType.*;
 import static org.jfxcore.compiler.util.TypeInstance.*;
 
 public class MethodFinder {
@@ -34,13 +33,9 @@ public class MethodFinder {
         this.declaringType = declaringType;
     }
 
-    public List<CtMethod> findOverloadedMethods(String methodName, InvocationType invocationType) {
+    public List<CtMethod> findOverloadedMethods(String methodName) {
         return Arrays.stream(declaringType.getMethods())
             .filter(method -> method.getName().equals(methodName))
-            .filter(method -> {
-                boolean staticMethod = Modifier.isStatic(method.getModifiers());
-                return staticMethod && invocationType != INSTANCE || !staticMethod && invocationType != STATIC;
-            })
             .collect(Collectors.toList());
     }
 
@@ -63,11 +58,10 @@ public class MethodFinder {
             @Nullable TypeInstance returnType,
             List<TypeInstance> argumentTypes,
             List<SourceInfo> argumentSourceInfo,
-            InvocationType invocationType,
             @Nullable List<DiagnosticInfo> diagnostics,
             SourceInfo sourceInfo) {
         return resolveOverloadedMethod(
-            findOverloadedMethods(methodName, invocationType),
+            findOverloadedMethods(methodName),
             returnType,
             argumentTypes,
             argumentSourceInfo,

@@ -13,7 +13,7 @@ import org.jfxcore.compiler.util.NameHelper;
 import org.jfxcore.compiler.util.PropertyInfo;
 import org.jfxcore.compiler.util.TypeInstance;
 
-import static org.jfxcore.compiler.diagnostic.errors.FormatHelper.formatPropertyName;
+import static org.jfxcore.compiler.util.NameHelper.formatPropertyName;
 
 public class GeneralErrors {
 
@@ -66,20 +66,25 @@ public class GeneralErrors {
             SourceInfo sourceInfo, PropertyInfo propertyInfo, CtClass addType, CtClass requiredType) {
         return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
             ErrorCode.CANNOT_ADD_ITEM_INCOMPATIBLE_TYPE,
-            formatPropertyName(propertyInfo), addType.getName(), requiredType.getName()));
+            formatPropertyName(propertyInfo),
+            NameHelper.getJavaClassName(sourceInfo, addType),
+            NameHelper.getJavaClassName(sourceInfo, requiredType)));
     }
 
     public static MarkupException cannotAddItemIncompatibleType(
             SourceInfo sourceInfo, CtClass collectionType, CtClass addType, CtClass requiredType) {
         return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
             ErrorCode.CANNOT_ADD_ITEM_INCOMPATIBLE_TYPE,
-            collectionType.getName(), addType.getName(), requiredType.getName()));
+            NameHelper.getJavaClassName(sourceInfo, collectionType),
+            NameHelper.getJavaClassName(sourceInfo, addType),
+            NameHelper.getJavaClassName(sourceInfo, requiredType)));
     }
 
     public static MarkupException cannotAddItemIncompatibleValue(
             SourceInfo sourceInfo, CtClass collectionType, String value) {
         return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
-            ErrorCode.CANNOT_ADD_ITEM_INCOMPATIBLE_VALUE, collectionType.getName(), value));
+            ErrorCode.CANNOT_ADD_ITEM_INCOMPATIBLE_VALUE,
+            NameHelper.getJavaClassName(sourceInfo, collectionType), value));
     }
 
     public static MarkupException cannotAddItemIncompatibleValue(
@@ -96,7 +101,7 @@ public class GeneralErrors {
 
     public static MarkupException unsupportedMapKeyType(SourceInfo sourceInfo, CtClass mapType) {
         return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
-            ErrorCode.UNSUPPORTED_MAP_KEY_TYPE, mapType.getName()));
+            ErrorCode.UNSUPPORTED_MAP_KEY_TYPE, NameHelper.getJavaClassName(sourceInfo, mapType)));
     }
 
     public static MarkupException typeArgumentOutOfBound(SourceInfo sourceInfo, TypeInstance typeArg, TypeInstance requiredType) {
@@ -107,12 +112,13 @@ public class GeneralErrors {
     public static MarkupException numTypeArgumentsMismatch(
             SourceInfo sourceInfo, CtClass declaringType, int expected, int actual) {
         return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
-            ErrorCode.NUM_TYPE_ARGUMENTS_MISMATCH, declaringType.getName(), expected, actual));
+            ErrorCode.NUM_TYPE_ARGUMENTS_MISMATCH,
+            NameHelper.getJavaClassName(sourceInfo, declaringType), expected, actual));
     }
 
     public static MarkupException rootClassCannotBeFinal(SourceInfo sourceInfo, CtClass rootClass) {
         return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
-            ErrorCode.ROOT_CLASS_CANNOT_BE_FINAL, rootClass.getName()));
+            ErrorCode.ROOT_CLASS_CANNOT_BE_FINAL, NameHelper.getJavaClassName(sourceInfo, rootClass)));
     }
 
     public static MarkupException incompatibleReturnValue(
