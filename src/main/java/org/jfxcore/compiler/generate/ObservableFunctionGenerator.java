@@ -1,4 +1,4 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2022, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.generate;
@@ -13,6 +13,7 @@ import javassist.bytecode.MethodInfo;
 import org.jetbrains.annotations.Nullable;
 import org.jfxcore.compiler.ast.emit.EmitObservableFunctionNode;
 import org.jfxcore.compiler.ast.emit.ValueEmitterNode;
+import org.jfxcore.compiler.util.Callable;
 import org.jfxcore.compiler.util.Label;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.ast.emit.BytecodeEmitContext;
@@ -52,14 +53,10 @@ public class ObservableFunctionGenerator extends GeneratorBase {
     private static final String DISCONNECT_METHOD = "disconnect";
 
     private final boolean bidirectional;
-    private final CtBehavior method;
-    private final CtBehavior inverseMethod;
-    private final boolean storeMethodReceiver;
-    private final boolean storeInverseMethodReceiver;
-    private final List<ValueEmitterNode> methodReceiver;
-    private final List<ValueEmitterNode> inverseMethodReceiver;
-    private final CtClass methodReceiverType;
-    private final CtClass inverseMethodReceiverType;
+    private final Callable function;
+    private final Callable inverseFunction;
+    private final boolean storeReceiver;
+    private final boolean storeInverseReceiver;
     private final List<EmitMethodArgumentNode> arguments;
     private final List<CtField> paramFields;
     private final List<String> fieldNames;
@@ -96,28 +93,26 @@ public class ObservableFunctionGenerator extends GeneratorBase {
     private CtMethod unbindBidirectionalMethod;
 
     public ObservableFunctionGenerator(
-            CtBehavior method,
-            @Nullable CtBehavior inverseMethod,
-            List<ValueEmitterNode> methodReceiver,
-            List<ValueEmitterNode> inverseMethodReceiver,
+            Callable function,
+            @Nullable Callable inverseFunction,
             Collection<? extends EmitMethodArgumentNode> arguments) {
-        this.bidirectional = inverseMethod != null;
-        this.method = method;
-        this.inverseMethod = inverseMethod;
-        this.storeMethodReceiver = !Modifier.isStatic(this.method.getModifiers()) && this.method instanceof CtMethod;
-        this.storeInverseMethodReceiver = inverseMethod != null &&
-            !Modifier.isStatic(this.inverseMethod.getModifiers()) && this.inverseMethod instanceof CtMethod;
-        this.methodReceiver = new ArrayList<>(methodReceiver);
-        this.inverseMethodReceiver = new ArrayList<>(inverseMethodReceiver);
-        this.methodReceiverType = method.getDeclaringClass();
-        this.inverseMethodReceiverType = inverseMethod != null ? inverseMethod.getDeclaringClass() : null;
+        this.bidirectional = inverseFunction != null;
+        this.function = function;
+        this.inverseFunction = inverseFunction;
+        this.storeReceiver =
+            !Modifier.isStatic(function.getBehavior().getModifiers())
+            && function.getBehavior() instanceof CtMethod;
+        this.storeInverseReceiver = inverseFunction != null &&
+            !Modifier.isStatic(inverseFunction.getBehavior().getModifiers())
+            && inverseFunction.getBehavior() instanceof CtMethod;
         this.arguments = new ArrayList<>(arguments);
         this.paramFields = new ArrayList<>();
         this.fieldNames = new ArrayList<>();
 
         Resolver resolver = new Resolver(SourceInfo.none());
-        CtClass returnType = method instanceof CtConstructor ?
-            method.getDeclaringClass() : unchecked(SourceInfo.none(), ((CtMethod)method)::getReturnType);
+        CtClass returnType = function.getBehavior() instanceof CtConstructor ?
+            function.getBehavior().getDeclaringClass() :
+            unchecked(SourceInfo.none(), ((CtMethod) function.getBehavior())::getReturnType);
 
         if (returnType == CtClass.booleanType || returnType == BooleanType()) {
             this.superType = resolver.getTypeInstance(
@@ -188,14 +183,14 @@ public class ObservableFunctionGenerator extends GeneratorBase {
         int fieldNum = 1;
         CtField field;
 
-        if (storeMethodReceiver) {
-            field = new CtField(methodReceiverType, mangle("methodReceiver"), clazz);
+        if (storeReceiver) {
+            field = new CtField(function.getBehavior().getDeclaringClass(), mangle("receiver"), clazz);
             field.setModifiers(Modifier.FINAL | Modifier.PRIVATE);
             clazz.addField(field);
         }
 
-        if (storeInverseMethodReceiver) {
-            field = new CtField(inverseMethodReceiverType, mangle("inverseMethodReceiver"), clazz);
+        if (storeInverseReceiver) {
+            field = new CtField(inverseFunction.getBehavior().getDeclaringClass(), mangle("inverseReceiver"), clazz);
             field.setModifiers(Modifier.FINAL | Modifier.PRIVATE);
             clazz.addField(field);
         }
@@ -429,24 +424,24 @@ public class ObservableFunctionGenerator extends GeneratorBase {
         code.aload(0)
             .invokespecial(clazz.getSuperclass(), MethodInfo.nameInit, constructor());
 
-        if (storeMethodReceiver) {
+        if (storeReceiver) {
             code.aload(0);
 
-            for (ValueEmitterNode emitter : methodReceiver) {
+            for (ValueEmitterNode emitter : function.getReceiver()) {
                 context.emit(emitter);
             }
 
-            code.putfield(clazz, mangle("methodReceiver"), methodReceiverType);
+            code.putfield(clazz, mangle("receiver"), function.getBehavior().getDeclaringClass());
         }
 
-        if (storeInverseMethodReceiver) {
+        if (storeInverseReceiver) {
             code.aload(0);
 
-            for (ValueEmitterNode emitter : inverseMethodReceiver) {
+            for (ValueEmitterNode emitter : inverseFunction.getReceiver()) {
                 context.emit(emitter);
             }
 
-            code.putfield(clazz, mangle("inverseMethodReceiver"), inverseMethodReceiverType);
+            code.putfield(clazz, mangle("inverseReceiver"), inverseFunction.getBehavior().getDeclaringClass());
         }
 
         int fieldIdx = 0;
@@ -553,12 +548,12 @@ public class ObservableFunctionGenerator extends GeneratorBase {
 
         Local valueLocal = code.acquireLocal(returnType);
 
-        if (this.method instanceof CtConstructor) {
-            code.anew(this.method.getDeclaringClass())
+        if (function.getBehavior() instanceof CtConstructor) {
+            code.anew(function.getBehavior().getDeclaringClass())
                 .dup();
-        } else if (!Modifier.isStatic(this.method.getModifiers())) {
+        } else if (!Modifier.isStatic(function.getBehavior().getModifiers())) {
             code.aload(0)
-                .getfield(clazz, mangle("methodReceiver"), methodReceiverType);
+                .getfield(clazz, mangle("receiver"), function.getBehavior().getDeclaringClass());
         }
 
         int fieldIdx = 0;
@@ -623,7 +618,7 @@ public class ObservableFunctionGenerator extends GeneratorBase {
             }
         }
 
-        code.ext_invoke(this.method);
+        code.ext_invoke(function.getBehavior());
 
         if (varargsLocal != null) {
             code.releaseLocal(varargsLocal);
@@ -721,24 +716,25 @@ public class ObservableFunctionGenerator extends GeneratorBase {
         int start = code.position();
         CtClass methodReturnType;
 
-        if (inverseMethod instanceof CtConstructor) {
+        if (inverseFunction.getBehavior() instanceof CtConstructor) {
             methodReturnType = invalidatedMethod.getDeclaringClass();
 
-            code.anew(inverseMethod.getDeclaringClass())
+            code.anew(inverseFunction.getBehavior().getDeclaringClass())
                 .dup();
         } else {
-            methodReturnType = unchecked(SourceInfo.none(), ((CtMethod)inverseMethod)::getReturnType);
+            methodReturnType = ((CtMethod) inverseFunction.getBehavior()).getReturnType();
 
-            if (!Modifier.isStatic(inverseMethod.getModifiers())) {
+            if (!Modifier.isStatic(inverseFunction.getBehavior().getModifiers())) {
                 code.aload(0)
-                    .getfield(clazz, mangle("inverseMethodReceiver"), inverseMethodReceiverType);
+                    .getfield(clazz, mangle("inverseReceiver"),
+                              inverseFunction.getBehavior().getDeclaringClass());
             }
         }
 
         code.aload(0)
             .getfield(clazz, mangle(returnType.isPrimitive() ? PRIMITIVE_VALUE_FIELD : VALUE_FIELD), returnType);
 
-        code.ext_invoke(inverseMethod)
+        code.ext_invoke(inverseFunction.getBehavior())
             .ext_autoconv(SourceInfo.none(), methodReturnType, sourceValueType)
             .ext_store(sourceValueType, convertedValueLocal);
 

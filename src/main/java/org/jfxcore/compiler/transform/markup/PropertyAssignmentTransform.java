@@ -4,7 +4,6 @@
 package org.jfxcore.compiler.transform.markup;
 
 import javassist.CtClass;
-import javassist.NotFoundException;
 import org.jetbrains.annotations.Nullable;
 import org.jfxcore.compiler.ast.BindingNode;
 import org.jfxcore.compiler.ast.Node;
@@ -210,91 +209,87 @@ public class PropertyAssignmentTransform implements Transform {
 
     private Node tryAddValue(
             TransformContext context, PropertyNode propertyNode, PropertyInfo propertyInfo, TypeInstance declaringType) {
-        try {
-            boolean isMap = propertyInfo.getValueType().subtypeOf(MapType());
-            if (!isMap && !propertyInfo.getValueType().subtypeOf(CollectionType())) {
-                return null;
-            }
+        boolean isMap = propertyInfo.getValueTypeInstance().subtypeOf(MapType());
+        if (!isMap && !propertyInfo.getValueTypeInstance().subtypeOf(CollectionType())) {
+            return null;
+        }
 
-            Resolver resolver = new Resolver(propertyNode.getSourceInfo());
-            List<TypeInstance> itemTypes = resolver.getPropertyTypeArguments(propertyInfo);
-            TypeInstance keyType, itemType;
+        Resolver resolver = new Resolver(propertyNode.getSourceInfo());
+        List<TypeInstance> itemTypes = resolver.getPropertyTypeArguments(propertyInfo);
+        TypeInstance keyType, itemType;
 
-            if (isMap) {
-                keyType = itemTypes.size() != 0 ? itemTypes.get(0) : resolver.getTypeInstance(ObjectType());
-                itemType = itemTypes.size() != 0 ? itemTypes.get(1) : resolver.getTypeInstance(ObjectType());
-            } else {
-                keyType = null;
-                itemType = itemTypes.size() != 0 ? itemTypes.get(0) : resolver.getTypeInstance(ObjectType());
-            }
+        if (isMap) {
+            keyType = itemTypes.size() != 0 ? itemTypes.get(0) : resolver.getTypeInstance(ObjectType());
+            itemType = itemTypes.size() != 0 ? itemTypes.get(1) : resolver.getTypeInstance(ObjectType());
+        } else {
+            keyType = null;
+            itemType = itemTypes.size() != 0 ? itemTypes.get(0) : resolver.getTypeInstance(ObjectType());
+        }
 
-            List<ValueNode> keys = new ArrayList<>();
-            List<ValueNode> values = new ArrayList<>();
+        List<ValueNode> keys = new ArrayList<>();
+        List<ValueNode> values = new ArrayList<>();
 
-            for (Node child : propertyNode.getValues()) {
-                boolean error = false;
-                TypeInstance childType = TypeHelper.getTypeInstance(child);
+        for (Node child : propertyNode.getValues()) {
+            boolean error = false;
+            TypeInstance childType = TypeHelper.getTypeInstance(child);
 
-                if (!isMap && child instanceof TextNode textNode) {
-                    if (textNode.isRawText()) {
+            if (!isMap && child instanceof TextNode textNode) {
+                if (textNode.isRawText()) {
+                    ValueNode valueNode = ValueEmitterFactory.newLiteralValue(
+                        textNode.getText(), itemType, child.getSourceInfo());
+
+                    if (valueNode == null) {
+                        error = true;
+                    } else {
+                        values.add(valueNode);
+                    }
+                } else {
+                    for (String value : textNode.getText().split(",|\\R")) {
+                        if (value.isBlank()) {
+                            continue;
+                        }
+
                         ValueNode valueNode = ValueEmitterFactory.newLiteralValue(
-                            textNode.getText(), itemType, child.getSourceInfo());
+                            value.trim(), itemType, child.getSourceInfo());
 
                         if (valueNode == null) {
                             error = true;
-                        } else {
-                            values.add(valueNode);
+                            break;
                         }
+
+                        values.add(valueNode);
+                    }
+                }
+            } else if (itemType.isAssignableFrom(childType)) {
+                if (isMap) {
+                    if (child instanceof EmitLiteralNode
+                            || child instanceof EmitObjectNode
+                            || child instanceof EmitClassConstantNode) {
+                        ValueNode key = tryCreateKey(context, (ValueEmitterNode)child, keyType.jvmType());
+                        if (key == null) {
+                            throw GeneralErrors.unsupportedMapKeyType(child.getSourceInfo(), propertyInfo);
+                        }
+
+                        keys.add(key);
                     } else {
-                        for (String value : textNode.getText().split(",|\\R")) {
-                            if (value.isBlank()) {
-                                continue;
-                            }
-
-                            ValueNode valueNode = ValueEmitterFactory.newLiteralValue(
-                                value.trim(), itemType, child.getSourceInfo());
-
-                            if (valueNode == null) {
-                                error = true;
-                                break;
-                            }
-
-                            values.add(valueNode);
-                        }
+                        throw GeneralErrors.cannotAddItemIncompatibleValue(
+                            child.getSourceInfo(), declaringType.jvmType(), propertyNode.getMarkupName(),
+                            child.getSourceInfo().getText());
                     }
-                } else if (itemType.isAssignableFrom(childType)) {
-                    if (isMap) {
-                        if (child instanceof EmitLiteralNode
-                                || child instanceof EmitObjectNode
-                                || child instanceof EmitClassConstantNode) {
-                            ValueNode key = tryCreateKey(context, (ValueEmitterNode)child, keyType.jvmType());
-                            if (key == null) {
-                                throw GeneralErrors.unsupportedMapKeyType(child.getSourceInfo(), propertyInfo);
-                            }
-
-                            keys.add(key);
-                        } else {
-                            throw GeneralErrors.cannotAddItemIncompatibleValue(
-                                child.getSourceInfo(), declaringType.jvmType(), propertyNode.getMarkupName(),
-                                child.getSourceInfo().getText());
-                        }
-                    }
-
-                    values.add((ValueNode)child);
-                } else {
-                    error = true;
                 }
 
-                if (error) {
-                    throw GeneralErrors.cannotAddItemIncompatibleType(
-                        child.getSourceInfo(), propertyInfo, TypeHelper.getJvmType(child), itemType.jvmType());
-                }
+                values.add((ValueNode)child);
+            } else {
+                error = true;
             }
 
-            return new EmitPropertyAdderNode(propertyInfo, keys, values, itemType, propertyNode.getSourceInfo());
-        } catch (NotFoundException ex) {
-            throw SymbolResolutionErrors.notFound(propertyNode.getSourceInfo(), ex.getMessage());
+            if (error) {
+                throw GeneralErrors.cannotAddItemIncompatibleType(
+                    child.getSourceInfo(), propertyInfo, TypeHelper.getJvmType(child), itemType.jvmType());
+            }
         }
+
+        return new EmitPropertyAdderNode(propertyInfo, keys, values, itemType, propertyNode.getSourceInfo());
     }
 
     private ValueNode tryCreateKey(TransformContext context, ValueEmitterNode node, CtClass keyType) {

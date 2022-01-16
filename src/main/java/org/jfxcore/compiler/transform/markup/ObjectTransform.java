@@ -4,6 +4,7 @@
 package org.jfxcore.compiler.transform.markup;
 
 import javassist.CtClass;
+import javassist.CtField;
 import javassist.CtMethod;
 import javassist.Modifier;
 import javassist.NotFoundException;
@@ -19,6 +20,7 @@ import org.jfxcore.compiler.ast.intrinsic.Intrinsics;
 import org.jfxcore.compiler.diagnostic.Diagnostic;
 import org.jfxcore.compiler.diagnostic.ErrorCode;
 import org.jfxcore.compiler.diagnostic.MarkupException;
+import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.diagnostic.errors.GeneralErrors;
 import org.jfxcore.compiler.diagnostic.errors.ObjectInitializationErrors;
 import org.jfxcore.compiler.diagnostic.errors.SymbolResolutionErrors;
@@ -27,6 +29,7 @@ import org.jfxcore.compiler.transform.TransformContext;
 import org.jfxcore.compiler.transform.markup.util.AdderFactory;
 import org.jfxcore.compiler.transform.markup.util.ValueEmitterFactory;
 import org.jfxcore.compiler.diagnostic.DiagnosticInfo;
+import org.jfxcore.compiler.util.AccessVerifier;
 import org.jfxcore.compiler.util.Classes;
 import org.jfxcore.compiler.util.PropertyHelper;
 import org.jfxcore.compiler.util.Resolver;
@@ -200,9 +203,12 @@ public class ObjectTransform implements Transform {
         }
 
         Resolver resolver = new Resolver(propertyNode.getSourceInfo());
-        boolean hasValueOfMethod = resolver.tryResolveValueOfMethod(nodeType.jvmType()) != null;
+        CtMethod valueOfMethod = resolver.tryResolveValueOfMethod(nodeType.jvmType());
+        boolean hasValueOfMethod = valueOfMethod != null;
 
-        if (!hasValueOfMethod) {
+        if (hasValueOfMethod) {
+            AccessVerifier.verifyAccessible(valueOfMethod, context.getMarkupClass(), propertyNode.getSourceInfo());
+        } else {
             TypeInstance supertype = resolver.tryResolveSupertypeWithValueOfMethod(nodeType);
             throw ObjectInitializationErrors.valueOfMethodNotFound(
                 propertyNode.getSourceInfo(), nodeType.jvmType(), supertype != null ? supertype.jvmType() :  null);
@@ -227,27 +233,29 @@ public class ObjectTransform implements Transform {
 
         CtClass declaringType;
         String[] segments = constantProperty.getTextValueNotEmpty(context).split("\\.");
+        SourceInfo valueSourceInfo = constantProperty.getSingleValue(context).getSourceInfo();
 
         if (segments.length == 1) {
             declaringType = TypeHelper.getJvmType(objectNode);
         } else if (segments.length == 2) {
-            declaringType = new Resolver(objectNode.getSourceInfo()).resolveClassAgainstImports(segments[0]);
+            declaringType = new Resolver(valueSourceInfo).resolveClassAgainstImports(segments[0]);
         } else {
             String className = Arrays.stream(segments)
                 .limit(segments.length - 1)
                 .collect(Collectors.joining("."));
 
-            declaringType = new Resolver(objectNode.getSourceInfo()).resolveClass(className);
+            declaringType = new Resolver(valueSourceInfo).resolveClass(className);
         }
 
         String fieldName = segments[segments.length - 1];
         TypeInstance fieldType;
 
         try {
-            Resolver resolver = new Resolver(constantProperty.getSourceInfo());
-            fieldType = resolver.getTypeInstance(declaringType.getField(fieldName), Collections.emptyList());
+            CtField field = declaringType.getField(fieldName);
+            AccessVerifier.verifyAccessible(field, context.getMarkupClass(), valueSourceInfo);
+            fieldType = new Resolver(valueSourceInfo).getTypeInstance(field, Collections.emptyList());
         } catch (NotFoundException ex) {
-            throw SymbolResolutionErrors.memberNotFound(constantProperty.getSourceInfo(), declaringType, fieldName);
+            throw SymbolResolutionErrors.memberNotFound(valueSourceInfo, declaringType, fieldName);
         }
 
         ValueNode constantNode = new EmitClassConstantNode(
@@ -292,7 +300,7 @@ public class ObjectTransform implements Transform {
         });
 
         if (factoryMethod == null) {
-            throw SymbolResolutionErrors.methodNotFound(factoryProperty.getSourceInfo(), declaringClass, methodName);
+            throw SymbolResolutionErrors.memberNotFound(factoryProperty.getSourceInfo(), declaringClass, methodName);
         }
 
         return EmitObjectNode

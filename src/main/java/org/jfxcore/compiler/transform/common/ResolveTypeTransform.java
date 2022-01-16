@@ -1,4 +1,4 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2022, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.transform.common;
@@ -20,6 +20,7 @@ import org.jfxcore.compiler.diagnostic.errors.PropertyAssignmentErrors;
 import org.jfxcore.compiler.parse.TypeParser;
 import org.jfxcore.compiler.transform.Transform;
 import org.jfxcore.compiler.transform.TransformContext;
+import org.jfxcore.compiler.util.AccessVerifier;
 import org.jfxcore.compiler.util.Resolver;
 import org.jfxcore.compiler.util.TypeInstance;
 import java.util.Collections;
@@ -71,6 +72,11 @@ public class ResolveTypeTransform implements Transform {
 
         if (objectTypeClass == null) {
             return typeNode;
+        }
+
+        CtClass markupClass = context.getMarkupClass();
+        if (markupClass != null) {
+            AccessVerifier.verifyAccessible(objectTypeClass, markupClass, typeNode.getSourceInfo());
         }
 
         if (objectNode == null) {

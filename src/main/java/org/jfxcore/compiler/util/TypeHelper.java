@@ -1,4 +1,4 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2022, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.util;
@@ -15,6 +15,8 @@ import javassist.CtBehavior;
 import javassist.CtClass;
 import javassist.CtField;
 import javassist.CtMember;
+import javassist.Modifier;
+import javassist.NotFoundException;
 import javassist.bytecode.BadBytecode;
 import javassist.bytecode.SignatureAttribute;
 import javassist.bytecode.annotation.Annotation;
@@ -230,40 +232,6 @@ public class TypeHelper {
         return type;
     }
 
-    /**
-     * Gets the boxed default value for the specified type.
-     */
-    public static Object getDefaultValue(CtClass type) {
-        switch (type.getName()) {
-            case "byte":
-            case ByteName:
-                return (byte)0;
-            case "short":
-            case ShortName:
-                return (short)0;
-            case "int":
-            case IntegerName:
-                return 0;
-            case "long":
-            case LongName:
-                return 0L;
-            case "char":
-            case CharacterName:
-                return (char)0;
-            case "float":
-            case FloatName:
-                return 0.0F;
-            case "double":
-            case DoubleName:
-                return 0.0D;
-            case "boolean":
-            case BooleanName:
-                return false;
-            default:
-                throw new IllegalArgumentException();
-        }
-    }
-
     public static class MemberValueVisitorAdapter implements MemberValueVisitor {
         @Override public void visitAnnotationMemberValue(AnnotationMemberValue node) {}
         @Override public void visitArrayMemberValue(ArrayMemberValue node) {}
@@ -420,6 +388,23 @@ public class TypeHelper {
         }
 
         return ((ResolvedTypeNode)typeNode).getJvmType();
+    }
+
+    public static boolean isEffectivelyPublic(CtClass type) {
+        CtClass t = type;
+        while (t != null) {
+            if (!Modifier.isPublic(t.getModifiers())) {
+                return false;
+            }
+
+            try {
+                t = t.getDeclaringClass();
+            } catch (NotFoundException e) {
+                throw ExceptionHelper.unchecked(e);
+            }
+        }
+
+        return true;
     }
 
     public static int getSlots(CtClass type) {

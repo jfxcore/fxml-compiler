@@ -1,4 +1,4 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2022, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.diagnostic.errors;
@@ -9,12 +9,13 @@ import org.jfxcore.compiler.diagnostic.Diagnostic;
 import org.jfxcore.compiler.diagnostic.ErrorCode;
 import org.jfxcore.compiler.diagnostic.MarkupException;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
+import org.jfxcore.compiler.util.NameHelper;
 import org.jfxcore.compiler.util.PropertyInfo;
 import org.jfxcore.compiler.util.TypeInstance;
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.jfxcore.compiler.diagnostic.errors.FormatHelper.formatPropertyName;
+import static org.jfxcore.compiler.util.NameHelper.formatPropertyName;
 
 public class PropertyAssignmentErrors {
 
@@ -35,7 +36,7 @@ public class PropertyAssignmentErrors {
     public static MarkupException incompatiblePropertyItems(SourceInfo sourceInfo, PropertyInfo propertyInfo) {
         return new MarkupException(sourceInfo, Diagnostic.newDiagnosticVariant(
             ErrorCode.INCOMPATIBLE_PROPERTY_TYPE, "items",
-            formatPropertyName(propertyInfo), propertyInfo.getValueType().getName()));
+            formatPropertyName(propertyInfo), propertyInfo.getValueTypeInstance().getJavaName()));
     }
 
     public static MarkupException cannotCoercePropertyValue(
@@ -91,7 +92,7 @@ public class PropertyAssignmentErrors {
 
     public static MarkupException unsuitableEventHandler(SourceInfo sourceInfo, CtClass eventType, String methodName) {
         return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
-            ErrorCode.UNSUITABLE_EVENT_HANDLER, eventType.getName(), methodName));
+            ErrorCode.UNSUITABLE_EVENT_HANDLER, NameHelper.getJavaClassName(sourceInfo, eventType), methodName));
     }
 
     public static MarkupException cannotModifyReadOnlyProperty(SourceInfo sourceInfo, PropertyInfo propertyInfo) {
@@ -126,20 +127,12 @@ public class PropertyAssignmentErrors {
 
     public static MarkupException invalidContentBindingTarget(
             SourceInfo sourceInfo, PropertyInfo propertyInfo, BindingMode mode) {
-        ErrorCode code;
-        switch (mode) {
-            case CONTENT:
-                code = ErrorCode.INVALID_CONTENT_ASSIGNMENT_TARGET;
-                break;
-            case UNIDIRECTIONAL_CONTENT:
-                code = ErrorCode.INVALID_CONTENT_BINDING_TARGET;
-                break;
-            case BIDIRECTIONAL_CONTENT:
-                code = ErrorCode.INVALID_BIDIRECTIONAL_CONTENT_BINDING_TARGET;
-                break;
-            default:
-                throw new IllegalArgumentException("mode");
-        }
+        ErrorCode code = switch (mode) {
+            case CONTENT -> ErrorCode.INVALID_CONTENT_ASSIGNMENT_TARGET;
+            case UNIDIRECTIONAL_CONTENT -> ErrorCode.INVALID_CONTENT_BINDING_TARGET;
+            case BIDIRECTIONAL_CONTENT -> ErrorCode.INVALID_BIDIRECTIONAL_CONTENT_BINDING_TARGET;
+            default -> throw new IllegalArgumentException("mode");
+        };
 
         return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(code, formatPropertyName(propertyInfo)));
     }

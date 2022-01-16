@@ -1,4 +1,4 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2022, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.util;
@@ -13,7 +13,7 @@ public class ExceptionHelper {
         try {
             action.run();
         } catch (NotFoundException ex) {
-            throw SymbolResolutionErrors.notFound(sourceInfo, ex.getMessage());
+            throw SymbolResolutionErrors.classNotFound(sourceInfo, ex.getMessage());
         } catch (Throwable ex) {
             throw unchecked(ex);
         }
@@ -23,7 +23,7 @@ public class ExceptionHelper {
         try {
             return action.get();
         } catch (NotFoundException ex) {
-            throw SymbolResolutionErrors.notFound(sourceInfo, ex.getMessage());
+            throw SymbolResolutionErrors.classNotFound(sourceInfo, ex.getMessage());
         } catch (Throwable ex) {
             throw unchecked(ex);
         }

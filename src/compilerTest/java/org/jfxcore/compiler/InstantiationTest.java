@@ -632,7 +632,7 @@ public class InstantiationTest extends CompilerTestBase {
                 </GridPane>
             """));
 
-            assertEquals(ErrorCode.METHOD_NOT_FOUND, ex.getDiagnostic().getCode());
+            assertEquals(ErrorCode.MEMBER_NOT_FOUND, ex.getDiagnostic().getCode());
             assertCodeHighlight("fx:factory=\"observableArrayList\"", ex);
         }
 

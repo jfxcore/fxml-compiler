@@ -1,4 +1,4 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2022, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.expression.path;
@@ -86,47 +86,43 @@ public class ResolvedPath {
             throw ParserErrors.invalidExpression(sourceInfo);
         }
 
-        try {
-            Resolver resolver = new Resolver(sourceInfo);
-            CtClass currentHostType = segments.get(0).getValueTypeInstance().jvmType();
+        Resolver resolver = new Resolver(sourceInfo);
+        CtClass currentHostType = segments.get(0).getValueTypeInstance().jvmType();
 
-            for (PathSegmentNode segment : path) {
-                Segment source = getValueSource(resolver, segment, currentHostType, preferObservable, false);
+        for (PathSegmentNode segment : path) {
+            Segment source = getValueSource(resolver, segment, currentHostType, preferObservable, false);
 
-                if (source == null) {
-                    if (segment.isObservableSelector() && getValueSource(
-                            resolver, segment, currentHostType, preferObservable, true) != null) {
-                        throw SymbolResolutionErrors.invalidInvariantReference(
-                            segment.getSourceInfo(), currentHostType, segment.getText());
-                    } else {
-                        if (segment instanceof SubPathSegmentNode subPathSegment) {
-                            var segments = subPathSegment.getSegments();
-                            var declaringClassName = segments.stream()
-                                .limit(segments.size() - 1)
-                                .map(PathSegmentNode::getText)
-                                .collect(Collectors.joining("."));
+            if (source == null) {
+                if (segment.isObservableSelector() && getValueSource(
+                        resolver, segment, currentHostType, preferObservable, true) != null) {
+                    throw SymbolResolutionErrors.invalidInvariantReference(
+                        segment.getSourceInfo(), currentHostType, segment.getText());
+                } else {
+                    if (segment instanceof SubPathSegmentNode subPathSegment) {
+                        var segments = subPathSegment.getSegments();
+                        var declaringClassName = segments.stream()
+                            .limit(segments.size() - 1)
+                            .map(PathSegmentNode::getText)
+                            .collect(Collectors.joining("."));
 
-                            SourceInfo declaringClassSourceInfo = SourceInfo.span(
-                                segments.get(0).getSourceInfo(), segments.get(segments.size() - 2).getSourceInfo());
+                        SourceInfo declaringClassSourceInfo = SourceInfo.span(
+                            segments.get(0).getSourceInfo(), segments.get(segments.size() - 2).getSourceInfo());
 
-                            var declaringClass = new Resolver(declaringClassSourceInfo)
-                                .resolveClassAgainstImports(declaringClassName);
-
-                            throw SymbolResolutionErrors.memberNotFound(
-                                segments.get(segments.size() - 1).getSourceInfo(),
-                                declaringClass, segments.get(segments.size() - 1).getText());
-                        }
+                        var declaringClass = new Resolver(declaringClassSourceInfo)
+                            .resolveClassAgainstImports(declaringClassName);
 
                         throw SymbolResolutionErrors.memberNotFound(
-                            segment.getSourceInfo(), currentHostType, segment.getText());
+                            segments.get(segments.size() - 1).getSourceInfo(),
+                            declaringClass, segments.get(segments.size() - 1).getText());
                     }
-                }
 
-                segments.add(source);
-                currentHostType = source.getValueTypeInstance().jvmType();
+                    throw SymbolResolutionErrors.memberNotFound(
+                        segment.getSourceInfo(), currentHostType, segment.getText());
+                }
             }
-        } catch (NotFoundException ex) {
-            throw SymbolResolutionErrors.notFound(sourceInfo, ex.getMessage());
+
+            segments.add(source);
+            currentHostType = source.getValueTypeInstance().jvmType();
         }
 
         optimizePath();
@@ -266,8 +262,7 @@ public class ResolvedPath {
             PathSegmentNode segment,
             CtClass declaringClass,
             boolean preferObservable,
-            boolean suppressObservableSelector)
-                throws NotFoundException {
+            boolean suppressObservableSelector) {
         ResolveSegmentMethod[] methods = new ResolveSegmentMethod[] {
                 this::getPathSegmentFromField,
                 this::getPathSegmentFromGetter,
@@ -368,8 +363,7 @@ public class ResolvedPath {
             CtClass declaringClass,
             CtClass receiverClass,
             boolean attachedProperty,
-            boolean selectObservable)
-                throws NotFoundException {
+            boolean selectObservable) {
         if (attachedProperty) {
             return null;
         }
@@ -379,7 +373,14 @@ public class ResolvedPath {
             return null;
         }
 
-        ObservableKind observableKind = ObservableKind.get(field.getType());
+        CtClass fieldType;
+        try {
+            fieldType = field.getType();
+        } catch (NotFoundException ex) {
+            throw SymbolResolutionErrors.classNotFound(sourceInfo, ex.getMessage());
+        }
+
+        ObservableKind observableKind = ObservableKind.get(fieldType);
         if (selectObservable && observableKind == ObservableKind.NONE) {
             return null;
         }
@@ -410,8 +411,7 @@ public class ResolvedPath {
             CtClass declaringClass,
             CtClass receiverClass,
             boolean attachedProperty,
-            boolean selectObservable)
-                throws NotFoundException {
+            boolean selectObservable) {
         CtMethod getter = attachedProperty ?
             resolver.tryResolveAttachedGetter(declaringClass, receiverClass, propertyName, true) :
             resolver.tryResolveGetter(declaringClass, propertyName, true, null);
@@ -428,7 +428,14 @@ public class ResolvedPath {
             return segment.getValueTypeInstance();
         }).collect(Collectors.toList());
 
-        ObservableKind observableKind = ObservableKind.get(getter.getReturnType());
+        CtClass returnType;
+        try {
+            returnType = getter.getReturnType();
+        } catch (NotFoundException ex) {
+            throw SymbolResolutionErrors.classNotFound(sourceInfo, ex.getMessage());
+        }
+
+        ObservableKind observableKind = ObservableKind.get(returnType);
         if (selectObservable && observableKind == ObservableKind.NONE) {
             return null;
         }
@@ -455,7 +462,7 @@ public class ResolvedPath {
             CtClass declaringClass,
             CtClass receiverClass,
             boolean attachedProperty,
-            boolean selectObservable) throws NotFoundException {
+            boolean selectObservable) {
         if (attachedProperty) {
             return null;
         }
@@ -473,7 +480,14 @@ public class ResolvedPath {
             return segment.getValueTypeInstance();
         }).collect(Collectors.toList());
 
-        ObservableKind observableKind = ObservableKind.get(delegateInfo.delegateField.getType());
+        CtClass fieldType;
+        try {
+            fieldType = delegateInfo.delegateField.getType();
+        } catch (NotFoundException ex) {
+            throw SymbolResolutionErrors.classNotFound(sourceInfo, ex.getMessage());
+        }
+
+        ObservableKind observableKind = ObservableKind.get(fieldType);
         if (selectObservable && observableKind == ObservableKind.NONE) {
             return null;
         }
@@ -483,10 +497,17 @@ public class ResolvedPath {
         }
 
         TypeInstance valueType = resolver.getTypeInstance(delegateInfo.getter, invocationChain);
-        TypeInstance type = resolver.getTypeInstance(delegateInfo.delegateField.getType());
+        TypeInstance type = resolver.getTypeInstance(fieldType);
         TypeInstance argument = resolver.tryFindObservableArgument(type);
 
-        if (argument == null || !delegateInfo.getter.getReturnType().equals(argument.jvmType())) {
+        CtClass returnType;
+        try {
+            returnType = delegateInfo.getter.getReturnType();
+        } catch (NotFoundException ex) {
+            throw SymbolResolutionErrors.classNotFound(sourceInfo, ex.getMessage());
+        }
+
+        if (argument == null || !returnType.equals(argument.jvmType())) {
             type = resolver.getTypeInstance(type.jvmType(), List.of(valueType));
         }
 
@@ -619,7 +640,7 @@ public class ResolvedPath {
             CtClass declaringClass,
             CtClass receiverClass,
             boolean attachedProperty,
-            boolean selectObservable) throws NotFoundException;
+            boolean selectObservable);
     }
 
     private static class SegmentMap extends TreeMap<Integer, SegmentInfo> {

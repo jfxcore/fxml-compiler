@@ -1,4 +1,4 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2022, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.util;
@@ -6,6 +6,7 @@ package org.jfxcore.compiler.util;
 import javassist.CtBehavior;
 import javassist.CtClass;
 import javassist.CtConstructor;
+import javassist.CtMember;
 import javassist.CtMethod;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import java.util.Arrays;
@@ -115,6 +116,10 @@ public class NameHelper {
         return builder.append(')').toString();
     }
 
+    public static String getJavaMemberName(SourceInfo sourceInfo, CtMember member) {
+        return getJavaClassName(sourceInfo, member.getDeclaringClass()) + "." + member.getName();
+    }
+
     public static String getJavaClassName(SourceInfo sourceInfo, CtClass cls) {
         return ExceptionHelper.unchecked(sourceInfo, () -> {
             char[] name = cls.getName().toCharArray();
@@ -127,6 +132,31 @@ public class NameHelper {
 
             return new String(name);
         });
+    }
+
+    public static String formatPropertyName(PropertyInfo propertyInfo) {
+        String propertyName = propertyInfo.getName();
+        if (propertyName.contains(".")) {
+            return propertyInfo.getDeclaringType().getSimpleName() + ".(" + propertyName + ")";
+        }
+
+        return propertyInfo.getDeclaringType().getSimpleName() + "." + propertyName;
+    }
+
+    public static String formatPropertyName(CtClass declaringClass, String name) {
+        if (name.contains(".")) {
+            return declaringClass.getSimpleName() + ".(" + name + ")";
+        }
+
+        return declaringClass.getSimpleName() + "." + name;
+    }
+
+    public static String formatPropertyName(String declaring, String name) {
+        if (name.contains(".")) {
+            return declaring + ".(" + name + ")";
+        }
+
+        return declaring + "." + name;
     }
 
     private static final Pattern JAVA_IDENTIFIER = Pattern.compile(

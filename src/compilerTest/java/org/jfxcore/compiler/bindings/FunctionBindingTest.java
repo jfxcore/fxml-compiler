@@ -403,7 +403,7 @@ public class FunctionBindingTest extends CompilerTestBase {
             </TestPane>
         """));
 
-        assertEquals(ErrorCode.METHOD_NOT_FOUND, ex.getDiagnostic().getCode());
+        assertEquals(ErrorCode.MEMBER_NOT_FOUND, ex.getDiagnostic().getCode());
         assertCodeHighlight("parent[1]/add", ex);
     }
 
@@ -462,8 +462,8 @@ public class FunctionBindingTest extends CompilerTestBase {
                       id="{fx:once defaultMethod('foo-%s', {fx:constant POSITIVE_INFINITY})}"/>
         """));
 
-        assertEquals(ErrorCode.NOT_FOUND, ex.getDiagnostic().getCode());
-        assertCodeHighlight("{fx:constant POSITIVE_INFINITY}", ex);
+        assertEquals(ErrorCode.MEMBER_NOT_FOUND, ex.getDiagnostic().getCode());
+        assertCodeHighlight("POSITIVE_INFINITY", ex);
     }
 
     @Test
@@ -611,7 +611,8 @@ public class FunctionBindingTest extends CompilerTestBase {
         assertTrue(root.prefWidthProperty().isBound());
         assertEquals(4.0, root.getPrefWidth(), 0.001);
 
-        // If we get 4 here, the compiler didn't eliminate the duplicate class for the second nested method
+        // If we get 4 here, the compiler didn't eliminate the duplicate class for the second nested method.
+        // This is most likely caused by an incorrect implementation of EmitObservableFunctionNode.equals/hashCode.
         Class<?>[] classes = root.getClass().getDeclaredClasses();
         assertEquals(3, classes.length);
     }
@@ -795,7 +796,7 @@ public class FunctionBindingTest extends CompilerTestBase {
             </TestPane>
         """));
 
-        assertEquals(ErrorCode.METHOD_NOT_FOUND, ex.getDiagnostic().getCode());
+        assertEquals(ErrorCode.MEMBER_NOT_FOUND, ex.getDiagnostic().getCode());
         assertCodeHighlight("parent[1]/add", ex);
     }
 
@@ -956,7 +957,7 @@ public class FunctionBindingTest extends CompilerTestBase {
                       prefWidth="{fx:sync sum(doubleProp); inverseMethod=foo.doesNotExist}"/>
         """));
 
-        assertEquals(ErrorCode.NOT_FOUND, ex.getDiagnostic().getCode());
+        assertEquals(ErrorCode.MEMBER_NOT_FOUND, ex.getDiagnostic().getCode());
         assertCodeHighlight("foo.doesNotExist", ex);
     }
 
@@ -1233,7 +1234,7 @@ public class FunctionBindingTest extends CompilerTestBase {
                                    id="{fx:sync noInverseMethod(doubleProp); inverseMethod=doesNotExist}"/>
         """));
 
-        assertEquals(ErrorCode.METHOD_NOT_FOUND, ex.getDiagnostic().getCode());
+        assertEquals(ErrorCode.MEMBER_NOT_FOUND, ex.getDiagnostic().getCode());
         assertCodeHighlight("doesNotExist", ex);
     }
 

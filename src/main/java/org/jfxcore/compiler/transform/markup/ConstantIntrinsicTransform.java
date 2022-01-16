@@ -4,6 +4,7 @@
 package org.jfxcore.compiler.transform.markup;
 
 import javassist.CtClass;
+import javassist.CtField;
 import javassist.NotFoundException;
 import org.jetbrains.annotations.Nullable;
 import org.jfxcore.compiler.ast.Node;
@@ -18,6 +19,7 @@ import org.jfxcore.compiler.diagnostic.errors.ParserErrors;
 import org.jfxcore.compiler.diagnostic.errors.SymbolResolutionErrors;
 import org.jfxcore.compiler.transform.Transform;
 import org.jfxcore.compiler.transform.TransformContext;
+import org.jfxcore.compiler.util.AccessVerifier;
 import org.jfxcore.compiler.util.PropertyInfo;
 import org.jfxcore.compiler.util.Resolver;
 import org.jfxcore.compiler.util.TypeHelper;
@@ -29,7 +31,7 @@ import java.util.stream.Collectors;
 
 /**
  * Transforms the fx:constant element into an {@link EmitClassConstantNode}.
- * Note: this transform doesn't apply to the fx:constant property, which is handled by {@link ObjectTransform}.
+ * Note: this transform doesn't apply to the fx:constant attribute, which is handled by {@link ObjectTransform}.
  */
 public class ConstantIntrinsicTransform implements Transform {
 
@@ -46,13 +48,13 @@ public class ConstantIntrinsicTransform implements Transform {
 
         ObjectNode objectNode = (ObjectNode)node;
         Node parentNode = context.getParent();
-        TypeInstance valueType = null;
+        TypeInstance propertyType = null;
 
         if (parentNode instanceof PropertyNode propertyNode) {
             TypeInstance parentType = TypeHelper.getTypeInstance(context.getParent(1));
             Resolver resolver = new Resolver(propertyNode.getSourceInfo());
             PropertyInfo propertyInfo = resolver.resolveProperty(parentType, propertyNode.getName());
-            valueType = propertyInfo.getValueTypeInstance();
+            propertyType = propertyInfo.getValueTypeInstance();
         }
 
         if (objectNode.getChildren().size() == 0) {
@@ -67,19 +69,25 @@ public class ConstantIntrinsicTransform implements Transform {
             throw ParserErrors.expectedIdentifier(objectNode.getChildren().get(0).getSourceInfo());
         }
 
-        return createConstantNode(valueType, textNode.getText(), node.getSourceInfo());
+        return createConstantNode(context, propertyType, textNode, node.getSourceInfo());
     }
 
-    private ValueNode createConstantNode(@Nullable TypeInstance valueType, String textValue, SourceInfo sourceInfo) {
+    private ValueNode createConstantNode(
+            TransformContext context,
+            @Nullable TypeInstance propertyType,
+            TextNode textNode,
+            SourceInfo nodeSourceInfo) {
         CtClass declaringType;
-        String[] segments = textValue.split("\\.");
+        String[] segments = textNode.getText().split("\\.");
+        SourceInfo sourceInfo = textNode.getSourceInfo();
+        Resolver resolver = new Resolver(sourceInfo);
 
         if (segments.length == 1) {
-            if (valueType == null) {
-                throw SymbolResolutionErrors.notFound(sourceInfo, segments[0]);
+            if (propertyType == null) {
+                propertyType = resolver.getTypeInstance(context.getBindingContextClass());
             }
 
-            declaringType = TypeHelper.getBoxedType(valueType.jvmType());
+            declaringType = TypeHelper.getBoxedType(propertyType.jvmType());
         } else if (segments.length == 2) {
             declaringType = new Resolver(sourceInfo).resolveClassAgainstImports(segments[0]);
         } else {
@@ -94,18 +102,14 @@ public class ConstantIntrinsicTransform implements Transform {
         TypeInstance fieldType;
 
         try {
-            Resolver resolver = new Resolver(sourceInfo);
-            fieldType = resolver.getTypeInstance(declaringType.getField(fieldName), Collections.emptyList());
+            CtField field = declaringType.getField(fieldName);
+            AccessVerifier.verifyAccessible(field, context.getMarkupClass(), sourceInfo);
+            fieldType = resolver.getTypeInstance(field, Collections.emptyList());
         } catch (NotFoundException ex) {
             throw SymbolResolutionErrors.memberNotFound(sourceInfo, declaringType, fieldName);
         }
 
-        return new EmitClassConstantNode(
-            null,
-            fieldType,
-            declaringType,
-            fieldName,
-            sourceInfo);
+        return new EmitClassConstantNode(null, fieldType, declaringType, fieldName, nodeSourceInfo);
     }
 
 }

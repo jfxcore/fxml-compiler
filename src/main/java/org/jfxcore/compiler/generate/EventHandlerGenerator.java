@@ -1,4 +1,4 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2022, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.generate;
@@ -13,6 +13,7 @@ import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.ast.emit.BytecodeEmitContext;
 import org.jfxcore.compiler.diagnostic.errors.PropertyAssignmentErrors;
 import org.jfxcore.compiler.diagnostic.errors.SymbolResolutionErrors;
+import org.jfxcore.compiler.util.AccessVerifier;
 import org.jfxcore.compiler.util.Bytecode;
 import org.jfxcore.compiler.util.Classes;
 import org.jfxcore.compiler.util.Descriptors;
@@ -149,16 +150,21 @@ public class EventHandlerGenerator extends GeneratorBase {
                 throw PropertyAssignmentErrors.unsuitableEventHandler(sourceInfo, eventType, eventHandlerName);
             }
 
-            throw SymbolResolutionErrors.methodNotFound(sourceInfo, declaringClass, eventHandlerName);
+            throw SymbolResolutionErrors.memberNotFound(sourceInfo, declaringClass, eventHandlerName);
         }
+
+        CtMethod selectedMethod = methods[0];
 
         for (CtMethod method : methods) {
             if (resolver.getParameterTypes(method, Collections.emptyList()).length > 0) {
-                return method;
+                selectedMethod = method;
+                break;
             }
         }
 
-        return methods[0];
+        AccessVerifier.verifyAccessible(selectedMethod, context.getMarkupClass(), sourceInfo);
+
+        return selectedMethod;
     }
 
 }
