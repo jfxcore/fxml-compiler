@@ -20,6 +20,7 @@ public class ClassNode extends ObjectNode implements JavaEmitterNode {
     private final String className;
     private final String markupClassName;
     private final String[] parameters;
+    private final String typeArguments;
     private final int classModifiers;
     private final boolean hasCodeBehind;
 
@@ -29,6 +30,7 @@ public class ClassNode extends ObjectNode implements JavaEmitterNode {
             String markupClassName,
             int classModifiers,
             String[] parameters,
+            String typeArguments,
             boolean hasCodeBehind,
             TypeNode type,
             Collection<PropertyNode> properties,
@@ -39,6 +41,7 @@ public class ClassNode extends ObjectNode implements JavaEmitterNode {
         this.markupClassName = markupClassName;
         this.classModifiers = classModifiers;
         this.parameters = parameters;
+        this.typeArguments = typeArguments;
         this.hasCodeBehind = hasCodeBehind;
     }
 
@@ -84,9 +87,14 @@ public class ClassNode extends ObjectNode implements JavaEmitterNode {
 
         StringBuilder code = context.getOutput();
         String className = hasCodeBehind ? markupClassName : this.className;
+        String superClassName = getType().getMarkupName();
+
+        if (typeArguments != null) {
+            superClassName += "<" + typeArguments + ">";
+        }
 
         code.append("@javax.annotation.processing.Generated(\"org.jfxcore:compiler\")\r\n")
-            .append(String.format("%sclass %s extends %s {\r\n", modifiers, className, getType().getMarkupName()));
+            .append(String.format("%sclass %s extends %s {\r\n", modifiers, className, superClassName));
 
         for (PropertyNode propertyNode : getProperties()) {
             context.emit(propertyNode);
@@ -145,8 +153,8 @@ public class ClassNode extends ObjectNode implements JavaEmitterNode {
     @Override
     public ClassNode deepClone() {
         return new ClassNode(
-            packageName, className, markupClassName, classModifiers, parameters, hasCodeBehind, getType(),
-            getProperties(), getSourceInfo());
+            packageName, className, markupClassName, classModifiers, parameters, typeArguments,
+            hasCodeBehind, getType(), getProperties(), getSourceInfo());
     }
 
     @Override
@@ -159,12 +167,13 @@ public class ClassNode extends ObjectNode implements JavaEmitterNode {
             && Objects.equals(packageName, other.packageName)
             && Objects.equals(className, other.className)
             && Objects.equals(markupClassName, other.markupClassName)
+            && Objects.equals(typeArguments, other.typeArguments)
             && Arrays.equals(parameters, other.parameters);
     }
 
     @Override
     public int hashCode() {
-        int result = Objects.hash(packageName, className, markupClassName, classModifiers, hasCodeBehind);
+        int result = Objects.hash(packageName, className, markupClassName, typeArguments, classModifiers, hasCodeBehind);
         result = 31 * result + Arrays.hashCode(parameters);
         return result;
     }

@@ -6,6 +6,7 @@ package org.jfxcore.compiler.transform.common;
 import javassist.CtClass;
 import org.jfxcore.compiler.ast.DocumentNode;
 import org.jfxcore.compiler.ast.Node;
+import org.jfxcore.compiler.ast.NodeDataKey;
 import org.jfxcore.compiler.ast.ObjectNode;
 import org.jfxcore.compiler.ast.PropertyNode;
 import org.jfxcore.compiler.ast.ResolvedTypeNode;
@@ -17,6 +18,7 @@ import org.jfxcore.compiler.diagnostic.ErrorCode;
 import org.jfxcore.compiler.diagnostic.MarkupException;
 import org.jfxcore.compiler.diagnostic.errors.ObjectInitializationErrors;
 import org.jfxcore.compiler.diagnostic.errors.PropertyAssignmentErrors;
+import org.jfxcore.compiler.parse.TypeFormatter;
 import org.jfxcore.compiler.parse.TypeParser;
 import org.jfxcore.compiler.transform.Transform;
 import org.jfxcore.compiler.transform.TransformContext;
@@ -52,6 +54,7 @@ public class ResolveTypeTransform implements Transform {
 
         TypeNode typeNode = (TypeNode)node;
         ObjectNode objectNode = context.getParent().as(ObjectNode.class);
+        boolean parentIsDocument = context.getParent(1) instanceof DocumentNode;
         Resolver resolver = new Resolver(node.getSourceInfo());
 
         if (typeNode.isIntrinsic()) {
@@ -96,6 +99,14 @@ public class ResolveTypeTransform implements Transform {
                 throw ObjectInitializationErrors.cannotParameterizeType(node.getSourceInfo(), objectTypeClass);
             }
 
+            if (parentIsDocument) {
+                String formattedTypeArgs = new TypeFormatter(
+                    typeArgsNode.getTextValueNotEmpty(context),
+                    typeArgsNode.getSourceInfo().getStart()).format();
+
+                objectNode.setNodeData(NodeDataKey.FORMATTED_TYPE_ARGUMENTS, formattedTypeArgs);
+            }
+
             typeArgsNode.remove();
             TypeInstance objectType = resolver.getTypeInstance(objectTypeClass);
 
@@ -133,7 +144,7 @@ public class ResolveTypeTransform implements Transform {
         }
 
         CtClass bindingContextType = context.getBindingContextClass();
-        if (bindingContextType != null && context.getParent(objectNode) instanceof DocumentNode) {
+        if (bindingContextType != null && parentIsDocument) {
             type = new TypeInstance(bindingContextType, Collections.emptyList(), List.of(type));
         }
 

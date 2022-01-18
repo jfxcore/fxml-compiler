@@ -1,4 +1,4 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2022, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler;
@@ -7,6 +7,8 @@ import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Pane;
+import javassist.ClassPool;
+import javassist.bytecode.SignatureAttribute;
 import org.jfxcore.compiler.diagnostic.ErrorCode;
 import org.jfxcore.compiler.diagnostic.MarkupException;
 import org.jfxcore.compiler.util.CompilerTestBase;
@@ -60,6 +62,37 @@ public class GenericsTest extends CompilerTestBase {
 
         assertEquals("foo", ((GenericObject)Reflection.getFieldValue(root, "obj")).getProp());
         assertEquals("foo", ((GenericObject)Reflection.getFieldValue(root, "obj")).getProp2());
+    }
+
+    @Test
+    public void GenericRootObject_With_TypeArguments_Is_Instantiated() throws Exception {
+        GenericObject<String> root = compileAndRun("""
+            <?import javafx.scene.layout.*?>
+            <GenericObject xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                           fx:typeArguments="java.lang.String" prop="foo" prop2="foo"/>
+        """);
+
+        var classPool = new ClassPool();
+        classPool.appendSystemPath();
+        classPool.appendClassPath(root.getClass().getProtectionDomain().getCodeSource().getLocation().toExternalForm());
+        String signature = classPool.get(root.getClass().getName()).getGenericSignature();
+        var classSignature = SignatureAttribute.toClassSignature(signature);
+        var type = ((SignatureAttribute.ClassType)classSignature.getSuperClass().getTypeArguments()[0].getType()).getName();
+        assertEquals("java.lang.String", type);
+    }
+
+    @Test
+    public void GenericRootObject_Without_TypeArguments_Is_Instantiated_As_RawType() throws Exception {
+        GenericObject<String> root = compileAndRun("""
+            <?import javafx.scene.layout.*?>
+            <GenericObject xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                           prop="foo" prop2="foo"/>
+        """);
+
+        var classPool = new ClassPool();
+        classPool.appendSystemPath();
+        classPool.appendClassPath(root.getClass().getProtectionDomain().getCodeSource().getLocation().toExternalForm());
+        assertNull(classPool.get(root.getClass().getName()).getGenericSignature());
     }
 
     @Test
