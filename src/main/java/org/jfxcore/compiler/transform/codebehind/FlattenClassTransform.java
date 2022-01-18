@@ -6,6 +6,7 @@ package org.jfxcore.compiler.transform.codebehind;
 import javassist.Modifier;
 import org.jfxcore.compiler.ast.DocumentNode;
 import org.jfxcore.compiler.ast.Node;
+import org.jfxcore.compiler.ast.NodeDataKey;
 import org.jfxcore.compiler.ast.ObjectNode;
 import org.jfxcore.compiler.ast.PropertyNode;
 import org.jfxcore.compiler.ast.codebehind.AddCodeFieldNode;
@@ -121,6 +122,7 @@ public class FlattenClassTransform implements Transform {
             markupClassName,
             classModifiers,
             params,
+            (String)root.getNodeData(NodeDataKey.FORMATTED_TYPE_ARGUMENTS),
             codeBehindClass != null,
             root.getType(),
             root.getProperties().stream().filter(p -> p instanceof AddCodeFieldNode).collect(Collectors.toList()),
