@@ -96,20 +96,7 @@ public class GenericsTest extends CompilerTestBase {
     }
 
     @Test
-    @SuppressWarnings("rawtypes")
-    public void CurlySyntax_GenericObject_With_TypeArguments_Is_Instantiated() {
-        var root = compileAndRun("""
-            <?import javafx.scene.control.*?>
-            <Label xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                   graphic="{GenericObject fx:typeArguments=String; fx:id=obj; prop=foo; prop2=foo}"/>
-        """);
-
-        assertEquals("foo", ((GenericObject)Reflection.getFieldValue(root, "obj")).getProp());
-        assertEquals("foo", ((GenericObject)Reflection.getFieldValue(root, "obj")).getProp2());
-    }
-
-    @Test
-    public void GenericObject_With_Uncoercible_Property_Throws_Exception() {
+    public void GenericObject_With_Uncoercible_PropertyValue_Throws_Exception() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.scene.layout.*?>
             <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
@@ -119,8 +106,11 @@ public class GenericsTest extends CompilerTestBase {
 
         assertEquals(ErrorCode.CANNOT_COERCE_PROPERTY_VALUE, ex.getDiagnostic().getCode());
         assertCodeHighlight("foo", ex);
+    }
 
-        ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+    @Test
+    public void GenericObject_With_Uncoercible_SetterValue_Throws_Exception() {
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.scene.layout.*?>
             <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
                 <GenericObject fx:typeArguments="java.lang.Integer" fx:id="obj" prop2="foo"/>
@@ -199,7 +189,7 @@ public class GenericsTest extends CompilerTestBase {
         public <U extends S, T extends U> void setProp2(T value) { prop2 = value; }
     }
 
-    @SuppressWarnings("unused")
+    @SuppressWarnings({"unused", "UnusedReturnValue"})
     public static class GenericDoubleObject<T extends Double> extends Pane {
         private final ObjectProperty<T> prop = new SimpleObjectProperty<>();
         public ObjectProperty<T> propProperty() { return prop; }
