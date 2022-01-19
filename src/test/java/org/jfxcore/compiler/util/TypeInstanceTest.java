@@ -1,4 +1,4 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2022, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.util;
@@ -789,6 +789,31 @@ public class TypeInstanceTest extends TestBase {
         MarkupException ex = assertThrows(MarkupException.class, () -> resolver.getTypeInstance(
             resolver.resolveClass(Type8.class.getName()), List.of(resolver.getTypeInstance(Classes.DoubleType()))));
         assertEquals(ErrorCode.TYPE_ARGUMENT_OUT_OF_BOUND, ex.getDiagnostic().getCode());
+    }
+
+    @Test
+    public void IsAssignable_With_RawUsage() {
+        var resolver = new Resolver(SourceInfo.none());
+        var clazz = resolver.resolveClass(Type5.class.getName());
+        var args = List.of(resolver.getTypeInstance(Classes.DoubleType()), resolver.getTypeInstance(Classes.StringType()));
+        var type1 = resolver.getTypeInstance(clazz, args);
+        var type2 = resolver.getTypeInstance(clazz, Collections.emptyList());
+
+        assertTrue(type1.isAssignableFrom(type2));
+        assertTrue(type2.isAssignableFrom(type1));
+    }
+
+    public static class Type9<T> {}
+    public static class Type10<T> extends Type9<T> {}
+    public static class Type11 extends Type10<String> {}
+
+    @Test
+    public void RawBaseType_IsAssignable_From_DerivedType() {
+        var resolver = new Resolver(SourceInfo.none());
+        var type1Raw = resolver.getTypeInstance(resolver.resolveClass(Type9.class.getName()), Collections.emptyList());
+        var type2 = resolver.getTypeInstance(resolver.resolveClass(Type11.class.getName()));
+
+        assertTrue(type1Raw.isAssignableFrom(type2));
     }
 
 }

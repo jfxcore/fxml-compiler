@@ -913,12 +913,7 @@ public class Resolver {
                 return getTypeInstance(clazz);
             }
 
-            TypeInstance typeInstance = invokeType(clazz.getDeclaringClass(), clazz, arguments);
-            if (arguments.isEmpty()) {
-                typeInstance.getArguments().clear();
-            }
-
-            return getCache().put(key, typeInstance);
+            return getCache().put(key, invokeType(clazz.getDeclaringClass(), clazz, arguments));
         } catch (NotFoundException ex) {
             throw SymbolResolutionErrors.classNotFound(sourceInfo, ex.getMessage());
         } catch (BadBytecode ex) {
@@ -1132,6 +1127,8 @@ public class Resolver {
                     }
 
                     arguments.add(providedArguments.get(i));
+                } else {
+                    arguments.add(TypeInstance.erased());
                 }
             }
 
@@ -1328,7 +1325,9 @@ public class Resolver {
                 for (int i = invocationChain.size() - 1; i >= 0; --i) {
                     TypeInstance instance = invocationChain.get(i);
 
-                    if (TypeHelper.equals(instance.jvmType(), argClass) && instance.getArguments().equals(typeArgs)) {
+                    if (TypeHelper.equals(instance.jvmType(), argClass)
+                            && instance.isRaw() == typeArgs.stream().anyMatch(TypeInstance::isRaw)
+                            && instance.getArguments().equals(typeArgs)) {
                         existingInstance = invocationChain.get(i);
                         break;
                     }
