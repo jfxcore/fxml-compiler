@@ -1,4 +1,4 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2022, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.parse;
@@ -24,7 +24,6 @@ import org.jfxcore.compiler.diagnostic.Location;
 import org.jfxcore.compiler.diagnostic.MarkupException;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.diagnostic.errors.ParserErrors;
-
 import java.util.ArrayList;
 import java.util.List;
 
@@ -173,14 +172,15 @@ public class MeParser {
 
     private PropertyNode parsePropertyExpression(MeTokenizer tokenizer) {
         TextNode propertyName = parseIdentifier(tokenizer);
+        String cleanName = cleanIdentifier(propertyName.getText(), propertyName.getSourceInfo());
         tokenizer.remove(EQUALS);
         ValueNode value = parseExpression(tokenizer);
 
         return new PropertyNode(
-            propertyName.getText().split("\\."),
+            cleanName.split("\\."),
             propertyName.getText(),
             value,
-            false,
+            !propertyName.getText().equals(cleanName),
             SourceInfo.span(propertyName.getSourceInfo(), value.getSourceInfo()));
     }
 
