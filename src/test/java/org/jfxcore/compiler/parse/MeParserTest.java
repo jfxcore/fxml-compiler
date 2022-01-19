@@ -1,4 +1,4 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2022, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.parse;
@@ -85,6 +85,8 @@ public class MeParserTest extends TestBase {
         assertEquals("content text", ((TextNode)root.getChildren().get(0)).getText());
 
         assertEquals("fx:id", root.getProperties().get(0).getMarkupName());
+        assertEquals("id", root.getProperties().get(0).getName());
+        assertTrue(root.getProperties().get(0).isIntrinsic());
         assertEquals(1, root.getProperties().get(0).getValues().size());
         assertEquals("pane0", ((TextNode)root.getProperties().get(0).getValues().get(0)).getText());
 
@@ -266,6 +268,8 @@ public class MeParserTest extends TestBase {
 
         ObjectNode root = new MeParser(markup, "fx").parseObject();
         assertEquals(1, root.getProperties().size());
+        assertTrue(root.getProperties().get(0).isIntrinsic());
+        assertEquals("bar", root.getProperties().get(0).getName());
         assertEquals("pane0 foo", ((TextNode)root.getProperties().get(0).getValues().get(0)).getText());
         assertEquals(1, root.getChildren().size());
         assertEquals("GridPane", ((ObjectNode)root.getChildren().get(0)).getType().getName());

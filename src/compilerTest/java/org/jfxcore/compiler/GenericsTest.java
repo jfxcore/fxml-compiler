@@ -65,6 +65,19 @@ public class GenericsTest extends CompilerTestBase {
     }
 
     @Test
+    @SuppressWarnings("rawtypes")
+    public void CurlySyntax_GenericObject_With_TypeArguments_Is_Instantiated() {
+        GridPane root = compileAndRun("""
+            <?import javafx.scene.layout.*?>
+            <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                      children="{GenericObject fx:typeArguments=String; fx:id=obj; prop=foo; prop2=foo}"/>
+        """);
+
+        assertEquals("foo", ((GenericObject)Reflection.getFieldValue(root, "obj")).getProp());
+        assertEquals("foo", ((GenericObject)Reflection.getFieldValue(root, "obj")).getProp2());
+    }
+
+    @Test
     public void GenericRootObject_With_TypeArguments_Is_Instantiated() throws Exception {
         GenericObject<String> root = compileAndRun("""
             <?import javafx.scene.layout.*?>
