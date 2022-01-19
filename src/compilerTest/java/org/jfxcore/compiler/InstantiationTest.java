@@ -299,9 +299,16 @@ public class InstantiationTest extends CompilerTestBase {
             public final T value;
             public final T value2;
         }
-        public static class MyButton<T> extends Button {
-            public MyButton(@NamedArg("data") MyData<T> data) { this.data = data; }
+
+        public static class MyGenericButton<T> extends Button {
+            public MyGenericButton(@NamedArg("data") MyData<T> data) { this.data = data; }
             public final MyData<T> data;
+        }
+
+        public static class MyDerivedData extends MyData<String> {
+            public MyDerivedData(@NamedArg("value") String value) {
+                super(value);
+            }
         }
 
         @Test
@@ -309,34 +316,41 @@ public class InstantiationTest extends CompilerTestBase {
             GridPane root = compileAndRun("""
                 <?import javafx.scene.layout.*?>
                 <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
-                    <MyButton fx:typeArguments="java.lang.String">
+                    <MyGenericButton fx:typeArguments="java.lang.String">
                         <data>
                             <MyData fx:typeArguments="java.lang.String" value="foo"/>
                         </data>
-                    </MyButton>
+                    </MyGenericButton>
                 </GridPane>
             """);
 
-            assertEquals(((MyButton<?>)root.getChildren().get(0)).data.value, "foo");
+            assertEquals(((MyGenericButton<?>)root.getChildren().get(0)).data.value, "foo");
         }
 
         @Test
-        public void RawType_Cannot_Be_Assigned_To_Typed_Element() {
-            MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+        public void RawType_Can_Be_Assigned_To_Typed_Element() {
+            GridPane root = compileAndRun("""
                 <?import javafx.scene.layout.*?>
                 <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
-                    <MyButton fx:typeArguments="java.lang.String">
+                    <MyGenericButton fx:typeArguments="java.lang.String">
                         <data><MyData value="foo"/></data>
-                    </MyButton>
+                    </MyGenericButton>
                 </GridPane>
-            """));
+            """);
 
-            assertEquals(ErrorCode.CONSTRUCTOR_NOT_FOUND, ex.getDiagnostic().getCode());
-            assertEquals(1, ex.getDiagnostic().getCauses().length);
-            assertEquals(ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT, ex.getDiagnostic().getCauses()[0].getCode());
-            assertCodeHighlight("""
-                <MyButton fx:typeArguments="java.lang.String">
-            """.trim(), ex);
+            assertEquals(((MyGenericButton<?>)root.getChildren().get(0)).data.value, "foo");
+        }
+
+        @Test
+        public void TypedData_Can_Be_Assigned_To_Raw_Element_With_CurlySyntax() {
+            GridPane root = compileAndRun("""
+                <?import javafx.scene.layout.*?>
+                <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                    <MyGenericButton data="{MyDerivedData value=foo}"/>
+                </GridPane>
+            """);
+
+            assertEquals(((MyGenericButton<?>)root.getChildren().get(0)).data.value, "foo");
         }
 
         @Test
@@ -344,9 +358,9 @@ public class InstantiationTest extends CompilerTestBase {
             MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
                 <?import javafx.scene.layout.*?>
                 <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
-                    <MyButton fx:typeArguments="java.lang.String">
+                    <MyGenericButton fx:typeArguments="java.lang.String">
                         <data><MyData fx:typeArguments="Double" value="foo"/></data>
-                    </MyButton>
+                    </MyGenericButton>
                 </GridPane>
             """));
 
@@ -354,7 +368,7 @@ public class InstantiationTest extends CompilerTestBase {
             assertEquals(1, ex.getDiagnostic().getCauses().length);
             assertEquals(ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT, ex.getDiagnostic().getCauses()[0].getCode());
             assertCodeHighlight("""
-                <MyButton fx:typeArguments="java.lang.String">
+                <MyGenericButton fx:typeArguments="java.lang.String">
             """.trim(), ex);
         }
     }

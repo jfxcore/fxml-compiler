@@ -96,6 +96,19 @@ public class GenericsTest extends CompilerTestBase {
     }
 
     @Test
+    @SuppressWarnings("rawtypes")
+    public void CurlySyntax_GenericObject_With_TypeArguments_Is_Instantiated() {
+        var root = compileAndRun("""
+            <?import javafx.scene.control.*?>
+            <Label xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                   graphic="{GenericObject fx:typeArguments=String; fx:id=obj; prop=foo; prop2=foo}"/>
+        """);
+
+        assertEquals("foo", ((GenericObject)Reflection.getFieldValue(root, "obj")).getProp());
+        assertEquals("foo", ((GenericObject)Reflection.getFieldValue(root, "obj")).getProp2());
+    }
+
+    @Test
     public void GenericObject_With_Uncoercible_Property_Throws_Exception() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.scene.layout.*?>

@@ -40,6 +40,20 @@ public class TypeInstance {
         LOOSE
     }
 
+    public static TypeInstance erased() {
+        return new TypeInstance(Classes.ObjectType()) {
+            @Override
+            public boolean isRaw() {
+                return true;
+            }
+
+            @Override
+            protected String toString(boolean simpleNames, boolean javaNames) {
+                return "<ERASED>";
+            }
+        };
+    }
+
     private final CtClass type;
     private final List<TypeInstance> arguments;
     private final List<TypeInstance> superTypes;
@@ -124,6 +138,10 @@ public class TypeInstance {
         if ((type.isPrimitive() || TypeHelper.isPrimitiveBox(type)) && arguments.size() > 0) {
             throw new IllegalArgumentException("Primitive cannot be parameterized.");
         }
+    }
+
+    public boolean isRaw() {
+        return arguments.stream().anyMatch(TypeInstance::isRaw);
     }
 
     public boolean isArray() {
@@ -297,6 +315,10 @@ public class TypeInstance {
             return false;
         }
 
+        if (isRaw() || from.isRaw()) {
+            return true;
+        }
+
         for (int i = 0; i < arguments.size(); ++i) {
             WildcardType wildcard = arguments.get(i).wildcard;
 
@@ -351,8 +373,7 @@ public class TypeInstance {
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        TypeInstance that = (TypeInstance)o;
+        if (!(o instanceof TypeInstance that)) return false;
         if (arguments.size() != that.arguments.size()) return false;
         if (dimensions != that.dimensions) return false;
         return arguments.isEmpty() ? TypeHelper.equals(type, that.type) : equals(new HashSet<>(), that);
@@ -369,9 +390,11 @@ public class TypeInstance {
             return false;
         }
 
-        for (int i = 0; i < arguments.size(); ++i) {
-            if (!arguments.get(i).equals(set, other.arguments.get(i))) {
-                return false;
+        if (!isRaw() && !other.isRaw()) {
+            for (int i = 0; i < arguments.size(); ++i) {
+                if (!arguments.get(i).equals(set, other.arguments.get(i))) {
+                    return false;
+                }
             }
         }
 
@@ -405,7 +428,7 @@ public class TypeInstance {
 
         builder.append(className);
 
-        if (arguments.size() > 0) {
+        if (!isRaw() && arguments.size() > 0) {
             builder.append('<');
 
             for (int i = 0; i < arguments.size(); ++i) {
