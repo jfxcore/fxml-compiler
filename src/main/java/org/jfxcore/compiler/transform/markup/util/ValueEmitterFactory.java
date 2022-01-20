@@ -28,6 +28,7 @@ import org.jfxcore.compiler.ast.text.TextNode;
 import org.jfxcore.compiler.diagnostic.Diagnostic;
 import org.jfxcore.compiler.diagnostic.DiagnosticInfo;
 import org.jfxcore.compiler.diagnostic.ErrorCode;
+import org.jfxcore.compiler.diagnostic.MarkupException;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.diagnostic.errors.GeneralErrors;
 import org.jfxcore.compiler.diagnostic.errors.PropertyAssignmentErrors;
@@ -275,6 +276,7 @@ public class ValueEmitterFactory {
     public static EmitObjectNode newObjectWithNamedParams(ObjectNode objectNode, List<DiagnosticInfo> diagnostics) {
         TypeInstance type = TypeHelper.getTypeInstance(objectNode);
         NamedArgsConstructor[] namedArgsConstructors = findNamedArgsConstructors(objectNode, diagnostics);
+        List<DiagnosticInfo> constructorDiagnostics = new ArrayList<>();
 
         for (NamedArgsConstructor namedArgsConstructor : namedArgsConstructors) {
             List<ValueNode> arguments = new ArrayList<>();
@@ -321,7 +323,7 @@ public class ValueEmitterFactory {
                         var argTypes = Arrays.stream(namedArgs).map(NamedArgParam::type).toArray(TypeInstance[]::new);
                         var argNames = Arrays.stream(namedArgs).map(NamedArgParam::name).toArray(String[]::new);
 
-                        diagnostics.add(
+                        constructorDiagnostics.add(
                             new DiagnosticInfo(
                                 Diagnostic.newDiagnosticVariant(
                                     ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT, "named",
@@ -345,6 +347,12 @@ public class ValueEmitterFactory {
 
                 return createObjectNode(objectNode, namedArgsConstructor.constructor(), arguments);
             }
+        }
+
+        if (constructorDiagnostics.size() > 0) {
+            throw new MarkupException(
+                constructorDiagnostics.get(0).getSourceInfo(),
+                constructorDiagnostics.get(0).getDiagnostic());
         }
 
         return null;
