@@ -239,10 +239,9 @@ public class InstantiationTest extends CompilerTestBase {
                 </GridPane>
             """));
 
-            assertEquals(ErrorCode.CONSTRUCTOR_NOT_FOUND, ex.getDiagnostic().getCode());
-            assertEquals(1, ex.getDiagnostic().getCauses().length);
-            assertEquals(ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT, ex.getDiagnostic().getCauses()[0].getCode());
-            assertCodeHighlight("<ArrayConstructorClass>", ex);
+            assertEquals(ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT, ex.getDiagnostic().getCode());
+            assertEquals(0, ex.getDiagnostic().getCauses().length);
+            assertCodeHighlight("<GridPane/>", ex);
         }
 
         public static class NamedArgWithDefaultValueClass extends Rectangle {
@@ -305,6 +304,7 @@ public class InstantiationTest extends CompilerTestBase {
             public final MyData<T> data;
         }
 
+        @SuppressWarnings("unused")
         public static class MyDerivedData extends MyData<String> {
             public MyDerivedData(@NamedArg("value") String value) {
                 super(value);
@@ -364,11 +364,10 @@ public class InstantiationTest extends CompilerTestBase {
                 </GridPane>
             """));
 
-            assertEquals(ErrorCode.CONSTRUCTOR_NOT_FOUND, ex.getDiagnostic().getCode());
-            assertEquals(1, ex.getDiagnostic().getCauses().length);
-            assertEquals(ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT, ex.getDiagnostic().getCauses()[0].getCode());
+            assertEquals(ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT, ex.getDiagnostic().getCode());
+            assertEquals(0, ex.getDiagnostic().getCauses().length);
             assertCodeHighlight("""
-                <MyGenericButton fx:typeArguments="java.lang.String">
+                <MyData fx:typeArguments="Double" value="foo"/>
             """.trim(), ex);
         }
     }
