@@ -816,4 +816,16 @@ public class TypeInstanceTest extends TestBase {
         assertTrue(type1Raw.isAssignableFrom(type2));
     }
 
+    public static class Type12<T extends String> {}
+
+    @Test
+    public void TypeArgument_Is_Erased_To_UpperBound() {
+        var resolver = new Resolver(SourceInfo.none());
+        var rawType = resolver.getTypeInstance(resolver.resolveClass(Type12.class.getName()), Collections.emptyList());
+        var stringType = resolver.getTypeInstance(resolver.resolveClass("java.lang.String"));
+
+        assertTrue(rawType.isRaw());
+        assertTrue(stringType.isAssignableFrom(rawType.getArguments().get(0)));
+    }
+
 }

@@ -1128,7 +1128,7 @@ public class Resolver {
 
                     arguments.add(providedArguments.get(i));
                 } else {
-                    arguments.add(TypeInstance.erased());
+                    arguments.add(TypeInstance.erased(bound));
                 }
             }
 
