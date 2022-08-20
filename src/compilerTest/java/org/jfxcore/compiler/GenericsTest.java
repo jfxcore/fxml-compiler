@@ -229,16 +229,29 @@ public class GenericsTest extends CompilerTestBase {
     }
 
     @Test
-    public void GenericDoubleObject_With_RawUsage_Compiles_But_Throws_ClassCastException() {
-        GridPane root = compileAndRun("""
+    public void GenericDoubleObject_With_RawUsage_Cannot_Assign_Incompatible_Value_To_Erased_Property() {
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.scene.layout.*?>
             <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
                 <GenericDoubleObject fx:id="obj" prop="foo"/>
             </GridPane>
+        """));
+
+        assertEquals(ErrorCode.CANNOT_COERCE_PROPERTY_VALUE, ex.getDiagnostic().getCode());
+        assertCodeHighlight("foo", ex);
+    }
+
+    @Test
+    public void GenericDoubleObject_With_RawUsage_Can_Assign_Value_To_Erased_Property() {
+        GridPane root = compileAndRun("""
+            <?import javafx.scene.layout.*?>
+            <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                <GenericDoubleObject fx:id="obj" prop="123.0"/>
+            </GridPane>
         """);
 
         GenericDoubleObject<?> obj = (GenericDoubleObject<?>)root.getChildren().get(0);
-        assertThrows(ClassCastException.class, obj::getProp);
+        assertEquals(123.0, obj.getProp(), 0.001);
     }
 
     @Test

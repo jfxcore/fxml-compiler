@@ -40,16 +40,21 @@ public class TypeInstance {
         LOOSE
     }
 
-    public static TypeInstance erased() {
-        return new TypeInstance(Classes.ObjectType()) {
+    public static TypeInstance erased(TypeInstance erasure) {
+        return new TypeInstance(
+                erasure.jvmType(),
+                erasure.getDimensions(),
+                Collections.emptyList(),
+                erasure.getSuperTypes(),
+                WildcardType.NONE) {
             @Override
             public boolean isRaw() {
                 return true;
             }
 
             @Override
-            protected String toString(boolean simpleNames, boolean javaNames) {
-                return "<ERASED>";
+            public String toString() {
+                return "<erased>" + jvmType().getSimpleName();
             }
         };
     }
