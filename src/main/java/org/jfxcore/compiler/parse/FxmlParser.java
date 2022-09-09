@@ -124,6 +124,7 @@ public class FxmlParser {
                         attribute.getNamespaceURI(),
                         attribute.getLocalName(),
                         List.of(nodeFromText(attribute, attribute.getNodeValue(), sourceInfo)),
+                        true,
                         sourceInfo));
             }
         }
@@ -163,6 +164,7 @@ public class FxmlParser {
                             child.getLocalName(),
                             parseElementNode((Element)child).getChildren().stream()
                                 .map(c -> (ValueNode)c).collect(Collectors.toList()),
+                            false,
                             getSourceInfo(child)));
                 } else {
                     children.add(parseElementNode((Element)child));
@@ -284,6 +286,7 @@ public class FxmlParser {
             String namespace,
             String name,
             Collection<? extends ValueNode> values,
+            boolean isAttribute,
             SourceInfo sourceInfo) {
         if (!FxmlNamespace.JAVAFX.equals(namespace) && !FxmlNamespace.FXML.equals(namespace)) {
             throw ParserErrors.unknownNamespace(sourceInfo, namespace);
@@ -294,6 +297,7 @@ public class FxmlParser {
             prefix != null ? prefix + ":" + name : name,
             values,
             prefix != null && FxmlNamespace.FXML.equals(namespace),
+            !isAttribute,
             sourceInfo);
     }
 

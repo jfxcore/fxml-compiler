@@ -104,6 +104,89 @@ public class PropertyAssignmentTest {
     }
 
     @Nested
+    public class PropertyNameTest extends CompilerTestBase {
+        @Test
+        public void Unresolvable_Property_Chain_Includes_All_Names_In_Diagnostic() {
+            MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+                <?import javafx.scene.control.*?>
+                <Button xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                        foo.bar.baz="Hello!"/>
+            """));
+
+            assertEquals(ErrorCode.PROPERTY_NOT_FOUND, ex.getDiagnostic().getCode());
+            assertCodeHighlight("foo.bar.baz=\"Hello!\"", ex);
+            assertTrue(ex.getDiagnostic().getMessage().startsWith("'foo.bar.baz' in"));
+            assertTrue(ex.getDiagnostic().getMessage().endsWith("cannot be resolved"));
+        }
+
+        @Test
+        public void Qualified_Property_With_Element_Notation_Is_Valid(){
+            Button root = compileAndRun("""
+                <?import javafx.scene.control.*?>
+                <Button xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                    <Button.text>Hello!</Button.text>
+                </Button>
+            """);
+
+            assertEquals("Hello!", root.getText());
+        }
+
+        @Test
+        public void Qualified_Property_With_Attribute_Notation_Is_Invalid() {
+            MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+                <?import javafx.scene.control.*?>
+                <Button xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                        Button.text="Hello!"/>
+            """));
+
+            assertEquals(ErrorCode.PROPERTY_NOT_FOUND, ex.getDiagnostic().getCode());
+            assertCodeHighlight("Button.text=\"Hello!\"", ex);
+            assertTrue(ex.getDiagnostic().getMessage().startsWith("'Button.text' in"));
+            assertTrue(ex.getDiagnostic().getMessage().endsWith("cannot be resolved"));
+        }
+
+        @Test
+        public void Nonexistent_Qualified_Property_Cannot_Be_Resolved() {
+            MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+                <?import javafx.scene.control.*?>
+                <Button xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                    <Button.doesNotExist>Hello!</Button.doesNotExist>
+                </Button>
+            """));
+
+            assertEquals(ErrorCode.PROPERTY_NOT_FOUND, ex.getDiagnostic().getCode());
+            assertCodeHighlight("<Button.doesNotExist>Hello!</Button.doesNotExist>", ex);
+            assertEquals("'doesNotExist' in Button cannot be resolved", ex.getDiagnostic().getMessage());
+        }
+
+        @Test
+        public void Qualified_Property_Is_Interpreted_As_Attached_Property() {
+            MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+                <?import javafx.scene.control.*?>
+                <Labeled xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                    <Button.text>Hello!</Button.text>
+                </Labeled>
+            """));
+
+            assertEquals(ErrorCode.ATTACHED_PROPERTY_NOT_FOUND, ex.getDiagnostic().getCode());
+            assertCodeHighlight("<Button.text>Hello!</Button.text>", ex);
+            assertTrue(ex.getDiagnostic().getMessage().startsWith("'text' in Button cannot be resolved"));
+        }
+
+        @Test
+        public void Qualified_Property_Of_Base_Type_Is_Valid(){
+            Button root = compileAndRun("""
+                <?import javafx.scene.control.*?>
+                <Button xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                    <Labeled.text>Hello!</Labeled.text>
+                </Button>
+            """);
+
+            assertEquals("Hello!", root.getText());
+        }
+    }
+
+    @Nested
     public class CoercionTest extends CompilerTestBase {
         @Test
         public void AttributeValue_Is_Coerced_To_String() {

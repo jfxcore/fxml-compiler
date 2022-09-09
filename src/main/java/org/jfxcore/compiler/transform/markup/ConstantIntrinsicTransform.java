@@ -53,7 +53,8 @@ public class ConstantIntrinsicTransform implements Transform {
         if (parentNode instanceof PropertyNode propertyNode) {
             TypeInstance parentType = TypeHelper.getTypeInstance(context.getParent(1));
             Resolver resolver = new Resolver(propertyNode.getSourceInfo());
-            PropertyInfo propertyInfo = resolver.resolveProperty(parentType, propertyNode.getName());
+            PropertyInfo propertyInfo = resolver.resolveProperty(
+                parentType, propertyNode.isAllowQualifiedName(), propertyNode.getNames());
             propertyType = propertyInfo.getValueTypeInstance();
         }
 

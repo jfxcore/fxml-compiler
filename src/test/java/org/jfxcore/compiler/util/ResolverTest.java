@@ -1,4 +1,4 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2022, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.util;
@@ -238,8 +238,9 @@ public class ResolverTest extends TestBase {
     @Test
     public void Detect_Attached_NonObservable_Property() {
         var resolver = new Resolver(SourceInfo.none());
+        var declaringClass = resolver.getTypeInstance(resolver.resolveClass("java.lang.Void"));
         var property = resolver.resolveProperty(
-            null, AttachedPropertyHolder.class.getName() + ".foo");
+            declaringClass, true, AttachedPropertyHolder.class.getName(), "foo");
         assertTrue(property.isAttached());
         assertFalse(property.isObservable());
         assertEquals("foo", property.getName());
@@ -249,8 +250,9 @@ public class ResolverTest extends TestBase {
     @SuppressWarnings("ConstantConditions")
     public void Detect_Attached_Observable_Property() {
         var resolver = new Resolver(SourceInfo.none());
+        var declaringClass = resolver.getTypeInstance(resolver.resolveClass("java.lang.Void"));
         var property = resolver.resolveProperty(
-            null, AttachedPropertyHolder.class.getName() + ".bar");
+            declaringClass, true, AttachedPropertyHolder.class.getName(), "bar");
         assertTrue(property.isAttached());
         assertTrue(property.isObservable());
         assertEquals("barProperty", property.getPropertyGetter().getName());

@@ -1,4 +1,4 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2022, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.transform.markup;
@@ -18,8 +18,9 @@ import java.util.Set;
 import static org.jfxcore.compiler.util.ExceptionHelper.unchecked;
 
 /**
- * Replaces an &lt;fx:define> property with &lt;properties>.
- * If the &lt;fx:define> property is not declared on a {@link javafx.scene.Node} element, a diagnostic is generated.
+ * Replaces an {@code <fx:define>} property with {@code <properties>}.
+ * If the {@code <fx:define>} property is not declared on a {@link javafx.scene.Node} element,
+ * a diagnostic is generated.
  */
 public class DefineBlockTransform implements Transform {
 
@@ -44,6 +45,7 @@ public class DefineBlockTransform implements Transform {
             new String[] {"properties"},
             propertyNode.getMarkupName(),
             propertyNode.getValues(),
+            false,
             false,
             propertyNode.getSourceInfo());
     }
