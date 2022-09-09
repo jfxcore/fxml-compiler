@@ -146,6 +146,19 @@ public class PropertyAssignmentTest {
         }
 
         @Test
+        public void Qualified_Property_Cannot_Be_Resolved_Without_Import() {
+            MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+                <javafx.scene.control.Button xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                    <Button.text>Hello!</Button.text>
+                </javafx.scene.control.Button>
+            """));
+
+            assertEquals(ErrorCode.CLASS_NOT_FOUND, ex.getDiagnostic().getCode());
+            assertCodeHighlight("<Button.text>Hello!</Button.text>", ex);
+            assertEquals("'Button' cannot be resolved", ex.getDiagnostic().getMessage());
+        }
+
+        @Test
         public void Nonexistent_Qualified_Property_Cannot_Be_Resolved() {
             MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
                 <?import javafx.scene.control.*?>
@@ -180,6 +193,18 @@ public class PropertyAssignmentTest {
                 <?import javafx.scene.control.*?>
                 <Button xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
                     <Labeled.text>Hello!</Labeled.text>
+                </Button>
+            """);
+
+            assertEquals("Hello!", root.getText());
+        }
+
+        @Test
+        public void Fully_Qualified_Property_Of_Base_Type_Is_Valid(){
+            Button root = compileAndRun("""
+                <?import javafx.scene.control.*?>
+                <Button xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                    <javafx.scene.control.Labeled.text>Hello!</javafx.scene.control.Labeled.text>
                 </Button>
             """);
 

@@ -125,7 +125,8 @@ public class PropertyAssignmentTransform implements Transform {
         }
 
         if (propertyInfo == null) {
-            // Create a better diagnostic for qualified local properties and attached properties
+            // Create different diagnostics depending on whether the property is a qualified
+            // local property or a static property.
             if (propertyNode.isAllowQualifiedName() && propertyNode.getNames().length > 1) {
                 String[] names = propertyNode.getNames();
                 String className = String.join(".", Arrays.copyOf(names, names.length - 1));
@@ -134,6 +135,10 @@ public class PropertyAssignmentTransform implements Transform {
                 if (type != null && TypeHelper.getTypeInstance(parentNode).subtypeOf(type)) {
                     throw SymbolResolutionErrors.propertyNotFound(
                         propertyNode.getSourceInfo(), className, names[names.length - 1]);
+                }
+
+                if (type == null) {
+                    throw SymbolResolutionErrors.classNotFound(propertyNode.getSourceInfo(), className);
                 }
 
                 throw SymbolResolutionErrors.staticPropertyNotFound(
