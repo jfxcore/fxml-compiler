@@ -168,9 +168,10 @@ public class PropertyAssignmentTest {
                 </Labeled>
             """));
 
-            assertEquals(ErrorCode.ATTACHED_PROPERTY_NOT_FOUND, ex.getDiagnostic().getCode());
+            assertEquals(ErrorCode.PROPERTY_NOT_FOUND, ex.getDiagnostic().getCode());
             assertCodeHighlight("<Button.text>Hello!</Button.text>", ex);
             assertTrue(ex.getDiagnostic().getMessage().startsWith("'text' in Button cannot be resolved"));
+            assertTrue(ex.getDiagnostic().getMessage().contains("'text' was interpreted as a static property"));
         }
 
         @Test

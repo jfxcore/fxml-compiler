@@ -18,7 +18,7 @@ import java.util.Set;
 import static org.jfxcore.compiler.util.ExceptionHelper.unchecked;
 
 /**
- * Replaces an {@code <fx:define>} property with {@code <properties>}.
+ * Replaces a {@code <fx:define>} property with {@code <properties>}.
  * If the {@code <fx:define>} property is not declared on a {@link javafx.scene.Node} element,
  * a diagnostic is generated.
  */

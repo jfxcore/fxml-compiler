@@ -136,7 +136,7 @@ public class PropertyAssignmentTransform implements Transform {
                         propertyNode.getSourceInfo(), className, names[names.length - 1]);
                 }
 
-                throw SymbolResolutionErrors.attachedPropertyNotFound(
+                throw SymbolResolutionErrors.staticPropertyNotFound(
                     propertyNode.getSourceInfo(), className, names[names.length - 1]);
             }
 
