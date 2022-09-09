@@ -1,4 +1,4 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2022, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.transform.markup;
@@ -44,7 +44,8 @@ public class UrlIntrinsicTransform implements Transform {
         }
 
         ObjectNode parentObject = (ObjectNode)context.getParent(property);
-        PropertyInfo propertyInfo = resolver.resolveProperty(TypeHelper.getTypeInstance(parentObject), property.getName());
+        PropertyInfo propertyInfo = resolver.resolveProperty(
+            TypeHelper.getTypeInstance(parentObject), property.isAllowQualifiedName(), property.getNames());
 
         TypeInstance targetType;
         TypeInstance propertyValueType;

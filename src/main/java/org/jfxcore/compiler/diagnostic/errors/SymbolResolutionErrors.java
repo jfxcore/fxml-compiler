@@ -43,6 +43,11 @@ public class SymbolResolutionErrors {
             ErrorCode.PROPERTY_NOT_FOUND, declaringType, propertyName));
     }
 
+    public static MarkupException staticPropertyNotFound(SourceInfo sourceInfo, String declaringType, String propertyName) {
+        return new MarkupException(sourceInfo, Diagnostic.newDiagnosticVariant(
+            ErrorCode.PROPERTY_NOT_FOUND, "static", declaringType, propertyName));
+    }
+
     public static MarkupException invalidInvariantReference(SourceInfo sourceInfo, CtClass declaringType, String memberName) {
         return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
             ErrorCode.INVALID_INVARIANT_REFERENCE, NameHelper.getJavaClassName(sourceInfo, declaringType), memberName));

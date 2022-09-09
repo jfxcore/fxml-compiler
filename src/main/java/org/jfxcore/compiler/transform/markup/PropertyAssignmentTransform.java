@@ -42,6 +42,7 @@ import org.jfxcore.compiler.util.Resolver;
 import org.jfxcore.compiler.util.TypeHelper;
 import org.jfxcore.compiler.util.TypeInstance;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
@@ -74,17 +75,19 @@ public class PropertyAssignmentTransform implements Transform {
         ValueEmitterNode parentNode = context.findParent(ValueEmitterNode.class);
         Resolver resolver = new Resolver(propertyNode.getSourceInfo());
         TypeInstance declaringType = TypeHelper.getTypeInstance(parentNode);
-        PropertyInfo propertyInfo = resolver.tryResolveProperty(declaringType, propertyNode.getName());
+        PropertyInfo propertyInfo = resolver.tryResolveProperty(
+            declaringType, propertyNode.isAllowQualifiedName(), propertyNode.getNames());
 
         // A property assignment of the form foo.bar.baz="some value" must be resolved to a chain of
         // getter nodes until we arrive at the last path segment.
-        if (propertyInfo == null && propertyNode.getNames().length > 1) {
+        if (propertyInfo == null && propertyNode.getNames().length > 1
+                && Arrays.stream(propertyNode.getNames()).allMatch(s -> Character.isLowerCase(s.charAt(0)))) {
             SourceInfo sourceInfo = propertyNode.getSourceInfo();
             String[] names = propertyNode.getNames();
             List<ValueEmitterNode> nodes = new ArrayList<>();
 
             for (int i = 0; i < names.length - 1; ++i) {
-                propertyInfo = resolver.tryResolveProperty(declaringType, names[i]);
+                propertyInfo = resolver.tryResolveProperty(declaringType, false, names[i]);
                 if (propertyInfo == null) {
                     // If we fail to resolve the first segment, format the error message to include the
                     // entire chain of names. This makes for a better diagnostic in case the user meant
@@ -116,11 +119,32 @@ public class PropertyAssignmentTransform implements Transform {
                     names[names.length - 1],
                     propertyNode.getValues(),
                     false,
+                    false,
                     sourceInfo),
                 sourceInfo);
         }
 
         if (propertyInfo == null) {
+            // Create different diagnostics depending on whether the property is a qualified
+            // local property or a static property.
+            if (propertyNode.isAllowQualifiedName() && propertyNode.getNames().length > 1) {
+                String[] names = propertyNode.getNames();
+                String className = String.join(".", Arrays.copyOf(names, names.length - 1));
+                CtClass type = resolver.tryResolveClassAgainstImports(className);
+
+                if (type != null && TypeHelper.getTypeInstance(parentNode).subtypeOf(type)) {
+                    throw SymbolResolutionErrors.propertyNotFound(
+                        propertyNode.getSourceInfo(), className, names[names.length - 1]);
+                }
+
+                if (type == null) {
+                    throw SymbolResolutionErrors.classNotFound(propertyNode.getSourceInfo(), className);
+                }
+
+                throw SymbolResolutionErrors.staticPropertyNotFound(
+                    propertyNode.getSourceInfo(), className, names[names.length - 1]);
+            }
+
             throw SymbolResolutionErrors.propertyNotFound(
                 propertyNode.getSourceInfo(), declaringType.jvmType(), propertyNode.getName());
         }

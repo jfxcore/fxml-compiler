@@ -1,4 +1,4 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2022, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast;
@@ -23,14 +23,22 @@ public class PropertyNode extends AbstractNode {
     private final String[] names;
     private final String markupName;
     private final boolean intrinsic;
+    private final boolean allowQualifiedName;
     private final List<Node> values;
 
-    public PropertyNode(String[] names, String markupName, Node value, boolean intrinsic, SourceInfo sourceInfo) {
+    public PropertyNode(
+            String[] names,
+            String markupName,
+            Node value,
+            boolean intrinsic,
+            boolean allowQualifiedName,
+            SourceInfo sourceInfo) {
         super(sourceInfo);
         this.names = checkNotNull(names);
         this.name = String.join(".", names);
         this.markupName = checkNotNull(markupName);
         this.intrinsic = intrinsic;
+        this.allowQualifiedName = allowQualifiedName;
         this.values = new ArrayList<>(1);
         this.values.add(checkNotNull(value));
     }
@@ -40,12 +48,14 @@ public class PropertyNode extends AbstractNode {
             String markupName,
             Collection<? extends Node> values,
             boolean intrinsic,
+            boolean allowQualifiedName,
             SourceInfo sourceInfo) {
         super(sourceInfo);
         this.names = checkNotNull(names);
         this.name = String.join(".", names);
         this.markupName = checkNotNull(markupName);
         this.intrinsic = intrinsic;
+        this.allowQualifiedName = allowQualifiedName;
         this.values = new ArrayList<>(checkNotNull(values));
     }
 
@@ -63,6 +73,10 @@ public class PropertyNode extends AbstractNode {
 
     public List<Node> getValues() {
         return values;
+    }
+
+    public boolean isAllowQualifiedName() {
+        return allowQualifiedName;
     }
 
     public Node getSingleValue(TransformContext context) {
@@ -140,7 +154,7 @@ public class PropertyNode extends AbstractNode {
 
     @Override
     public PropertyNode deepClone() {
-        return new PropertyNode(names, markupName, deepClone(values), intrinsic, getSourceInfo());
+        return new PropertyNode(names, markupName, deepClone(values), intrinsic, allowQualifiedName, getSourceInfo());
     }
 
 }

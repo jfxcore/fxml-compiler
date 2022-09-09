@@ -52,7 +52,8 @@ public class ValueIntrinsicTransform implements Transform {
 
         TypeInstance parentType = TypeHelper.getTypeInstance(context.getParent(1));
         Resolver resolver = new Resolver(propertyNode.getSourceInfo());
-        PropertyInfo propertyInfo = resolver.resolveProperty(parentType, propertyNode.getName());
+        PropertyInfo propertyInfo = resolver.resolveProperty(
+            parentType, propertyNode.isAllowQualifiedName(), propertyNode.getNames());
         TypeInstance valueType = propertyInfo.getValueTypeInstance();
 
         if (objectNode.getChildren().size() == 0) {

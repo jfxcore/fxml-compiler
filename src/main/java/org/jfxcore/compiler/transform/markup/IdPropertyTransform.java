@@ -1,4 +1,4 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2022, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.transform.markup;
@@ -45,8 +45,8 @@ public class IdPropertyTransform implements Transform {
 
                 if (idProperty == null) {
                     objectNode.getProperties().add(
-                        new PropertyNode(
-                            new String[] {value}, value, idNode.getValues(), false, idNode.getSourceInfo()));
+                        new PropertyNode(new String[] {value}, value, idNode.getValues(),
+                                         false, false, idNode.getSourceInfo()));
                 }
             }
         }

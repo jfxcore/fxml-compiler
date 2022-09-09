@@ -181,6 +181,7 @@ public class MeParser {
             propertyName.getText(),
             value,
             !propertyName.getText().equals(cleanName),
+            false,
             SourceInfo.span(propertyName.getSourceInfo(), value.getSourceInfo()));
     }
 

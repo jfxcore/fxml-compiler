@@ -274,42 +274,50 @@ public class Resolver {
         }
     }
 
-    public PropertyInfo resolveProperty(TypeInstance declaringClass, String propertyName) {
-        PropertyInfo propertyInfo = tryResolveProperty(declaringClass, propertyName);
+    public PropertyInfo resolveProperty(TypeInstance declaringClass, boolean allowQualifiedName, String... names) {
+        PropertyInfo propertyInfo = tryResolveProperty(declaringClass, allowQualifiedName, names);
         if (propertyInfo == null) {
-            throw SymbolResolutionErrors.propertyNotFound(sourceInfo, declaringClass.jvmType(), propertyName);
+            throw SymbolResolutionErrors.propertyNotFound(
+                sourceInfo, declaringClass.jvmType(), String.join(".", names));
         }
 
         return propertyInfo;
     }
 
-    public PropertyInfo tryResolveProperty(TypeInstance declaringClass, String propertyName) {
-        CacheKey key = new CacheKey("tryResolveProperty", declaringClass, propertyName);
+    public PropertyInfo tryResolveProperty(TypeInstance declaringClass, boolean allowQualifiedName, String... names) {
+        CacheKey key = new CacheKey("tryResolveProperty", declaringClass, allowQualifiedName, names);
         CacheEntry entry = getCache().get(key);
         if (entry.found() && cacheEnabled) {
             return (PropertyInfo)entry.value();
         }
 
         boolean attached = false;
+        boolean validLocalName = true;
+        String propertyName = names[names.length - 1];
+        CtMethod propertyGetter = null;
 
-        if (propertyName.contains(".")) {
-            String[] parts = propertyName.split("\\.");
-            String className = String.join(".", Arrays.copyOf(parts, parts.length - 1));
+        if (names.length > 1) {
+            String className = String.join(".", Arrays.copyOf(names, names.length - 1));
             CtClass clazz = tryResolveClassAgainstImports(className);
             if (clazz != null) {
-                declaringClass = getTypeInstance(clazz);
-                propertyName = parts[parts.length - 1];
-                attached = true;
+                TypeInstance type = getTypeInstance(clazz);
+                validLocalName = allowQualifiedName && declaringClass.subtypeOf(type);
+                declaringClass = type;
             } else {
                 return null;
             }
+
+            propertyGetter = tryResolveAttachedPropertyGetter(declaringClass.jvmType(), propertyName);
+        }
+
+        if (propertyGetter != null) {
+            attached = true;
+        } else {
+            propertyGetter = tryResolvePropertyGetter(declaringClass.jvmType(), propertyName);
         }
 
         TypeInstance typeInstance = null;
         TypeInstance observableTypeInstance = null;
-        CtMethod propertyGetter = attached ?
-            tryResolveAttachedPropertyGetter(declaringClass.jvmType(), propertyName) :
-            tryResolvePropertyGetter(declaringClass.jvmType(), propertyName);
 
         // If we have a property getter, extract the type of the generic parameter.
         // For primitive wrappers like ObservableBooleanValue, we define the type of the property
@@ -335,9 +343,13 @@ public class Resolver {
         // Look for a getter that matches the previously determined property type.
         // If we didn't find a property getter in the previous step, this selects the first getter that matches by name,
         // or in case this is an attached property, matches by name and signature.
-        CtMethod getter = attached ?
-            tryResolveAttachedGetter(declaringClass.jvmType(), propertyName) :
-            tryResolveGetter(declaringClass.jvmType(), propertyName, false, typeInstance != null ? typeInstance.jvmType() : null);
+        CtMethod getter = tryResolveAttachedGetter(declaringClass.jvmType(), propertyName);
+        if (getter != null) {
+            attached = true;
+        } else if (!attached) {
+            getter = tryResolveGetter(declaringClass.jvmType(), propertyName, false,
+                                      typeInstance != null ? typeInstance.jvmType() : null);
+        }
 
         try {
             if (typeInstance == null && getter != null) {
@@ -347,6 +359,12 @@ public class Resolver {
             // If we still haven't been able to determine a property type, this means that we haven't
             // found a property getter, nor a regular getter. This means the property doesn't exist.
             if (typeInstance == null) {
+                getCache().put(key, null);
+                return null;
+            }
+
+            // A regular (non-attached) property needs a valid local name, otherwise we don't accept it.
+            if (!attached && !validLocalName) {
                 getCache().put(key, null);
                 return null;
             }
