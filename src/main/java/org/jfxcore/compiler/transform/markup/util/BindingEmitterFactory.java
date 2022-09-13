@@ -91,7 +91,7 @@ public class BindingEmitterFactory {
             }
         }
 
-        if (propertyInfo.isAttached()) {
+        if (propertyInfo.isStatic()) {
             return new EmitStaticPropertySetterNode(
                 propertyInfo.getDeclaringTypeInstance(), propertyInfo.getSetter(), value, sourceInfo);
         }

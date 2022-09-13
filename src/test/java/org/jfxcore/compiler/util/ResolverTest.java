@@ -3,20 +3,27 @@
 
 package org.jfxcore.compiler.util;
 
-import javafx.beans.property.StringProperty;
-import javafx.beans.value.ObservableValue;
-import javafx.scene.Node;
 import javassist.CtConstructor;
 import javassist.CtMethod;
+import org.jfxcore.compiler.TestBase;
 import org.jfxcore.compiler.diagnostic.ErrorCode;
 import org.jfxcore.compiler.diagnostic.MarkupException;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.jfxcore.compiler.TestBase;
+import org.junit.jupiter.api.extension.ExtensionContext;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.ArgumentsProvider;
+import org.junit.jupiter.params.provider.ArgumentsSource;
+import javafx.beans.property.ReadOnlyStringProperty;
+import javafx.beans.property.StringProperty;
+import javafx.beans.value.ObservableValue;
+import javafx.scene.Node;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -226,37 +233,178 @@ public class ResolverTest extends TestBase {
         assertEquals(ErrorCode.TYPE_ARGUMENT_OUT_OF_BOUND, ex.getDiagnostic().getCode());
     }
 
-    public static class AttachedPropertyHolder {
-        public static String getFoo(Node node) { return null; }
-        public static void setFoo(Node node, String value) {}
+    public record PropertyTestRun(
+        String propertyName,
+        boolean readOnly,
+        boolean observable,
+        boolean hasPropertyGetter,
+        boolean hasGetter,
+        boolean hasSetter) {}
 
-        public static String getBar(Node node) { return null; }
-        public static void setBar(Node node, String value) {}
-        public static StringProperty barProperty(Node node) { return null; }
+    public static class PropertyArgumentsProvider implements ArgumentsProvider {
+        @Override
+        public Stream<? extends Arguments> provideArguments(ExtensionContext context) {
+            return Stream.of(
+                Arguments.of(new PropertyTestRun("prop1", true, false, false, true, false)),
+                Arguments.of(new PropertyTestRun("prop2", true, true, true, false, false)),
+                Arguments.of(new PropertyTestRun("prop3", true, true, true, true, false)),
+                Arguments.of(new PropertyTestRun("prop4", false, false, false, true, true)),
+                Arguments.of(new PropertyTestRun("prop5", false, true, true, false, false)),
+                Arguments.of(new PropertyTestRun("prop6", false, true, true, true, false)),
+                Arguments.of(new PropertyTestRun("prop7", false, true, true, true, true))
+            );
+        }
     }
 
-    @Test
-    public void Detect_Attached_NonObservable_Property() {
-        var resolver = new Resolver(SourceInfo.none());
-        var declaringClass = resolver.getTypeInstance(resolver.resolveClass("java.lang.Void"));
-        var property = resolver.resolveProperty(
-            declaringClass, true, AttachedPropertyHolder.class.getName(), "foo");
-        assertTrue(property.isAttached());
-        assertFalse(property.isObservable());
-        assertEquals("foo", property.getName());
+    public static class PropertyHolder {
+        // read-only, not observable
+        public String getProp1() { return null; }
+
+        // read-only, observable
+        public ReadOnlyStringProperty prop2Property() { return null; }
+
+        // read-only, observable + getter
+        public String getProp3() { return null; }
+        public ReadOnlyStringProperty prop3Property() { return null; }
+
+        // writable, not observable
+        public String getProp4() { return null; }
+        public void setProp4(String value) {}
+
+        // writable, observable
+        public StringProperty prop5Property() { return null; }
+
+        // writable, observable + getter
+        public String getProp6() { return null; }
+        public StringProperty prop6Property() { return null; }
+
+        // writable, observable + getter + setter
+        public String getProp7() { return null; }
+        public void setProp7(String value) {}
+        public StringProperty prop7Property() { return null; }
     }
 
-    @Test
-    @SuppressWarnings("ConstantConditions")
-    public void Detect_Attached_Observable_Property() {
+    public static class StaticPropertyHolder {
+        // read-only, not observable
+        public static String getProp1(Node node) { return null; }
+
+        // read-only, observable
+        public static ReadOnlyStringProperty prop2Property(Node node) { return null; }
+
+        // read-only, observable + getter
+        public static String getProp3(Node node) { return null; }
+        public static ReadOnlyStringProperty prop3Property(Node node) { return null; }
+
+        // writable, not observable
+        public static String getProp4(Node node) { return null; }
+        public static void setProp4(Node node, String value) {}
+
+        // writable, observable
+        public static StringProperty prop5Property(Node node) { return null; }
+
+        // writable, observable + getter
+        public static String getProp6(Node node) { return null; }
+        public static StringProperty prop6Property(Node node) { return null; }
+
+        // writable, observable + getter + setter
+        public static String getProp7(Node node) { return null; }
+        public static void setProp7(Node node, String value) {}
+        public static StringProperty prop7Property(Node node) { return null; }
+    }
+
+    public static class MixedPropertyHolder extends PropertyHolder {
+        // read-only, not observable
+        public static String getProp1(Node node) { return null; }
+
+        // read-only, observable
+        public static ReadOnlyStringProperty prop2Property(Node node) { return null; }
+
+        // read-only, observable + getter
+        public static String getProp3(Node node) { return null; }
+        public static ReadOnlyStringProperty prop3Property(Node node) { return null; }
+
+        // writable, not observable
+        public static String getProp4(Node node) { return null; }
+        public static void setProp4(Node node, String value) {}
+
+        // writable, observable
+        public static StringProperty prop5Property(Node node) { return null; }
+
+        // writable, observable + getter
+        public static String getProp6(Node node) { return null; }
+        public static StringProperty prop6Property(Node node) { return null; }
+
+        // writable, observable + getter + setter
+        public static String getProp7(Node node) { return null; }
+        public static void setProp7(Node node, String value) {}
+        public static StringProperty prop7Property(Node node) { return null; }
+    }
+
+    private void assertPropertyInfo(PropertyTestRun testRun, PropertyInfo property) {
+        assertEquals(testRun.propertyName, property.getName());
+        assertEquals(testRun.observable, property.isObservable());
+        assertEquals(testRun.readOnly, property.isReadOnly());
+        assertEquals(testRun.hasPropertyGetter, property.getPropertyGetter() != null);
+        assertEquals(testRun.hasGetter, property.getGetter() != null);
+        assertEquals(testRun.hasSetter, property.getSetter() != null);
+    }
+
+    @ParameterizedTest
+    @ArgumentsSource(PropertyArgumentsProvider.class)
+    public void Detect_Qualified_Property_Names_Test(PropertyTestRun testRun) {
         var resolver = new Resolver(SourceInfo.none());
-        var declaringClass = resolver.getTypeInstance(resolver.resolveClass("java.lang.Void"));
+        var declaringClass = resolver.getTypeInstance(resolver.resolveClass(PropertyHolder.class.getName()));
         var property = resolver.resolveProperty(
-            declaringClass, true, AttachedPropertyHolder.class.getName(), "bar");
-        assertTrue(property.isAttached());
-        assertTrue(property.isObservable());
-        assertEquals("barProperty", property.getPropertyGetter().getName());
-        assertEquals("bar", property.getName());
+            declaringClass, true, PropertyHolder.class.getName(), testRun.propertyName);
+
+        assertFalse(property.isStatic());
+        assertPropertyInfo(testRun, property);
+    }
+
+    @ParameterizedTest
+    @ArgumentsSource(PropertyArgumentsProvider.class)
+    public void Detect_Unqualified_Property_Names_Test(PropertyTestRun testRun) {
+        var resolver = new Resolver(SourceInfo.none());
+        var declaringClass = resolver.getTypeInstance(resolver.resolveClass(PropertyHolder.class.getName()));
+        var property = resolver.resolveProperty(declaringClass, true, testRun.propertyName);
+
+        assertFalse(property.isStatic());
+        assertPropertyInfo(testRun, property);
+    }
+
+    @ParameterizedTest
+    @ArgumentsSource(PropertyArgumentsProvider.class)
+    public void Detect_Unqualified_Property_Names_With_Same_Name_As_Static_Properties_Test(PropertyTestRun testRun) {
+        var resolver = new Resolver(SourceInfo.none());
+        var declaringClass = resolver.getTypeInstance(resolver.resolveClass(MixedPropertyHolder.class.getName()));
+        var property = resolver.resolveProperty(declaringClass, true, testRun.propertyName);
+
+        assertFalse(property.isStatic());
+        assertPropertyInfo(testRun, property);
+    }
+
+    @ParameterizedTest
+    @ArgumentsSource(PropertyArgumentsProvider.class)
+    public void Detect_Static_Property_Names_Test(PropertyTestRun testRun) {
+        var resolver = new Resolver(SourceInfo.none());
+        var declaringClass = resolver.getTypeInstance(resolver.resolveClass(StaticPropertyHolder.class.getName()));
+        var property = resolver.resolveProperty(
+            declaringClass, true, StaticPropertyHolder.class.getName(), testRun.propertyName);
+
+        assertTrue(property.isStatic());
+        assertPropertyInfo(testRun, property);
+    }
+
+    @ParameterizedTest
+    @ArgumentsSource(PropertyArgumentsProvider.class)
+    public void Detect_Static_Property_Names_With_Same_Name_As_Local_Properties_Test(PropertyTestRun testRun) {
+        var resolver = new Resolver(SourceInfo.none());
+        var declaringClass = resolver.getTypeInstance(resolver.resolveClass(MixedPropertyHolder.class.getName()));
+        var property = resolver.resolveProperty(
+            declaringClass, true, MixedPropertyHolder.class.getName(), testRun.propertyName);
+
+        assertTrue(property.isStatic());
+        assertPropertyInfo(testRun, property);
     }
 
 }

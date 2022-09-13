@@ -1,28 +1,47 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2022, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.intrinsic;
 
 import javassist.CtClass;
+import org.jfxcore.compiler.ast.ObjectNode;
+import org.jfxcore.compiler.ast.PropertyNode;
+import org.jfxcore.compiler.ast.TypeNode;
+import org.jfxcore.compiler.transform.TransformContext;
+import org.jfxcore.compiler.util.PropertyInfo;
+import org.jfxcore.compiler.util.Resolver;
+import org.jfxcore.compiler.util.TypeHelper;
+import org.jfxcore.compiler.util.TypeInstance;
 import java.util.Arrays;
 import java.util.List;
 import java.util.function.Supplier;
 
 public class Intrinsic {
 
-    private final String name;
-    private final Supplier<CtClass> type;
-    private final Usage usage;
-    private final List<IntrinsicProperty> properties;
-
-    public Intrinsic(String name, Usage usage, IntrinsicProperty... properties) {
-        this(name, () -> CtClass.voidType, usage, properties);
+    public enum Kind {
+        ANY, OBJECT, PROPERTY
     }
 
-    public Intrinsic(String name, Supplier<CtClass> type, Usage usage, IntrinsicProperty... properties) {
+    public enum Placement {
+        ANY, ROOT, NOT_ROOT
+    }
+
+    private final String name;
+    private final Supplier<CtClass> type;
+    private final Kind kind;
+    private final Placement placement;
+    private final List<IntrinsicProperty> properties;
+    private TypeInstance cachedTypeInstance;
+
+    public Intrinsic(String name, Kind kind, Placement placement, IntrinsicProperty... properties) {
+        this(name, kind, placement, () -> new CtClass("<no-type>") {}, properties);
+    }
+
+    public Intrinsic(String name, Kind kind, Placement placement, Supplier<CtClass> type, IntrinsicProperty... properties) {
         this.name = name;
         this.type = type;
-        this.usage = usage;
+        this.kind = kind;
+        this.placement = placement;
         this.properties = Arrays.asList(properties);
 
         for (IntrinsicProperty property : properties) {
@@ -34,12 +53,29 @@ public class Intrinsic {
         return name;
     }
 
-    public CtClass getType() {
-        return type.get();
+    public TypeInstance getType(TransformContext context, TypeNode typeNode) {
+        if (kind == Kind.ANY
+                && context.getParent(typeNode) instanceof ObjectNode objectNode
+                && context.getParent(objectNode) instanceof PropertyNode propertyNode
+                && context.getParent(propertyNode) instanceof ObjectNode parentNode) {
+            PropertyInfo propertyInfo = new Resolver(propertyNode.getSourceInfo())
+                .resolveProperty(TypeHelper.getTypeInstance(parentNode), false, propertyNode.getNames());
+            return propertyInfo.getValueTypeInstance();
+        }
+
+        if (cachedTypeInstance == null) {
+            cachedTypeInstance = new Resolver(typeNode.getSourceInfo()).getTypeInstance(type.get());
+        }
+
+        return cachedTypeInstance;
     }
 
-    public Usage getUsage() {
-        return usage;
+    public Kind getKind() {
+        return kind;
+    }
+
+    public Placement getPlacement() {
+        return placement;
     }
 
     public List<IntrinsicProperty> getProperties() {

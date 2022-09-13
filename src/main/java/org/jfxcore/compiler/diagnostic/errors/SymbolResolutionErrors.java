@@ -43,9 +43,9 @@ public class SymbolResolutionErrors {
             ErrorCode.PROPERTY_NOT_FOUND, declaringType, propertyName));
     }
 
-    public static MarkupException staticPropertyNotFound(SourceInfo sourceInfo, String declaringType, String propertyName) {
+    public static MarkupException staticPropertyNotFound(SourceInfo sourceInfo, CtClass declaringType, String propertyName) {
         return new MarkupException(sourceInfo, Diagnostic.newDiagnosticVariant(
-            ErrorCode.PROPERTY_NOT_FOUND, "static", declaringType, propertyName));
+            ErrorCode.PROPERTY_NOT_FOUND, "static", NameHelper.getJavaClassName(sourceInfo, declaringType), propertyName));
     }
 
     public static MarkupException invalidInvariantReference(SourceInfo sourceInfo, CtClass declaringType, String memberName) {

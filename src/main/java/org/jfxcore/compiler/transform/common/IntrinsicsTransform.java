@@ -11,6 +11,7 @@ import org.jfxcore.compiler.ast.intrinsic.Intrinsic;
 import org.jfxcore.compiler.ast.intrinsic.Intrinsics;
 import org.jfxcore.compiler.diagnostic.errors.GeneralErrors;
 import org.jfxcore.compiler.diagnostic.errors.ObjectInitializationErrors;
+import org.jfxcore.compiler.diagnostic.errors.ParserErrors;
 import org.jfxcore.compiler.diagnostic.errors.SymbolResolutionErrors;
 import org.jfxcore.compiler.transform.Transform;
 import org.jfxcore.compiler.transform.TransformContext;
@@ -18,9 +19,21 @@ import org.jfxcore.compiler.util.NameHelper;
 import java.util.Set;
 
 /**
- * Ensures that intrinsics are well-formed.
+ * Ensures that intrinsics are well-formed and converts property intrinsics in element notation
+ * into their PropertyNode representation if the intrinsic kind is {@link Intrinsic.Kind#PROPERTY}.
+ * <p>
+ * For example: In the following FXML document, {@code <fx:define>} is parsed as an ObjectNode, but
+ * must be converted into a PropertyNode because {@code fx:define} is only applicable as a property.
+ *
+ * <pre>{@code
+ *     <Button>
+ *         <fx:define>
+ *             <String fx:id="foo">Hello!</String>
+ *         </fx:define>
+ *     </Button>
+ * }</pre>
  */
-public class ValidateIntrinsicsTransform implements Transform {
+public class IntrinsicsTransform implements Transform {
 
     private static final Set<Intrinsic> CONFLICTING_INTRINSICS = Set.of(
         Intrinsics.VALUE, Intrinsics.CONSTANT, Intrinsics.FACTORY);
@@ -29,14 +42,14 @@ public class ValidateIntrinsicsTransform implements Transform {
     public Node transform(TransformContext context, Node node) {
         if (node.typeEquals(ObjectNode.class)) {
             if (((ObjectNode)node).getType().isIntrinsic()) {
-                return processIntrinsicElement((ObjectNode)node);
+                return processIntrinsicObject((ObjectNode)node);
             }
 
             validateConflictingIntrinsics((ObjectNode)node);
         }
 
-        if (node.typeEquals(PropertyNode.class)) {
-            return processIntrinsicAttribute(context, (PropertyNode)node);
+        if (node.typeEquals(PropertyNode.class) && ((PropertyNode)node).isIntrinsic()) {
+            return processIntrinsicProperty(context, (PropertyNode)node);
         }
 
         return node;
@@ -66,23 +79,31 @@ public class ValidateIntrinsicsTransform implements Transform {
     /**
      * Ensures that an intrinsic in element notation is valid, and all of its properties are valid.
      */
-    private ObjectNode processIntrinsicElement(ObjectNode objectNode) {
-        if (objectNode.getType().isIntrinsic()) {
-            Intrinsic intrinsic = Intrinsics.find(objectNode.getType().getName());
-            if (intrinsic == null) {
-                throw GeneralErrors.unknownIntrinsic(objectNode.getSourceInfo(), objectNode.getType().getMarkupName());
+    private Node processIntrinsicObject(ObjectNode objectNode) {
+        Intrinsic intrinsic = Intrinsics.find(objectNode.getType().getName());
+        if (intrinsic == null) {
+            throw GeneralErrors.unknownIntrinsic(objectNode.getSourceInfo(), objectNode.getType().getMarkupName());
+        }
+
+        if (intrinsic.getKind() == Intrinsic.Kind.PROPERTY) {
+            if (!objectNode.getProperties().isEmpty()) {
+                throw ParserErrors.unexpectedToken(objectNode.getProperties().get(0).getSourceInfo());
             }
 
-            if (!intrinsic.getUsage().isElement()) {
-                throw GeneralErrors.unexpectedIntrinsic(objectNode.getSourceInfo(), objectNode.getType().getMarkupName());
-            }
+            return new PropertyNode(
+                new String[] {objectNode.getType().getName()},
+                objectNode.getType().getMarkupName(),
+                objectNode.getChildren(),
+                true,
+                false,
+                objectNode.getSourceInfo());
+        }
 
-            for (PropertyNode propertyNode : objectNode.getProperties()) {
-                if (intrinsic.findProperty(propertyNode.getName()) == null) {
-                    throw SymbolResolutionErrors.propertyNotFound(
-                        propertyNode.getSourceInfo(),
-                        objectNode.getType().getMarkupName(), propertyNode.getMarkupName());
-                }
+        for (PropertyNode propertyNode : objectNode.getProperties()) {
+            if (intrinsic.findProperty(propertyNode.getName()) == null) {
+                throw SymbolResolutionErrors.propertyNotFound(
+                    propertyNode.getSourceInfo(),
+                    objectNode.getType().getMarkupName(), propertyNode.getMarkupName());
             }
         }
 
@@ -92,25 +113,23 @@ public class ValidateIntrinsicsTransform implements Transform {
     /**
      * Ensures that an intrinsic in attribute notation is valid.
      */
-    private PropertyNode processIntrinsicAttribute(TransformContext context, PropertyNode propertyNode) {
-        if (propertyNode.isIntrinsic()) {
-            Intrinsic intrinsic = Intrinsics.find(propertyNode.getName());
-            if (intrinsic == null) {
-                throw GeneralErrors.unknownIntrinsic(propertyNode.getSourceInfo(), propertyNode.getMarkupName());
-            }
+    private PropertyNode processIntrinsicProperty(TransformContext context, PropertyNode propertyNode) {
+        Intrinsic intrinsic = Intrinsics.find(propertyNode.getName());
+        if (intrinsic == null) {
+            throw GeneralErrors.unknownIntrinsic(propertyNode.getSourceInfo(), propertyNode.getMarkupName());
+        }
 
-            if (!intrinsic.getUsage().isAttribute()) {
+        if (intrinsic.getKind() == Intrinsic.Kind.OBJECT) {
+            throw GeneralErrors.unexpectedIntrinsic(propertyNode.getSourceInfo(), propertyNode.getMarkupName());
+        }
+
+        if (context.getParent(1) instanceof DocumentNode) {
+            if (intrinsic.getPlacement() == Intrinsic.Placement.NOT_ROOT) {
                 throw GeneralErrors.unexpectedIntrinsic(propertyNode.getSourceInfo(), propertyNode.getMarkupName());
             }
-
-            if (context.getParent(1) instanceof DocumentNode) {
-                if (!intrinsic.getUsage().isRootAttribute()) {
-                    throw GeneralErrors.unexpectedIntrinsic(propertyNode.getSourceInfo(), propertyNode.getMarkupName());
-                }
-            } else {
-                if (!intrinsic.getUsage().isChildAttribute()) {
-                    throw GeneralErrors.unexpectedIntrinsic(propertyNode.getSourceInfo(), propertyNode.getMarkupName());
-                }
+        } else {
+            if (intrinsic.getPlacement() == Intrinsic.Placement.ROOT) {
+                throw GeneralErrors.unexpectedIntrinsic(propertyNode.getSourceInfo(), propertyNode.getMarkupName());
             }
         }
 

@@ -4,6 +4,7 @@
 package org.jfxcore.compiler;
 
 import javafx.geometry.Pos;
+import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.ListView;
 import javafx.scene.control.SelectionMode;
@@ -154,8 +155,8 @@ public class PropertyAssignmentTest {
             """));
 
             assertEquals(ErrorCode.CLASS_NOT_FOUND, ex.getDiagnostic().getCode());
-            assertCodeHighlight("<Button.text>Hello!</Button.text>", ex);
-            assertEquals("'Button' cannot be resolved", ex.getDiagnostic().getMessage());
+            assertCodeHighlight("Button.text", ex);
+            assertEquals("'Button.text' cannot be resolved", ex.getDiagnostic().getMessage());
         }
 
         @Test
@@ -168,12 +169,12 @@ public class PropertyAssignmentTest {
             """));
 
             assertEquals(ErrorCode.PROPERTY_NOT_FOUND, ex.getDiagnostic().getCode());
-            assertCodeHighlight("<Button.doesNotExist>Hello!</Button.doesNotExist>", ex);
-            assertEquals("'doesNotExist' in Button cannot be resolved", ex.getDiagnostic().getMessage());
+            assertCodeHighlight("Button.doesNotExist", ex);
+            assertEquals("'doesNotExist' in javafx.scene.control.Button cannot be resolved", ex.getDiagnostic().getMessage());
         }
 
         @Test
-        public void Qualified_Property_Is_Interpreted_As_Attached_Property() {
+        public void Qualified_Property_Is_Interpreted_As_Static_Property() {
             MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
                 <?import javafx.scene.control.*?>
                 <Labeled xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
@@ -183,7 +184,7 @@ public class PropertyAssignmentTest {
 
             assertEquals(ErrorCode.PROPERTY_NOT_FOUND, ex.getDiagnostic().getCode());
             assertCodeHighlight("<Button.text>Hello!</Button.text>", ex);
-            assertTrue(ex.getDiagnostic().getMessage().startsWith("'text' in Button cannot be resolved"));
+            assertTrue(ex.getDiagnostic().getMessage().startsWith("'text' in javafx.scene.control.Button cannot be resolved"));
             assertTrue(ex.getDiagnostic().getMessage().contains("'text' was interpreted as a static property"));
         }
 
@@ -210,6 +211,70 @@ public class PropertyAssignmentTest {
 
             assertEquals("Hello!", root.getText());
         }
+
+        public static class lowercaseButton extends Button {}
+
+        @Test
+        public void Lowercase_Element_Is_Valid() {
+            Button root = compileAndRun("""
+                <?import javafx.scene.control.*?>
+                <Button xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                    <graphic>
+                        <lowercaseButton/>
+                    </graphic>
+                </Button>
+            """);
+
+            assertTrue(root.getGraphic() instanceof lowercaseButton);
+        }
+
+        @SuppressWarnings("unused")
+        public static class StaticPropertyButton extends Button {
+            public static void setText(Node node, String text) {
+                node.getProperties().put(StaticPropertyButton.class, text);
+            }
+            public static String getText(Node node) {
+                return (String)node.getProperties().get(StaticPropertyButton.class);
+            }
+        }
+
+        @Test
+        public void UnqualifiedPropertyName_Is_Not_Interpreted_As_StaticProperty_When_Name_Is_Ambiguous() {
+            StaticPropertyButton root = compileAndRun("""
+                <StaticPropertyButton xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                    <text>foo</text>
+                </StaticPropertyButton>
+            """);
+
+            assertEquals("foo", root.getText());
+            assertNull(StaticPropertyButton.getText(root));
+        }
+
+        @Test
+        public void QualifiedPropertyName_Is_Interpreted_As_StaticProperty_When_Name_Is_Ambiguous() {
+            StaticPropertyButton root = compileAndRun("""
+                <StaticPropertyButton xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                    <StaticPropertyButton.text>foo</StaticPropertyButton.text>
+                </StaticPropertyButton>
+            """);
+
+            assertEquals("foo", StaticPropertyButton.getText(root));
+            assertEquals("", root.getText());
+        }
+
+        @Test
+        public void StaticProperty_And_LocalProperty_With_Same_Name_Are_Valid() {
+            StaticPropertyButton root = compileAndRun("""
+                <StaticPropertyButton xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                    <StaticPropertyButton.text>foo</StaticPropertyButton.text>
+                    <text>bar</text>
+                </StaticPropertyButton>
+            """);
+
+            assertEquals("foo", StaticPropertyButton.getText(root));
+            assertEquals("bar", root.getText());
+        }
+
     }
 
     @Nested

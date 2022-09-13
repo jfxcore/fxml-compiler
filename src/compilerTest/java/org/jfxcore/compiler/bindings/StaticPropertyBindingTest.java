@@ -1,4 +1,4 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2022, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.bindings;
@@ -22,7 +22,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 @SuppressWarnings({"HttpUrlsUsage", "DuplicatedCode"})
 @ExtendWith(TestExtension.class)
-public class AttachedPropertyBindingTest extends CompilerTestBase {
+public class StaticPropertyBindingTest extends CompilerTestBase {
 
     public static class TextSource {
         public static StringProperty textProperty(Node node) {
@@ -40,7 +40,7 @@ public class AttachedPropertyBindingTest extends CompilerTestBase {
     }
 
     @Test
-    public void Bind_Once_To_Attached_StringProperty() {
+    public void Bind_Once_To_Static_StringProperty() {
         Pane root = compileAndRun("""
             <?import javafx.scene.layout.*?>
             <?import javafx.scene.control.*?>
@@ -57,13 +57,13 @@ public class AttachedPropertyBindingTest extends CompilerTestBase {
     }
 
     @Test
-    public void Bind_Once_To_Fully_Qualified_Attached_StringProperty() {
+    public void Bind_Once_To_Fully_Qualified_Static_StringProperty() {
         Pane root = compileAndRun("""
             <?import javafx.scene.layout.*?>
             <?import javafx.scene.control.*?>
             <Pane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
                 <Pane fx:id="pane" TextSource.text="foo"/>
-                <Label text="{fx:once pane.(org.jfxcore.compiler.bindings.AttachedPropertyBindingTest.TextSource.text)}"/>
+                <Label text="{fx:once pane.(org.jfxcore.compiler.bindings.StaticPropertyBindingTest.TextSource.text)}"/>
             </Pane>
         """);
 
@@ -74,14 +74,14 @@ public class AttachedPropertyBindingTest extends CompilerTestBase {
     }
 
     @Test
-    public void Bind_Once_To_Partially_Qualified_Attached_StringProperty() {
+    public void Bind_Once_To_Partially_Qualified_Static_StringProperty() {
         Pane root = compileAndRun("""
             <?import javafx.scene.layout.*?>
             <?import javafx.scene.control.*?>
             <?import org.jfxcore.compiler.bindings.*?>
             <Pane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
                 <Pane fx:id="pane" TextSource.text="foo"/>
-                <Label text="{fx:once pane.(AttachedPropertyBindingTest.TextSource.text)}"/>
+                <Label text="{fx:once pane.(StaticPropertyBindingTest.TextSource.text)}"/>
             </Pane>
         """);
 
@@ -92,7 +92,7 @@ public class AttachedPropertyBindingTest extends CompilerTestBase {
     }
 
     @Test
-    public void Bind_Unidirectional_To_Attached_StringProperty() {
+    public void Bind_Unidirectional_To_Static_StringProperty() {
         Pane root = compileAndRun("""
             <?import javafx.scene.layout.*?>
             <?import javafx.scene.control.*?>
@@ -117,7 +117,7 @@ public class AttachedPropertyBindingTest extends CompilerTestBase {
     }
 
     @Test
-    public void Bind_Bidirectional_To_Attached_StringProperty() {
+    public void Bind_Bidirectional_To_Static_StringProperty() {
         Pane root = compileAndRun("""
             <?import javafx.scene.layout.*?>
             <?import javafx.scene.control.*?>
@@ -142,7 +142,7 @@ public class AttachedPropertyBindingTest extends CompilerTestBase {
     }
 
     @Test
-    public void Bind_Observable_AttachedProperty_To_ObservableValue() {
+    public void Bind_Observable_StaticProperty_To_ObservableValue() {
         Pane root = compileAndRun("""
             <?import javafx.scene.layout.*?>
             <?import javafx.scene.control.*?>
@@ -167,13 +167,13 @@ public class AttachedPropertyBindingTest extends CompilerTestBase {
     }
 
     @Test
-    public void Bind_Fully_Qualified_Observable_AttachedProperty_To_ObservableValue() {
+    public void Bind_Fully_Qualified_Observable_StaticProperty_To_ObservableValue() {
         Pane root = compileAndRun("""
             <?import javafx.scene.layout.*?>
             <?import javafx.scene.control.*?>
             <Pane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
                 <Label fx:id="lbl" text="foo"/>
-                <Pane org.jfxcore.compiler.bindings.AttachedPropertyBindingTest.TextSource.text="{fx:bind lbl.text}"/>
+                <Pane org.jfxcore.compiler.bindings.StaticPropertyBindingTest.TextSource.text="{fx:bind lbl.text}"/>
             </Pane>
         """);
 
@@ -192,7 +192,7 @@ public class AttachedPropertyBindingTest extends CompilerTestBase {
     }
 
     @Test
-    public void BindBidirectional_Observable_AttachedProperty_To_StringProperty() {
+    public void BindBidirectional_Observable_StaticProperty_To_StringProperty() {
         Pane root = compileAndRun("""
             <?import javafx.scene.layout.*?>
             <?import javafx.scene.control.*?>
@@ -217,7 +217,7 @@ public class AttachedPropertyBindingTest extends CompilerTestBase {
     }
 
     @Test
-    public void Nonexistent_Source_AttachedProperty_Cannot_Be_Resolved() {
+    public void Nonexistent_Source_StaticProperty_Cannot_Be_Resolved() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.scene.layout.*?>
             <?import javafx.scene.control.*?>
@@ -232,7 +232,7 @@ public class AttachedPropertyBindingTest extends CompilerTestBase {
     }
 
     @Test
-    public void Nonexistent_Target_AttachedProperty_Cannot_Be_Resolved() {
+    public void Nonexistent_Target_StaticProperty_Cannot_Be_Resolved() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.scene.layout.*?>
             <?import javafx.scene.control.*?>
@@ -249,7 +249,7 @@ public class AttachedPropertyBindingTest extends CompilerTestBase {
     }
 
     @Test
-    public void Nested_AttachedProperty_Path_Is_Not_Allowed() {
+    public void Nested_StaticProperty_Path_Is_Not_Allowed() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.scene.layout.*?>
             <?import javafx.scene.control.*?>
@@ -288,7 +288,7 @@ public class AttachedPropertyBindingTest extends CompilerTestBase {
     }
 
     @Test
-    public void Bind_Unidirectional_To_Chained_Attached_Property() {
+    public void Bind_Unidirectional_To_Chained_Static_Property() {
         Pane root = compileAndRun("""
             <?import javafx.scene.layout.*?>
             <?import javafx.scene.control.*?>
@@ -311,7 +311,7 @@ public class AttachedPropertyBindingTest extends CompilerTestBase {
     }
 
     @Test
-    public void Bind_Unidirectional_To_Chained_Observable_Attached_Property() {
+    public void Bind_Unidirectional_To_Chained_Observable_Static_Property() {
         Pane root = compileAndRun("""
             <?import javafx.scene.layout.*?>
             <?import javafx.scene.control.*?>

@@ -13,9 +13,12 @@ import java.util.Iterator;
 import java.util.List;
 import javassist.CtBehavior;
 import javassist.CtClass;
+import javassist.CtConstructor;
 import javassist.CtField;
 import javassist.CtMember;
+import javassist.Modifier;
 import javassist.bytecode.BadBytecode;
+import javassist.bytecode.ParameterAnnotationsAttribute;
 import javassist.bytecode.SignatureAttribute;
 import javassist.bytecode.annotation.Annotation;
 import javassist.bytecode.annotation.AnnotationMemberValue;
@@ -228,6 +231,46 @@ public class TypeHelper {
         }
 
         return type;
+    }
+
+    /**
+     * Returns whether the specified type has a constructor that accepts an {@code @NamedArg}
+     * parameter with the specified name.
+     */
+    public static boolean hasNamedConstructorParam(CtClass type, String paramName) {
+        for (CtConstructor constructor : type.getConstructors()) {
+            if (!Modifier.isPublic(constructor.getModifiers())) {
+                continue;
+            }
+
+            ParameterAnnotationsAttribute attr = (ParameterAnnotationsAttribute)constructor
+                .getMethodInfo2().getAttribute(ParameterAnnotationsAttribute.visibleTag);
+
+            if (attr == null) {
+                continue;
+            }
+
+            Annotation[][] annotations = attr.getAnnotations();
+
+            for (int i = 0; i < annotations.length; ++i) {
+                Annotation namedArgAnnotation = null;
+                for (Annotation item : annotations[i]) {
+                    if (item.getTypeName().equals(Classes.NamedArgAnnotationName)) {
+                        namedArgAnnotation = item;
+                        break;
+                    }
+                }
+
+                if (namedArgAnnotation != null) {
+                    String value = TypeHelper.getAnnotationString(namedArgAnnotation, "value");
+                    if (paramName.equals(value)) {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        return false;
     }
 
     public static class MemberValueVisitorAdapter implements MemberValueVisitor {

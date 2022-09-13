@@ -8,67 +8,69 @@ import org.jfxcore.compiler.ast.ObjectNode;
 import org.jfxcore.compiler.util.Classes;
 import java.util.List;
 
+import static org.jfxcore.compiler.ast.intrinsic.Intrinsic.*;
+
 public class Intrinsics {
 
     public static final Intrinsic NULL = new Intrinsic(
-        "null", Usage.ELEMENT);
+        "null", Kind.OBJECT, Placement.NOT_ROOT);
 
     public static final Intrinsic CLASS = new Intrinsic(
-        "class", Usage.ROOT_ATTRIBUTE);
+        "class", Kind.PROPERTY, Placement.ROOT, Classes::StringType);
 
     public static final Intrinsic CLASS_MODIFIER = new Intrinsic(
-        "classModifier", Usage.ROOT_ATTRIBUTE);
+        "classModifier", Kind.PROPERTY, Placement.ROOT, Classes::StringType);
 
     public static final Intrinsic CLASS_PARAMETERS = new Intrinsic(
-        "classParameters", Usage.ROOT_ATTRIBUTE);
+        "classParameters", Kind.PROPERTY, Placement.ROOT, Classes::StringType);
 
     public static final Intrinsic MARKUP_CLASS_NAME = new Intrinsic(
-        "markupClassName", Usage.ROOT_ATTRIBUTE);
+        "markupClassName", Kind.PROPERTY, Placement.ROOT, Classes::StringType);
 
     public static final Intrinsic ID = new Intrinsic(
-        "id", Usage.CHILD_ATTRIBUTE);
+        "id", Kind.PROPERTY, Placement.ANY, Classes::StringType);
 
     public static final Intrinsic VALUE = new Intrinsic(
-        "value", new Usage(true, false, true));
+        "value", Kind.ANY, Placement.NOT_ROOT, Classes::StringType);
 
     public static final Intrinsic CONSTANT = new Intrinsic(
-        "constant", new Usage(true, false, true));
+        "constant", Kind.ANY, Placement.NOT_ROOT, Classes::StringType);
 
     public static final Intrinsic FACTORY = new Intrinsic(
-        "factory", Usage.CHILD_ATTRIBUTE);
+        "factory", Kind.PROPERTY, Placement.NOT_ROOT);
 
     public static final Intrinsic TYPE_ARGUMENTS = new Intrinsic(
-        "typeArguments", Usage.ATTRIBUTE);
+        "typeArguments", Kind.PROPERTY, Placement.ANY);
 
     public static final Intrinsic ITEM_TYPE = new Intrinsic(
-        "itemType", Usage.CHILD_ATTRIBUTE);
+        "itemType", Kind.PROPERTY, Placement.ANY);
 
     public static final Intrinsic DEFINE = new Intrinsic(
-        "define", Usage.ATTRIBUTE);
+        "define", Kind.PROPERTY, Placement.ANY);
 
     public static final Intrinsic STYLESHEET = new Intrinsic(
-        "stylesheet", Classes::StringType, Usage.ELEMENT);
+        "stylesheet", Kind.OBJECT, Placement.ANY, Classes::StringType);
 
     public static final Intrinsic TYPE = new Intrinsic(
-        "type", Classes::ClassType, Usage.ELEMENT,
+        "type", Kind.OBJECT, Placement.ANY, Classes::ClassType,
         new IntrinsicProperty("name", Classes::StringType, true));
 
     public static final Intrinsic URL = new Intrinsic(
-        "url", Classes::URLType, Usage.ELEMENT,
+        "url", Kind.OBJECT, Placement.ANY, Classes::URLType,
         new IntrinsicProperty("value", Classes::StringType, true));
 
     public static final Intrinsic ONCE = new Intrinsic(
-        "once", Usage.ELEMENT,
+        "once", Kind.OBJECT, Placement.ANY,
         new IntrinsicProperty("path", Classes::StringType, true),
         new IntrinsicProperty("content", () -> CtClass.booleanType));
 
     public static final Intrinsic BIND = new Intrinsic(
-        "bind", Usage.ELEMENT,
+        "bind", Kind.OBJECT, Placement.ANY,
         new IntrinsicProperty("path", Classes::StringType, true),
         new IntrinsicProperty("content", () -> CtClass.booleanType));
 
     public static final Intrinsic SYNC = new Intrinsic(
-        "sync", Usage.ELEMENT,
+        "sync", Kind.OBJECT, Placement.ANY,
         new IntrinsicProperty("path", Classes::StringType, true),
         new IntrinsicProperty("content", () -> CtClass.booleanType),
         new IntrinsicProperty("inverseMethod", Classes::StringType));

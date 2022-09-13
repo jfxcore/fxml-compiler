@@ -15,7 +15,6 @@ import org.jfxcore.compiler.ast.intrinsic.Intrinsics;
 import org.jfxcore.compiler.ast.text.TextNode;
 import org.jfxcore.compiler.ast.TypeNode;
 import org.jfxcore.compiler.ast.ValueNode;
-import org.jfxcore.compiler.diagnostic.errors.GeneralErrors;
 import org.jfxcore.compiler.diagnostic.errors.ParserErrors;
 import org.w3c.dom.Attr;
 import org.w3c.dom.Document;
@@ -32,7 +31,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 public class FxmlParser {
 
@@ -109,8 +107,6 @@ public class FxmlParser {
             throw ParserErrors.unknownNamespace(getSourceInfo(element), namespace);
         }
 
-        boolean isProperty = isPropertyName(element);
-
         List<PropertyNode> properties = new ArrayList<>();
         List<org.jfxcore.compiler.ast.ValueNode> children = new ArrayList<>();
 
@@ -124,7 +120,6 @@ public class FxmlParser {
                         attribute.getNamespaceURI(),
                         attribute.getLocalName(),
                         List.of(nodeFromText(attribute, attribute.getNodeValue(), sourceInfo)),
-                        true,
                         sourceInfo));
             }
         }
@@ -133,42 +128,7 @@ public class FxmlParser {
             Node child = element.getChildNodes().item(i);
 
             if (child instanceof Element) {
-                boolean isChildProperty;
-                Intrinsic childIntrinsic = FxmlNamespace.FXML.equals(child.getNamespaceURI()) ?
-                    Intrinsics.find(child.getLocalName()) : null;
-
-                if (isProperty) {
-                    if (childIntrinsic != null && !childIntrinsic.getUsage().isElement()) {
-                        throw GeneralErrors.unexpectedIntrinsic(getSourceInfo(child), child.getNodeName());
-                    }
-
-                    if (childIntrinsic == null && isPropertyName(child)) {
-                        throw ParserErrors.elementCannotStartWithLowercaseLetter(
-                            getSourceInfo(child), child.getNodeName());
-                    }
-
-                    isChildProperty = false;
-                } else { // isElement
-                    if (childIntrinsic != null) {
-                        isChildProperty = childIntrinsic.getUsage().isAttribute();
-                    } else {
-                        isChildProperty = isPropertyName(child);
-                    }
-                }
-
-                if (isChildProperty) {
-                    properties.add(
-                        createPropertyNode(
-                            child.getPrefix(),
-                            child.getNamespaceURI(),
-                            child.getLocalName(),
-                            parseElementNode((Element)child).getChildren().stream()
-                                .map(c -> (ValueNode)c).collect(Collectors.toList()),
-                            false,
-                            getSourceInfo(child)));
-                } else {
-                    children.add(parseElementNode((Element)child));
-                }
+                children.add(parseElementNode((Element)child));
             } else if (child instanceof Text) {
                 String value = child.getNodeValue();
                 if (!value.isBlank()) {
@@ -188,22 +148,6 @@ public class FxmlParser {
 
     private SourceInfo getSourceInfo(Node node) {
         return (SourceInfo)node.getUserData(XmlReader.SOURCE_INFO_KEY);
-    }
-
-    private boolean isPropertyName(Node node) {
-        String[] parts = node.getLocalName().split("\\.");
-        String name = parts[parts.length - 1];
-
-        if (FxmlNamespace.FXML.equals(node.getNamespaceURI())) {
-            if (parts.length != 1) {
-                return false;
-            }
-
-            Intrinsic intrinsic = Intrinsics.find(parts[0]);
-            return intrinsic != null && intrinsic.getUsage().isAttribute();
-        }
-
-        return Character.isLowerCase(name.charAt(0));
     }
 
     private ValueNode nodeFromText(Node node, String text, SourceInfo sourceInfo) {
@@ -286,7 +230,6 @@ public class FxmlParser {
             String namespace,
             String name,
             Collection<? extends ValueNode> values,
-            boolean isAttribute,
             SourceInfo sourceInfo) {
         if (!FxmlNamespace.JAVAFX.equals(namespace) && !FxmlNamespace.FXML.equals(namespace)) {
             throw ParserErrors.unknownNamespace(sourceInfo, namespace);
@@ -297,7 +240,7 @@ public class FxmlParser {
             prefix != null ? prefix + ":" + name : name,
             values,
             prefix != null && FxmlNamespace.FXML.equals(namespace),
-            !isAttribute,
+            false,
             sourceInfo);
     }
 

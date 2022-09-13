@@ -9,7 +9,6 @@ import javassist.NotFoundException;
 import org.jetbrains.annotations.Nullable;
 import org.jfxcore.compiler.ast.Node;
 import org.jfxcore.compiler.ast.ObjectNode;
-import org.jfxcore.compiler.ast.PropertyNode;
 import org.jfxcore.compiler.ast.ValueNode;
 import org.jfxcore.compiler.ast.emit.EmitClassConstantNode;
 import org.jfxcore.compiler.ast.intrinsic.Intrinsics;
@@ -20,7 +19,6 @@ import org.jfxcore.compiler.diagnostic.errors.SymbolResolutionErrors;
 import org.jfxcore.compiler.transform.Transform;
 import org.jfxcore.compiler.transform.TransformContext;
 import org.jfxcore.compiler.util.AccessVerifier;
-import org.jfxcore.compiler.util.PropertyInfo;
 import org.jfxcore.compiler.util.Resolver;
 import org.jfxcore.compiler.util.TypeHelper;
 import org.jfxcore.compiler.util.TypeInstance;
@@ -47,18 +45,8 @@ public class ConstantIntrinsicTransform implements Transform {
         }
 
         ObjectNode objectNode = (ObjectNode)node;
-        Node parentNode = context.getParent();
-        TypeInstance propertyType = null;
 
-        if (parentNode instanceof PropertyNode propertyNode) {
-            TypeInstance parentType = TypeHelper.getTypeInstance(context.getParent(1));
-            Resolver resolver = new Resolver(propertyNode.getSourceInfo());
-            PropertyInfo propertyInfo = resolver.resolveProperty(
-                parentType, propertyNode.isAllowQualifiedName(), propertyNode.getNames());
-            propertyType = propertyInfo.getValueTypeInstance();
-        }
-
-        if (objectNode.getChildren().size() == 0) {
+        if (objectNode.getChildren().size() == 0 || objectNode.getProperties().size() > 0) {
             throw ParserErrors.invalidExpression(objectNode.getSourceInfo());
         }
 
@@ -70,7 +58,7 @@ public class ConstantIntrinsicTransform implements Transform {
             throw ParserErrors.expectedIdentifier(objectNode.getChildren().get(0).getSourceInfo());
         }
 
-        return createConstantNode(context, propertyType, textNode, node.getSourceInfo());
+        return createConstantNode(context, TypeHelper.getTypeInstance(objectNode), textNode, node.getSourceInfo());
     }
 
     private ValueNode createConstantNode(

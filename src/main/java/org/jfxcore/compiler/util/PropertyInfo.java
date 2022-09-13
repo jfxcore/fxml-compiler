@@ -1,4 +1,4 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2022, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.util;
@@ -24,14 +24,20 @@ import static org.jfxcore.compiler.util.Classes.*;
  *     <li>ObservableValue&lt;T&gt; valueProperty()
  *     <li>ObservableValue&lt;T&gt; valueProperty(), T getValue()
  *     <li>static T getValue(Node)
+ *     <li>static ObservableValue&lt;T&gt; valueProperty(Node)
+ *     <li>static ObservableValue&lt;T&gt; valueProperty(Node), static T getValue(Node)
  * </ol>
  *
  * <p>Writable properties:
  * <ol>
  *     <li>T getValue(), void setValue(T)
+ *     <li>Property&lt;T&gt; valueProperty()
  *     <li>Property&lt;T&gt; valueProperty(), T getValue()
  *     <li>Property&lt;T&gt; valueProperty(), T getValue(), void setValue(T)
  *     <li>static T getValue(Node), static void setValue(Node, T)
+ *     <li>static Property&lt;T&gt; valueProperty(Node)
+ *     <li>static Property&lt;T&gt; valueProperty(Node), T getValue(Node)
+ *     <li>static Property&lt;T&gt; valueProperty(Node), T getValue(Node), void setValue(Node, T)
  * </ol>
  *
  * <p>If the property uses a primitive wrapper like ObservableBooleanValue, the optional getter and setter
@@ -46,7 +52,7 @@ public class PropertyInfo {
     private final TypeInstance typeInstance;
     private final TypeInstance observableType;
     private final TypeInstance declaringType;
-    private final boolean attached;
+    private final boolean isStatic;
     private final boolean observable;
     private final boolean readonly;
     private final boolean bindable;
@@ -59,7 +65,7 @@ public class PropertyInfo {
             TypeInstance typeInstance,
             TypeInstance observableType,
             TypeInstance declaringType,
-            boolean attached) throws NotFoundException {
+            boolean isStatic) throws NotFoundException {
         this.name = name;
         this.propertyGetter = propertyGetter;
         this.getter = getter;
@@ -67,7 +73,7 @@ public class PropertyInfo {
         this.typeInstance = typeInstance;
         this.observableType = observableType;
         this.declaringType = declaringType;
-        this.attached = attached;
+        this.isStatic = isStatic;
         this.observable = propertyGetter != null;
         this.readonly = setter == null &&
             (propertyGetter == null || !propertyGetter.getReturnType().subtypeOf(Classes.WritableValueType()));
@@ -161,10 +167,10 @@ public class PropertyInfo {
     }
 
     /**
-     * Returns whether the property is an attached property.
+     * Returns whether the property is a static property.
      */
-    public boolean isAttached() {
-        return attached;
+    public boolean isStatic() {
+        return isStatic;
     }
 
     /**
