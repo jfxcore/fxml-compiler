@@ -53,6 +53,13 @@ public class Intrinsic {
         return name;
     }
 
+    /**
+     * Gets the type of the intrinsic, which may depend on other nodes in the AST.
+     * For example, an in-context fx:value node depends on the property type to which it is assigned.
+     *
+     * @param context the {@code TransformContext}
+     * @param typeNode the {@code TypeNode} in the AST that represents the intrinsic type
+     */
     public TypeInstance getType(TransformContext context, TypeNode typeNode) {
         if (kind == Kind.ANY
                 && context.getParent(typeNode) instanceof ObjectNode objectNode
