@@ -1,4 +1,4 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2022, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast;
@@ -124,6 +124,17 @@ public class ObjectNode extends AbstractNode implements ValueNode {
         type = (TypeNode)type.accept(visitor);
         acceptChildren(properties, visitor);
         acceptChildren(children, visitor);
+
+        // ObjectToPropertyTransform may have converted children to properties.
+        // We need to fix this by moving all PropertyNodes to the properties list.
+        var it = children.listIterator();
+        while (it.hasNext()) {
+            Node child = it.next();
+            if (child instanceof PropertyNode propertyNode) {
+                properties.add(propertyNode);
+                it.remove();
+            }
+        }
     }
 
     @Override

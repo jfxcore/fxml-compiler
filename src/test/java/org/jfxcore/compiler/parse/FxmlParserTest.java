@@ -1,4 +1,4 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2022, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.parse;
@@ -108,8 +108,8 @@ public class FxmlParserTest extends TestBase {
         assertEquals("\"", getPropertyText(document, "quot"));
         assertEquals("&", getPropertyText(document, "amp"));
         assertEquals("'", getPropertyText(document, "apos"));
-        assertEquals(String.valueOf((char)100), getPropertyText(document, "num1"));
-        assertEquals(String.valueOf((char)255), getPropertyText(document, "num2"));
+        assertEquals(String.valueOf((char)100), getElementText(document, "num1"));
+        assertEquals(String.valueOf((char)255), getElementText(document, "num2"));
     }
 
     @Test
@@ -142,6 +142,17 @@ public class FxmlParserTest extends TestBase {
 
         assertEquals("foo", getPropertyText(document, "text1"));
         assertEquals(" bar ", getPropertyText(document, "text2"));
+    }
+
+    private String getElementText(DocumentNode document, String elementName) {
+        //noinspection OptionalGetWithoutIsPresent
+        return document
+            .getRoot().as(ObjectNode.class)
+            .getChildren().stream()
+            .filter(e -> ((ObjectNode)e).getType().getMarkupName().equals(elementName))
+            .findFirst().get().as(ObjectNode.class)
+            .getTextContent()
+            .getText();
     }
 
     private String getPropertyText(DocumentNode document, String propertyName) {

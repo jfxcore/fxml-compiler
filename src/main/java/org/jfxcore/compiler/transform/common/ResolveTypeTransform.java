@@ -30,20 +30,21 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * Replaces all instances of {@link TypeNode} in the AST with {@link ResolvedTypeNode} by resolving
- * the names against the imported packages.
+ * Replaces {@link TypeNode} instances in the AST with {@link ResolvedTypeNode} by resolving
+ * the names against the imported packages. When the name cannot be resolved, the {@code TypeNode}
+ * instance is not replaced.
  */
 public class ResolveTypeTransform implements Transform {
 
-    private final boolean allowUnresolvableTypes;
+    private final boolean allowUnresolvableTypeArguments;
 
-    public ResolveTypeTransform(boolean allowUnresolvableTypes) {
-        this.allowUnresolvableTypes = allowUnresolvableTypes;
+    public ResolveTypeTransform(boolean allowUnresolvableTypeArguments) {
+        this.allowUnresolvableTypeArguments = allowUnresolvableTypeArguments;
     }
 
     @Override
     public Set<Class<? extends Transform>> getDependsOn() {
-        return Set.of(ValidateIntrinsicsTransform.class);
+        return Set.of(IntrinsicsTransform.class);
     }
 
     @Override
@@ -62,17 +63,14 @@ public class ResolveTypeTransform implements Transform {
 
             //noinspection ConstantConditions
             return new ResolvedTypeNode(
-                resolver.getTypeInstance(intrinsic.getType()),
+                intrinsic.getType(context, typeNode),
                 typeNode.getName(),
                 typeNode.getMarkupName(),
                 true,
                 typeNode.getSourceInfo());
         }
 
-        CtClass objectTypeClass = allowUnresolvableTypes ?
-            resolver.tryResolveClassAgainstImports(typeNode.getName()) :
-            resolver.resolveClassAgainstImports(typeNode.getName());
-
+        CtClass objectTypeClass = resolver.tryResolveClassAgainstImports(typeNode.getName());
         if (objectTypeClass == null) {
             return typeNode;
         }
@@ -133,7 +131,7 @@ public class ResolveTypeTransform implements Transform {
 
                 type = resolver.getTypeInstance(objectTypeClass, typeArguments);
             } catch (MarkupException ex) {
-                if (!allowUnresolvableTypes || ex.getDiagnostic().getCode() != ErrorCode.CLASS_NOT_FOUND) {
+                if (!allowUnresolvableTypeArguments || ex.getDiagnostic().getCode() != ErrorCode.CLASS_NOT_FOUND) {
                     throw ex;
                 }
 

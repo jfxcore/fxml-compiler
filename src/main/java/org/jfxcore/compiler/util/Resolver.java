@@ -291,10 +291,8 @@ public class Resolver {
             return (PropertyInfo)entry.value();
         }
 
-        boolean attached = false;
         boolean validLocalName = true;
         String propertyName = names[names.length - 1];
-        CtMethod propertyGetter = null;
 
         if (names.length > 1) {
             String className = String.join(".", Arrays.copyOf(names, names.length - 1));
@@ -307,15 +305,18 @@ public class Resolver {
                 return null;
             }
 
-            propertyGetter = tryResolveAttachedPropertyGetter(declaringClass.jvmType(), propertyName);
+            PropertyInfo propertyInfo = tryResolveStaticPropertyImpl(declaringClass, propertyName);
+            if (propertyInfo != null) {
+                return getCache().put(key, propertyInfo);
+            }
         }
 
-        if (propertyGetter != null) {
-            attached = true;
-        } else {
-            propertyGetter = tryResolvePropertyGetter(declaringClass.jvmType(), propertyName);
+        // A regular (non-static) property needs a valid local name, otherwise we don't accept it.
+        if (!validLocalName) {
+            return getCache().put(key, null);
         }
 
+        CtMethod propertyGetter = tryResolvePropertyGetter(declaringClass.jvmType(), propertyName);
         TypeInstance typeInstance = null;
         TypeInstance observableTypeInstance = null;
 
@@ -324,32 +325,14 @@ public class Resolver {
         // to be the primitive value type (i.e. not the boxed value type).
         if (propertyGetter != null) {
             observableTypeInstance = getTypeInstance(propertyGetter, List.of(declaringClass));
-
-            if (observableTypeInstance.subtypeOf(Classes.ObservableBooleanValueType())) {
-                typeInstance = new TypeInstance(CtClass.booleanType);
-            } else if (observableTypeInstance.subtypeOf(Classes.ObservableIntegerValueType())) {
-                typeInstance = new TypeInstance(CtClass.intType);
-            } else if (observableTypeInstance.subtypeOf(Classes.ObservableLongValueType())) {
-                typeInstance = new TypeInstance(CtClass.longType);
-            } else if (observableTypeInstance.subtypeOf(Classes.ObservableFloatValueType())) {
-                typeInstance = new TypeInstance(CtClass.floatType);
-            } else if (observableTypeInstance.subtypeOf(Classes.ObservableDoubleValueType())) {
-                typeInstance = new TypeInstance(CtClass.doubleType);
-            } else {
-                typeInstance = findObservableArgument(observableTypeInstance);
-            }
+            typeInstance = findObservableArgument(observableTypeInstance);
         }
 
         // Look for a getter that matches the previously determined property type.
-        // If we didn't find a property getter in the previous step, this selects the first getter that matches by name,
-        // or in case this is an attached property, matches by name and signature.
-        CtMethod getter = tryResolveAttachedGetter(declaringClass.jvmType(), propertyName);
-        if (getter != null) {
-            attached = true;
-        } else if (!attached) {
-            getter = tryResolveGetter(declaringClass.jvmType(), propertyName, false,
-                                      typeInstance != null ? typeInstance.jvmType() : null);
-        }
+        // If we didn't find a property getter in the previous step, this selects the first getter that
+        // matches by name, or in case this is a static property, matches by name and signature.
+        CtMethod getter = tryResolveGetter(declaringClass.jvmType(), propertyName, false,
+                                           typeInstance != null ? typeInstance.jvmType() : null);
 
         try {
             if (typeInstance == null && getter != null) {
@@ -359,31 +342,56 @@ public class Resolver {
             // If we still haven't been able to determine a property type, this means that we haven't
             // found a property getter, nor a regular getter. This means the property doesn't exist.
             if (typeInstance == null) {
-                getCache().put(key, null);
-                return null;
-            }
-
-            // A regular (non-attached) property needs a valid local name, otherwise we don't accept it.
-            if (!attached && !validLocalName) {
-                getCache().put(key, null);
-                return null;
+                return getCache().put(key, null);
             }
 
             // We only look for a setter if we have a getter (i.e. write-only properties don't exist).
             CtMethod setter = null;
             if (getter != null) {
-                setter = attached ?
-                    tryResolveAttachedSetter(declaringClass.jvmType(), propertyName, getter.getReturnType()) :
-                    tryResolveSetter(declaringClass.jvmType(), propertyName, false, getter.getReturnType());
+                setter = tryResolveSetter(declaringClass.jvmType(), propertyName, false, getter.getReturnType());
             }
 
             PropertyInfo propertyInfo = new PropertyInfo(
                 propertyName, propertyGetter, getter, setter, typeInstance,
-                observableTypeInstance, declaringClass, attached);
+                observableTypeInstance, declaringClass, false);
 
-            getCache().put(key, propertyInfo);
+            return getCache().put(key, propertyInfo);
+        } catch (NotFoundException ex) {
+            throw SymbolResolutionErrors.classNotFound(sourceInfo, ex.getMessage());
+        }
+    }
 
-            return propertyInfo;
+    private PropertyInfo tryResolveStaticPropertyImpl(TypeInstance declaringType, String propertyName) {
+        try {
+            CtMethod getter = tryResolveStaticGetter(declaringType.jvmType(), propertyName);
+            CtMethod propertyGetter = tryResolveStaticPropertyGetter(declaringType.jvmType(), propertyName);
+            TypeInstance observableType = propertyGetter != null ?
+                                          getTypeInstance(propertyGetter, List.of(declaringType)) : null;
+            TypeInstance propertyType = observableType != null ? findObservableArgument(observableType) : null;
+
+            // If the return type of the getter doesn't match the type of the property getter,
+            // we discard the getter and only use the property getter.
+            if (propertyType != null && getter != null
+                    && !propertyType.equals(getTypeInstance(getter, List.of(declaringType)))) {
+                getter = null;
+            }
+
+            if (propertyGetter == null && getter != null) {
+                propertyType = getTypeInstance(getter, List.of(declaringType));
+            }
+
+            CtMethod setter = null;
+            if (propertyType != null && getter != null) {
+                setter = tryResolveStaticSetter(declaringType.jvmType(), propertyName, propertyType.jvmType());
+            }
+
+            if (propertyGetter == null && getter == null) {
+                return null;
+            }
+
+            return new PropertyInfo(
+                propertyName, propertyGetter, getter, setter, propertyType,
+                observableType, declaringType, true);
         } catch (NotFoundException ex) {
             throw SymbolResolutionErrors.classNotFound(sourceInfo, ex.getMessage());
         }
@@ -541,7 +549,7 @@ public class Resolver {
      * If {@code verbatim} is true, only returns methods that match the name exactly; otherwise, also returns setter
      * methods with names like setMethodName.
      *
-     *  If {@code paramType} is non-null, only setter methods accepting this parameter type are considered.
+     * If {@code paramType} is non-null, only setter methods accepting this parameter type are considered.
      *
      * @return The method, or {@code null} if no setter can be found.
      */
@@ -581,12 +589,12 @@ public class Resolver {
      * If {@code verbatim} is true, only returns methods that match the name exactly; otherwise, also returns setter
      * methods with names like setMethodName.
      *
-     *  If {@code paramType} is non-null, only setter methods accepting this parameter type are considered.
+     * If {@code paramType} is non-null, only setter methods accepting this parameter type are considered.
      *
      * @return The method, or {@code null} if no setter can be found.
      */
-    public CtMethod tryResolveAttachedSetter(CtClass type, String name, @Nullable CtClass paramType) {
-        CacheKey key = new CacheKey("tryResolveStaticPropertySetter", type, name, paramType);
+    public CtMethod tryResolveStaticSetter(CtClass type, String name, @Nullable CtClass paramType) {
+        CacheKey key = new CacheKey("tryResolveStaticSetter", type, name, paramType);
         CacheEntry entry = getCache().get(key);
         if (entry.found() && cacheEnabled) {
             return (CtMethod)entry.value();
@@ -620,8 +628,8 @@ public class Resolver {
      *
      * @return The method, or {@code null} if no getter can be found.
      */
-    public CtMethod tryResolveAttachedGetter(CtClass declaringClass, String name) {
-        return tryResolveAttachedGetter(declaringClass, Classes.NodeType(), name, false);
+    public CtMethod tryResolveStaticGetter(CtClass declaringClass, String name) {
+        return tryResolveStaticGetter(declaringClass, Classes.NodeType(), name, false);
     }
 
     /**
@@ -633,9 +641,9 @@ public class Resolver {
      * @param verbatim if {@code true}, only methods matching the name exactly are considered
      * @return The method, or {@code null} if no getter can be found.
      */
-    public CtMethod tryResolveAttachedGetter(
+    public CtMethod tryResolveStaticGetter(
             CtClass declaringClass, CtClass receiverClass, String name, boolean verbatim) {
-        CacheKey key = new CacheKey("tryResolveStaticPropertyGetter", declaringClass, name);
+        CacheKey key = new CacheKey("tryResolveStaticGetter", declaringClass, name);
         CacheEntry entry = getCache().get(key);
         if (entry.found() && cacheEnabled) {
             return (CtMethod)entry.value();
@@ -690,12 +698,12 @@ public class Resolver {
     }
 
     /**
-     * Returns an attached property getter method for the specified property.
+     * Returns a static property getter method for the specified property.
      *
      * @return The method, or {@code null} if no getter can be found.
      */
-    public CtMethod tryResolveAttachedPropertyGetter(CtClass declaringClass, String name) {
-        CacheKey key = new CacheKey("tryResolveAttachedPropertyGetter", declaringClass, name);
+    public CtMethod tryResolveStaticPropertyGetter(CtClass declaringClass, String name) {
+        CacheKey key = new CacheKey("tryResolveStaticPropertyGetter", declaringClass, name);
         CacheEntry entry = getCache().get(key);
         if (entry.found() && cacheEnabled) {
             return (CtMethod)entry.value();
@@ -940,7 +948,7 @@ public class Resolver {
     }
 
     public TypeInstance getTypeInstance(CtField field, List<TypeInstance> invocationChain) {
-        CacheKey key = new CacheKey("resolveTypeInfo", field, invocationChain);
+        CacheKey key = new CacheKey("getTypeInstance", field, invocationChain);
         CacheEntry entry = getCache().get(key);
         if (entry.found() && cacheEnabled) {
             return (TypeInstance)entry.value();
@@ -974,7 +982,7 @@ public class Resolver {
     }
 
     public TypeInstance getTypeInstance(CtMethod method, List<TypeInstance> invocationChain) {
-        CacheKey key = new CacheKey("resolveTypeInfo", method, invocationChain);
+        CacheKey key = new CacheKey("getTypeInstance", method, invocationChain);
         CacheEntry entry = getCache().get(key);
         if (entry.found() && cacheEnabled) {
             return (TypeInstance)entry.value();
@@ -1559,16 +1567,46 @@ public class Resolver {
             if (this == o) return true;
             if (o == null || getClass() != o.getClass()) return false;
             CacheKey tuple = (CacheKey)o;
-            return Objects.equals(item1, tuple.item1) &&
-                Objects.equals(item2, tuple.item2) &&
-                Objects.equals(item3, tuple.item3) &&
-                Objects.equals(item4, tuple.item4) &&
-                Objects.equals(item5, tuple.item5);
+            return equals(item1, tuple.item1) &&
+                equals(item2, tuple.item2) &&
+                equals(item3, tuple.item3) &&
+                equals(item4, tuple.item4) &&
+                equals(item5, tuple.item5);
         }
 
         @Override
         public int hashCode() {
-            return Objects.hash(item1, item2, item3, item4, item5);
+            int result = 1;
+            result = 31 * result + hashCode(item1);
+            result = 31 * result + hashCode(item2);
+            result = 31 * result + hashCode(item3);
+            result = 31 * result + hashCode(item4);
+            result = 31 * result + hashCode(item5);
+            return result;
+        }
+
+        private static boolean equals(Object item1, Object item2) {
+            if (item1 instanceof CtClass c1 && item2 instanceof CtClass c2) {
+                return TypeHelper.equals(c1, c2);
+            }
+
+            if (item1 instanceof CtMethod m1 && item2 instanceof CtMethod m2) {
+                return TypeHelper.equals(m1, m2);
+            }
+
+            return Objects.equals(item1, item2);
+        }
+
+        private static int hashCode(Object o) {
+            if (o instanceof CtClass c) {
+                return TypeHelper.hashCode(c);
+            }
+
+            if (o instanceof CtMethod m) {
+                return TypeHelper.hashCode(m);
+            }
+
+            return o != null ? o.hashCode() : 0;
         }
     }
 

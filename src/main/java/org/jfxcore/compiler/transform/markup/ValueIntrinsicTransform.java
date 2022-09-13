@@ -19,7 +19,6 @@ import org.jfxcore.compiler.diagnostic.errors.ParserErrors;
 import org.jfxcore.compiler.transform.Transform;
 import org.jfxcore.compiler.transform.TransformContext;
 import org.jfxcore.compiler.util.Classes;
-import org.jfxcore.compiler.util.PropertyInfo;
 import org.jfxcore.compiler.util.Resolver;
 import org.jfxcore.compiler.util.TypeHelper;
 import org.jfxcore.compiler.util.TypeInstance;
@@ -50,12 +49,6 @@ public class ValueIntrinsicTransform implements Transform {
             throw GeneralErrors.unexpectedIntrinsic(node.getSourceInfo(), objectNode.getType().getMarkupName());
         }
 
-        TypeInstance parentType = TypeHelper.getTypeInstance(context.getParent(1));
-        Resolver resolver = new Resolver(propertyNode.getSourceInfo());
-        PropertyInfo propertyInfo = resolver.resolveProperty(
-            parentType, propertyNode.isAllowQualifiedName(), propertyNode.getNames());
-        TypeInstance valueType = propertyInfo.getValueTypeInstance();
-
         if (objectNode.getChildren().size() == 0) {
             throw ParserErrors.invalidExpression(objectNode.getSourceInfo());
         }
@@ -68,7 +61,8 @@ public class ValueIntrinsicTransform implements Transform {
         if (objectNode.getChildren().get(0) instanceof ValueEmitterNode n) {
             content = n;
         } else if (objectNode.getChildren().get(0) instanceof TextNode n) {
-            content = new EmitLiteralNode(resolver.getTypeInstance(Classes.StringType()), n.getText(), n.getSourceInfo());
+            TypeInstance stringType = new Resolver(node.getSourceInfo()).getTypeInstance(Classes.StringType());
+            content = new EmitLiteralNode(stringType, n.getText(), n.getSourceInfo());
         } else {
             throw ParserErrors.invalidExpression(objectNode.getChildren().get(0).getSourceInfo());
         }
@@ -79,7 +73,7 @@ public class ValueIntrinsicTransform implements Transform {
                 new Resolver(content.getSourceInfo()).getTypeInstance(Classes.StringType()));
         }
 
-        return createValueOfNode(valueType, content, node.getSourceInfo());
+        return createValueOfNode(TypeHelper.getTypeInstance(objectNode), content, node.getSourceInfo());
     }
 
     private ValueNode createValueOfNode(TypeInstance valueType, ValueEmitterNode content, SourceInfo sourceInfo) {

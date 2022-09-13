@@ -1,4 +1,4 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2022, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.expression.path;
@@ -17,7 +17,7 @@ public class GetterSegment extends Segment {
 
     private final CtMethod getter;
     private final boolean requireNonNull;
-    private final boolean attachedPropertyGetter;
+    private final boolean staticPropertyGetter;
 
     public GetterSegment(
             String name,
@@ -25,20 +25,20 @@ public class GetterSegment extends Segment {
             TypeInstance type,
             TypeInstance valueType,
             CtMethod getter,
-            boolean attachedPropertyGetter,
+            boolean staticPropertyGetter,
             ObservableKind observableKind) {
         super(name, displayName, type, valueType, observableKind);
         this.getter = Objects.requireNonNull(getter);
         this.requireNonNull = observableKind.isNonNull();
-        this.attachedPropertyGetter = attachedPropertyGetter;
+        this.staticPropertyGetter = staticPropertyGetter;
     }
 
     public CtMethod getGetter() {
         return getter;
     }
 
-    public boolean isAttachedPropertyGetter() {
-        return attachedPropertyGetter;
+    public boolean isStaticPropertyGetter() {
+        return staticPropertyGetter;
     }
 
     @Override
@@ -64,12 +64,12 @@ public class GetterSegment extends Segment {
         GetterSegment that = (GetterSegment)o;
         return TypeHelper.equals(getter, that.getter)
             && requireNonNull == that.requireNonNull
-            && attachedPropertyGetter == that.attachedPropertyGetter;
+            && staticPropertyGetter == that.staticPropertyGetter;
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(super.hashCode(), TypeHelper.hashCode(getter), requireNonNull, attachedPropertyGetter);
+        return Objects.hash(super.hashCode(), TypeHelper.hashCode(getter), requireNonNull, staticPropertyGetter);
     }
 
 }

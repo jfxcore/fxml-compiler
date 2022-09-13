@@ -247,7 +247,7 @@ public class ResolvedPath {
                 segments.get(i) instanceof FieldSegment fieldSegment
                     && Modifier.isStatic(fieldSegment.getField().getModifiers())
                 || segments.get(i) instanceof GetterSegment getterSegment
-                    && !getterSegment.isAttachedPropertyGetter()
+                    && !getterSegment.isStaticPropertyGetter()
                     && Modifier.isStatic(getterSegment.getGetter().getModifiers());
 
             if (isStatic) {
@@ -413,7 +413,7 @@ public class ResolvedPath {
             boolean attachedProperty,
             boolean selectObservable) {
         CtMethod getter = attachedProperty ?
-            resolver.tryResolveAttachedGetter(declaringClass, receiverClass, propertyName, true) :
+            resolver.tryResolveStaticGetter(declaringClass, receiverClass, propertyName, true) :
             resolver.tryResolveGetter(declaringClass, propertyName, true, null);
 
         if (getter == null) {

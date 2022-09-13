@@ -16,7 +16,6 @@ import org.jfxcore.compiler.ast.intrinsic.Intrinsics;
 import org.jfxcore.compiler.diagnostic.errors.PropertyAssignmentErrors;
 import org.jfxcore.compiler.transform.Transform;
 import org.jfxcore.compiler.transform.TransformContext;
-import org.jfxcore.compiler.transform.common.ResolveTypeTransform;
 import org.jfxcore.compiler.util.Classes;
 import org.jfxcore.compiler.util.Resolver;
 import org.jfxcore.compiler.util.TypeHelper;
@@ -34,7 +33,7 @@ public class DefaultPropertyTransform implements Transform {
 
     @Override
     public Set<Class<? extends Transform>> getDependsOn() {
-        return Set.of(ResolveTypeTransform.class);
+        return Set.of(ValidateTypeTransform.class);
     }
 
     @Override
@@ -52,7 +51,7 @@ public class DefaultPropertyTransform implements Transform {
         Intrinsic intrinsic = Intrinsics.find(objectNode);
 
         if (intrinsic != null) {
-            if (!intrinsic.getUsage().isAttribute()) {
+            if (intrinsic.getKind() != Intrinsic.Kind.PROPERTY) {
                 IntrinsicProperty intrinsicDefaultProperty = intrinsic.getDefaultProperty();
                 defaultProperty = intrinsicDefaultProperty != null ? intrinsicDefaultProperty.getName() : null;
             } else {

@@ -7,7 +7,6 @@ import javassist.CtClass;
 import org.jetbrains.annotations.Nullable;
 import org.jfxcore.compiler.ast.BindingNode;
 import org.jfxcore.compiler.ast.Node;
-import org.jfxcore.compiler.ast.ObjectNode;
 import org.jfxcore.compiler.ast.PropertyNode;
 import org.jfxcore.compiler.ast.TemplateContentNode;
 import org.jfxcore.compiler.ast.ValueNode;
@@ -24,8 +23,6 @@ import org.jfxcore.compiler.ast.emit.EmitTemplateContentNode;
 import org.jfxcore.compiler.ast.emit.EmitUnwrapObservableNode;
 import org.jfxcore.compiler.ast.emit.ReferenceableNode;
 import org.jfxcore.compiler.ast.emit.ValueEmitterNode;
-import org.jfxcore.compiler.ast.intrinsic.Intrinsic;
-import org.jfxcore.compiler.ast.intrinsic.Intrinsics;
 import org.jfxcore.compiler.ast.text.TextNode;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.diagnostic.errors.GeneralErrors;
@@ -91,7 +88,7 @@ public class PropertyAssignmentTransform implements Transform {
                 if (propertyInfo == null) {
                     // If we fail to resolve the first segment, format the error message to include the
                     // entire chain of names. This makes for a better diagnostic in case the user meant
-                    // to specify the name of an attached property that couldn't be resolved.
+                    // to specify the name of a static property that couldn't be resolved.
                     String name = i == 0 ? propertyNode.getName() : names[i];
                     throw SymbolResolutionErrors.propertyNotFound(sourceInfo, declaringType.jvmType(), name);
                 }
@@ -125,8 +122,6 @@ public class PropertyAssignmentTransform implements Transform {
         }
 
         if (propertyInfo == null) {
-            // Create different diagnostics depending on whether the property is a qualified
-            // local property or a static property.
             if (propertyNode.isAllowQualifiedName() && propertyNode.getNames().length > 1) {
                 String[] names = propertyNode.getNames();
                 String className = String.join(".", Arrays.copyOf(names, names.length - 1));
@@ -142,7 +137,7 @@ public class PropertyAssignmentTransform implements Transform {
                 }
 
                 throw SymbolResolutionErrors.staticPropertyNotFound(
-                    propertyNode.getSourceInfo(), className, names[names.length - 1]);
+                    propertyNode.getSourceInfo(), type, names[names.length - 1]);
             }
 
             throw SymbolResolutionErrors.propertyNotFound(
@@ -157,19 +152,12 @@ public class PropertyAssignmentTransform implements Transform {
         if (propertyNode.getValues().size() == 1) {
             Node child = propertyNode.getValues().get(0);
 
-            if (child instanceof ObjectNode) {
-                Intrinsic intrinsic = Intrinsics.find((ObjectNode)child);
-                if (intrinsic != null && intrinsic.getType() == CtClass.voidType) {
-                    return node;
-                }
+            if (child instanceof BindingNode bindingNode) {
+                return BindingEmitterFactory.createBindingEmitter(propertyNode, bindingNode, propertyInfo);
             }
 
-            if (child instanceof BindingNode) {
-                return BindingEmitterFactory.createBindingEmitter(propertyNode, (BindingNode)child, propertyInfo);
-            }
-
-            if (child instanceof ValueNode) {
-                Node result = trySetValue(context, (ValueNode)child, propertyInfo);
+            if (child instanceof ValueNode valueNode) {
+                Node result = trySetValue(context, valueNode, propertyInfo);
                 if (result != null) {
                     return result;
                 }
@@ -220,7 +208,7 @@ public class PropertyAssignmentTransform implements Transform {
         }
 
         if (value != null) {
-            if (propertyInfo.isAttached()) {
+            if (propertyInfo.isStatic()) {
                 return new EmitStaticPropertySetterNode(
                     propertyInfo.getDeclaringTypeInstance(), propertyInfo.getSetter(), value, node.getSourceInfo());
             } else {
