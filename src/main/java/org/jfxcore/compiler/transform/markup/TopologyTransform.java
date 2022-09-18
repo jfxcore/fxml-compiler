@@ -1,4 +1,4 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2022, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.transform.markup;
@@ -8,7 +8,6 @@ import org.jfxcore.compiler.ast.Node;
 import org.jfxcore.compiler.ast.emit.ReferenceableNode;
 import org.jfxcore.compiler.transform.Transform;
 import org.jfxcore.compiler.transform.TransformContext;
-import java.util.Set;
 
 /**
  * Moves {@link ReferenceableNode} nodes that need to be constructed in the <i>preamble</i> phase of component
@@ -20,11 +19,6 @@ import java.util.Set;
  * object later during property assignments, bindings, etc.
  */
 public class TopologyTransform implements Transform {
-
-    @Override
-    public Set<Class<? extends Transform>> getDependsOn() {
-        return Set.of(PropertyAssignmentTransform.class);
-    }
 
     @Override
     public Node transform(TransformContext context, Node node) {

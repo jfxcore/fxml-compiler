@@ -22,7 +22,6 @@ import org.jfxcore.compiler.util.Classes;
 import org.jfxcore.compiler.util.Resolver;
 import org.jfxcore.compiler.util.TypeHelper;
 import org.jfxcore.compiler.util.TypeInstance;
-import java.util.Set;
 
 import static org.jfxcore.compiler.util.ExceptionHelper.unchecked;
 
@@ -31,11 +30,6 @@ import static org.jfxcore.compiler.util.ExceptionHelper.unchecked;
  * Note: this transform doesn't apply to the fx:value property, which is handled by {@link ObjectTransform}.
  */
 public class ValueIntrinsicTransform implements Transform {
-
-    @Override
-    public Set<Class<? extends Transform>> getDependsOn() {
-        return Set.of(DefaultPropertyTransform.class, ConstantIntrinsicTransform.class);
-    }
 
     @Override
     public Node transform(TransformContext context, Node node) {

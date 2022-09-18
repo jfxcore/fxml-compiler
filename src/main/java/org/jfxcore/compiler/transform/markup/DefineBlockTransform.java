@@ -10,10 +10,8 @@ import org.jfxcore.compiler.ast.intrinsic.Intrinsics;
 import org.jfxcore.compiler.diagnostic.errors.GeneralErrors;
 import org.jfxcore.compiler.transform.Transform;
 import org.jfxcore.compiler.transform.TransformContext;
-import org.jfxcore.compiler.transform.common.ResolveTypeTransform;
 import org.jfxcore.compiler.util.Classes;
 import org.jfxcore.compiler.util.TypeHelper;
-import java.util.Set;
 
 import static org.jfxcore.compiler.util.ExceptionHelper.unchecked;
 
@@ -23,11 +21,6 @@ import static org.jfxcore.compiler.util.ExceptionHelper.unchecked;
  * a diagnostic is generated.
  */
 public class DefineBlockTransform implements Transform {
-
-    @Override
-    public Set<Class<? extends Transform>> getDependsOn() {
-        return Set.of(ResolveTypeTransform.class);
-    }
 
     @Override
     public Node transform(TransformContext context, Node node) {

@@ -10,9 +10,7 @@ import org.jfxcore.compiler.ast.intrinsic.Intrinsic;
 import org.jfxcore.compiler.ast.intrinsic.Intrinsics;
 import org.jfxcore.compiler.transform.Transform;
 import org.jfxcore.compiler.transform.TransformContext;
-import org.jfxcore.compiler.transform.common.ResolveTypeTransform;
 import java.util.List;
-import java.util.Set;
 
 /**
  * Removes some intrinsics that are only relevant in the code generation phase.
@@ -21,11 +19,6 @@ public class RemoveIntrinsicsTransform implements Transform {
 
     private static final List<Intrinsic> REMOVED_INTRINSICS = List.of(
         Intrinsics.CLASS, Intrinsics.CLASS_PARAMETERS, Intrinsics.CLASS_MODIFIER, Intrinsics.MARKUP_CLASS_NAME);
-
-    @Override
-    public Set<Class<? extends Transform>> getDependsOn() {
-        return Set.of(ResolveTypeTransform.class);
-    }
 
     @Override
     public Node transform(TransformContext context, Node node) {

@@ -22,7 +22,6 @@ import org.jfxcore.compiler.util.TypeHelper;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Set;
 
 /**
  * If an {@link ObjectNode} contains child nodes, this transform tries to look up the default
@@ -30,11 +29,6 @@ import java.util.Set;
  * If a default property annotation exists, the child nodes are added to the default property.
  */
 public class DefaultPropertyTransform implements Transform {
-
-    @Override
-    public Set<Class<? extends Transform>> getDependsOn() {
-        return Set.of(ValidateTypeTransform.class);
-    }
 
     @Override
     public Node transform(TransformContext context, Node node) {
