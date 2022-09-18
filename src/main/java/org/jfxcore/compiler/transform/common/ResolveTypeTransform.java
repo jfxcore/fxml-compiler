@@ -27,7 +27,6 @@ import org.jfxcore.compiler.util.Resolver;
 import org.jfxcore.compiler.util.TypeInstance;
 import java.util.Collections;
 import java.util.List;
-import java.util.Set;
 
 /**
  * Replaces {@link TypeNode} instances in the AST with {@link ResolvedTypeNode} by resolving
@@ -40,11 +39,6 @@ public class ResolveTypeTransform implements Transform {
 
     public ResolveTypeTransform(boolean allowUnresolvableTypeArguments) {
         this.allowUnresolvableTypeArguments = allowUnresolvableTypeArguments;
-    }
-
-    @Override
-    public Set<Class<? extends Transform>> getDependsOn() {
-        return Set.of(IntrinsicsTransform.class);
     }
 
     @Override

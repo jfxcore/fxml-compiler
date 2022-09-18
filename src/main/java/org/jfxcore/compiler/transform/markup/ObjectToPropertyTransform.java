@@ -14,13 +14,11 @@ import org.jfxcore.compiler.ast.intrinsic.Intrinsics;
 import org.jfxcore.compiler.diagnostic.errors.SymbolResolutionErrors;
 import org.jfxcore.compiler.transform.Transform;
 import org.jfxcore.compiler.transform.TransformContext;
-import org.jfxcore.compiler.transform.common.ResolveTypeTransform;
 import org.jfxcore.compiler.util.PropertyInfo;
 import org.jfxcore.compiler.util.Resolver;
 import org.jfxcore.compiler.util.TypeHelper;
 import org.jfxcore.compiler.util.TypeInstance;
 import java.util.Arrays;
-import java.util.Set;
 
 /**
  * Transforms objects to properties in two scenarios:
@@ -48,11 +46,6 @@ import java.util.Set;
  * </ol>
  */
 public class ObjectToPropertyTransform implements Transform {
-
-    @Override
-    public Set<Class<? extends Transform>> getDependsOn() {
-        return Set.of(ResolveTypeTransform.class);
-    }
 
     @Override
     public Node transform(TransformContext context, Node node) {

@@ -42,7 +42,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.Set;
 import java.util.UUID;
 
 import static org.jfxcore.compiler.util.Classes.*;
@@ -53,11 +52,6 @@ import static org.jfxcore.compiler.util.ExceptionHelper.unchecked;
  * ({@link EmitPropertySetterNode}) or static property assignments ({@link EmitStaticPropertySetterNode}).
  */
 public class PropertyAssignmentTransform implements Transform {
-
-    @Override
-    public Set<Class<? extends Transform>> getDependsOn() {
-        return Set.of(ObjectTransform.class, RemoveIntrinsicsTransform.class);
-    }
 
     @Override
     public Node transform(TransformContext context, Node node) {

@@ -17,17 +17,10 @@ import org.jfxcore.compiler.util.Resolver;
 import org.jfxcore.compiler.util.TypeHelper;
 import org.jfxcore.compiler.util.TypeInstance;
 
-import java.util.Set;
-
 /**
  * Transforms the fx:null intrinsic into a null literal.
  */
 public class NullIntrinsicTransform implements Transform {
-
-    @Override
-    public Set<Class<? extends Transform>> getDependsOn() {
-        return Set.of(BindingTransform.class);
-    }
 
     @Override
     public Node transform(TransformContext context, Node node) {

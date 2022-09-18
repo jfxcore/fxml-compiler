@@ -21,7 +21,6 @@ import org.jfxcore.compiler.util.FileUtil;
 import org.jfxcore.compiler.util.NameHelper;
 import java.nio.file.Path;
 import java.util.Arrays;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -31,11 +30,6 @@ import java.util.stream.Collectors;
 public class FlattenClassTransform implements Transform {
 
     private static final String DEFAULT_MARKUP_CLASS_NAME = "%sMarkup";
-
-    @Override
-    public Set<Class<? extends Transform>> getDependsOn() {
-        return Set.of(AddCodeFieldsTransform.class);
-    }
 
     @Override
     public Node transform(TransformContext context, Node node) {

@@ -40,7 +40,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.ListIterator;
-import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -52,22 +51,6 @@ import static org.jfxcore.compiler.util.ExceptionHelper.*;
  *     2. instantiation of a new object ({@link EmitObjectNode})
  */
 public class ObjectTransform implements Transform {
-
-    @Override
-    public Set<Class<? extends Transform>> getDependsOn() {
-        return Set.of(
-            AddTemplateIdFields.class,
-            IdPropertyTransform.class,
-            DefaultPropertyTransform.class,
-            DefineBlockTransform.class,
-            StylesheetTransform.class,
-            NullIntrinsicTransform.class,
-            TypeIntrinsicTransform.class,
-            ConstantIntrinsicTransform.class,
-            ValueIntrinsicTransform.class,
-            UrlIntrinsicTransform.class,
-            BindingTransform.class);
-    }
 
     @Override
     public Node transform(TransformContext context, Node node) {

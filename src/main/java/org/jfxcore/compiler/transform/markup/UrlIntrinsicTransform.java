@@ -16,16 +16,10 @@ import org.jfxcore.compiler.util.PropertyInfo;
 import org.jfxcore.compiler.util.Resolver;
 import org.jfxcore.compiler.util.TypeHelper;
 import org.jfxcore.compiler.util.TypeInstance;
-import java.util.Set;
 
 import static org.jfxcore.compiler.util.ExceptionHelper.unchecked;
 
 public class UrlIntrinsicTransform implements Transform {
-
-    @Override
-    public Set<Class<? extends Transform>> getDependsOn() {
-        return Set.of(BindingTransform.class);
-    }
 
     @Override
     public Node transform(TransformContext context, Node node) {

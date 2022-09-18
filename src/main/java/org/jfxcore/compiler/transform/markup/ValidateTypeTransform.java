@@ -8,17 +8,11 @@ import org.jfxcore.compiler.ast.TypeNode;
 import org.jfxcore.compiler.transform.Transform;
 import org.jfxcore.compiler.transform.TransformContext;
 import org.jfxcore.compiler.util.Resolver;
-import java.util.Set;
 
 /**
  * Validates that there are no unresolved types in the AST.
  */
 public class ValidateTypeTransform implements Transform {
-
-    @Override
-    public Set<Class<? extends Transform>> getDependsOn() {
-        return Set.of(ObjectToPropertyTransform.class);
-    }
 
     @Override
     public Node transform(TransformContext context, Node node) {

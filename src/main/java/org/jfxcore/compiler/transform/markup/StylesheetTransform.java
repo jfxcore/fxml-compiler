@@ -1,4 +1,4 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2022, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.transform.markup;
@@ -18,7 +18,6 @@ import org.jfxcore.compiler.parse.CurlyTokenClass;
 import org.jfxcore.compiler.parse.CurlyTokenType;
 import org.jfxcore.compiler.transform.Transform;
 import org.jfxcore.compiler.transform.TransformContext;
-import org.jfxcore.compiler.transform.common.ResolveTypeTransform;
 import org.jfxcore.compiler.util.Classes;
 import org.jfxcore.compiler.util.StringHelper;
 import org.jfxcore.compiler.util.TypeHelper;
@@ -33,7 +32,6 @@ import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
-import java.util.Set;
 
 import static org.jfxcore.compiler.util.ExceptionHelper.unchecked;
 
@@ -46,11 +44,6 @@ import static org.jfxcore.compiler.util.ExceptionHelper.unchecked;
 public class StylesheetTransform implements Transform {
 
     private static final String DATA_URI_PREFIX = "data:application/octet-stream;charset=utf-8;base64,";
-
-    @Override
-    public Set<Class<? extends Transform>> getDependsOn() {
-        return Set.of(ResolveTypeTransform.class);
-    }
 
     @Override
     public Node transform(TransformContext context, Node node) {

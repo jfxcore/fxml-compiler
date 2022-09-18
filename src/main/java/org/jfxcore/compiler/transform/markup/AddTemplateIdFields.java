@@ -1,4 +1,4 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2022, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.transform.markup;
@@ -17,14 +17,8 @@ import org.jfxcore.compiler.transform.Transform;
 import org.jfxcore.compiler.transform.TransformContext;
 import org.jfxcore.compiler.util.ExceptionHelper;
 import org.jfxcore.compiler.util.TypeHelper;
-import java.util.Set;
 
 public class AddTemplateIdFields implements Transform {
-
-    @Override
-    public Set<Class<? extends Transform>> getDependsOn() {
-        return Set.of(TemplateContentTransform.class);
-    }
 
     @Override
     @SuppressWarnings("ConstantConditions")

@@ -24,7 +24,6 @@ import org.jfxcore.compiler.util.TypeHelper;
 import org.jfxcore.compiler.util.TypeInstance;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -32,11 +31,6 @@ import java.util.stream.Collectors;
  * Note: this transform doesn't apply to the fx:constant attribute, which is handled by {@link ObjectTransform}.
  */
 public class ConstantIntrinsicTransform implements Transform {
-
-    @Override
-    public Set<Class<? extends Transform>> getDependsOn() {
-        return Set.of(BindingTransform.class);
-    }
 
     @Override
     public Node transform(TransformContext context, Node node) {
