@@ -1,4 +1,4 @@
-// Copyright (c) 2022, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2023, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.transform.markup;
@@ -8,6 +8,7 @@ import javassist.CtField;
 import javassist.CtMethod;
 import javassist.Modifier;
 import javassist.NotFoundException;
+import org.jfxcore.compiler.ast.NodeDataKey;
 import org.jfxcore.compiler.ast.TemplateContentNode;
 import org.jfxcore.compiler.ast.emit.EmitInitializeRootNode;
 import org.jfxcore.compiler.ast.Node;
@@ -74,6 +75,15 @@ public class ObjectTransform implements Transform {
                 .loadRoot(TypeHelper.getTypeInstance(objectNode), objectNode.getSourceInfo())
                 .children(PropertyHelper.getSorted(objectNode, objectNode.getProperties()))
                 .create();
+        }
+
+        // Check that we don't have wildcard type arguments, since the JLS doesn't allow
+        // direct instantiation of wildcard types.
+        for (TypeInstance typeArg : TypeHelper.getTypeInstance(objectNode).getArguments()) {
+            if (typeArg.getWildcardType() != TypeInstance.WildcardType.NONE) {
+                throw ObjectInitializationErrors.wildcardCannotBeInstantiated(
+                    (SourceInfo)objectNode.getNodeData(NodeDataKey.TYPE_ARGUMENTS_SOURCE_INFO));
+            }
         }
 
         ValueNode result = createNode(context, objectNode);

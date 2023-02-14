@@ -1,4 +1,4 @@
-// Copyright (c) 2022, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2023, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.util;
@@ -381,6 +381,7 @@ public class TypeInstance {
         if (!(o instanceof TypeInstance that)) return false;
         if (arguments.size() != that.arguments.size()) return false;
         if (dimensions != that.dimensions) return false;
+        if (wildcard != that.wildcard) return false;
         return arguments.isEmpty() ? TypeHelper.equals(type, that.type) : equals(new HashSet<>(), that);
     }
 
@@ -454,7 +455,7 @@ public class TypeInstance {
 
     @Override
     public int hashCode() {
-        return Objects.hash(TypeHelper.hashCode(type), arguments.size(), superTypes.size());
+        return Objects.hash(TypeHelper.hashCode(type), arguments.size(), superTypes.size(), dimensions, wildcard);
     }
 
     @Override

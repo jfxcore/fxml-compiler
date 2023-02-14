@@ -1,4 +1,4 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2023, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.parse;
@@ -50,11 +50,24 @@ public class TypeParser {
 
     private TypeInstance parseType(TypeTokenizer tokenizer) {
         if (tokenizer.poll(TypeTokenType.WILDCARD) != null) {
-            TypeInstance objectInst = resolver.getTypeInstance(Classes.ObjectsType());
+            TypeInstance objectInst;
+            TypeInstance.WildcardType wildcardType;
+
+            if (tokenizer.peek(TypeTokenType.UPPER_BOUND) != null) {
+                wildcardType = TypeInstance.WildcardType.UPPER;
+                tokenizer.remove();
+                objectInst = parseType(tokenizer);
+            } else if (tokenizer.peek(TypeTokenType.LOWER_BOUND) != null) {
+                wildcardType = TypeInstance.WildcardType.LOWER;
+                tokenizer.remove();
+                objectInst = parseType(tokenizer);
+            } else {
+                wildcardType = TypeInstance.WildcardType.ANY;
+                objectInst = resolver.getTypeInstance(Classes.ObjectsType());
+            }
 
             return new TypeInstance(
-                objectInst.jvmType(), objectInst.getArguments(), objectInst.getSuperTypes(),
-                TypeInstance.WildcardType.ANY);
+                objectInst.jvmType(), objectInst.getArguments(), objectInst.getSuperTypes(), wildcardType);
         }
 
         String typeName = tokenizer.removeQualifiedIdentifier(false).getValue();

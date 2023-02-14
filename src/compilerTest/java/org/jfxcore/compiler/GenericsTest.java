@@ -1,4 +1,4 @@
-// Copyright (c) 2022, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2023, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler;
@@ -106,6 +106,32 @@ public class GenericsTest extends CompilerTestBase {
         classPool.appendSystemPath();
         classPool.appendClassPath(root.getClass().getProtectionDomain().getCodeSource().getLocation().toExternalForm());
         assertNull(classPool.get(root.getClass().getName()).getGenericSignature());
+    }
+
+    @Test
+    public void GenericObject_With_Upper_Wildcard_TypeArgument_Cannot_Be_Instantiated() {
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <?import javafx.scene.layout.*?>
+            <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                <GenericObject fx:typeArguments="? extends String"/>
+            </GridPane>
+        """));
+
+        assertEquals(ErrorCode.WILDCARD_CANNOT_BE_INSTANTIATED, ex.getDiagnostic().getCode());
+        assertCodeHighlight("? extends String", ex);
+    }
+
+    @Test
+    public void GenericObject_With_Lower_Wildcard_TypeArgument_Cannot_Be_Instantiated() {
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <?import javafx.scene.layout.*?>
+            <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                <GenericObject fx:typeArguments="? super String"/>
+            </GridPane>
+        """));
+
+        assertEquals(ErrorCode.WILDCARD_CANNOT_BE_INSTANTIATED, ex.getDiagnostic().getCode());
+        assertCodeHighlight("? super String", ex);
     }
 
     @Test
