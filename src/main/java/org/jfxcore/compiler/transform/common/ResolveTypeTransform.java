@@ -1,4 +1,4 @@
-// Copyright (c) 2022, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2023, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.transform.common;
@@ -124,6 +124,9 @@ public class ResolveTypeTransform implements Transform {
                     typeArgsNode.getValues().get(0).getSourceInfo().getStart()).parse();
 
                 type = resolver.getTypeInstance(objectTypeClass, typeArguments);
+
+                objectNode.setNodeData(NodeDataKey.TYPE_ARGUMENTS_SOURCE_INFO,
+                    typeArgsNode.getValues().get(0).getSourceInfo());
             } catch (MarkupException ex) {
                 if (!allowUnresolvableTypeArguments || ex.getDiagnostic().getCode() != ErrorCode.CLASS_NOT_FOUND) {
                     throw ex;

@@ -8,6 +8,7 @@ import javassist.CtField;
 import javassist.CtMethod;
 import javassist.Modifier;
 import javassist.NotFoundException;
+import org.jfxcore.compiler.ast.NodeDataKey;
 import org.jfxcore.compiler.ast.TemplateContentNode;
 import org.jfxcore.compiler.ast.emit.EmitInitializeRootNode;
 import org.jfxcore.compiler.ast.Node;
@@ -74,6 +75,15 @@ public class ObjectTransform implements Transform {
                 .loadRoot(TypeHelper.getTypeInstance(objectNode), objectNode.getSourceInfo())
                 .children(PropertyHelper.getSorted(objectNode, objectNode.getProperties()))
                 .create();
+        }
+
+        // Check that we don't have wildcard type arguments, since the JLS doesn't allow
+        // direct instantiation of wildcard types.
+        for (TypeInstance typeArg : TypeHelper.getTypeInstance(objectNode).getArguments()) {
+            if (typeArg.getWildcardType() != TypeInstance.WildcardType.NONE) {
+                throw ObjectInitializationErrors.wildcardCannotBeInstantiated(
+                    (SourceInfo)objectNode.getNodeData(NodeDataKey.TYPE_ARGUMENTS_SOURCE_INFO));
+            }
         }
 
         ValueNode result = createNode(context, objectNode);

@@ -1,4 +1,4 @@
-// Copyright (c) 2022, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2023, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.parse;
@@ -39,8 +39,23 @@ public class TypeFormatter {
     }
 
     private String parseType(TypeTokenizer tokenizer) {
+        String bounds = null;
+
         if (tokenizer.peekNotNull().getType() == TypeTokenType.WILDCARD) {
-            throw ParserErrors.unexpectedToken(tokenizer.peekNotNull());
+            TypeToken[] tokens = tokenizer.peekAhead(2);
+            if (tokens != null) {
+                TypeTokenType tokenType = tokens[1].getType();
+                if (tokenType == TypeTokenType.UPPER_BOUND || tokenType == TypeTokenType.LOWER_BOUND) {
+                    bounds = tokenType.getSymbol();
+                }
+            }
+
+            if (bounds != null) {
+                tokenizer.remove();
+                tokenizer.remove();
+            } else {
+                throw ParserErrors.unexpectedToken(tokenizer.peekNotNull());
+            }
         }
 
         String typeName = tokenizer.removeQualifiedIdentifier(false).getValue();
@@ -63,7 +78,8 @@ public class TypeFormatter {
             array.append("[]");
         }
 
-        StringBuilder result = new StringBuilder(typeName);
+        StringBuilder result = new StringBuilder(
+            bounds != null ? String.format("? %s %s", bounds, typeName) : typeName);
 
         if (arguments.size() > 0) {
             result.append("<");
@@ -81,7 +97,5 @@ public class TypeFormatter {
 
         return result.toString() + array;
     }
-
-    private static class Foo<T> {}
 
 }

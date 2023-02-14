@@ -1,4 +1,4 @@
-// Copyright (c) 2022, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2023, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.util;
@@ -660,6 +660,26 @@ public class TypeInstanceTest extends TestBase {
         assertEquals("java.lang.Comparable<?>", t0.getJavaName());
         assertEquals("java.lang.Comparable<java.lang.Double>", t1.getJavaName());
         assertTrue(t0.isAssignableFrom(t1));
+    }
+
+    @Test
+    public void IsAssignableFrom_Wildcard_UpperBound() {
+        TypeInstance t0 = new TypeParser("java.lang.Comparable<? extends Number>").parse().get(0);
+        TypeInstance t1 = new TypeParser("java.lang.Comparable<Double>").parse().get(0);
+        assertEquals("java.lang.Comparable<? extends java.lang.Number>", t0.getJavaName());
+        assertEquals("java.lang.Comparable<java.lang.Double>", t1.getJavaName());
+        assertTrue(t0.isAssignableFrom(t1));
+        assertFalse(t1.isAssignableFrom(t0));
+    }
+
+    @Test
+    public void IsAssignableFrom_Wildcard_LowerBound() {
+        TypeInstance t0 = new TypeParser("java.lang.Comparable<? super Number>").parse().get(0);
+        TypeInstance t1 = new TypeParser("java.lang.Comparable<Double>").parse().get(0);
+        assertEquals("java.lang.Comparable<? super java.lang.Number>", t0.getJavaName());
+        assertEquals("java.lang.Comparable<java.lang.Double>", t1.getJavaName());
+        assertFalse(t0.isAssignableFrom(t1));
+        assertFalse(t1.isAssignableFrom(t0));
     }
 
     @Test
