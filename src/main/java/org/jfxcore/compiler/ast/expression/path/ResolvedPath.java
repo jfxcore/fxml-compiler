@@ -1,4 +1,4 @@
-// Copyright (c) 2022, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2023, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.expression.path;
@@ -29,7 +29,6 @@ import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.diagnostic.errors.ParserErrors;
 import org.jfxcore.compiler.diagnostic.errors.SymbolResolutionErrors;
 import org.jfxcore.compiler.util.Classes;
-import org.jfxcore.compiler.util.NameHelper;
 import org.jfxcore.compiler.util.ObservableKind;
 import org.jfxcore.compiler.util.Resolver;
 import org.jfxcore.compiler.util.TypeHelper;
@@ -617,20 +616,14 @@ public class ResolvedPath {
         StringBuilder stringBuilder = new StringBuilder();
 
         for (Segment pathSegment : path) {
-            if (pathSegment instanceof FieldSegment) {
-                stringBuilder.append("F");
-            } else if (pathSegment instanceof GetterSegment) {
-                stringBuilder.append("G");
-            } else {
-                continue;
+            if (pathSegment instanceof FieldSegment || pathSegment instanceof GetterSegment) {
+                stringBuilder.append(pathSegment.getName()).append("$");
             }
-
-            stringBuilder.append(pathSegment.getName());
         }
 
         stringBuilder.append(segment);
 
-        return "Binding" + NameHelper.getMangledClassName(stringBuilder.toString());
+        return stringBuilder.toString();
     }
 
     private interface ResolveSegmentMethod {

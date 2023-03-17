@@ -1,4 +1,4 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2023, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.util;
@@ -45,10 +45,16 @@ public final class Classes {
     public static CtClass URLType() { return get("java.net.URL"); }
     public static CtClass URIType() { return get("java.net.URI"); }
     public static CtClass ThreadType() { return get("java.lang.Thread"); }
+    public static CtClass ReferenceType() { return get("java.lang.ref.Reference"); }
+    public static CtClass WeakReferenceType() { return get("java.lang.ref.WeakReference"); }
+    public static CtClass ReferenceQueueType() { return get("java.lang.ref.ReferenceQueue"); }
     public static CtClass UncaughtExceptionHandlerType() { return get("java.lang.Thread.UncaughtExceptionHandler"); }
     public static CtClass ThrowableType() { return get("java.lang.Throwable"); }
     public static CtClass RuntimeExceptionType() { return get("java.lang.RuntimeException"); }
+    public static CtClass IllegalStateExceptionType() { return get("java.lang.IllegalStateException"); }
+    public static CtClass UnsupportedOperationExceptionType() { return get("java.lang.UnsupportedOperationException"); }
     public static CtClass CollectionType() { return get("java.util.Collection"); }
+    public static CtClass CollectionsType() { return get("java.util.Collections"); }
     public static CtClass FXCollectionsType() { return get("javafx.collections.FXCollections"); }
     public static CtClass ObservableType() { return get("javafx.beans.Observable"); }
     public static CtClass ObservableValueType() { return get("javafx.beans.value.ObservableValue"); }
@@ -79,14 +85,28 @@ public final class Classes {
     public static CtClass ReadOnlyMapPropertyType() { return get("javafx.beans.property.ReadOnlyMapProperty"); }
     public static CtClass BindingsType() { return get("javafx.beans.binding.Bindings"); }
     public static CtClass BooleanBindingType() { return get("javafx.beans.binding.BooleanBinding"); }
+    public static CtClass IteratorType() { return get("java.util.Iterator"); }
+    public static CtClass ListIteratorType() { return get("java.util.ListIterator"); }
     public static CtClass ListType() { return get("java.util.List"); }
     public static CtClass SetType() { return get("java.util.Set"); }
+    public static CtClass HashSetType() { return get("java.util.HashSet"); }
     public static CtClass MapType() { return get("java.util.Map"); }
+    public static CtClass MapEntryType() { return get("java.util.Map.Entry"); }
     public static CtClass ObservableListType() { return get("javafx.collections.ObservableList"); }
     public static CtClass ObservableSetType() { return get("javafx.collections.ObservableSet"); }
     public static CtClass ObservableMapType() { return get("javafx.collections.ObservableMap"); }
     public static CtClass InvalidationListenerType() { return get("javafx.beans.InvalidationListener"); }
+    public static CtClass WeakInvalidationListenerType() { return get("javafx.beans.WeakInvalidationListener"); }
     public static CtClass ChangeListenerType() { return get("javafx.beans.value.ChangeListener"); }
+    public static CtClass ListChangeListenerType() { return get("javafx.collections.ListChangeListener"); }
+    public static CtClass ListChangeListenerChangeType() { return get("javafx.collections.ListChangeListener.Change"); }
+    public static CtClass WeakListChangeListenerType() { return get("javafx.collections.WeakListChangeListener"); }
+    public static CtClass SetChangeListenerType() { return get("javafx.collections.SetChangeListener"); }
+    public static CtClass SetChangeListenerChangeType() { return get("javafx.collections.SetChangeListener.Change"); }
+    public static CtClass WeakSetChangeListenerType() { return get("javafx.collections.WeakSetChangeListener"); }
+    public static CtClass MapChangeListenerType() { return get("javafx.collections.MapChangeListener"); }
+    public static CtClass MapChangeListenerChangeType() { return get("javafx.collections.MapChangeListener.Change"); }
+    public static CtClass WeakMapChangeListenerType() { return get("javafx.collections.WeakMapChangeListener"); }
     public static CtClass EventTypent() { return get("javafx.event.Event"); }
     public static CtClass EventHandlerType() { return get("javafx.event.EventHandler"); }
     public static CtClass ColorType() { return get("javafx.scene.paint.Color"); }

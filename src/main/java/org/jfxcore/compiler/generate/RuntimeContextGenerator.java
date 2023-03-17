@@ -1,4 +1,4 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2023, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.generate;
@@ -15,18 +15,19 @@ import org.jfxcore.compiler.util.Bytecode;
 import org.jfxcore.compiler.util.Classes;
 import org.jfxcore.compiler.util.Descriptors;
 import org.jfxcore.compiler.util.Local;
+import org.jfxcore.compiler.util.NameHelper;
 import org.jfxcore.compiler.util.Resolver;
 import org.jfxcore.compiler.util.TypeInstance;
 
-public class RuntimeContextGenerator extends GeneratorBase {
+public class RuntimeContextGenerator extends ClassGenerator {
 
     public static final String PUSH_PARENT_METHOD = "push";
     public static final String POP_PARENT_METHOD = "pop";
     public static final String GET_RESOURCE_METHOD = "getResource";
 
-    public static final String PARENTS_FIELD = "$0";
-    public static final String TARGET_TYPE_FIELD = "$1";
-    private static final String INDEX_FIELD = "$2";
+    public static final String PARENTS_FIELD = "parents";
+    public static final String TARGET_TYPE_FIELD = "targetType";
+    private static final String INDEX_FIELD = "index";
 
     private final boolean resourceSupport;
     private CtClass parentArrayType;
@@ -52,15 +53,14 @@ public class RuntimeContextGenerator extends GeneratorBase {
 
     @Override
     public String getClassName() {
-        return "RuntimeContext";
+        return NameHelper.getMangledClassName("RuntimeContext");
     }
 
     @Override
     public void emitClass(BytecodeEmitContext context) {
         parentArrayType = getParentArrayType();
-        clazz = context.getMarkupClass().makeNestedClass(getClassName(), true);
+        clazz = context.getNestedClasses().create(getClassName());
         clazz.setModifiers(Modifier.PRIVATE | Modifier.FINAL);
-        context.getNestedClasses().add(clazz);
     }
 
     @Override

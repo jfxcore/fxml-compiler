@@ -1,4 +1,4 @@
-// Copyright (c) 2022, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2023, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.generate;
@@ -35,7 +35,7 @@ import static org.jfxcore.compiler.util.Classes.*;
 import static org.jfxcore.compiler.util.Descriptors.*;
 import static org.jfxcore.compiler.util.ExceptionHelper.unchecked;
 
-public class ObservableFunctionGenerator extends GeneratorBase {
+public class ObservableFunctionGenerator extends ClassGenerator {
 
     private static final String CHANGE_LISTENERS_ERROR =
         "Cannot add multiple change listeners to a compiled binding.";
@@ -164,7 +164,7 @@ public class ObservableFunctionGenerator extends GeneratorBase {
 
     @Override
     public void emitClass(BytecodeEmitContext context) throws Exception {
-        clazz = context.getMarkupClass().makeNestedClass(getClassName(), true);
+        clazz = context.getNestedClasses().create(getClassName());
 
         if (superType.jvmType().isInterface()) {
             clazz.addInterface(superType.jvmType());
@@ -174,7 +174,6 @@ public class ObservableFunctionGenerator extends GeneratorBase {
 
         clazz.addInterface(InvalidationListenerType());
         clazz.setModifiers(Modifier.PRIVATE | Modifier.FINAL);
-        context.getNestedClasses().add(clazz);
     }
 
     @Override

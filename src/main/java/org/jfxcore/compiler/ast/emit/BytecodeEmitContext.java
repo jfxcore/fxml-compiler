@@ -1,4 +1,4 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2023, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.emit;
@@ -8,6 +8,7 @@ import org.jfxcore.compiler.ast.EmitContext;
 import org.jfxcore.compiler.ast.GeneratorEmitterNode;
 import org.jfxcore.compiler.ast.Node;
 import org.jfxcore.compiler.ast.Visitor;
+import org.jfxcore.compiler.generate.ClassGenerator;
 import org.jfxcore.compiler.generate.Generator;
 import org.jfxcore.compiler.generate.RuntimeContextGenerator;
 import org.jfxcore.compiler.util.Action;
@@ -18,9 +19,11 @@ import org.jfxcore.compiler.util.ExceptionHelper;
 import org.jfxcore.compiler.util.Local;
 import java.util.AbstractSet;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 public class BytecodeEmitContext extends EmitContext<Bytecode> {
@@ -29,7 +32,7 @@ public class BytecodeEmitContext extends EmitContext<Bytecode> {
     private final EmitInitializeRootNode rootNode;
     private final CtClass codeBehindClass;
     private final CtClass markupClass;
-    private final ClassSet nestedClasses;
+    private final ClassSetImpl nestedClasses;
     private CtClass bindingContextClass;
     private CtClass runtimeContextClass;
     private int runtimeContextLocal;
@@ -46,7 +49,7 @@ public class BytecodeEmitContext extends EmitContext<Bytecode> {
         this.bindingContextClass = codeBehindClass;
         this.codeBehindClass = codeBehindClass;
         this.markupClass = markupClass;
-        this.nestedClasses = new ClassSet(markupClass);
+        this.nestedClasses = new ClassSetImpl(markupClass);
 
         CompilationContext context = CompilationContext.getCurrent();
         context.setClassPool(markupClass.getClassPool());
@@ -112,7 +115,7 @@ public class BytecodeEmitContext extends EmitContext<Bytecode> {
                 }
             });
 
-            runtimeContextClass = Generator.emit(this, new RuntimeContextGenerator(resourceSupport[0]));
+            runtimeContextClass = ClassGenerator.emit(this, new RuntimeContextGenerator(resourceSupport[0]));
         }
 
         return runtimeContextClass;
@@ -186,8 +189,8 @@ public class BytecodeEmitContext extends EmitContext<Bytecode> {
 
             @Override
             public Node onVisited(Node node) {
-                if (node instanceof GeneratorEmitterNode) {
-                    List<Generator> list = ((GeneratorEmitterNode)node).emitGenerators(BytecodeEmitContext.this);
+                if (node instanceof GeneratorEmitterNode generatorEmitterNode) {
+                    List<? extends Generator> list = generatorEmitterNode.emitGenerators(BytecodeEmitContext.this);
                     if (list != null && !list.isEmpty()) {
                         generators.addAll(
                             list.stream()
@@ -210,29 +213,16 @@ public class BytecodeEmitContext extends EmitContext<Bytecode> {
             }
         });
 
-        Iterator<GeneratorEntry> it = generators.listIterator();
-        while (it.hasNext()) {
-            Generator generator = it.next().generator;
-            CtClass clazz = getNestedClasses().find(generator.getClassName());
-
-            if (clazz != null) {
-                it.remove();
-            }
-        }
-
         List<GeneratorEntry> activeGenerators = new ArrayList<>();
 
         for (GeneratorEntry entry : generators) {
-            runWithParentStack(entry.parents, () -> {
-                String className = entry.generator.getClassName();
-                if (activeGenerators.stream().noneMatch(g -> g.generator.getClassName().equals(className))) {
-                    activeGenerators.add(entry);
-                }
-            });
+            activeGenerators.addAll(findActiveGenerators(this, entry));
         }
 
         for (GeneratorEntry entry : activeGenerators) {
-            runWithParentStack(entry.parents, () -> entry.generator.emitClass(this));
+            if (entry.generator instanceof ClassGenerator classGenerator) {
+                runWithParentStack(entry.parents, () -> classGenerator.emitClass(this));
+            }
         }
 
         for (GeneratorEntry entry : activeGenerators) {
@@ -255,6 +245,21 @@ public class BytecodeEmitContext extends EmitContext<Bytecode> {
         } else {
             emit(rootNode);
         }
+    }
+
+    private List<GeneratorEntry> findActiveGenerators(BytecodeEmitContext context, GeneratorEntry entry) {
+        if (entry.generator.consume(context)) {
+            List<GeneratorEntry> result = new ArrayList<>();
+            for (Generator subGenerator : entry.generator.getSubGenerators()) {
+                GeneratorEntry newEntry = new GeneratorEntry(entry.node, entry.parents, subGenerator);
+                result.addAll(findActiveGenerators(context, newEntry));
+            }
+
+            result.add(entry);
+            return result;
+        }
+
+        return Collections.emptyList();
     }
 
     public void emit(Node node) {
@@ -293,23 +298,28 @@ public class BytecodeEmitContext extends EmitContext<Bytecode> {
         }
     }
 
-    public static class ClassSet extends AbstractSet<CtClass> {
+    public interface ClassSet extends Set<CtClass> {
+        CtClass create(String simpleName);
+        CtClass find(String simpleName);
+    }
+
+    private static class ClassSetImpl extends AbstractSet<CtClass> implements ClassSet {
         private final HashMap<CtClass, Object> map = new HashMap<>();
         private final Object present = new Object();
         private final CtClass markupClass;
 
-        ClassSet(CtClass markupClass) {
+        ClassSetImpl(CtClass markupClass) {
             this.markupClass = markupClass;
         }
 
-        public boolean add(CtClass e) {
-            return !contains(e.getSimpleName()) && map.put(e, present) == null;
+        @Override
+        public CtClass create(String simpleName) {
+            CtClass newClass = markupClass.makeNestedClass(simpleName, true);
+            map.put(newClass, present);
+            return newClass;
         }
 
-        public boolean contains(String simpleName) {
-            return find(simpleName) != null;
-        }
-
+        @Override
         public CtClass find(String simpleName) {
             simpleName = markupClass.getSimpleName() + "$" + simpleName;
 

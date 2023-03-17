@@ -1,4 +1,4 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2023, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.emit;
@@ -13,7 +13,7 @@ import org.jfxcore.compiler.ast.GeneratorEmitterNode;
 import org.jfxcore.compiler.ast.ResolvedTypeNode;
 import org.jfxcore.compiler.ast.Visitor;
 import org.jfxcore.compiler.ast.expression.path.ResolvedPath;
-import org.jfxcore.compiler.generate.Generator;
+import org.jfxcore.compiler.generate.ClassGenerator;
 import org.jfxcore.compiler.util.Bytecode;
 import org.jfxcore.compiler.util.Descriptors;
 import org.jfxcore.compiler.util.Local;
@@ -37,10 +37,11 @@ public class EmitObservablePathNode
     private final int leadingInvariantSegments;
     private final boolean useCompiledPath;
     private final boolean bidirectional;
-    private final transient List<Generator> generators;
-    private final transient String compiledClassName;
+    private final transient List<ClassGenerator> generators;
     private ResolvedTypeNode type;
     private EmitInvariantPathNode invariantPath;
+    private EmitValueWrapperNode leadingValueWrapper;
+    private EmitValueWrapperNode constructorWrapper;
 
     public EmitObservablePathNode(ResolvedPath path, boolean bidirectional, SourceInfo sourceInfo) {
         this(path, bidirectional, null, sourceInfo);
@@ -66,12 +67,20 @@ public class EmitObservablePathNode
 
         if (this.useCompiledPath) {
             this.generators = path.fold().toGenerators();
-            this.compiledClassName = generators.get(0).getClassName();
             this.type = new ResolvedTypeNode(generators.get(0).getTypeInstance(), sourceInfo);
         } else {
             this.generators = Collections.emptyList();
-            this.compiledClassName = null;
             this.type = new ResolvedTypeNode(path.getTypeInstance(), sourceInfo);
+        }
+
+        if (leadingInvariantSegments > 1) {
+            if (useCompiledPath) {
+                TypeInstance type = path.getValueTypeInstance();
+                constructorWrapper = new EmitValueWrapperNode(new EmitNopNode(type, getSourceInfo()));
+            } else if (!bidirectional) {
+                TypeInstance type = path.get(leadingInvariantSegments).getValueTypeInstance();
+                leadingValueWrapper = new EmitValueWrapperNode(new EmitNopNode(type, getSourceInfo()));
+            }
         }
     }
 
@@ -89,6 +98,14 @@ public class EmitObservablePathNode
         super.acceptChildren(visitor);
         type = (ResolvedTypeNode)type.accept(visitor);
         invariantPath = (EmitInvariantPathNode)invariantPath.accept(visitor);
+
+        if (leadingValueWrapper != null) {
+            leadingValueWrapper = (EmitValueWrapperNode)leadingValueWrapper.accept(visitor);
+        }
+
+        if (constructorWrapper != null) {
+            constructorWrapper = (EmitValueWrapperNode)constructorWrapper.accept(visitor);
+        }
     }
 
     @Override
@@ -97,7 +114,7 @@ public class EmitObservablePathNode
     }
 
     @Override
-    public List<Generator> emitGenerators(BytecodeEmitContext context) {
+    public List<ClassGenerator> emitGenerators(BytecodeEmitContext context) {
         return generators;
     }
 
@@ -106,11 +123,14 @@ public class EmitObservablePathNode
         Bytecode code = context.getOutput();
         boolean mayReturnNull;
         Local constructorArgLocal;
+        String compiledClassName;
 
         if (useCompiledPath) {
+            compiledClassName = generators.get(0).getClassName();
             constructorArgLocal = code.acquireLocal(false);
             mayReturnNull = false;
         } else {
+            compiledClassName = null;
             constructorArgLocal = null;
             mayReturnNull = bidirectional;
         }
@@ -131,9 +151,8 @@ public class EmitObservablePathNode
                         if (mayReturnNull || useCompiledPath) {
                             code.aconst_null();
                         } else {
-                            TypeInstance type = path.get(leadingInvariantSegments).getValueTypeInstance();
-                            code.ext_defaultconst(type.jvmType());
-                            context.emit(new EmitWrapValueNode(new EmitNopNode(type, getSourceInfo())));
+                            code.ext_defaultconst(leadingValueWrapper.getValueType());
+                            context.emit(leadingValueWrapper);
                         }
                     });
 
@@ -163,9 +182,8 @@ public class EmitObservablePathNode
                     .ifnonnull(
                         invokeConstructor,
                         () -> {
-                            TypeInstance type = path.getValueTypeInstance();
-                            code.ext_defaultconst(type.jvmType());
-                            context.emit(new EmitWrapValueNode(new EmitNopNode(type, getSourceInfo())));
+                            code.ext_defaultconst(constructorWrapper.getValueType());
+                            context.emit(constructorWrapper);
                         });
             } else {
                 invokeConstructor.run();

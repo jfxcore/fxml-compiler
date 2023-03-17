@@ -1,4 +1,4 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2023, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.bindings;
@@ -13,25 +13,27 @@ import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
-import javafx.collections.ObservableSet;
 import javafx.scene.layout.Pane;
 import org.jfxcore.compiler.diagnostic.ErrorCode;
 import org.jfxcore.compiler.diagnostic.MarkupException;
+import org.jfxcore.compiler.generate.collections.ListObservableValueWrapperGenerator;
+import org.jfxcore.compiler.generate.collections.ListWrapperGenerator;
 import org.jfxcore.compiler.util.CompilerTestBase;
+import org.jfxcore.compiler.util.NameHelper;
 import org.jfxcore.compiler.util.TestExtension;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 @SuppressWarnings({"HttpUrlsUsage", "DuplicatedCode"})
 @ExtendWith(TestExtension.class)
-public class CollectionBindingTest extends CompilerTestBase {
+public class ListBindingTest extends CompilerTestBase {
 
     @SuppressWarnings("unused")
     public static class IndirectContext {
@@ -54,11 +56,6 @@ public class CollectionBindingTest extends CompilerTestBase {
         public ObjectProperty<ObservableList<String>> list4 = new SimpleObjectProperty<>(FXCollections.observableArrayList(List.of("foo", "bar", "baz")));
         public ObservableValue<ObservableList<String>> list4ReadOnly() { return list4; }
 
-        public Set<String> set1 = new HashSet<>(Set.of("foo", "bar", "baz"));
-        public ObservableSet<String> set2 = FXCollections.observableSet("foo", "bar", "baz");
-        public ObjectProperty<Set<String>> set3 = new SimpleObjectProperty<>(new HashSet<>(Set.of("foo", "bar", "baz")));
-        public ObjectProperty<ObservableSet<String>> set4 = new SimpleObjectProperty<>(FXCollections.observableSet(Set.of("foo", "bar", "baz")));
-
         public final ListProperty<String> readOnlyListProp = new SimpleListProperty<>(this, "readOnlyListProp");
         public ReadOnlyListProperty<String> readOnlyListPropProperty() { return readOnlyListProp; }
 
@@ -74,6 +71,39 @@ public class CollectionBindingTest extends CompilerTestBase {
         public ObservableList<String> getTargetObservableList() { return targetObservableList; }
     }
 
+    private void assertMethodCall(Object root, String... methodNames) {
+        List<String> methodNameList = Arrays.asList(methodNames);
+        assertMethodCall(root, list -> list.stream().anyMatch(m -> methodNameList.contains(m.getName())));
+    }
+
+    private void assertNotMethodCall(Object root, String... methodNames) {
+        List<String> methodNameList = Arrays.asList(methodNames);
+        assertMethodCall(root, list -> list.stream().noneMatch(m -> methodNameList.contains(m.getName())));
+    }
+
+    private void assertNewExpr(Object root, String... classNameFragments) {
+        assertNewExpr(root, ctors -> ctors.stream().anyMatch(
+            ctor -> Arrays.stream(classNameFragments).anyMatch(
+                cn -> ctor.getDeclaringClass().getSimpleName().contains(cn))));
+    }
+
+    private void assertNotNewExpr(Object root, String... classNameFragments) {
+        assertNewExpr(root, ctors -> ctors.stream().noneMatch(
+            ctor -> Arrays.stream(classNameFragments).anyMatch(
+                cn -> ctor.getDeclaringClass().getSimpleName().contains(cn))));
+    }
+
+    private static String LIST_WRAPPER;
+    private static String OBSERVABLE_VALUE_WRAPPER;
+    private static String ADD_REFERENCE_METHOD;
+
+    @BeforeAll
+    public static void beforeAll() {
+        LIST_WRAPPER = ListWrapperGenerator.CLASS_NAME;
+        OBSERVABLE_VALUE_WRAPPER = ListObservableValueWrapperGenerator.CLASS_NAME;
+        ADD_REFERENCE_METHOD = NameHelper.getMangledMethodName("addReference");
+    }
+
     @Test
     public void Once_Binding_To_Vanilla_List() {
         ListTestPane root = compileAndRun("""
@@ -81,6 +111,7 @@ public class CollectionBindingTest extends CompilerTestBase {
                           listProp="{fx:once list1}" objectProp="{fx:once list1}"/>
         """);
 
+        assertNotNewExpr(root, LIST_WRAPPER, OBSERVABLE_VALUE_WRAPPER);
         assertEquals(3, root.listProp.size());
 
         boolean[] flag = new boolean[1];
@@ -102,6 +133,7 @@ public class CollectionBindingTest extends CompilerTestBase {
                           listProp="{fx:once list2}" objectProp="{fx:once list2}"/>
         """);
 
+        assertNotNewExpr(root, LIST_WRAPPER, OBSERVABLE_VALUE_WRAPPER);
         assertEquals(3, root.listProp.size());
         boolean[] flag1 = new boolean[1];
         root.listProp.addListener((ListChangeListener<String>)c -> flag1[0] = true);
@@ -124,6 +156,7 @@ public class CollectionBindingTest extends CompilerTestBase {
                           listProp="{fx:once list3}" objectProp="{fx:once list3}"/>
         """);
 
+        assertNotNewExpr(root, LIST_WRAPPER, OBSERVABLE_VALUE_WRAPPER);
         assertEquals(3, root.listProp.size());
         boolean[] flag1 = new boolean[1];
         root.listProp.addListener((ListChangeListener<String>)c -> flag1[0] = true);
@@ -151,6 +184,7 @@ public class CollectionBindingTest extends CompilerTestBase {
                           listProp="{fx:once list4}" objectProp="{fx:once list4}"/>
         """);
 
+        assertNotNewExpr(root, LIST_WRAPPER, OBSERVABLE_VALUE_WRAPPER);
         assertEquals(3, root.listProp.size());
         boolean[] flag1 = new boolean[1];
         root.listProp.addListener((ListChangeListener<String>)c -> flag1[0] = true);
@@ -178,9 +212,7 @@ public class CollectionBindingTest extends CompilerTestBase {
                           listProp="{fx:once list1; content=true}"/>
         """);
 
-        assertNotReferenced(root, "observableListValue");
-        assertNotReferenced(root, "observableList");
-
+        assertNotNewExpr(root, LIST_WRAPPER, OBSERVABLE_VALUE_WRAPPER);
         assertEquals(3, root.listProp.size());
         root.list1.clear(); // Change the source list
         assertEquals(3, root.listProp.size()); // Target list is unchanged
@@ -193,9 +225,7 @@ public class CollectionBindingTest extends CompilerTestBase {
                           listProp="{fx:once indirect.list1; content=true}"/>
         """);
 
-        assertNotReferenced(root, "observableListValue");
-        assertNotReferenced(root, "observableList");
-
+        assertNotNewExpr(root, LIST_WRAPPER, OBSERVABLE_VALUE_WRAPPER);
         assertEquals(3, root.listProp.size());
         root.indirect.get().list1.clear(); // Change the source list
         assertEquals(3, root.listProp.size()); // Target list is unchanged
@@ -208,9 +238,7 @@ public class CollectionBindingTest extends CompilerTestBase {
                           listProp="{fx:once list2; content=true}"/>
         """);
 
-        assertNotReferenced(root, "observableListValue");
-        assertNotReferenced(root, "observableList");
-
+        assertNotNewExpr(root, LIST_WRAPPER, OBSERVABLE_VALUE_WRAPPER);
         assertEquals(3, root.listProp.size());
         root.list1.clear(); // Change the source list
         assertEquals(3, root.listProp.size()); // Target list is unchanged
@@ -223,9 +251,7 @@ public class CollectionBindingTest extends CompilerTestBase {
                           listProp="{fx:once indirect.list2; content=true}"/>
         """);
 
-        assertNotReferenced(root, "observableListValue");
-        assertNotReferenced(root, "observableList");
-
+        assertNotNewExpr(root, LIST_WRAPPER, OBSERVABLE_VALUE_WRAPPER);
         assertEquals(3, root.listProp.size());
         root.indirect.get().list1.clear(); // Change the source list
         assertEquals(3, root.listProp.size()); // Target list is unchanged
@@ -238,9 +264,7 @@ public class CollectionBindingTest extends CompilerTestBase {
                           listProp="{fx:once list3; content=true}"/>
         """);
 
-        assertNotReferenced(root, "observableListValue");
-        assertNotReferenced(root, "observableList");
-
+        assertNotNewExpr(root, LIST_WRAPPER, OBSERVABLE_VALUE_WRAPPER);
         assertEquals(3, root.listProp.size());
         root.indirect.get().list1.clear(); // Change the source list
         assertEquals(3, root.listProp.size()); // Target list is unchanged
@@ -253,9 +277,7 @@ public class CollectionBindingTest extends CompilerTestBase {
                           listProp="{fx:once indirect.list3; content=true}"/>
         """);
 
-        assertNotReferenced(root, "observableListValue");
-        assertNotReferenced(root, "observableList");
-
+        assertNotNewExpr(root, LIST_WRAPPER, OBSERVABLE_VALUE_WRAPPER);
         assertEquals(3, root.listProp.size());
         root.indirect.get().list1.clear(); // Change the source list
         assertEquals(3, root.listProp.size()); // Target list is unchanged
@@ -268,9 +290,7 @@ public class CollectionBindingTest extends CompilerTestBase {
                           listProp="{fx:once list4; content=true}"/>
         """);
 
-        assertNotReferenced(root, "observableListValue");
-        assertNotReferenced(root, "observableList");
-
+        assertNotNewExpr(root, LIST_WRAPPER, OBSERVABLE_VALUE_WRAPPER);
         assertEquals(3, root.listProp.size());
         root.indirect.get().list1.clear(); // Change the source list
         assertEquals(3, root.listProp.size()); // Target list is unchanged
@@ -283,9 +303,7 @@ public class CollectionBindingTest extends CompilerTestBase {
                           listProp="{fx:once indirect.list4; content=true}"/>
         """);
 
-        assertNotReferenced(root, "observableListValue");
-        assertNotReferenced(root, "observableList");
-
+        assertNotNewExpr(root, LIST_WRAPPER, OBSERVABLE_VALUE_WRAPPER);
         assertEquals(3, root.listProp.size());
         root.indirect.get().list1.clear(); // Change the source list
         assertEquals(3, root.listProp.size()); // Target list is unchanged
@@ -323,18 +341,19 @@ public class CollectionBindingTest extends CompilerTestBase {
 
     /*
      *  source:   List
-     *  expected: target.bind(FXObservables.observableListValue(source))
+     *  expected: target.bind(new <ListWrapperGenerator>(source))
      */
     @Test
     public void Unidirectional_Binding_To_Vanilla_List() {
         ListTestPane root = compileAndRun("""
-            <?import org.jfxcore.compiler.bindings.CollectionBindingTest.ListTestPane?>
+            <?import org.jfxcore.compiler.bindings.ListBindingTest.ListTestPane?>
             <ListTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
                           listProp="{fx:bind list1}" objectProp="{fx:bind list1}"/>
         """);
 
-        assertReferenced(root, "observableListValue");
-        assertNotReferenced(root, "observableObjectValue");
+        assertNewExpr(root, LIST_WRAPPER);
+        assertNotNewExpr(root, "Constant");
+        assertNotMethodCall(root, ADD_REFERENCE_METHOD);
         assertEquals(3, root.listProp.size());
 
         boolean[] flag = new boolean[1];
@@ -351,7 +370,7 @@ public class CollectionBindingTest extends CompilerTestBase {
 
     /*
      *  source:   List
-     *  expected: target.bind(FXObservables.observableListValue(source))
+     *  expected: target.bind(new ListObservableValueWrapper(source))
      */
     @Test
     public void Unidirectional_Binding_To_Vanilla_List_Indirect() {
@@ -360,8 +379,9 @@ public class CollectionBindingTest extends CompilerTestBase {
                           listProp="{fx:bind indirect.list1}" objectProp="{fx:bind indirect.list1}"/>
         """);
 
-        assertReferenced(root, "observableListValue");
-        assertNotReferenced(root, "observableObjectValue");
+        assertNewExpr(root, OBSERVABLE_VALUE_WRAPPER);
+        assertNotNewExpr(root, LIST_WRAPPER, "Constant");
+        assertNotMethodCall(root, ADD_REFERENCE_METHOD);
         assertEquals(3, root.listProp.size());
 
         boolean[] flag = new boolean[1];
@@ -408,7 +428,7 @@ public class CollectionBindingTest extends CompilerTestBase {
 
     /*
      *  source:   ObservableList
-     *  expected: target.bind(FXObservables.observableObjectValue(source))
+     *  expected: target.bind(new <ObjectConstantGenerator>(source))
      */
     @Test
     public void Unidirectional_Binding_To_ObservableList() {
@@ -417,8 +437,9 @@ public class CollectionBindingTest extends CompilerTestBase {
                           listProp="{fx:bind list2}" objectProp="{fx:bind list2}"/>
         """);
 
-        assertReferenced(root, "observableObjectValue");
-        assertNotReferenced(root, "observableListValue");
+        assertNewExpr(root, "ObjectConstant");
+        assertNotNewExpr(root, OBSERVABLE_VALUE_WRAPPER, LIST_WRAPPER);
+        assertNotMethodCall(root, ADD_REFERENCE_METHOD);
 
         assertEquals(3, root.listProp.size());
         boolean[] flag1 = new boolean[1];
@@ -446,8 +467,8 @@ public class CollectionBindingTest extends CompilerTestBase {
                           listProp="{fx:bind list2; content=true}"/>
         """);
 
-        assertNotReferenced(root, "observableListValue");
-        assertNotReferenced(root, "observableObjectValue");
+        assertNotNewExpr(root, "Constant", OBSERVABLE_VALUE_WRAPPER, LIST_WRAPPER);
+        assertNotMethodCall(root, ADD_REFERENCE_METHOD);
 
         assertEquals(3, root.listProp.size());
         boolean[] flag1 = new boolean[1];
@@ -459,7 +480,7 @@ public class CollectionBindingTest extends CompilerTestBase {
 
     /*
      *  source:   ObservableValue<List>
-     *  expected: target.bind(FXObservables.observableListValue(source))
+     *  expected: target.bind(new ListObservableValueWrapper(source))
      */
     @Test
     public void Unidirectional_Binding_To_ObservableValue_Of_Vanilla_List() throws Exception {
@@ -468,8 +489,9 @@ public class CollectionBindingTest extends CompilerTestBase {
                           listProp="{fx:bind list3}" objectProp="{fx:bind list3}"/>
         """);
 
-        assertReferenced(root, "observableListValue");
-        assertNotReferenced(root, "observableObjectValue");
+        assertNewExpr(root, OBSERVABLE_VALUE_WRAPPER);
+        assertNotNewExpr(root, "Constant", LIST_WRAPPER);
+        assertNotMethodCall(root, ADD_REFERENCE_METHOD);
 
         assertEquals(3, root.listProp.size());
         boolean[] flag = new boolean[1];
@@ -500,7 +522,7 @@ public class CollectionBindingTest extends CompilerTestBase {
 
     /*
      *  source:   ObservableValue<List>
-     *  expected: target.bindContent(FXObservables.observableListValue(source))
+     *  expected: target.bindContent(new ListObservableValueWrapper(source))
      */
     @Test
     public void Unidirectional_ContentBinding_To_ObservableValue_Of_Vanilla_List() {
@@ -509,8 +531,9 @@ public class CollectionBindingTest extends CompilerTestBase {
                           listProp="{fx:bind list3; content=true}"/>
         """);
 
-        assertReferenced(root, "observableListValue");
-        assertNotReferenced(root, "observableObjectValue");
+        assertNewExpr(root, OBSERVABLE_VALUE_WRAPPER);
+        assertNotNewExpr(root, "Constant", LIST_WRAPPER);
+        assertMethodCall(root, ADD_REFERENCE_METHOD);
     }
 
     /*
@@ -524,8 +547,8 @@ public class CollectionBindingTest extends CompilerTestBase {
                           listProp="{fx:bind list4}" objectProp="{fx:bind list4}"/>
         """);
 
-        assertNotReferenced(root, "observableListValue");
-        assertNotReferenced(root, "observableObjectValue");
+        assertNotNewExpr(root, "Constant", OBSERVABLE_VALUE_WRAPPER, LIST_WRAPPER);
+        assertNotMethodCall(root, ADD_REFERENCE_METHOD);
 
         assertEquals(3, root.listProp.size());
         boolean[] flag1 = new boolean[1];
@@ -549,7 +572,7 @@ public class CollectionBindingTest extends CompilerTestBase {
 
     /*
      *  source:   ObservableValue<ObservableList>
-     *  expected: target.bindContent(FXObservables.observableListValue(source))
+     *  expected: target.bindContent(new ListObservableValueWrapper(source))
      */
     @Test
     public void Unidirectional_ContentBinding_To_ObservableValue_Of_ObservableList() {
@@ -558,8 +581,9 @@ public class CollectionBindingTest extends CompilerTestBase {
                           listProp="{fx:bind list4; content=true}"/>
         """);
 
-        assertReferenced(root, "observableListValue");
-        assertNotReferenced(root, "observableObjectValue");
+        assertNewExpr(root, OBSERVABLE_VALUE_WRAPPER);
+        assertNotNewExpr(root, "Constant", LIST_WRAPPER);
+        assertMethodCall(root, ADD_REFERENCE_METHOD);
 
         assertEquals(3, root.listProp.size());
         boolean[] flag1 = new boolean[1];
@@ -633,8 +657,8 @@ public class CollectionBindingTest extends CompilerTestBase {
                           listProp="{fx:sync list2; content=true}"/>
         """);
 
-        assertNotReferenced(root, "observableListValue");
-        assertNotReferenced(root, "observableObjectValue");
+        assertNotNewExpr(root, "Constant", OBSERVABLE_VALUE_WRAPPER, LIST_WRAPPER);
+        assertNotMethodCall(root, ADD_REFERENCE_METHOD);
 
         assertEquals(3, root.listProp.size());
         boolean[] flag1 = new boolean[1];
@@ -683,13 +707,12 @@ public class CollectionBindingTest extends CompilerTestBase {
                           listProp="{fx:sync list4}"/>
         """);
 
-        assertNotReferenced(root, "observableListValue");
-        assertNotReferenced(root, "observableObjectValue");
+        assertNotNewExpr(root, OBSERVABLE_VALUE_WRAPPER, LIST_WRAPPER, "Constant");
     }
 
     /*
      * source:   Property<ObservableList>
-     * expected: target.bindContentBidirectional(FXObservables.observableListValue(source))
+     * expected: target.bindContentBidirectional(new ListObservableValueWrapper(source))
      */
     @Test
     public void Bidirectional_ContentBinding_To_Property_Of_ObservableList() {
@@ -698,8 +721,13 @@ public class CollectionBindingTest extends CompilerTestBase {
                           listProp="{fx:sync list4; content=true}"/>
         """);
 
-        assertReferenced(root, "observableListValue");
-        assertNotReferenced(root, "observableObjectValue");
+        assertNewExpr(root, OBSERVABLE_VALUE_WRAPPER);
+        assertNotNewExpr(root, LIST_WRAPPER, "Constant");
+        assertMethodCall(root, ADD_REFERENCE_METHOD);
+
+        gc(); // verify that the generated wrapper is not prematurely collected
+        root.list4.set(FXCollections.observableArrayList("123"));
+        assertEquals(List.of("123"), root.listProp.get());
     }
 
     /*
@@ -718,7 +746,7 @@ public class CollectionBindingTest extends CompilerTestBase {
 
     /*
      * source:   ObservableValue<ObservableList>
-     * expected: target.bindContentBidirectional(FXObservables.observableListValue(source))
+     * expected: target.bindContentBidirectional(new ListObservableValueWrapper(source))
      */
     @Test
     public void Bidirectional_ContentBinding_To_ReadOnlyObservableValue_Of_ObservableList() {
@@ -727,8 +755,9 @@ public class CollectionBindingTest extends CompilerTestBase {
                           listProp="{fx:sync list4ReadOnly; content=true}"/>
         """);
 
-        assertReferenced(root, "observableListValue");
-        assertNotReferenced(root, "observableObjectValue");
+        assertNewExpr(root, OBSERVABLE_VALUE_WRAPPER);
+        assertNotNewExpr(root, "Constant", LIST_WRAPPER);
+        assertMethodCall(root, ADD_REFERENCE_METHOD);
     }
 
     @SuppressWarnings("unchecked")

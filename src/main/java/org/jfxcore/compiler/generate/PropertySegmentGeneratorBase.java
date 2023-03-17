@@ -1,4 +1,4 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2023, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.generate;
@@ -12,6 +12,7 @@ import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.ast.expression.path.FoldedGroup;
 import org.jfxcore.compiler.util.Bytecode;
 import org.jfxcore.compiler.util.Descriptors;
+import org.jfxcore.compiler.util.NameHelper;
 import org.jfxcore.compiler.util.Resolver;
 import org.jfxcore.compiler.util.TypeHelper;
 import org.jfxcore.compiler.util.TypeInstance;
@@ -110,16 +111,15 @@ abstract class PropertySegmentGeneratorBase extends SegmentGeneratorBase {
 
     @Override
     public String getClassName() {
-        return groups[segment].getName();
+        return NameHelper.getMangledClassName(groups[segment].getName());
     }
 
     @Override
     public void emitClass(BytecodeEmitContext context) throws Exception {
-        clazz = context.getMarkupClass().makeNestedClass(getClassName(), true);
+        clazz = context.getNestedClasses().create(getClassName());
         clazz.setModifiers(Modifier.PRIVATE | Modifier.FINAL);
         interfaces.forEach(itf -> clazz.addInterface(itf));
         groups[segment].setCompiledClass(clazz);
-        context.getNestedClasses().add(clazz);
     }
 
     @Override

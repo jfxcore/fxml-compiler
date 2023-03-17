@@ -1,23 +1,26 @@
-// Copyright (c) 2022, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2023, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.util;
 
 import javassist.ClassPool;
+import javassist.CtConstructor;
 import javassist.CtMethod;
 import javassist.NotFoundException;
 import javassist.expr.ExprEditor;
 import javassist.expr.MethodCall;
+import javassist.expr.NewExpr;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
+import java.lang.ref.WeakReference;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.function.Predicate;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class CompilerTestBase {
 
@@ -34,6 +37,29 @@ public class CompilerTestBase {
 
     public <T> T compileAndRun(String fxml) {
         return TestCompiler.newInstance(getFileName(), getAdditionalImports() + fxml);
+    }
+
+    public void gc() {
+        WeakReference<Object> wref = new WeakReference<>(new Object());
+
+        for (int i = 0; i < 10 && wref.get() != null; ++i) {
+            createGarbage();
+            System.gc();
+
+            try {
+                Thread.sleep(10);
+            } catch (InterruptedException ignored) {
+            }
+        }
+    }
+
+    private void createGarbage() {
+        LinkedList<Integer> list = new LinkedList<>();
+        int counter = 0;
+        while (counter < 10) {
+            counter += 1;
+            list.add(1);
+        }
     }
 
     private static Object getOuter(Object instance) {
@@ -99,15 +125,15 @@ public class CompilerTestBase {
         return cachedFileName = String.join("_", names);
     }
 
-    public void assertReferenced(Object root, String methodName) {
-        assertTrue(isMethodCalled(root, methodName));
+    public void assertMethodCall(Object root, Predicate<List<CtMethod>> predicate) {
+        assertTrue(testMethodExpr(root, predicate), "MethodCall assertion failed");
     }
 
-    public void assertNotReferenced(Object root, String methodName) {
-        assertFalse(isMethodCalled(root, methodName));
+    public void assertNewExpr(Object root, Predicate<List<CtConstructor>> predicate) {
+        assertTrue(testNewExpr(root, predicate), "NewExpr assertion failed");
     }
 
-    private synchronized boolean isMethodCalled(Object root, String methodName) {
+    private synchronized boolean testMethodExpr(Object root, Predicate<List<CtMethod>> predicate) {
         try {
             if (classPool == null) {
                 classPool = new ClassPool();
@@ -129,7 +155,35 @@ public class CompilerTestBase {
                     }
                 });
 
-            return methodCalls.stream().anyMatch(m -> m.getName().equals(methodName));
+            return predicate.test(methodCalls);
+        } catch (Exception ex) {
+            throw new RuntimeException(ex);
+        }
+    }
+
+    private synchronized boolean testNewExpr(Object root, Predicate<List<CtConstructor>> predicate) {
+        try {
+            if (classPool == null) {
+                classPool = new ClassPool();
+                classPool.appendSystemPath();
+                classPool.appendClassPath(root.getClass().getProtectionDomain().getCodeSource().getLocation().toExternalForm());
+            }
+
+            List<CtConstructor> constructorCalls = new ArrayList<>();
+
+            classPool
+                .get(root.getClass().getName())
+                .getDeclaredMethod("initializeComponent").instrument(new ExprEditor() {
+                    @Override
+                    public void edit(NewExpr e) {
+                        try {
+                            constructorCalls.add(e.getConstructor());
+                        } catch (NotFoundException ignored) {
+                        }
+                    }
+                });
+
+            return predicate.test(constructorCalls);
         } catch (Exception ex) {
             throw new RuntimeException(ex);
         }

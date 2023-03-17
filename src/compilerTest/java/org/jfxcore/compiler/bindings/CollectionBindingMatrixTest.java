@@ -1,4 +1,4 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2023, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.bindings;
@@ -982,7 +982,7 @@ public class CollectionBindingMatrixTest {
     @SuppressWarnings("unchecked")
     public void ParameterizedTest(Execution execution) throws Exception {
         String target = execution.target, source = execution.source;
-        String fileName = "ParameterizedTest_" + target + "_" + source.replaceAll("fx:|\\{|}|_|\s|;|=", "");
+        String fileName = "ParameterizedTest_" + target + "_" + source.replaceAll("fx:|\\{|}|_|\s|;|=|:", "");
 
         var expectedError = execution.expected instanceof ErrorCode ? (ErrorCode)execution.expected : null;
         var expectedResult = !(execution.expected instanceof ErrorCode) ? execution.expected : null;

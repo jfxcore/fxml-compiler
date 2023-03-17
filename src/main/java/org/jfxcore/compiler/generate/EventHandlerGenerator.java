@@ -1,4 +1,4 @@
-// Copyright (c) 2022, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2023, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.generate;
@@ -27,7 +27,7 @@ import java.util.List;
 
 import static org.jfxcore.compiler.util.ExceptionHelper.*;
 
-public class EventHandlerGenerator extends GeneratorBase {
+public class EventHandlerGenerator extends ClassGenerator {
 
     private static final String HANDLER_CLASS_REF = "$0";
 
@@ -59,10 +59,9 @@ public class EventHandlerGenerator extends GeneratorBase {
 
     @Override
     public void emitClass(BytecodeEmitContext context) {
-        clazz = context.getMarkupClass().makeNestedClass(getClassName(), true);
+        clazz = context.getNestedClasses().create(getClassName());
         clazz.addInterface(Classes.EventHandlerType());
         clazz.setModifiers(Modifier.PRIVATE | Modifier.FINAL);
-        context.getNestedClasses().add(clazz);
     }
 
     @Override

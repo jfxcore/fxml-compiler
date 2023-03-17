@@ -1,4 +1,4 @@
-// Copyright (c) 2022, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2023, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.util;
@@ -9,39 +9,47 @@ import javassist.CtConstructor;
 import javassist.CtMember;
 import javassist.CtMethod;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
 
 public class NameHelper {
 
     private static final class NameData {
-        final Map<String, String> mangledNames = new HashMap<>();
-        int nameIndex;
+        final Map<String, List<Object>> uniqueNames = new HashMap<>();
     }
 
     public static String getUniqueName(String name, Object obj) {
-        return name + getMangledClassName(Integer.toString(System.identityHashCode(obj)));
-    }
-
-    public static String getMangledClassName(String className) {
         NameData nameData = (NameData)CompilationContext.getCurrent()
             .computeIfAbsent(NameHelper.class, key -> new NameData());
 
-        String mangledName = nameData.mangledNames.get(className);
-        if (mangledName != null) {
-            return mangledName;
+        String template = "__FX$%s$%d";
+        List<Object> objs = nameData.uniqueNames.computeIfAbsent(name, key -> new ArrayList<>());
+        for (int i = 0; i < objs.size(); ++i) {
+            if (objs.get(i) == obj) {
+                return String.format(template, name, i);
+            }
         }
 
-        mangledName = "$" + nameData.nameIndex++;
-        nameData.mangledNames.put(className, mangledName);
+        String uniqueName = String.format(template, name, objs.size());
+        objs.add(obj);
 
-        return mangledName;
+        return uniqueName;
+    }
+
+    public static String getMangledClassName(String className) {
+        return "__FX$" + className;
+    }
+
+    public static String getMangledFieldName(String fieldName) {
+        return "__FX$" + fieldName;
     }
 
     public static String getMangledMethodName(String methodName) {
-        return "$" + methodName;
+        return "__FX$" + methodName;
     }
 
     public static String getPropertyGetterName(String name) {

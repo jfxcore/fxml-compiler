@@ -1,4 +1,4 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2023, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.emit;
@@ -8,8 +8,8 @@ import javassist.bytecode.MethodInfo;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.ast.AbstractNode;
 import org.jfxcore.compiler.ast.ResolvedTypeNode;
+import org.jfxcore.compiler.generate.ClassGenerator;
 import org.jfxcore.compiler.generate.EventHandlerGenerator;
-import org.jfxcore.compiler.generate.Generator;
 import org.jfxcore.compiler.util.Bytecode;
 import org.jfxcore.compiler.util.Resolver;
 import org.jfxcore.compiler.util.TypeHelper;
@@ -45,7 +45,7 @@ public class EmitEventHandlerNode extends AbstractNode implements ValueEmitterNo
         var generator = new EventHandlerGenerator(
             context.getBindingContextClass(), eventType, eventHandlerName);
 
-        CtClass handlerClass = Generator.emit(context, generator);
+        CtClass handlerClass = ClassGenerator.emit(context, generator);
 
         code.anew(handlerClass)
             .dup()

@@ -1,13 +1,13 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2023, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.expression.path;
 
 import org.jfxcore.compiler.diagnostic.SourceInfo;
+import org.jfxcore.compiler.generate.ClassGenerator;
 import org.jfxcore.compiler.generate.HeadSegmentGenerator;
 import org.jfxcore.compiler.generate.TailSegmentGenerator;
 import org.jfxcore.compiler.generate.IntermediateSegmentGenerator;
-import org.jfxcore.compiler.generate.Generator;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -35,8 +35,8 @@ public class FoldedPath {
         return groups;
     }
 
-    public List<Generator> toGenerators() {
-        List<Generator> list = new ArrayList<>();
+    public List<ClassGenerator> toGenerators() {
+        List<ClassGenerator> list = new ArrayList<>();
 
         if (groups.length == 0) {
             throw new IllegalArgumentException();
