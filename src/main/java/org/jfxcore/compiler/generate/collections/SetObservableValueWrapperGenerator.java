@@ -302,8 +302,8 @@ public class SetObservableValueWrapperGenerator extends ClassGenerator {
                         () -> code.iconst(1),
                         () -> code.iconst(0)))
             .ifne(() -> code
-                // ObservableSet oldValue = this.set;
-                // ObservableSet currentValue = set.get();
+                // ObservableSet oldValue = this.value;
+                // ObservableSet currentValue = this.get();
                 .aload(0)
                 .getfield(generatedClass, VALUE_FIELD, ObservableSetType())
                 .astore(oldValueLocal)
@@ -326,7 +326,7 @@ public class SetObservableValueWrapperGenerator extends ClassGenerator {
                         .aload(oldValueLocal)
                         .aload(currentValueLocal)
                         .invokeinterface(ChangeListenerType(), "changed",
-                                         function(voidType, ObservableType(), ObjectType(), ObjectType())))
+                                         function(voidType, ObservableValueType(), ObjectType(), ObjectType())))
                     // if (setChangeListener != null)
                     .aload(0)
                     .getfield(generatedClass, SET_CHANGE_LISTENER_FIELD, SetChangeListenerType())
@@ -533,7 +533,11 @@ public class SetObservableValueWrapperGenerator extends ClassGenerator {
             .invokespecial(WeakInvalidationListenerType(), MethodInfo.nameInit,
                            constructor(InvalidationListenerType()))
             .invokeinterface(ObservableType(), "addListener",
-                             function(voidType, InvalidationListenerType()))
+                             function(voidType, InvalidationListenerType()));
+
+        code.aload(0)
+            .invokeinterface(ObservableSetValueType(), "get", function(ObjectType()))
+            .pop()
             .vreturn();
 
         constructor.getMethodInfo().setCodeAttribute(code.toCodeAttribute());

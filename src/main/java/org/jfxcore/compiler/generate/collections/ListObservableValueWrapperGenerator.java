@@ -312,11 +312,19 @@ public class ListObservableValueWrapperGenerator extends ClassGenerator {
                                  function(voidType, ObservableType()))
             );
 
-        // if (changeListener != null)
+        // if (changeListener != null || listChangeListener != null)
         code.aload(0)
             .getfield(generatedClass, CHANGE_LISTENER_FIELD, ChangeListenerType())
-            .ifnonnull(() -> code
-                // ObservableList oldValue = this.list;
+            .ifnonnull(
+                () -> code.iconst(1),
+                () -> code
+                    .aload(0)
+                    .getfield(generatedClass, LIST_CHANGE_LISTENER_FIELD, ListChangeListenerType())
+                    .ifnonnull(
+                        () -> code.iconst(1),
+                        () -> code.iconst(0)))
+            .ifne(() -> code
+                // ObservableList oldValue = this.value;
                 // ObservableList currentValue = this.get();
                 .aload(0)
                 .getfield(generatedClass, VALUE_FIELD, ObservableListType())
@@ -329,76 +337,70 @@ public class ListObservableValueWrapperGenerator extends ClassGenerator {
                 .aload(oldValueLocal)
                 .aload(currentValueLocal)
                 .if_acmpne(() -> code
-                    // changeListener.changed(this, oldValue, currentValue);
+                    // if (changeListener != null)
                     .aload(0)
                     .getfield(generatedClass, CHANGE_LISTENER_FIELD, ChangeListenerType())
-                    .aload(0)
-                    .aload(oldValueLocal)
-                    .aload(currentValueLocal)
-                    .invokeinterface(ChangeListenerType(), "changed",
-                                     function(voidType, ObservableType(), ObjectType(), ObjectType()))
-                )
-            );
-
-        // if (listChangeListener != null)
-        code.aload(0)
-            .getfield(generatedClass, LIST_CHANGE_LISTENER_FIELD, ListChangeListenerType())
-            .ifnonnull(() -> code
-                // ObservableList oldValue = this.list;
-                // ObservableList currentValue = this.get();
-                .aload(0)
-                .getfield(generatedClass, VALUE_FIELD, ObservableListType())
-                .astore(oldValueLocal)
-                .aload(0)
-                .invokeinterface(ObservableObjectValueType(), "get", function(ObjectType()))
-                .checkcast(ObservableListType())
-                .astore(currentValueLocal)
-                // if (oldValue != currentValue)
-                .aload(oldValueLocal)
-                .aload(currentValueLocal)
-                .if_acmpne(() -> {
-                    // int safeSize = currentValue != null ? currentValue.size() : 0;
-                    code.aload(currentValueLocal)
-                        .ifnull(() -> code
-                            .iconst(0)
-                            .istore(safeSizeLocal),
-                        /*else*/ () -> code
-                            .aload(currentValueLocal)
-                            .invokeinterface(ListType(), "size", function(intType))
-                            .istore(safeSizeLocal)
-                        );
-
-                    // if (oldValue == null)
-                    code.aload(oldValueLocal)
-                        .ifnull(() -> code
-                            // safeOldValue = FXCollections.emptyObservableList();
-                            .invokestatic(FXCollectionsType(), "emptyObservableList",
-                                          function(ObservableListType()))
-                            .astore(safeOldValueLocal),
-                        /*else*/ () -> code
-                            // safeOldValue = FXCollections.unmodifiableObservableList(oldValue);
-                            .aload(oldValueLocal)
-                            .invokestatic(FXCollectionsType(), "unmodifiableObservableList",
-                                          function(ObservableListType(), ObservableListType()))
-                            .astore(safeOldValueLocal)
-                        );
-
-                    CtClass changeType = context.getNestedClasses().find(ListAddRemoveChangeGenerator.CLASS_NAME);
-
-                    // listChangeListener.onChanged(new AddRemoveChange(0, safeSize, safeOldValue, this));
-                    code.aload(0)
-                        .getfield(generatedClass, LIST_CHANGE_LISTENER_FIELD, ListChangeListenerType())
-                        .anew(changeType)
-                        .dup()
-                        .iconst(0)
-                        .iload(safeSizeLocal)
-                        .aload(safeOldValueLocal)
+                    .ifnonnull(() -> code
+                        // changeListener.changed(this, oldValue, currentValue);
                         .aload(0)
-                        .invokespecial(changeType, MethodInfo.nameInit,
-                                       constructor(intType, intType, ListType(), ObservableListType()))
-                        .invokeinterface(ListChangeListenerType(), "onChanged",
-                                         function(voidType, ListChangeListenerChangeType()));
-                })
+                        .getfield(generatedClass, CHANGE_LISTENER_FIELD, ChangeListenerType())
+                        .aload(0)
+                        .aload(oldValueLocal)
+                        .aload(currentValueLocal)
+                        .invokeinterface(ChangeListenerType(), "changed",
+                                         function(voidType, ObservableValueType(), ObjectType(), ObjectType())))
+                    // if (listChangeListener != null)
+                    .aload(0)
+                    .getfield(generatedClass, LIST_CHANGE_LISTENER_FIELD, ListChangeListenerType())
+                    .ifnonnull(() -> code
+                        // if (oldValue != currentValue)
+                        .aload(oldValueLocal)
+                        .aload(currentValueLocal)
+                        .if_acmpne(() -> {
+                            // int safeSize = currentValue != null ? currentValue.size() : 0;
+                            code.aload(currentValueLocal)
+                                .ifnull(() -> code
+                                    .iconst(0)
+                                    .istore(safeSizeLocal),
+                                /*else*/ () -> code
+                                    .aload(currentValueLocal)
+                                    .invokeinterface(ListType(), "size", function(intType))
+                                    .istore(safeSizeLocal)
+                                );
+
+                            // if (oldValue == null)
+                            code.aload(oldValueLocal)
+                                .ifnull(() -> code
+                                    // safeOldValue = FXCollections.emptyObservableList();
+                                    .invokestatic(FXCollectionsType(), "emptyObservableList",
+                                                  function(ObservableListType()))
+                                    .astore(safeOldValueLocal),
+                                /*else*/ () -> code
+                                    // safeOldValue = FXCollections.unmodifiableObservableList(oldValue);
+                                    .aload(oldValueLocal)
+                                    .invokestatic(FXCollectionsType(), "unmodifiableObservableList",
+                                                  function(ObservableListType(), ObservableListType()))
+                                    .astore(safeOldValueLocal)
+                                );
+
+                            CtClass changeType = context.getNestedClasses().find(ListAddRemoveChangeGenerator.CLASS_NAME);
+
+                            // listChangeListener.onChanged(new AddRemoveChange(0, safeSize, safeOldValue, this));
+                            code.aload(0)
+                                .getfield(generatedClass, LIST_CHANGE_LISTENER_FIELD, ListChangeListenerType())
+                                .anew(changeType)
+                                .dup()
+                                .iconst(0)
+                                .iload(safeSizeLocal)
+                                .aload(safeOldValueLocal)
+                                .aload(0)
+                                .invokespecial(changeType, MethodInfo.nameInit,
+                                               constructor(intType, intType, ListType(), ObservableListType()))
+                                .invokeinterface(ListChangeListenerType(), "onChanged",
+                                                 function(voidType, ListChangeListenerChangeType()));
+                        })
+                    )
+                )
             );
 
         code.releaseLocal(oldValueLocal);
@@ -457,7 +459,11 @@ public class ListObservableValueWrapperGenerator extends ClassGenerator {
             .aload(0)
             .invokespecial(WeakInvalidationListenerType(), MethodInfo.nameInit,
                            constructor(InvalidationListenerType()))
-            .invokeinterface(ObservableType(), "addListener", function(voidType, InvalidationListenerType()))
+            .invokeinterface(ObservableType(), "addListener", function(voidType, InvalidationListenerType()));
+
+        code.aload(0)
+            .invokeinterface(ObservableListValueType(), "get", function(ObjectType()))
+            .pop()
             .vreturn();
 
         constructor.getMethodInfo().setCodeAttribute(code.toCodeAttribute());

@@ -128,8 +128,8 @@ public class MapWrapperGenerator extends ClassGenerator {
         createFieldDelegateMethod(context, generatedClass, booleanType, VALUE_FIELD, fieldType, "containsValue", ObjectType());
         createFieldDelegateMethod(context, generatedClass, ObjectType(), VALUE_FIELD, fieldType, "get", ObjectType());
         createFieldDelegateMethod(context, generatedClass, ObjectType(), VALUE_FIELD, fieldType, "put", ObjectType(), ObjectType());
-        createFieldDelegateMethod(context, generatedClass, ObjectType(), VALUE_FIELD, fieldType, "putAll", MapType());
         createFieldDelegateMethod(context, generatedClass, ObjectType(), VALUE_FIELD, fieldType, "remove", ObjectType());
+        createFieldDelegateMethod(context, generatedClass, voidType, VALUE_FIELD, fieldType, "putAll", MapType());
         createFieldDelegateMethod(context, generatedClass, voidType, VALUE_FIELD, fieldType, "clear");
         createFieldDelegateMethod(context, generatedClass, SetType(), VALUE_FIELD, fieldType, "keySet");
         createFieldDelegateMethod(context, generatedClass, CollectionType(), VALUE_FIELD, fieldType, "values");
@@ -221,56 +221,56 @@ public class MapWrapperGenerator extends ClassGenerator {
         constructor.getMethodInfo().rebuildStackMap(generatedClass.getClassPool());
     }
 
-    static void createOnChangedMethod(BytecodeEmitContext context, CtClass clazz) throws Exception {
+    static void createOnChangedMethod(BytecodeEmitContext context, CtClass generatedClass) throws Exception {
         CtMethod method = new CtMethod(
-            voidType, "onChanged", new CtClass[] {MapChangeListenerChangeType()}, clazz);
+            voidType, "onChanged", new CtClass[] {MapChangeListenerChangeType()}, generatedClass);
         method.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
-        clazz.addMethod(method);
-        BytecodeEmitContext ctx = new BytecodeEmitContext(context, clazz, 2, -1);
+        generatedClass.addMethod(method);
+        BytecodeEmitContext ctx = new BytecodeEmitContext(context, generatedClass, 2, -1);
         Bytecode code = ctx.getOutput();
         CtClass adapterChangeType = context.getNestedClasses().find(MapSourceAdapterChangeGenerator.CLASS_NAME);
 
         code.aload(0)
-            .getfield(clazz, ROOT_REF, context.getMarkupClass())
+            .getfield(generatedClass, ROOT_REF, context.getMarkupClass())
             .invokevirtual(context.getMarkupClass(), ReferenceTrackerGenerator.CLEAR_STALE_REFERENCES_METHOD,
                            function(voidType));
 
         code.aload(0)
-            .getfield(clazz, INVALIDATION_LISTENER_FIELD, InvalidationListenerType())
+            .getfield(generatedClass, INVALIDATION_LISTENER_FIELD, InvalidationListenerType())
             .ifnonnull(() -> code
                 .aload(0)
-                .getfield(clazz, INVALIDATION_LISTENER_FIELD, InvalidationListenerType())
+                .getfield(generatedClass, INVALIDATION_LISTENER_FIELD, InvalidationListenerType())
                 .aload(0)
                 .invokeinterface(InvalidationListenerType(), "invalidated",
                                  function(voidType, ObservableType()))
             );
 
         code.aload(0)
-            .getfield(clazz, CHANGE_LISTENER_FIELD, ChangeListenerType())
+            .getfield(generatedClass, CHANGE_LISTENER_FIELD, ChangeListenerType())
             .ifnonnull(() -> code
                 .aload(0)
-                .getfield(clazz, CHANGE_LISTENER_FIELD, ChangeListenerType())
+                .getfield(generatedClass, CHANGE_LISTENER_FIELD, ChangeListenerType())
                 .aload(0)
                 .aload(0)
-                .getfield(clazz, VALUE_FIELD, ObservableMapType())
+                .getfield(generatedClass, VALUE_FIELD, ObservableMapType())
                 .aload(0)
-                .getfield(clazz, VALUE_FIELD, ObservableMapType())
+                .getfield(generatedClass, VALUE_FIELD, ObservableMapType())
                 .invokeinterface(ChangeListenerType(), "changed",
-                                 function(voidType, ObservableType(), ObjectType(), ObjectType()))
+                                 function(voidType, ObservableValueType(), ObjectType(), ObjectType()))
             );
 
         code.aload(0)
-            .getfield(clazz, MAP_CHANGE_LISTENER_FIELD, MapChangeListenerType())
+            .getfield(generatedClass, MAP_CHANGE_LISTENER_FIELD, MapChangeListenerType())
             .ifnonnull(() -> code
                 .aload(0)
-                .getfield(clazz, ADAPTER_CHANGE_FIELD, adapterChangeType)
+                .getfield(generatedClass, ADAPTER_CHANGE_FIELD, adapterChangeType)
                 .aload(1)
                 .invokevirtual(adapterChangeType, MapSourceAdapterChangeGenerator.INIT_CHANGE_METHOD_NAME,
                                function(voidType, MapChangeListenerChangeType()))
                 .aload(0)
-                .getfield(clazz, MAP_CHANGE_LISTENER_FIELD, MapChangeListenerType())
+                .getfield(generatedClass, MAP_CHANGE_LISTENER_FIELD, MapChangeListenerType())
                 .aload(0)
-                .getfield(clazz, ADAPTER_CHANGE_FIELD, adapterChangeType)
+                .getfield(generatedClass, ADAPTER_CHANGE_FIELD, adapterChangeType)
                 .invokeinterface(MapChangeListenerType(), "onChanged",
                                  function(voidType, MapChangeListenerChangeType()))
             );
@@ -278,7 +278,7 @@ public class MapWrapperGenerator extends ClassGenerator {
         code.vreturn();
 
         method.getMethodInfo().setCodeAttribute(code.toCodeAttribute());
-        method.getMethodInfo().rebuildStackMap(clazz.getClassPool());
+        method.getMethodInfo().rebuildStackMap(generatedClass.getClassPool());
     }
 
 }

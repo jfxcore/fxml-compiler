@@ -305,8 +305,8 @@ public class MapObservableValueWrapperGenerator extends ClassGenerator {
                         () -> code.iconst(1),
                         () -> code.iconst(0)))
             .ifne(() -> code
-                // ObservableMap oldValue = this.set;
-                // ObservableMap currentValue = set.get();
+                // ObservableMap oldValue = this.value;
+                // ObservableMap currentValue = this.get();
                 .aload(0)
                 .getfield(generatedClass, VALUE_FIELD, ObservableMapType())
                 .astore(oldValueLocal)
@@ -329,7 +329,7 @@ public class MapObservableValueWrapperGenerator extends ClassGenerator {
                         .aload(oldValueLocal)
                         .aload(currentValueLocal)
                         .invokeinterface(ChangeListenerType(), "changed",
-                                         function(voidType, ObservableType(), ObjectType(), ObjectType())))
+                                         function(voidType, ObservableValueType(), ObjectType(), ObjectType())))
                     // if (mapChangeListener != null)
                     .aload(0)
                     .getfield(generatedClass, MAP_CHANGE_LISTENER_FIELD, MapChangeListenerType())
@@ -597,7 +597,11 @@ public class MapObservableValueWrapperGenerator extends ClassGenerator {
             .invokespecial(WeakInvalidationListenerType(), MethodInfo.nameInit,
                            constructor(InvalidationListenerType()))
             .invokeinterface(ObservableType(), "addListener",
-                             function(voidType, InvalidationListenerType()))
+                             function(voidType, InvalidationListenerType()));
+
+        code.aload(0)
+            .invokeinterface(ObservableMapValueType(), "get", function(ObjectType()))
+            .pop()
             .vreturn();
 
         constructor.getMethodInfo().setCodeAttribute(code.toCodeAttribute());

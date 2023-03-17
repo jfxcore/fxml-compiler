@@ -341,7 +341,7 @@ public class ListBindingTest extends CompilerTestBase {
 
     /*
      *  source:   List
-     *  expected: target.bind(new <ListWrapperGenerator>(source))
+     *  expected: target.bind(new ListWrapper(source))
      */
     @Test
     public void Unidirectional_Binding_To_Vanilla_List() {
@@ -428,7 +428,7 @@ public class ListBindingTest extends CompilerTestBase {
 
     /*
      *  source:   ObservableList
-     *  expected: target.bind(new <ObjectConstantGenerator>(source))
+     *  expected: target.bind(new ObjectConstant(source))
      */
     @Test
     public void Unidirectional_Binding_To_ObservableList() {

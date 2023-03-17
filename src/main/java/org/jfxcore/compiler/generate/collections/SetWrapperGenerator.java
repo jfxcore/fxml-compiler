@@ -224,56 +224,56 @@ public class SetWrapperGenerator extends ClassGenerator {
         constructor.getMethodInfo().rebuildStackMap(generatedClass.getClassPool());
     }
 
-    static void createOnChangedMethod(BytecodeEmitContext context, CtClass clazz) throws Exception {
+    static void createOnChangedMethod(BytecodeEmitContext context, CtClass generatedClass) throws Exception {
         CtMethod method = new CtMethod(
-            voidType, "onChanged", new CtClass[] {SetChangeListenerChangeType()}, clazz);
+            voidType, "onChanged", new CtClass[] {SetChangeListenerChangeType()}, generatedClass);
         method.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
-        clazz.addMethod(method);
-        BytecodeEmitContext ctx = new BytecodeEmitContext(context, clazz, 2, -1);
+        generatedClass.addMethod(method);
+        BytecodeEmitContext ctx = new BytecodeEmitContext(context, generatedClass, 2, -1);
         Bytecode code = ctx.getOutput();
         CtClass adapterChangeType = context.getNestedClasses().find(SetSourceAdapterChangeGenerator.CLASS_NAME);
 
         code.aload(0)
-            .getfield(clazz, ROOT_REF, context.getMarkupClass())
+            .getfield(generatedClass, ROOT_REF, context.getMarkupClass())
             .invokevirtual(context.getMarkupClass(), ReferenceTrackerGenerator.CLEAR_STALE_REFERENCES_METHOD,
                            function(voidType));
 
         code.aload(0)
-            .getfield(clazz, INVALIDATION_LISTENER_FIELD, InvalidationListenerType())
+            .getfield(generatedClass, INVALIDATION_LISTENER_FIELD, InvalidationListenerType())
             .ifnonnull(() -> code
                 .aload(0)
-                .getfield(clazz, INVALIDATION_LISTENER_FIELD, InvalidationListenerType())
+                .getfield(generatedClass, INVALIDATION_LISTENER_FIELD, InvalidationListenerType())
                 .aload(0)
                 .invokeinterface(InvalidationListenerType(), "invalidated",
                                  function(voidType, ObservableType()))
             );
 
         code.aload(0)
-            .getfield(clazz, CHANGE_LISTENER_FIELD, ChangeListenerType())
+            .getfield(generatedClass, CHANGE_LISTENER_FIELD, ChangeListenerType())
             .ifnonnull(() -> code
                 .aload(0)
-                .getfield(clazz, CHANGE_LISTENER_FIELD, ChangeListenerType())
+                .getfield(generatedClass, CHANGE_LISTENER_FIELD, ChangeListenerType())
                 .aload(0)
                 .aload(0)
-                .getfield(clazz, VALUE_FIELD, ObservableSetType())
+                .getfield(generatedClass, VALUE_FIELD, ObservableSetType())
                 .aload(0)
-                .getfield(clazz, VALUE_FIELD, ObservableSetType())
+                .getfield(generatedClass, VALUE_FIELD, ObservableSetType())
                 .invokeinterface(ChangeListenerType(), "changed",
-                                 function(voidType, ObservableType(), ObjectType(), ObjectType()))
+                                 function(voidType, ObservableValueType(), ObjectType(), ObjectType()))
             );
 
         code.aload(0)
-            .getfield(clazz, SET_CHANGE_LISTENER_FIELD, SetChangeListenerType())
+            .getfield(generatedClass, SET_CHANGE_LISTENER_FIELD, SetChangeListenerType())
             .ifnonnull(() -> code
                 .aload(0)
-                .getfield(clazz, ADAPTER_CHANGE_FIELD, adapterChangeType)
+                .getfield(generatedClass, ADAPTER_CHANGE_FIELD, adapterChangeType)
                 .aload(1)
                 .invokevirtual(adapterChangeType, SetSourceAdapterChangeGenerator.INIT_CHANGE_METHOD_NAME,
                                function(voidType, SetChangeListenerChangeType()))
                 .aload(0)
-                .getfield(clazz, SET_CHANGE_LISTENER_FIELD, SetChangeListenerType())
+                .getfield(generatedClass, SET_CHANGE_LISTENER_FIELD, SetChangeListenerType())
                 .aload(0)
-                .getfield(clazz, ADAPTER_CHANGE_FIELD, adapterChangeType)
+                .getfield(generatedClass, ADAPTER_CHANGE_FIELD, adapterChangeType)
                 .invokeinterface(SetChangeListenerType(), "onChanged",
                                  function(voidType, SetChangeListenerChangeType()))
             );
@@ -281,7 +281,7 @@ public class SetWrapperGenerator extends ClassGenerator {
         code.vreturn();
 
         method.getMethodInfo().setCodeAttribute(code.toCodeAttribute());
-        method.getMethodInfo().rebuildStackMap(clazz.getClassPool());
+        method.getMethodInfo().rebuildStackMap(generatedClass.getClassPool());
     }
 
 }

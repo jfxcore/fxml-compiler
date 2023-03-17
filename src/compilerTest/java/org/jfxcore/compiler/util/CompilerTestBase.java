@@ -10,6 +10,7 @@ import javassist.NotFoundException;
 import javassist.expr.ExprEditor;
 import javassist.expr.MethodCall;
 import javassist.expr.NewExpr;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import java.lang.ref.WeakReference;
@@ -92,7 +93,7 @@ public class CompilerTestBase {
                 Class<?> declaringClass = Class.forName(element.getClassName());
                 Method method = declaringClass.getMethod(element.getMethodName());
 
-                if (method.getAnnotation(Test.class) != null) {
+                if (method.getAnnotation(Test.class) != null || method.getAnnotation(BeforeAll.class) != null) {
                     methodName = method.getName();
                     break;
                 }
