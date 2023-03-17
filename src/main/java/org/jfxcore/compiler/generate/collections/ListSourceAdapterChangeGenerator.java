@@ -43,25 +43,25 @@ public class ListSourceAdapterChangeGenerator extends ClassGenerator {
 
     @Override
     public void emitClass(BytecodeEmitContext context) throws Exception {
-        clazz = context.getNestedClasses().create(getClassName());
-        clazz.setModifiers(Modifier.PRIVATE | Modifier.FINAL);
-        clazz.setSuperclass(ListChangeListenerChangeType());
+        generatedClass = context.getNestedClasses().create(getClassName());
+        generatedClass.setModifiers(Modifier.PRIVATE | Modifier.FINAL);
+        generatedClass.setSuperclass(ListChangeListenerChangeType());
     }
 
     @Override
     public void emitFields(BytecodeEmitContext context) throws Exception {
-        CtField field = new CtField(ListChangeListenerChangeType(), SOURCE_FIELD, clazz);
+        CtField field = new CtField(ListChangeListenerChangeType(), SOURCE_FIELD, generatedClass);
         field.setModifiers(Modifier.PRIVATE);
-        clazz.addField(field);
+        generatedClass.addField(field);
     }
 
     @Override
     public void emitMethods(BytecodeEmitContext context) throws Exception {
         super.emitMethods(context);
 
-        constructor = new CtConstructor(new CtClass[] {ObservableListType()}, clazz);
+        constructor = new CtConstructor(new CtClass[] {ObservableListType()}, generatedClass);
         initChangeMethod = new CtMethod(
-            voidType, INIT_CHANGE_METHOD_NAME, new CtClass[] {ListChangeListenerChangeType()}, clazz);
+            voidType, INIT_CHANGE_METHOD_NAME, new CtClass[] {ListChangeListenerChangeType()}, generatedClass);
     }
 
     @Override
@@ -72,24 +72,24 @@ public class ListSourceAdapterChangeGenerator extends ClassGenerator {
         emitInitChangeMethod(context, initChangeMethod);
 
         CtClass type = ListChangeListenerChangeType();
-        createFieldDelegateMethod(context, clazz, StringType(), SOURCE_FIELD, type, "toString");
-        createFieldDelegateMethod(context, clazz, voidType, SOURCE_FIELD, type, "reset");
-        createFieldDelegateMethod(context, clazz, booleanType, SOURCE_FIELD, type, "next");
-        createFieldDelegateMethod(context, clazz, intType, SOURCE_FIELD, type, "getFrom");
-        createFieldDelegateMethod(context, clazz, intType, SOURCE_FIELD, type, "getTo");
-        createFieldDelegateMethod(context, clazz, booleanType, SOURCE_FIELD, type, "wasAdded");
-        createFieldDelegateMethod(context, clazz, booleanType, SOURCE_FIELD, type, "wasRemoved");
-        createFieldDelegateMethod(context, clazz, booleanType, SOURCE_FIELD, type, "wasPermutated");
-        createFieldDelegateMethod(context, clazz, booleanType, SOURCE_FIELD, type, "wasReplaced");
-        createFieldDelegateMethod(context, clazz, booleanType, SOURCE_FIELD, type, "wasUpdated");
-        createFieldDelegateMethod(context, clazz, intType, SOURCE_FIELD, type, "getAddedSize");
-        createFieldDelegateMethod(context, clazz, ListType(), SOURCE_FIELD, type, "getAddedSubList");
-        createFieldDelegateMethod(context, clazz, intType, SOURCE_FIELD, type, "getRemovedSize");
-        createFieldDelegateMethod(context, clazz, ListType(), SOURCE_FIELD, type, "getRemoved");
-        createFieldDelegateMethod(context, clazz, intType, SOURCE_FIELD, type, "getPermutation", intType);
+        createFieldDelegateMethod(context, generatedClass, StringType(), SOURCE_FIELD, type, "toString");
+        createFieldDelegateMethod(context, generatedClass, voidType, SOURCE_FIELD, type, "reset");
+        createFieldDelegateMethod(context, generatedClass, booleanType, SOURCE_FIELD, type, "next");
+        createFieldDelegateMethod(context, generatedClass, intType, SOURCE_FIELD, type, "getFrom");
+        createFieldDelegateMethod(context, generatedClass, intType, SOURCE_FIELD, type, "getTo");
+        createFieldDelegateMethod(context, generatedClass, booleanType, SOURCE_FIELD, type, "wasAdded");
+        createFieldDelegateMethod(context, generatedClass, booleanType, SOURCE_FIELD, type, "wasRemoved");
+        createFieldDelegateMethod(context, generatedClass, booleanType, SOURCE_FIELD, type, "wasPermutated");
+        createFieldDelegateMethod(context, generatedClass, booleanType, SOURCE_FIELD, type, "wasReplaced");
+        createFieldDelegateMethod(context, generatedClass, booleanType, SOURCE_FIELD, type, "wasUpdated");
+        createFieldDelegateMethod(context, generatedClass, intType, SOURCE_FIELD, type, "getAddedSize");
+        createFieldDelegateMethod(context, generatedClass, ListType(), SOURCE_FIELD, type, "getAddedSubList");
+        createFieldDelegateMethod(context, generatedClass, intType, SOURCE_FIELD, type, "getRemovedSize");
+        createFieldDelegateMethod(context, generatedClass, ListType(), SOURCE_FIELD, type, "getRemoved");
+        createFieldDelegateMethod(context, generatedClass, intType, SOURCE_FIELD, type, "getPermutation", intType);
 
-        createBehavior(context, clazz, new CtMethod(new Resolver(SourceInfo.none()).resolveClass("int[]"),
-            "getPermutation", new CtClass[0], clazz), 1, code -> code
+        createBehavior(context, generatedClass, new CtMethod(new Resolver(SourceInfo.none()).resolveClass("int[]"),
+            "getPermutation", new CtClass[0], generatedClass), 1, code -> code
             .anew(UnsupportedOperationExceptionType())
             .dup()
             .invokespecial(UnsupportedOperationExceptionType(), MethodInfo.nameInit, constructor())
@@ -98,18 +98,18 @@ public class ListSourceAdapterChangeGenerator extends ClassGenerator {
     }
 
     private void emitConstructor(BytecodeEmitContext parentContext, CtConstructor constructor) throws Exception {
-        createBehavior(parentContext, clazz, constructor, 2, code -> code
+        createBehavior(parentContext, generatedClass, constructor, 2, code -> code
             .aload(0)
             .aload(1)
-            .invokespecial(clazz.getSuperclass(), MethodInfo.nameInit, constructor(ObservableListType()))
+            .invokespecial(generatedClass.getSuperclass(), MethodInfo.nameInit, constructor(ObservableListType()))
             .vreturn());
     }
 
     private void emitInitChangeMethod(BytecodeEmitContext parentContext, CtMethod method) throws Exception {
-        createBehavior(parentContext, clazz, method, 2, code -> code
+        createBehavior(parentContext, generatedClass, method, 2, code -> code
             .aload(0)
             .aload(1)
-            .putfield(clazz, SOURCE_FIELD, ListChangeListenerChangeType())
+            .putfield(generatedClass, SOURCE_FIELD, ListChangeListenerChangeType())
             .vreturn());
     }
 

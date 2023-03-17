@@ -74,38 +74,38 @@ public class ListWrapperGenerator extends ClassGenerator {
 
     @Override
     public final void emitClass(BytecodeEmitContext context) throws Exception {
-        clazz = context.getNestedClasses().create(getClassName());
-        clazz.setModifiers(Modifier.PRIVATE | Modifier.FINAL);
-        clazz.addInterface(ObservableListValueType());
-        clazz.addInterface(ListChangeListenerType());
+        generatedClass = context.getNestedClasses().create(getClassName());
+        generatedClass.setModifiers(Modifier.PRIVATE | Modifier.FINAL);
+        generatedClass.addInterface(ObservableListValueType());
+        generatedClass.addInterface(ListChangeListenerType());
     }
 
     @Override
     public void emitFields(BytecodeEmitContext context) throws Exception {
-        CtField field = new CtField(context.getMarkupClass(), ROOT_REF, clazz);
+        CtField field = new CtField(context.getMarkupClass(), ROOT_REF, generatedClass);
         field.setModifiers(Modifier.PRIVATE | Modifier.FINAL);
-        clazz.addField(field);
+        generatedClass.addField(field);
 
-        field = new CtField(ObservableListType(), VALUE_FIELD, clazz);
+        field = new CtField(ObservableListType(), VALUE_FIELD, generatedClass);
         field.setModifiers(Modifier.PRIVATE | Modifier.FINAL);
-        clazz.addField(field);
+        generatedClass.addField(field);
 
         field = new CtField(context.getNestedClasses().find(ListSourceAdapterChangeGenerator.CLASS_NAME),
-                            ADAPTER_CHANGE_FIELD, clazz);
+                            ADAPTER_CHANGE_FIELD, generatedClass);
         field.setModifiers(Modifier.PRIVATE | Modifier.FINAL);
-        clazz.addField(field);
+        generatedClass.addField(field);
 
-        field = new CtField(InvalidationListenerType(), INVALIDATION_LISTENER_FIELD, clazz);
+        field = new CtField(InvalidationListenerType(), INVALIDATION_LISTENER_FIELD, generatedClass);
         field.setModifiers(Modifier.PRIVATE);
-        clazz.addField(field);
+        generatedClass.addField(field);
 
-        field = new CtField(ChangeListenerType(), CHANGE_LISTENER_FIELD, clazz);
+        field = new CtField(ChangeListenerType(), CHANGE_LISTENER_FIELD, generatedClass);
         field.setModifiers(Modifier.PRIVATE);
-        clazz.addField(field);
+        generatedClass.addField(field);
 
-        field = new CtField(ListChangeListenerType(), LIST_CHANGE_LISTENER_FIELD, clazz);
+        field = new CtField(ListChangeListenerType(), LIST_CHANGE_LISTENER_FIELD, generatedClass);
         field.setModifiers(Modifier.PRIVATE);
-        clazz.addField(field);
+        generatedClass.addField(field);
     }
 
     @Override
@@ -116,95 +116,95 @@ public class ListWrapperGenerator extends ClassGenerator {
         createListMethods(context);
         createObservableListMethods(context);
         createObservableValueMethods(context);
-        createOnChangedMethod(context, clazz);
-        createListenerMethods(context, clazz, LIST_CHANGE_LISTENER_FIELD, ListChangeListenerType());
+        createOnChangedMethod(context, generatedClass);
+        createListenerMethods(context, generatedClass, LIST_CHANGE_LISTENER_FIELD, ListChangeListenerType());
     }
 
     private void createListMethods(BytecodeEmitContext context) throws Exception {
         CtClass arrayType = new Resolver(SourceInfo.none()).resolveClass("java.lang.Object[]");
         CtClass fieldType = ObservableListType();
 
-        createFieldDelegateMethod(context, clazz, intType, VALUE_FIELD, fieldType, "size");
-        createFieldDelegateMethod(context, clazz, booleanType, VALUE_FIELD, fieldType, "isEmpty");
-        createFieldDelegateMethod(context, clazz, booleanType, VALUE_FIELD, fieldType, "contains", ObjectType());
-        createFieldDelegateMethod(context, clazz, IteratorType(), VALUE_FIELD, fieldType, "iterator");
-        createFieldDelegateMethod(context, clazz, arrayType, VALUE_FIELD, fieldType, "toArray");
-        createFieldDelegateMethod(context, clazz, arrayType, VALUE_FIELD, fieldType, "toArray", arrayType);
-        createFieldDelegateMethod(context, clazz, booleanType, VALUE_FIELD, fieldType, "add", ObjectType());
-        createFieldDelegateMethod(context, clazz, booleanType, VALUE_FIELD, fieldType, "remove", ObjectType());
-        createFieldDelegateMethod(context, clazz, booleanType, VALUE_FIELD, fieldType, "containsAll", CollectionType());
-        createFieldDelegateMethod(context, clazz, booleanType, VALUE_FIELD, fieldType, "addAll", CollectionType());
-        createFieldDelegateMethod(context, clazz, booleanType, VALUE_FIELD, fieldType, "addAll", intType, CollectionType());
-        createFieldDelegateMethod(context, clazz, booleanType, VALUE_FIELD, fieldType, "removeAll", CollectionType());
-        createFieldDelegateMethod(context, clazz, booleanType, VALUE_FIELD, fieldType, "retainAll", CollectionType());
-        createFieldDelegateMethod(context, clazz, voidType, VALUE_FIELD, fieldType, "clear");
-        createFieldDelegateMethod(context, clazz, ObjectType(), VALUE_FIELD, fieldType, "get", intType);
-        createFieldDelegateMethod(context, clazz, ObjectType(), VALUE_FIELD, fieldType, "set", intType, ObjectType());
-        createFieldDelegateMethod(context, clazz, ObjectType(), VALUE_FIELD, fieldType, "add", intType, ObjectType());
-        createFieldDelegateMethod(context, clazz, ObjectType(), VALUE_FIELD, fieldType, "remove", intType);
-        createFieldDelegateMethod(context, clazz, intType, VALUE_FIELD, fieldType, "indexOf", ObjectType());
-        createFieldDelegateMethod(context, clazz, intType, VALUE_FIELD, fieldType, "lastIndexOf", ObjectType());
-        createFieldDelegateMethod(context, clazz, ListIteratorType(), VALUE_FIELD, fieldType, "listIterator");
-        createFieldDelegateMethod(context, clazz, ListIteratorType(), VALUE_FIELD, fieldType, "listIterator", intType);
-        createFieldDelegateMethod(context, clazz, ListType(), VALUE_FIELD, fieldType, "subList", intType, intType);
-        createFieldDelegateMethod(context, clazz, booleanType, VALUE_FIELD, fieldType, "equals", ObjectType());
-        createFieldDelegateMethod(context, clazz, intType, VALUE_FIELD, fieldType, "hashCode");
-        createFieldDelegateMethod(context, clazz, intType, VALUE_FIELD, fieldType, "toString");
+        createFieldDelegateMethod(context, generatedClass, intType, VALUE_FIELD, fieldType, "size");
+        createFieldDelegateMethod(context, generatedClass, booleanType, VALUE_FIELD, fieldType, "isEmpty");
+        createFieldDelegateMethod(context, generatedClass, booleanType, VALUE_FIELD, fieldType, "contains", ObjectType());
+        createFieldDelegateMethod(context, generatedClass, IteratorType(), VALUE_FIELD, fieldType, "iterator");
+        createFieldDelegateMethod(context, generatedClass, arrayType, VALUE_FIELD, fieldType, "toArray");
+        createFieldDelegateMethod(context, generatedClass, arrayType, VALUE_FIELD, fieldType, "toArray", arrayType);
+        createFieldDelegateMethod(context, generatedClass, booleanType, VALUE_FIELD, fieldType, "add", ObjectType());
+        createFieldDelegateMethod(context, generatedClass, booleanType, VALUE_FIELD, fieldType, "remove", ObjectType());
+        createFieldDelegateMethod(context, generatedClass, booleanType, VALUE_FIELD, fieldType, "containsAll", CollectionType());
+        createFieldDelegateMethod(context, generatedClass, booleanType, VALUE_FIELD, fieldType, "addAll", CollectionType());
+        createFieldDelegateMethod(context, generatedClass, booleanType, VALUE_FIELD, fieldType, "addAll", intType, CollectionType());
+        createFieldDelegateMethod(context, generatedClass, booleanType, VALUE_FIELD, fieldType, "removeAll", CollectionType());
+        createFieldDelegateMethod(context, generatedClass, booleanType, VALUE_FIELD, fieldType, "retainAll", CollectionType());
+        createFieldDelegateMethod(context, generatedClass, voidType, VALUE_FIELD, fieldType, "clear");
+        createFieldDelegateMethod(context, generatedClass, ObjectType(), VALUE_FIELD, fieldType, "get", intType);
+        createFieldDelegateMethod(context, generatedClass, ObjectType(), VALUE_FIELD, fieldType, "set", intType, ObjectType());
+        createFieldDelegateMethod(context, generatedClass, ObjectType(), VALUE_FIELD, fieldType, "add", intType, ObjectType());
+        createFieldDelegateMethod(context, generatedClass, ObjectType(), VALUE_FIELD, fieldType, "remove", intType);
+        createFieldDelegateMethod(context, generatedClass, intType, VALUE_FIELD, fieldType, "indexOf", ObjectType());
+        createFieldDelegateMethod(context, generatedClass, intType, VALUE_FIELD, fieldType, "lastIndexOf", ObjectType());
+        createFieldDelegateMethod(context, generatedClass, ListIteratorType(), VALUE_FIELD, fieldType, "listIterator");
+        createFieldDelegateMethod(context, generatedClass, ListIteratorType(), VALUE_FIELD, fieldType, "listIterator", intType);
+        createFieldDelegateMethod(context, generatedClass, ListType(), VALUE_FIELD, fieldType, "subList", intType, intType);
+        createFieldDelegateMethod(context, generatedClass, booleanType, VALUE_FIELD, fieldType, "equals", ObjectType());
+        createFieldDelegateMethod(context, generatedClass, intType, VALUE_FIELD, fieldType, "hashCode");
+        createFieldDelegateMethod(context, generatedClass, intType, VALUE_FIELD, fieldType, "toString");
     }
 
     private void createObservableListMethods(BytecodeEmitContext context) throws Exception {
         CtClass arrayType = new Resolver(SourceInfo.none()).resolveClass("java.lang.Object[]");
         CtClass fieldType = ObservableListType();
 
-        createFieldDelegateMethod(context, clazz, booleanType, VALUE_FIELD, fieldType, "addAll", arrayType);
-        createFieldDelegateMethod(context, clazz, booleanType, VALUE_FIELD, fieldType, "setAll", arrayType);
-        createFieldDelegateMethod(context, clazz, booleanType, VALUE_FIELD, fieldType, "setAll", CollectionType());
-        createFieldDelegateMethod(context, clazz, booleanType, VALUE_FIELD, fieldType, "removeAll", arrayType);
-        createFieldDelegateMethod(context, clazz, booleanType, VALUE_FIELD, fieldType, "retainAll", arrayType);
-        createFieldDelegateMethod(context, clazz, voidType, VALUE_FIELD, fieldType, "remove", intType, intType);
+        createFieldDelegateMethod(context, generatedClass, booleanType, VALUE_FIELD, fieldType, "addAll", arrayType);
+        createFieldDelegateMethod(context, generatedClass, booleanType, VALUE_FIELD, fieldType, "setAll", arrayType);
+        createFieldDelegateMethod(context, generatedClass, booleanType, VALUE_FIELD, fieldType, "setAll", CollectionType());
+        createFieldDelegateMethod(context, generatedClass, booleanType, VALUE_FIELD, fieldType, "removeAll", arrayType);
+        createFieldDelegateMethod(context, generatedClass, booleanType, VALUE_FIELD, fieldType, "retainAll", arrayType);
+        createFieldDelegateMethod(context, generatedClass, voidType, VALUE_FIELD, fieldType, "remove", intType, intType);
     }
 
     private void createObservableValueMethods(BytecodeEmitContext context) throws Exception {
-        createListenerMethods(context, clazz, INVALIDATION_LISTENER_FIELD, InvalidationListenerType());
-        createListenerMethods(context, clazz, CHANGE_LISTENER_FIELD, ChangeListenerType());
+        createListenerMethods(context, generatedClass, INVALIDATION_LISTENER_FIELD, InvalidationListenerType());
+        createListenerMethods(context, generatedClass, CHANGE_LISTENER_FIELD, ChangeListenerType());
 
-        CtMethod method = new CtMethod(ObjectType(), "get", new CtClass[0], clazz);
+        CtMethod method = new CtMethod(ObjectType(), "get", new CtClass[0], generatedClass);
         method.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
-        clazz.addMethod(method);
-        var ctx = new BytecodeEmitContext(context, clazz, 1, -1);
-        ctx.getOutput().aload(0).getfield(clazz, VALUE_FIELD, ObservableListType()).areturn();
+        generatedClass.addMethod(method);
+        var ctx = new BytecodeEmitContext(context, generatedClass, 1, -1);
+        ctx.getOutput().aload(0).getfield(generatedClass, VALUE_FIELD, ObservableListType()).areturn();
         method.getMethodInfo().setCodeAttribute(ctx.getOutput().toCodeAttribute());
-        method.getMethodInfo().rebuildStackMap(clazz.getClassPool());
+        method.getMethodInfo().rebuildStackMap(generatedClass.getClassPool());
 
-        method = new CtMethod(ObjectType(), "getValue", new CtClass[0], clazz);
+        method = new CtMethod(ObjectType(), "getValue", new CtClass[0], generatedClass);
         method.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
-        clazz.addMethod(method);
-        ctx = new BytecodeEmitContext(context, clazz, 1, -1);
-        ctx.getOutput().aload(0).getfield(clazz, VALUE_FIELD, ObservableListType()).areturn();
+        generatedClass.addMethod(method);
+        ctx = new BytecodeEmitContext(context, generatedClass, 1, -1);
+        ctx.getOutput().aload(0).getfield(generatedClass, VALUE_FIELD, ObservableListType()).areturn();
         method.getMethodInfo().setCodeAttribute(ctx.getOutput().toCodeAttribute());
-        method.getMethodInfo().rebuildStackMap(clazz.getClassPool());
+        method.getMethodInfo().rebuildStackMap(generatedClass.getClassPool());
     }
 
     private void createConstructor(BytecodeEmitContext context) throws Exception {
-        CtConstructor constructor = new CtConstructor(new CtClass[]{context.getMarkupClass(), ListType()}, clazz);
+        CtConstructor constructor = new CtConstructor(new CtClass[]{context.getMarkupClass(), ListType()}, generatedClass);
         constructor.setModifiers(Modifier.PUBLIC);
-        clazz.addConstructor(constructor);
-        BytecodeEmitContext ctx = new BytecodeEmitContext(context, clazz, 3, -1);
+        generatedClass.addConstructor(constructor);
+        BytecodeEmitContext ctx = new BytecodeEmitContext(context, generatedClass, 3, -1);
         Bytecode code = ctx.getOutput();
         Local valueLocal = code.acquireLocal(false);
         CtClass adapterChangeType = context.getNestedClasses().find(ListSourceAdapterChangeGenerator.CLASS_NAME);
 
         code.aload(0)
-            .invokespecial(clazz.getSuperclass(), MethodInfo.nameInit, constructor())
+            .invokespecial(generatedClass.getSuperclass(), MethodInfo.nameInit, constructor())
             .aload(0)
             .aload(1)
-            .putfield(clazz, ROOT_REF, context.getMarkupClass())
+            .putfield(generatedClass, ROOT_REF, context.getMarkupClass())
             .aload(0)
             .anew(adapterChangeType)
             .dup()
             .aload(0)
             .invokespecial(adapterChangeType, MethodInfo.nameInit, constructor(ObservableListType()))
-            .putfield(clazz, ADAPTER_CHANGE_FIELD, adapterChangeType)
+            .putfield(generatedClass, ADAPTER_CHANGE_FIELD, adapterChangeType)
             .aconst_null()
             .astore(valueLocal)
             .aload(2)
@@ -239,12 +239,12 @@ public class ListWrapperGenerator extends ClassGenerator {
             )
             .aload(0)
             .aload(valueLocal)
-            .putfield(clazz, VALUE_FIELD, ObservableListType())
+            .putfield(generatedClass, VALUE_FIELD, ObservableListType())
             .vreturn()
             .releaseLocal(valueLocal);
 
         constructor.getMethodInfo().setCodeAttribute(code.toCodeAttribute());
-        constructor.getMethodInfo().rebuildStackMap(clazz.getClassPool());
+        constructor.getMethodInfo().rebuildStackMap(generatedClass.getClassPool());
     }
 
     static void createOnChangedMethod(BytecodeEmitContext context, CtClass clazz) throws Exception {

@@ -79,51 +79,51 @@ public class MapObservableValueWrapperGenerator extends ClassGenerator {
 
     @Override
     public final void emitClass(BytecodeEmitContext context) throws Exception {
-        clazz = context.getNestedClasses().create(getClassName());
-        clazz.setModifiers(Modifier.PRIVATE | Modifier.FINAL);
-        clazz.addInterface(ObservableMapValueType());
-        clazz.addInterface(MapChangeListenerType());
-        clazz.addInterface(InvalidationListenerType());
+        generatedClass = context.getNestedClasses().create(getClassName());
+        generatedClass.setModifiers(Modifier.PRIVATE | Modifier.FINAL);
+        generatedClass.addInterface(ObservableMapValueType());
+        generatedClass.addInterface(MapChangeListenerType());
+        generatedClass.addInterface(InvalidationListenerType());
     }
 
     @Override
     public void emitFields(BytecodeEmitContext context) throws Exception {
-        CtField field = new CtField(context.getMarkupClass(), ROOT_REF, clazz);
+        CtField field = new CtField(context.getMarkupClass(), ROOT_REF, generatedClass);
         field.setModifiers(Modifier.PRIVATE | Modifier.FINAL);
-        clazz.addField(field);
+        generatedClass.addField(field);
 
-        field = new CtField(ObservableValueType(), OBSERVABLE_FIELD, clazz);
+        field = new CtField(ObservableValueType(), OBSERVABLE_FIELD, generatedClass);
         field.setModifiers(Modifier.PRIVATE | Modifier.FINAL);
-        clazz.addField(field);
+        generatedClass.addField(field);
 
-        field = new CtField(WeakMapChangeListenerType(), WEAK_MAP_CHANGE_LISTENER_FIELD, clazz);
+        field = new CtField(WeakMapChangeListenerType(), WEAK_MAP_CHANGE_LISTENER_FIELD, generatedClass);
         field.setModifiers(Modifier.PRIVATE | Modifier.FINAL);
-        clazz.addField(field);
+        generatedClass.addField(field);
 
         field = new CtField(context.getNestedClasses().find(MapSourceAdapterChangeGenerator.CLASS_NAME),
-                            ADAPTER_CHANGE_FIELD, clazz);
+                            ADAPTER_CHANGE_FIELD, generatedClass);
         field.setModifiers(Modifier.PRIVATE | Modifier.FINAL);
-        clazz.addField(field);
+        generatedClass.addField(field);
 
-        field = new CtField(ObservableMapType(), VALUE_FIELD, clazz);
+        field = new CtField(ObservableMapType(), VALUE_FIELD, generatedClass);
         field.setModifiers(Modifier.PRIVATE);
-        clazz.addField(field);
+        generatedClass.addField(field);
 
-        field = new CtField(booleanType, VALID_FIELD, clazz);
+        field = new CtField(booleanType, VALID_FIELD, generatedClass);
         field.setModifiers(Modifier.PRIVATE);
-        clazz.addField(field);
+        generatedClass.addField(field);
 
-        field = new CtField(InvalidationListenerType(), INVALIDATION_LISTENER_FIELD, clazz);
+        field = new CtField(InvalidationListenerType(), INVALIDATION_LISTENER_FIELD, generatedClass);
         field.setModifiers(Modifier.PRIVATE);
-        clazz.addField(field);
+        generatedClass.addField(field);
 
-        field = new CtField(ChangeListenerType(), CHANGE_LISTENER_FIELD, clazz);
+        field = new CtField(ChangeListenerType(), CHANGE_LISTENER_FIELD, generatedClass);
         field.setModifiers(Modifier.PRIVATE);
-        clazz.addField(field);
+        generatedClass.addField(field);
 
-        field = new CtField(MapChangeListenerType(), MAP_CHANGE_LISTENER_FIELD, clazz);
+        field = new CtField(MapChangeListenerType(), MAP_CHANGE_LISTENER_FIELD, generatedClass);
         field.setModifiers(Modifier.PRIVATE);
-        clazz.addField(field);
+        generatedClass.addField(field);
     }
 
     @Override
@@ -135,10 +135,10 @@ public class MapObservableValueWrapperGenerator extends ClassGenerator {
         createGetValueMethod(context);
         createGetMethod(context);
         createInvalidatedMethod(context);
-        createOnChangedMethod(context, clazz);
-        createListenerMethods(context, clazz, INVALIDATION_LISTENER_FIELD, InvalidationListenerType());
-        createListenerMethods(context, clazz, CHANGE_LISTENER_FIELD, ChangeListenerType());
-        createListenerMethods(context, clazz, MAP_CHANGE_LISTENER_FIELD, MapChangeListenerType());
+        createOnChangedMethod(context, generatedClass);
+        createListenerMethods(context, generatedClass, INVALIDATION_LISTENER_FIELD, InvalidationListenerType());
+        createListenerMethods(context, generatedClass, CHANGE_LISTENER_FIELD, ChangeListenerType());
+        createListenerMethods(context, generatedClass, MAP_CHANGE_LISTENER_FIELD, MapChangeListenerType());
     }
 
     private void createMapMethods(BytecodeEmitContext context) throws Exception {
@@ -160,38 +160,38 @@ public class MapObservableValueWrapperGenerator extends ClassGenerator {
     }
 
     private void createGetValueMethod(BytecodeEmitContext context) throws Exception {
-        CtMethod method = new CtMethod(ObjectType(), "getValue", new CtClass[0], clazz);
+        CtMethod method = new CtMethod(ObjectType(), "getValue", new CtClass[0], generatedClass);
         method.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
-        clazz.addMethod(method);
-        var ctx = new BytecodeEmitContext(context, clazz, 1, -1);
+        generatedClass.addMethod(method);
+        var ctx = new BytecodeEmitContext(context, generatedClass, 1, -1);
         ctx.getOutput()
             .aload(0)
             .invokeinterface(ObservableObjectValueType(), "get", function(ObjectType()))
             .areturn();
         method.getMethodInfo().setCodeAttribute(ctx.getOutput().toCodeAttribute());
-        method.getMethodInfo().rebuildStackMap(clazz.getClassPool());
+        method.getMethodInfo().rebuildStackMap(generatedClass.getClassPool());
     }
 
     private void createGetMethod(BytecodeEmitContext context) throws Exception {
-        CtMethod method = new CtMethod(ObjectType(), "get", new CtClass[0], clazz);
+        CtMethod method = new CtMethod(ObjectType(), "get", new CtClass[0], generatedClass);
         method.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
-        clazz.addMethod(method);
-        var ctx = new BytecodeEmitContext(context, clazz, 1, -1);
+        generatedClass.addMethod(method);
+        var ctx = new BytecodeEmitContext(context, generatedClass, 1, -1);
         Bytecode code = ctx.getOutput();
         Local listLocal = code.acquireLocal(false);
 
         code.aload(0)
-            .getfield(clazz, VALID_FIELD, booleanType)
+            .getfield(generatedClass, VALID_FIELD, booleanType)
             .ifeq(() -> {
                 // if (this.map != null)
                 code.aload(0)
-                    .getfield(clazz, VALUE_FIELD, ObservableMapType())
+                    .getfield(generatedClass, VALUE_FIELD, ObservableMapType())
                     .ifnonnull(() -> {
                         // this.map.removeListener(weakMapChangeListener);
                         code.aload(0)
-                            .getfield(clazz, VALUE_FIELD, ObservableMapType())
+                            .getfield(generatedClass, VALUE_FIELD, ObservableMapType())
                             .aload(0)
-                            .getfield(clazz, WEAK_MAP_CHANGE_LISTENER_FIELD, WeakMapChangeListenerType())
+                            .getfield(generatedClass, WEAK_MAP_CHANGE_LISTENER_FIELD, WeakMapChangeListenerType())
                             .invokeinterface(ObservableMapType(), "removeListener",
                                              function(voidType, MapChangeListenerType()));
                     });
@@ -200,9 +200,9 @@ public class MapObservableValueWrapperGenerator extends ClassGenerator {
                 // Map map = source.getValue();
                 code.aload(0)
                     .iconst(1)
-                    .putfield(clazz, VALID_FIELD, booleanType)
+                    .putfield(generatedClass, VALID_FIELD, booleanType)
                     .aload(0)
-                    .getfield(clazz, OBSERVABLE_FIELD, ObservableValueType())
+                    .getfield(generatedClass, OBSERVABLE_FIELD, ObservableValueType())
                     .invokeinterface(ObservableValueType(), "getValue", function(ObjectType()))
                     .astore(listLocal);
 
@@ -215,11 +215,11 @@ public class MapObservableValueWrapperGenerator extends ClassGenerator {
                         .aload(0)
                         .aload(listLocal)
                         .checkcast(ObservableMapType())
-                        .putfield(clazz, VALUE_FIELD, ObservableMapType())
+                        .putfield(generatedClass, VALUE_FIELD, ObservableMapType())
                         .aload(0)
-                        .getfield(clazz, VALUE_FIELD, ObservableMapType())
+                        .getfield(generatedClass, VALUE_FIELD, ObservableMapType())
                         .aload(0)
-                        .getfield(clazz, WEAK_MAP_CHANGE_LISTENER_FIELD, WeakMapChangeListenerType())
+                        .getfield(generatedClass, WEAK_MAP_CHANGE_LISTENER_FIELD, WeakMapChangeListenerType())
                         .invokeinterface(ObservableMapType(), "addListener",
                                          function(voidType, MapChangeListenerType())),
                     /*else*/ () -> code
@@ -231,22 +231,22 @@ public class MapObservableValueWrapperGenerator extends ClassGenerator {
                             .aload(listLocal)
                             .invokestatic(FXCollectionsType(), "observableMap",
                                           function(ObservableMapType(), MapType()))
-                            .putfield(clazz, VALUE_FIELD, ObservableMapType()),
+                            .putfield(generatedClass, VALUE_FIELD, ObservableMapType()),
                         /*else*/ () -> code
                             // else this.set = null;
                             .aload(0)
                             .aconst_null()
-                            .putfield(clazz, VALUE_FIELD, ObservableMapType())
+                            .putfield(generatedClass, VALUE_FIELD, ObservableMapType())
                         )
                     );
             })
             .aload(0)
-            .getfield(clazz, VALUE_FIELD, ObservableMapType())
+            .getfield(generatedClass, VALUE_FIELD, ObservableMapType())
             .areturn()
             .releaseLocal(listLocal);
 
         method.getMethodInfo().setCodeAttribute(code.toCodeAttribute());
-        method.getMethodInfo().rebuildStackMap(clazz.getClassPool());
+        method.getMethodInfo().rebuildStackMap(generatedClass.getClassPool());
     }
 
     /**
@@ -254,10 +254,10 @@ public class MapObservableValueWrapperGenerator extends ClassGenerator {
      * i.e. when the map wrapped by the ObservableValue is replaced entirely.
      */
     private void createInvalidatedMethod(BytecodeEmitContext context) throws Exception {
-        CtMethod method = new CtMethod(voidType, "invalidated", new CtClass[] {ObservableType()}, clazz);
+        CtMethod method = new CtMethod(voidType, "invalidated", new CtClass[] {ObservableType()}, generatedClass);
         method.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
-        clazz.addMethod(method);
-        var ctx = new BytecodeEmitContext(context, clazz, 2, -1);
+        generatedClass.addMethod(method);
+        var ctx = new BytecodeEmitContext(context, generatedClass, 2, -1);
         Bytecode code = ctx.getOutput();
         Local oldValueLocal = code.acquireLocal(false);
         Local currentValueLocal = code.acquireLocal(false);
@@ -272,22 +272,22 @@ public class MapObservableValueWrapperGenerator extends ClassGenerator {
 
         // markupRef.clearStaleReferences();
         code.aload(0)
-            .getfield(clazz, ROOT_REF, context.getMarkupClass())
+            .getfield(generatedClass, ROOT_REF, context.getMarkupClass())
             .invokevirtual(context.getMarkupClass(), ReferenceTrackerGenerator.CLEAR_STALE_REFERENCES_METHOD,
                            function(voidType));
 
         // this.valid = false;
         code.aload(0)
             .iconst(0)
-            .putfield(clazz, VALID_FIELD, booleanType);
+            .putfield(generatedClass, VALID_FIELD, booleanType);
 
         // if (invalidationListener != null)
         code.aload(0)
-            .getfield(clazz, INVALIDATION_LISTENER_FIELD, InvalidationListenerType())
+            .getfield(generatedClass, INVALIDATION_LISTENER_FIELD, InvalidationListenerType())
             .ifnonnull(() -> code
                 // invalidationListener.invalidated(this);
                 .aload(0)
-                .getfield(clazz, INVALIDATION_LISTENER_FIELD, InvalidationListenerType())
+                .getfield(generatedClass, INVALIDATION_LISTENER_FIELD, InvalidationListenerType())
                 .aload(0)
                 .invokeinterface(InvalidationListenerType(), "invalidated",
                                  function(voidType, ObservableType()))
@@ -295,12 +295,12 @@ public class MapObservableValueWrapperGenerator extends ClassGenerator {
 
         // if (changeListener != null || mapChangeListener != null)
         code.aload(0)
-            .getfield(clazz, CHANGE_LISTENER_FIELD, ChangeListenerType())
+            .getfield(generatedClass, CHANGE_LISTENER_FIELD, ChangeListenerType())
             .ifnonnull(
                 () -> code.iconst(1),
                 () -> code
                     .aload(0)
-                    .getfield(clazz, MAP_CHANGE_LISTENER_FIELD, MapChangeListenerType())
+                    .getfield(generatedClass, MAP_CHANGE_LISTENER_FIELD, MapChangeListenerType())
                     .ifnonnull(
                         () -> code.iconst(1),
                         () -> code.iconst(0)))
@@ -308,7 +308,7 @@ public class MapObservableValueWrapperGenerator extends ClassGenerator {
                 // ObservableMap oldValue = this.set;
                 // ObservableMap currentValue = set.get();
                 .aload(0)
-                .getfield(clazz, VALUE_FIELD, ObservableMapType())
+                .getfield(generatedClass, VALUE_FIELD, ObservableMapType())
                 .astore(oldValueLocal)
                 .aload(0)
                 .invokeinterface(ObservableObjectValueType(), "get", function(ObjectType()))
@@ -320,11 +320,11 @@ public class MapObservableValueWrapperGenerator extends ClassGenerator {
                 .if_acmpne(() -> code
                     // if (changeListener != null)
                     .aload(0)
-                    .getfield(clazz, CHANGE_LISTENER_FIELD, ChangeListenerType())
+                    .getfield(generatedClass, CHANGE_LISTENER_FIELD, ChangeListenerType())
                     .ifnonnull(() -> code
                         // changeListener.changed(this, oldValue, currentValue);
                         .aload(0)
-                        .getfield(clazz, CHANGE_LISTENER_FIELD, ChangeListenerType())
+                        .getfield(generatedClass, CHANGE_LISTENER_FIELD, ChangeListenerType())
                         .aload(0)
                         .aload(oldValueLocal)
                         .aload(currentValueLocal)
@@ -332,7 +332,7 @@ public class MapObservableValueWrapperGenerator extends ClassGenerator {
                                          function(voidType, ObservableType(), ObjectType(), ObjectType())))
                     // if (mapChangeListener != null)
                     .aload(0)
-                    .getfield(clazz, MAP_CHANGE_LISTENER_FIELD, MapChangeListenerType())
+                    .getfield(generatedClass, MAP_CHANGE_LISTENER_FIELD, MapChangeListenerType())
                     .ifnonnull(() -> code
                         // var change = new MapAddRemoveChange(this)
                         .anew(addRemoveChangeType)
@@ -370,7 +370,7 @@ public class MapObservableValueWrapperGenerator extends ClassGenerator {
                                     .invokevirtual(addRemoveChangeType, MapAddRemoveChangeGenerator.INIT_REMOVE_METHOD_NAME,
                                                    function(voidType, ObjectType(), ObjectType()))
                                     .aload(0)
-                                    .getfield(clazz, MAP_CHANGE_LISTENER_FIELD, MapChangeListenerType())
+                                    .getfield(generatedClass, MAP_CHANGE_LISTENER_FIELD, MapChangeListenerType())
                                     .aload(addRemoveChangeLocal)
                                     .invokeinterface(MapChangeListenerType(), "onChanged",
                                                      function(voidType, MapChangeListenerChangeType()))
@@ -407,7 +407,7 @@ public class MapObservableValueWrapperGenerator extends ClassGenerator {
                                         .invokevirtual(addRemoveChangeType, MapAddRemoveChangeGenerator.INIT_ADD_METHOD_NAME,
                                                        function(voidType, ObjectType(), ObjectType()))
                                         .aload(0)
-                                        .getfield(clazz, MAP_CHANGE_LISTENER_FIELD, MapChangeListenerType())
+                                        .getfield(generatedClass, MAP_CHANGE_LISTENER_FIELD, MapChangeListenerType())
                                         .aload(addRemoveChangeLocal)
                                         .invokeinterface(MapChangeListenerType(), "onChanged",
                                                          function(voidType, MapChangeListenerChangeType()))
@@ -468,7 +468,7 @@ public class MapObservableValueWrapperGenerator extends ClassGenerator {
                                                 .invokevirtual(addRemoveChangeType, MapAddRemoveChangeGenerator.INIT_REPLACE_METHOD_NAME,
                                                                function(voidType, ObjectType(), ObjectType(), ObjectType()))
                                                 .aload(0)
-                                                .getfield(clazz, MAP_CHANGE_LISTENER_FIELD, MapChangeListenerType())
+                                                .getfield(generatedClass, MAP_CHANGE_LISTENER_FIELD, MapChangeListenerType())
                                                 .aload(addRemoveChangeLocal)
                                                 .invokeinterface(MapChangeListenerType(), "onChanged",
                                                                  function(voidType, MapChangeListenerChangeType()))
@@ -480,7 +480,7 @@ public class MapObservableValueWrapperGenerator extends ClassGenerator {
                                            .invokevirtual(addRemoveChangeType, MapAddRemoveChangeGenerator.INIT_REMOVE_METHOD_NAME,
                                                           function(voidType, ObjectType(), ObjectType()))
                                            .aload(0)
-                                           .getfield(clazz, MAP_CHANGE_LISTENER_FIELD, MapChangeListenerType())
+                                           .getfield(generatedClass, MAP_CHANGE_LISTENER_FIELD, MapChangeListenerType())
                                            .aload(addRemoveChangeLocal)
                                            .invokeinterface(MapChangeListenerType(), "onChanged",
                                                             function(voidType, MapChangeListenerChangeType()))
@@ -524,7 +524,7 @@ public class MapObservableValueWrapperGenerator extends ClassGenerator {
                                             .invokevirtual(addRemoveChangeType, MapAddRemoveChangeGenerator.INIT_ADD_METHOD_NAME,
                                                            function(voidType, ObjectType(), ObjectType()))
                                             .aload(0)
-                                            .getfield(clazz, MAP_CHANGE_LISTENER_FIELD, MapChangeListenerType())
+                                            .getfield(generatedClass, MAP_CHANGE_LISTENER_FIELD, MapChangeListenerType())
                                             .aload(addRemoveChangeLocal)
                                             .invokeinterface(MapChangeListenerType(), "onChanged",
                                                              function(voidType, MapChangeListenerChangeType()))
@@ -546,31 +546,31 @@ public class MapObservableValueWrapperGenerator extends ClassGenerator {
         code.vreturn();
 
         method.getMethodInfo().setCodeAttribute(code.toCodeAttribute());
-        method.getMethodInfo().rebuildStackMap(clazz.getClassPool());
+        method.getMethodInfo().rebuildStackMap(generatedClass.getClassPool());
     }
 
     private void createConstructor(BytecodeEmitContext context) throws Exception {
         CtConstructor constructor = new CtConstructor(
-                new CtClass[] {context.getMarkupClass(), ObservableValueType()}, clazz);
+                new CtClass[] {context.getMarkupClass(), ObservableValueType()}, generatedClass);
         constructor.setModifiers(Modifier.PUBLIC);
-        clazz.addConstructor(constructor);
-        BytecodeEmitContext ctx = new BytecodeEmitContext(context, clazz, 3, -1);
+        generatedClass.addConstructor(constructor);
+        BytecodeEmitContext ctx = new BytecodeEmitContext(context, generatedClass, 3, -1);
         CtClass adapterChangeType = context.getNestedClasses().find(MapSourceAdapterChangeGenerator.CLASS_NAME);
         Bytecode code = ctx.getOutput();
 
         // super()
         code.aload(0)
-            .invokespecial(clazz.getSuperclass(), MethodInfo.nameInit, constructor());
+            .invokespecial(generatedClass.getSuperclass(), MethodInfo.nameInit, constructor());
 
         // markupRef = $1
         code.aload(0)
             .aload(1)
-            .putfield(clazz, ROOT_REF, context.getMarkupClass());
+            .putfield(generatedClass, ROOT_REF, context.getMarkupClass());
 
         // observable = $2
         code.aload(0)
             .aload(2)
-            .putfield(clazz, OBSERVABLE_FIELD, ObservableValueType());
+            .putfield(generatedClass, OBSERVABLE_FIELD, ObservableValueType());
 
         // weakMapChangeListener = new WeakMapChangeListener(this);
         code.aload(0)
@@ -579,7 +579,7 @@ public class MapObservableValueWrapperGenerator extends ClassGenerator {
             .aload(0)
             .invokespecial(WeakMapChangeListenerType(), MethodInfo.nameInit,
                            constructor(MapChangeListenerType()))
-            .putfield(clazz, WEAK_MAP_CHANGE_LISTENER_FIELD, WeakMapChangeListenerType());
+            .putfield(generatedClass, WEAK_MAP_CHANGE_LISTENER_FIELD, WeakMapChangeListenerType());
 
         // mapAdapterChange = new MapAdapterChange(this);
         code.aload(0)
@@ -587,7 +587,7 @@ public class MapObservableValueWrapperGenerator extends ClassGenerator {
             .dup()
             .aload(0)
             .invokespecial(adapterChangeType, MethodInfo.nameInit, constructor(ObservableMapType()))
-            .putfield(clazz, ADAPTER_CHANGE_FIELD, adapterChangeType);
+            .putfield(generatedClass, ADAPTER_CHANGE_FIELD, adapterChangeType);
 
         // $1.addListener(new WeakInvalidationListener(this));
         code.aload(2)
@@ -601,7 +601,7 @@ public class MapObservableValueWrapperGenerator extends ClassGenerator {
             .vreturn();
 
         constructor.getMethodInfo().setCodeAttribute(code.toCodeAttribute());
-        constructor.getMethodInfo().rebuildStackMap(clazz.getClassPool());
+        constructor.getMethodInfo().rebuildStackMap(generatedClass.getClassPool());
     }
 
     /**
@@ -619,7 +619,7 @@ public class MapObservableValueWrapperGenerator extends ClassGenerator {
         boolean delegatesToObservableMap = delegateType.subtypeOf(ObservableMapType());
 
         createBehavior(
-            context, clazz, new CtMethod(retType, methodName, params, clazz),
+            context, generatedClass, new CtMethod(retType, methodName, params, generatedClass),
             Arrays.stream(params).mapToInt(TypeHelper::getSlots).sum() + 1,
             code -> {
                 Local listLocal = code.acquireLocal(false);

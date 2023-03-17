@@ -164,16 +164,16 @@ public class ObservableFunctionGenerator extends ClassGenerator {
 
     @Override
     public void emitClass(BytecodeEmitContext context) throws Exception {
-        clazz = context.getNestedClasses().create(getClassName());
+        generatedClass = context.getNestedClasses().create(getClassName());
 
         if (superType.jvmType().isInterface()) {
-            clazz.addInterface(superType.jvmType());
+            generatedClass.addInterface(superType.jvmType());
         } else {
-            clazz.setSuperclass(superType.jvmType());
+            generatedClass.setSuperclass(superType.jvmType());
         }
 
-        clazz.addInterface(InvalidationListenerType());
-        clazz.setModifiers(Modifier.PRIVATE | Modifier.FINAL);
+        generatedClass.addInterface(InvalidationListenerType());
+        generatedClass.setModifiers(Modifier.PRIVATE | Modifier.FINAL);
     }
 
     @Override
@@ -183,15 +183,15 @@ public class ObservableFunctionGenerator extends ClassGenerator {
         CtField field;
 
         if (storeReceiver) {
-            field = new CtField(function.getBehavior().getDeclaringClass(), mangle("receiver"), clazz);
+            field = new CtField(function.getBehavior().getDeclaringClass(), mangle("receiver"), generatedClass);
             field.setModifiers(Modifier.FINAL | Modifier.PRIVATE);
-            clazz.addField(field);
+            generatedClass.addField(field);
         }
 
         if (storeInverseReceiver) {
-            field = new CtField(inverseFunction.getBehavior().getDeclaringClass(), mangle("inverseReceiver"), clazz);
+            field = new CtField(inverseFunction.getBehavior().getDeclaringClass(), mangle("inverseReceiver"), generatedClass);
             field.setModifiers(Modifier.FINAL | Modifier.PRIVATE);
-            clazz.addField(field);
+            generatedClass.addField(field);
         }
 
         for (EmitMethodArgumentNode argument : arguments) {
@@ -204,11 +204,11 @@ public class ObservableFunctionGenerator extends ClassGenerator {
                     resolver.getObservableClass(TypeHelper.getJvmType(child), false) :
                     TypeHelper.getJvmType(child);
 
-                CtField paramField = new CtField(fieldType, mangle("param" + fieldNum), clazz);
+                CtField paramField = new CtField(fieldType, mangle("param" + fieldNum), generatedClass);
 
                 paramField.setModifiers(Modifier.PRIVATE);
                 paramFields.add(paramField);
-                clazz.addField(paramField);
+                generatedClass.addField(paramField);
 
                 if (isObservableArgument(child)) {
                     numObservables++;
@@ -219,27 +219,27 @@ public class ObservableFunctionGenerator extends ClassGenerator {
         }
 
         if (numObservables > 0) {
-            field = new CtField(InvalidationListenerType(), mangle(INVALIDATION_LISTENER_FIELD), clazz);
+            field = new CtField(InvalidationListenerType(), mangle(INVALIDATION_LISTENER_FIELD), generatedClass);
             field.setModifiers(Modifier.PRIVATE);
-            clazz.addField(field);
+            generatedClass.addField(field);
 
-            field = new CtField(ChangeListenerType(), mangle(CHANGE_LISTENER_FIELD), clazz);
+            field = new CtField(ChangeListenerType(), mangle(CHANGE_LISTENER_FIELD), generatedClass);
             field.setModifiers(Modifier.PRIVATE);
-            clazz.addField(field);
+            generatedClass.addField(field);
         }
 
-        field = new CtField(CtClass.intType, mangle(FLAGS_FIELD), clazz);
+        field = new CtField(CtClass.intType, mangle(FLAGS_FIELD), generatedClass);
         field.setModifiers(Modifier.PRIVATE);
-        clazz.addField(field);
+        generatedClass.addField(field);
 
-        field = new CtField(TypeHelper.getBoxedType(returnType), mangle(VALUE_FIELD), clazz);
+        field = new CtField(TypeHelper.getBoxedType(returnType), mangle(VALUE_FIELD), generatedClass);
         field.setModifiers(Modifier.PRIVATE);
-        clazz.addField(field);
+        generatedClass.addField(field);
 
         if (returnType.isPrimitive()) {
-            field = new CtField(returnType, mangle(PRIMITIVE_VALUE_FIELD), clazz);
+            field = new CtField(returnType, mangle(PRIMITIVE_VALUE_FIELD), generatedClass);
             field.setModifiers(Modifier.PRIVATE);
-            clazz.addField(field);
+            generatedClass.addField(field);
         }
     }
 
@@ -247,121 +247,121 @@ public class ObservableFunctionGenerator extends ClassGenerator {
     public void emitMethods(BytecodeEmitContext context) throws Exception {
         super.emitMethods(context);
 
-        clazz.addConstructor(constructor = new CtConstructor(new CtClass[] {context.getRuntimeContextClass()}, clazz));
+        generatedClass.addConstructor(constructor = new CtConstructor(new CtClass[] {context.getRuntimeContextClass()}, generatedClass));
 
         addInvalidationListenerMethod = new CtMethod(
-            CtClass.voidType, "addListener", new CtClass[] {InvalidationListenerType()}, clazz);
+            CtClass.voidType, "addListener", new CtClass[] {InvalidationListenerType()}, generatedClass);
         addInvalidationListenerMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
-        clazz.addMethod(addInvalidationListenerMethod);
+        generatedClass.addMethod(addInvalidationListenerMethod);
 
         removeInvalidationListenerMethod = new CtMethod(
-            CtClass.voidType, "removeListener", new CtClass[] {InvalidationListenerType()}, clazz);
+            CtClass.voidType, "removeListener", new CtClass[] {InvalidationListenerType()}, generatedClass);
         removeInvalidationListenerMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
-        clazz.addMethod(removeInvalidationListenerMethod);
+        generatedClass.addMethod(removeInvalidationListenerMethod);
 
         addChangeListenerMethod = new CtMethod(
-            CtClass.voidType, "addListener", new CtClass[] {ChangeListenerType()}, clazz);
+            CtClass.voidType, "addListener", new CtClass[] {ChangeListenerType()}, generatedClass);
         addChangeListenerMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
-        clazz.addMethod(addChangeListenerMethod);
+        generatedClass.addMethod(addChangeListenerMethod);
 
         removeChangeListenerMethod = new CtMethod(
-            CtClass.voidType, "removeListener", new CtClass[] {ChangeListenerType()}, clazz);
+            CtClass.voidType, "removeListener", new CtClass[] {ChangeListenerType()}, generatedClass);
         removeChangeListenerMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
-        clazz.addMethod(removeChangeListenerMethod);
+        generatedClass.addMethod(removeChangeListenerMethod);
 
-        invalidatedMethod = new CtMethod(CtClass.voidType, "invalidated", new CtClass[] {ObservableType()}, clazz);
+        invalidatedMethod = new CtMethod(CtClass.voidType, "invalidated", new CtClass[] {ObservableType()}, generatedClass);
         invalidatedMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
-        clazz.addMethod(invalidatedMethod);
+        generatedClass.addMethod(invalidatedMethod);
 
-        getValueMethod = new CtMethod(ObjectType(), "getValue", new CtClass[0], clazz);
+        getValueMethod = new CtMethod(ObjectType(), "getValue", new CtClass[0], generatedClass);
         getValueMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
-        clazz.addMethod(getValueMethod);
+        generatedClass.addMethod(getValueMethod);
 
         if (bidirectional) {
-            setValueMethod = new CtMethod(CtClass.voidType, "setValue", new CtClass[] {ObjectType()}, clazz);
+            setValueMethod = new CtMethod(CtClass.voidType, "setValue", new CtClass[] {ObjectType()}, generatedClass);
             setValueMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
-            clazz.addMethod(setValueMethod);
+            generatedClass.addMethod(setValueMethod);
         }
 
         if (returnType.isPrimitive()) {
-            getMethod = new CtMethod(returnType, "get", new CtClass[0], clazz);
+            getMethod = new CtMethod(returnType, "get", new CtClass[0], generatedClass);
             getMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
-            clazz.addMethod(getMethod);
+            generatedClass.addMethod(getMethod);
 
             if (bidirectional) {
-                setMethod = new CtMethod(CtClass.voidType, "set", new CtClass[]{returnType}, clazz);
+                setMethod = new CtMethod(CtClass.voidType, "set", new CtClass[]{returnType}, generatedClass);
                 setMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
-                clazz.addMethod(setMethod);
+                generatedClass.addMethod(setMethod);
             }
         }
 
         if (isNumeric) {
-            intValueMethod = new CtMethod(CtClass.intType, "intValue", new CtClass[0], clazz);
+            intValueMethod = new CtMethod(CtClass.intType, "intValue", new CtClass[0], generatedClass);
             intValueMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
-            clazz.addMethod(intValueMethod);
+            generatedClass.addMethod(intValueMethod);
 
-            longValueMethod = new CtMethod(CtClass.longType, "longValue", new CtClass[0], clazz);
+            longValueMethod = new CtMethod(CtClass.longType, "longValue", new CtClass[0], generatedClass);
             longValueMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
-            clazz.addMethod(longValueMethod);
+            generatedClass.addMethod(longValueMethod);
 
-            floatValueMethod = new CtMethod(CtClass.floatType, "floatValue", new CtClass[0], clazz);
+            floatValueMethod = new CtMethod(CtClass.floatType, "floatValue", new CtClass[0], generatedClass);
             floatValueMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
-            clazz.addMethod(floatValueMethod);
+            generatedClass.addMethod(floatValueMethod);
 
-            doubleValueMethod = new CtMethod(CtClass.doubleType, "doubleValue", new CtClass[0], clazz);
+            doubleValueMethod = new CtMethod(CtClass.doubleType, "doubleValue", new CtClass[0], generatedClass);
             doubleValueMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
-            clazz.addMethod(doubleValueMethod);
+            generatedClass.addMethod(doubleValueMethod);
         }
 
         validateMethod = new CtMethod(
             CtClass.voidType,
             VALIDATE_METHOD,
             returnType.isPrimitive() ? new CtClass[] {CtClass.booleanType} : new CtClass[0],
-            clazz);
+                generatedClass);
         validateMethod.setModifiers(Modifier.PRIVATE | Modifier.FINAL);
-        clazz.addMethod(validateMethod);
+        generatedClass.addMethod(validateMethod);
 
         if (numObservables > 0) {
-            connectMethod = new CtMethod(CtClass.voidType, CONNECT_METHOD, new CtClass[0], clazz);
+            connectMethod = new CtMethod(CtClass.voidType, CONNECT_METHOD, new CtClass[0], generatedClass);
             connectMethod.setModifiers(Modifier.PRIVATE | Modifier.FINAL);
-            clazz.addMethod(connectMethod);
+            generatedClass.addMethod(connectMethod);
 
-            disconnectMethod = new CtMethod(CtClass.voidType, DISCONNECT_METHOD, new CtClass[0], clazz);
+            disconnectMethod = new CtMethod(CtClass.voidType, DISCONNECT_METHOD, new CtClass[0], generatedClass);
             disconnectMethod.setModifiers(Modifier.PRIVATE | Modifier.FINAL);
-            clazz.addMethod(disconnectMethod);
+            generatedClass.addMethod(disconnectMethod);
         }
 
         if (bidirectional) {
-            bindMethod = new CtMethod(CtClass.voidType, "bind", new CtClass[] {ObservableValueType()}, clazz);
+            bindMethod = new CtMethod(CtClass.voidType, "bind", new CtClass[] {ObservableValueType()}, generatedClass);
             bindMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
 
-            unbindMethod = new CtMethod(CtClass.voidType, "unbind", new CtClass[0], clazz);
+            unbindMethod = new CtMethod(CtClass.voidType, "unbind", new CtClass[0], generatedClass);
             unbindMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
 
-            isBoundMethod = new CtMethod(CtClass.booleanType, "isBound", new CtClass[0], clazz);
+            isBoundMethod = new CtMethod(CtClass.booleanType, "isBound", new CtClass[0], generatedClass);
             isBoundMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
 
             bindBidirectionalMethod = new CtMethod(
-                CtClass.voidType, "bindBidirectional", new CtClass[] {PropertyType()}, clazz);
+                CtClass.voidType, "bindBidirectional", new CtClass[] {PropertyType()}, generatedClass);
             bindBidirectionalMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
 
             unbindBidirectionalMethod = new CtMethod(
-                CtClass.voidType, "unbindBidirectional", new CtClass[] {PropertyType()}, clazz);
+                CtClass.voidType, "unbindBidirectional", new CtClass[] {PropertyType()}, generatedClass);
             unbindBidirectionalMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
 
-            getBeanMethod = new CtMethod(ObjectType(), "getBean", new CtClass[0], clazz);
+            getBeanMethod = new CtMethod(ObjectType(), "getBean", new CtClass[0], generatedClass);
             getBeanMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
 
-            getNameMethod = new CtMethod(StringType(), "getName", new CtClass[0], clazz);
+            getNameMethod = new CtMethod(StringType(), "getName", new CtClass[0], generatedClass);
             getNameMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
 
-            clazz.addMethod(bindMethod);
-            clazz.addMethod(unbindMethod);
-            clazz.addMethod(isBoundMethod);
-            clazz.addMethod(bindBidirectionalMethod);
-            clazz.addMethod(unbindBidirectionalMethod);
-            clazz.addMethod(getBeanMethod);
-            clazz.addMethod(getNameMethod);
+            generatedClass.addMethod(bindMethod);
+            generatedClass.addMethod(unbindMethod);
+            generatedClass.addMethod(isBoundMethod);
+            generatedClass.addMethod(bindBidirectionalMethod);
+            generatedClass.addMethod(unbindBidirectionalMethod);
+            generatedClass.addMethod(getBeanMethod);
+            generatedClass.addMethod(getNameMethod);
         }
     }
 
@@ -417,11 +417,11 @@ public class ObservableFunctionGenerator extends ClassGenerator {
     }
 
     private void emitConstructor(CtConstructor constructor, BytecodeEmitContext parentContext) throws Exception {
-        BytecodeEmitContext context = new BytecodeEmitContext(parentContext, clazz, 2, 1);
+        BytecodeEmitContext context = new BytecodeEmitContext(parentContext, generatedClass, 2, 1);
         Bytecode code = context.getOutput();
 
         code.aload(0)
-            .invokespecial(clazz.getSuperclass(), MethodInfo.nameInit, constructor());
+            .invokespecial(generatedClass.getSuperclass(), MethodInfo.nameInit, constructor());
 
         if (storeReceiver) {
             code.aload(0);
@@ -430,7 +430,7 @@ public class ObservableFunctionGenerator extends ClassGenerator {
                 context.emit(emitter);
             }
 
-            code.putfield(clazz, mangle("receiver"), function.getBehavior().getDeclaringClass());
+            code.putfield(generatedClass, mangle("receiver"), function.getBehavior().getDeclaringClass());
         }
 
         if (storeInverseReceiver) {
@@ -440,7 +440,7 @@ public class ObservableFunctionGenerator extends ClassGenerator {
                 context.emit(emitter);
             }
 
-            code.putfield(clazz, mangle("inverseReceiver"), inverseFunction.getBehavior().getDeclaringClass());
+            code.putfield(generatedClass, mangle("inverseReceiver"), inverseFunction.getBehavior().getDeclaringClass());
         }
 
         int fieldIdx = 0;
@@ -454,7 +454,7 @@ public class ObservableFunctionGenerator extends ClassGenerator {
                 CtField field = paramFields.get(fieldIdx++);
                 code.aload(0);
                 context.emit(child);
-                code.putfield(clazz, field.getName(), field.getType());
+                code.putfield(generatedClass, field.getName(), field.getType());
             }
         }
 
@@ -542,7 +542,7 @@ public class ObservableFunctionGenerator extends ClassGenerator {
 
     @SuppressWarnings("ConstantConditions")
     private void emitValidateMethod(CtBehavior method, BytecodeEmitContext parentContext) throws Exception {
-        var context = new BytecodeEmitContext(parentContext, clazz, returnType.isPrimitive() ? 2 : 1, -1);
+        var context = new BytecodeEmitContext(parentContext, generatedClass, returnType.isPrimitive() ? 2 : 1, -1);
         Bytecode code = context.getOutput();
 
         Local valueLocal = code.acquireLocal(returnType);
@@ -552,7 +552,7 @@ public class ObservableFunctionGenerator extends ClassGenerator {
                 .dup();
         } else if (!Modifier.isStatic(function.getBehavior().getModifiers())) {
             code.aload(0)
-                .getfield(clazz, mangle("receiver"), function.getBehavior().getDeclaringClass());
+                .getfield(generatedClass, mangle("receiver"), function.getBehavior().getDeclaringClass());
         }
 
         int fieldIdx = 0;
@@ -585,7 +585,7 @@ public class ObservableFunctionGenerator extends ClassGenerator {
                     CtClass fieldType = field.getType();
 
                     code.aload(0)
-                        .getfield(clazz, field.getName(), fieldType);
+                        .getfield(generatedClass, field.getName(), fieldType);
 
                     if (isObservableArgument(child)) {
                         if (bidirectional) {
@@ -629,7 +629,7 @@ public class ObservableFunctionGenerator extends ClassGenerator {
             // this.pvalue = $valueLocal
             code.aload(0)
                 .ext_load(returnType, valueLocal)
-                .putfield(clazz, mangle(PRIMITIVE_VALUE_FIELD), returnType);
+                .putfield(generatedClass, mangle(PRIMITIVE_VALUE_FIELD), returnType);
 
             // if (boxValue)
             code.iload(1)
@@ -639,23 +639,23 @@ public class ObservableFunctionGenerator extends ClassGenerator {
                         .aload(0)
                         .ext_load(returnType, valueLocal)
                         .ext_box(returnType)
-                        .putfield(clazz, mangle(VALUE_FIELD), TypeHelper.getBoxedType(returnType))
+                        .putfield(generatedClass, mangle(VALUE_FIELD), TypeHelper.getBoxedType(returnType))
                         .aload(0)
                         .iconst(1) // 1 = valid, boxed
-                        .putfield(clazz, mangle(FLAGS_FIELD), CtClass.intType),
+                        .putfield(generatedClass, mangle(FLAGS_FIELD), CtClass.intType),
                     () -> code
                         .aload(0)
                         .iconst(2) // 2 = valid, unboxed
-                        .putfield(clazz, mangle(FLAGS_FIELD), CtClass.intType));
+                        .putfield(generatedClass, mangle(FLAGS_FIELD), CtClass.intType));
         } else {
             // this.value = $valueLocal
             code.aload(0)
                 .aload(valueLocal)
-                .putfield(clazz, mangle(VALUE_FIELD), TypeHelper.getBoxedType(returnType));
+                .putfield(generatedClass, mangle(VALUE_FIELD), TypeHelper.getBoxedType(returnType));
 
             code.aload(0)
                 .iconst(1) // 1 = valid, boxed
-                .putfield(clazz, mangle(FLAGS_FIELD), CtClass.intType);
+                .putfield(generatedClass, mangle(FLAGS_FIELD), CtClass.intType);
         }
 
         code.releaseLocal(valueLocal);
@@ -704,12 +704,12 @@ public class ObservableFunctionGenerator extends ClassGenerator {
 
         code.aload(0)
             .iconst(0)
-            .putfield(clazz, mangle(FLAGS_FIELD), CtClass.intType);
+            .putfield(generatedClass, mangle(FLAGS_FIELD), CtClass.intType);
 
         code.aload(0)
             .ext_load(paramType, 1)
             .ext_castconv(SourceInfo.none(), paramType, returnType)
-            .putfield(clazz, mangle(returnType.isPrimitive() ? PRIMITIVE_VALUE_FIELD : VALUE_FIELD), returnType);
+            .putfield(generatedClass, mangle(returnType.isPrimitive() ? PRIMITIVE_VALUE_FIELD : VALUE_FIELD), returnType);
 
         Local convertedValueLocal = code.acquireLocal(sourceValueType);
         int start = code.position();
@@ -725,13 +725,13 @@ public class ObservableFunctionGenerator extends ClassGenerator {
 
             if (!Modifier.isStatic(inverseFunction.getBehavior().getModifiers())) {
                 code.aload(0)
-                    .getfield(clazz, mangle("inverseReceiver"),
+                    .getfield(generatedClass, mangle("inverseReceiver"),
                               inverseFunction.getBehavior().getDeclaringClass());
             }
         }
 
         code.aload(0)
-            .getfield(clazz, mangle(returnType.isPrimitive() ? PRIMITIVE_VALUE_FIELD : VALUE_FIELD), returnType);
+            .getfield(generatedClass, mangle(returnType.isPrimitive() ? PRIMITIVE_VALUE_FIELD : VALUE_FIELD), returnType);
 
         code.ext_invoke(inverseFunction.getBehavior())
             .ext_autoconv(SourceInfo.none(), methodReturnType, sourceValueType)
@@ -740,7 +740,7 @@ public class ObservableFunctionGenerator extends ClassGenerator {
         Local sourceObservableLocal = code.acquireLocal(false);
 
         code.aload(0)
-            .getfield(clazz, paramFields.get(0).getName(), sourceObservableType)
+            .getfield(generatedClass, paramFields.get(0).getName(), sourceObservableType)
             .astore(sourceObservableLocal)
             .aload(sourceObservableLocal)
             .ifnonnull(() -> {
@@ -782,7 +782,7 @@ public class ObservableFunctionGenerator extends ClassGenerator {
 
         code.aload(0)
             .iconst(returnType.isPrimitive() ? 2 : 1)
-            .putfield(clazz, mangle(FLAGS_FIELD), CtClass.intType);
+            .putfield(generatedClass, mangle(FLAGS_FIELD), CtClass.intType);
 
         code.vreturn();
 
@@ -888,36 +888,36 @@ public class ObservableFunctionGenerator extends ClassGenerator {
         Local newValue = code.acquireLocal(false);
 
         code.aload(0)
-            .getfield(clazz, mangle(FLAGS_FIELD), CtClass.intType)
+            .getfield(generatedClass, mangle(FLAGS_FIELD), CtClass.intType)
             .ifne(() -> code
                 .aload(0)
                 .iconst(0)
-                .putfield(clazz, mangle(FLAGS_FIELD), CtClass.intType)
+                .putfield(generatedClass, mangle(FLAGS_FIELD), CtClass.intType)
                 .aload(0)
-                .getfield(clazz, mangle(CHANGE_LISTENER_FIELD), ChangeListenerType())
+                .getfield(generatedClass, mangle(CHANGE_LISTENER_FIELD), ChangeListenerType())
                 .ifnonnull(() -> {
                     if (returnType.isPrimitive()) {
                         // if (this.flags == 2)
                         code.aload(0)
-                            .getfield(clazz, mangle(FLAGS_FIELD), CtClass.intType)
+                            .getfield(generatedClass, mangle(FLAGS_FIELD), CtClass.intType)
                             .iconst(2)
                             .if_icmpeq(() -> code
                                 // this.value = this.pvalue
                                 .aload(0)
                                 .aload(0)
-                                .getfield(clazz, mangle(PRIMITIVE_VALUE_FIELD), returnType)
+                                .getfield(generatedClass, mangle(PRIMITIVE_VALUE_FIELD), returnType)
                                 .ext_box(returnType)
-                                .putfield(clazz, mangle(VALUE_FIELD), TypeHelper.getBoxedType(returnType))
+                                .putfield(generatedClass, mangle(VALUE_FIELD), TypeHelper.getBoxedType(returnType))
 
                                 // this.flags = 1
                                 .aload(0)
                                 .iconst(1)
-                                .putfield(clazz, mangle(FLAGS_FIELD), CtClass.intType));
+                                .putfield(generatedClass, mangle(FLAGS_FIELD), CtClass.intType));
                     }
 
                     // oldValue = this.value
                     code.aload(0)
-                        .getfield(clazz, mangle(VALUE_FIELD), TypeHelper.getBoxedType(returnType))
+                        .getfield(generatedClass, mangle(VALUE_FIELD), TypeHelper.getBoxedType(returnType))
                         .astore(oldValue);
 
                     // newValue = getValue()
@@ -927,7 +927,7 @@ public class ObservableFunctionGenerator extends ClassGenerator {
 
                     // this.changeListener.changed(this, oldValue, newValue)
                     code.aload(0)
-                        .getfield(clazz, mangle(CHANGE_LISTENER_FIELD), ChangeListenerType())
+                        .getfield(generatedClass, mangle(CHANGE_LISTENER_FIELD), ChangeListenerType())
                         .aload(0)
                         .aload(oldValue)
                         .aload(newValue)
@@ -935,10 +935,10 @@ public class ObservableFunctionGenerator extends ClassGenerator {
                                          function(CtClass.voidType, ObservableValueType(), ObjectType(), ObjectType()));
                 })
                 .aload(0)
-                .getfield(clazz, mangle(INVALIDATION_LISTENER_FIELD), InvalidationListenerType())
+                .getfield(generatedClass, mangle(INVALIDATION_LISTENER_FIELD), InvalidationListenerType())
                 .ifnonnull(() -> code
                     .aload(0)
-                    .getfield(clazz, mangle(INVALIDATION_LISTENER_FIELD), InvalidationListenerType())
+                    .getfield(generatedClass, mangle(INVALIDATION_LISTENER_FIELD), InvalidationListenerType())
                     .aload(0)
                     .invokeinterface(InvalidationListenerType(), "invalidated",
                                      function(CtClass.voidType, ObservableType()))))
@@ -966,7 +966,7 @@ public class ObservableFunctionGenerator extends ClassGenerator {
                     CtClass fieldType = field.getType();
 
                     code.aload(0)
-                        .getfield(clazz, field.getName(), fieldType);
+                        .getfield(generatedClass, field.getName(), fieldType);
 
                     if (bidirectional) {
                         Local local = code.acquireLocal(fieldType);
@@ -1044,7 +1044,7 @@ public class ObservableFunctionGenerator extends ClassGenerator {
         String methodSignature = function(beanIsTrue ? ObjectType() : StringType());
 
         code.aload(0)
-            .getfield(clazz, mangle("param1"), fieldType);
+            .getfield(generatedClass, mangle("param1"), fieldType);
 
         if (bidirectional) {
             Local local = code.acquireLocal(fieldType);

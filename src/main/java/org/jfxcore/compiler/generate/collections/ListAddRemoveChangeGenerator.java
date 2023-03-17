@@ -44,36 +44,36 @@ public class ListAddRemoveChangeGenerator extends ClassGenerator {
 
     @Override
     public void emitClass(BytecodeEmitContext context) throws Exception {
-        clazz = context.getNestedClasses().create(getClassName());
-        clazz.setModifiers(Modifier.PRIVATE | Modifier.FINAL);
-        clazz.setSuperclass(ListChangeListenerChangeType());
+        generatedClass = context.getNestedClasses().create(getClassName());
+        generatedClass.setModifiers(Modifier.PRIVATE | Modifier.FINAL);
+        generatedClass.setSuperclass(ListChangeListenerChangeType());
     }
 
     @Override
     public void emitFields(BytecodeEmitContext context) throws Exception {
-        CtField field = new CtField(ListType(), REMOVED_FIELD, clazz);
+        CtField field = new CtField(ListType(), REMOVED_FIELD, generatedClass);
         field.setModifiers(Modifier.PRIVATE | Modifier.FINAL);
-        clazz.addField(field);
+        generatedClass.addField(field);
 
-        field = new CtField(intType, FROM_FIELD, clazz);
+        field = new CtField(intType, FROM_FIELD, generatedClass);
         field.setModifiers(Modifier.PRIVATE | Modifier.FINAL);
-        clazz.addField(field);
+        generatedClass.addField(field);
 
-        field = new CtField(intType, TO_FIELD, clazz);
+        field = new CtField(intType, TO_FIELD, generatedClass);
         field.setModifiers(Modifier.PRIVATE | Modifier.FINAL);
-        clazz.addField(field);
+        generatedClass.addField(field);
 
-        field = new CtField(booleanType, INVALID_FIELD, clazz);
+        field = new CtField(booleanType, INVALID_FIELD, generatedClass);
         field.setModifiers(Modifier.PRIVATE);
-        clazz.addField(field);
+        generatedClass.addField(field);
     }
 
     @Override
     public void emitMethods(BytecodeEmitContext context) throws Exception {
         super.emitMethods(context);
 
-        constructor = new CtConstructor( new CtClass[] {intType, intType, ListType(), ObservableListType()}, clazz);
-        clazz.addConstructor(constructor);
+        constructor = new CtConstructor( new CtClass[] {intType, intType, ListType(), ObservableListType()}, generatedClass);
+        generatedClass.addConstructor(constructor);
     }
 
     @Override
@@ -82,9 +82,9 @@ public class ListAddRemoveChangeGenerator extends ClassGenerator {
 
         emitConstructor(context, constructor);
 
-        createBehavior(context, clazz, new CtMethod(voidType, "checkState", new CtClass[0], clazz), 1, code -> {
+        createBehavior(context, generatedClass, new CtMethod(voidType, "checkState", new CtClass[0], generatedClass), 1, code -> {
             code.aload(0)
-                .getfield(clazz, INVALID_FIELD, booleanType)
+                .getfield(generatedClass, INVALID_FIELD, booleanType)
                 .ifne(() -> {
                     code.anew(IllegalStateExceptionType())
                         .dup()
@@ -95,53 +95,53 @@ public class ListAddRemoveChangeGenerator extends ClassGenerator {
                 .vreturn();
         });
 
-        createBehavior(context, clazz, new CtMethod(intType, "getFrom", new CtClass[0], clazz), 1, code -> {
+        createBehavior(context, generatedClass, new CtMethod(intType, "getFrom", new CtClass[0], generatedClass), 1, code -> {
             code.aload(0)
-                .invokevirtual(clazz, "checkState", function(voidType))
+                .invokevirtual(generatedClass, "checkState", function(voidType))
                 .aload(0)
-                .getfield(clazz, FROM_FIELD, intType)
+                .getfield(generatedClass, FROM_FIELD, intType)
                 .ireturn();
         });
 
-        createBehavior(context, clazz, new CtMethod(intType, "getTo", new CtClass[0], clazz), 1, code -> {
+        createBehavior(context, generatedClass, new CtMethod(intType, "getTo", new CtClass[0], generatedClass), 1, code -> {
             code.aload(0)
-                .invokevirtual(clazz, "checkState", function(voidType))
+                .invokevirtual(generatedClass, "checkState", function(voidType))
                 .aload(0)
-                .getfield(clazz, TO_FIELD, intType)
+                .getfield(generatedClass, TO_FIELD, intType)
                 .ireturn();
         });
 
         CtClass intArrayType = new Resolver(SourceInfo.none()).resolveClass("int[]");
-        createBehavior(context, clazz, new CtMethod(intArrayType, "getPermutation", new CtClass[0], clazz), 1, code -> {
+        createBehavior(context, generatedClass, new CtMethod(intArrayType, "getPermutation", new CtClass[0], generatedClass), 1, code -> {
             code.aload(0)
-                .invokevirtual(clazz, "checkState", function(voidType))
+                .invokevirtual(generatedClass, "checkState", function(voidType))
                 .newarray(intType, 0)
                 .areturn();
         });
 
-        createBehavior(context, clazz, new CtMethod(ListType(), "getRemoved", new CtClass[0], clazz), 1, code -> {
+        createBehavior(context, generatedClass, new CtMethod(ListType(), "getRemoved", new CtClass[0], generatedClass), 1, code -> {
             code.aload(0)
-                .invokevirtual(clazz, "checkState", function(voidType))
+                .invokevirtual(generatedClass, "checkState", function(voidType))
                 .aload(0)
-                .getfield(clazz, REMOVED_FIELD, ListType())
+                .getfield(generatedClass, REMOVED_FIELD, ListType())
                 .areturn();
         });
 
-        createBehavior(context, clazz, new CtMethod(voidType, "reset", new CtClass[0], clazz), 1, code -> {
+        createBehavior(context, generatedClass, new CtMethod(voidType, "reset", new CtClass[0], generatedClass), 1, code -> {
             code.aload(0)
                 .iconst(1)
-                .putfield(clazz, INVALID_FIELD, booleanType)
+                .putfield(generatedClass, INVALID_FIELD, booleanType)
                 .vreturn();
         });
 
-        createBehavior(context, clazz, new CtMethod(booleanType, "next", new CtClass[0], clazz), 1, code -> {
+        createBehavior(context, generatedClass, new CtMethod(booleanType, "next", new CtClass[0], generatedClass), 1, code -> {
             code.aload(0)
-                .getfield(clazz, INVALID_FIELD, booleanType)
+                .getfield(generatedClass, INVALID_FIELD, booleanType)
                 .ifne(
                     () -> code
                         .aload(0)
                         .iconst(0)
-                        .putfield(clazz, INVALID_FIELD, booleanType)
+                        .putfield(generatedClass, INVALID_FIELD, booleanType)
                         .iconst(1),
                     () -> code
                         .iconst(0))
@@ -150,27 +150,27 @@ public class ListAddRemoveChangeGenerator extends ClassGenerator {
     }
 
     private void emitConstructor(BytecodeEmitContext parentContext, CtConstructor constructor) throws Exception {
-        var context = new BytecodeEmitContext(parentContext, clazz, 5, -1);
+        var context = new BytecodeEmitContext(parentContext, generatedClass, 5, -1);
         context.getOutput()
             .aload(0)
             .aload(4)
-            .invokespecial(clazz.getSuperclass(), MethodInfo.nameInit, constructor(ObservableListType()))
+            .invokespecial(generatedClass.getSuperclass(), MethodInfo.nameInit, constructor(ObservableListType()))
             .aload(0)
             .aload(3)
-            .putfield(clazz, REMOVED_FIELD, ListType())
+            .putfield(generatedClass, REMOVED_FIELD, ListType())
             .aload(0)
             .iload(1)
-            .putfield(clazz, FROM_FIELD, intType)
+            .putfield(generatedClass, FROM_FIELD, intType)
             .aload(0)
             .iload(2)
-            .putfield(clazz, TO_FIELD, intType)
+            .putfield(generatedClass, TO_FIELD, intType)
             .aload(0)
             .iconst(1)
-            .putfield(clazz, INVALID_FIELD, booleanType)
+            .putfield(generatedClass, INVALID_FIELD, booleanType)
             .vreturn();
 
         constructor.getMethodInfo().setCodeAttribute(context.getOutput().toCodeAttribute());
-        constructor.getMethodInfo().rebuildStackMap(clazz.getClassPool());
+        constructor.getMethodInfo().rebuildStackMap(generatedClass.getClassPool());
     }
 
 }

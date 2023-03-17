@@ -162,60 +162,60 @@ public class ReferenceTrackerGenerator implements Generator {
 
         @Override
         public void emitClass(BytecodeEmitContext context) throws Exception {
-            clazz = context.getNestedClasses().create(getClassName());
-            clazz.setModifiers(Modifier.PRIVATE | Modifier.FINAL | Modifier.STATIC);
-            clazz.setSuperclass(WeakReferenceType());
+            generatedClass = context.getNestedClasses().create(getClassName());
+            generatedClass.setModifiers(Modifier.PRIVATE | Modifier.FINAL | Modifier.STATIC);
+            generatedClass.setSuperclass(WeakReferenceType());
         }
 
         @Override
         public void emitFields(BytecodeEmitContext context) throws Exception {
-            CtField field = new CtField(ObjectType(), "$0", clazz);
+            CtField field = new CtField(ObjectType(), "$0", generatedClass);
             field.setModifiers(Modifier.PRIVATE | Modifier.FINAL);
-            clazz.addField(field);
+            generatedClass.addField(field);
 
-            field = new CtField(CtClass.intType, "$1", clazz);
+            field = new CtField(CtClass.intType, "$1", generatedClass);
             field.setModifiers(Modifier.PRIVATE | Modifier.FINAL);
-            clazz.addField(field);
+            generatedClass.addField(field);
         }
 
         @Override
         public void emitCode(BytecodeEmitContext context) throws Exception {
             super.emitCode(context);
 
-            var constructor = new CtConstructor(new CtClass[] {ObjectType(), ObjectType(), ReferenceQueueType()}, clazz);
-            createBehavior(context, clazz, constructor, 4, code -> code
+            var constructor = new CtConstructor(new CtClass[] {ObjectType(), ObjectType(), ReferenceQueueType()}, generatedClass);
+            createBehavior(context, generatedClass, constructor, 4, code -> code
                 .aload(0)
                 .aload(2)
                 .aload(3)
-                .invokespecial(clazz.getSuperclass(), MethodInfo.nameInit,
+                .invokespecial(generatedClass.getSuperclass(), MethodInfo.nameInit,
                                constructor(ObjectType(), ReferenceQueueType()))
                 .aload(0)
                 .aload(1)
-                .putfield(clazz, "$0", ObjectType())
+                .putfield(generatedClass, "$0", ObjectType())
                 .aload(0)
                 .aload(2)
                 .invokestatic("java.lang.System", "identityHashCode",
                               function(CtClass.intType, ObjectType()))
-                .putfield(clazz, "$1", CtClass.intType)
+                .putfield(generatedClass, "$1", CtClass.intType)
                 .vreturn()
             );
 
-            var method = new CtMethod(CtClass.intType, "hashCode", new CtClass[0], clazz);
-            createBehavior(context, clazz, method, 1, code -> {
+            var method = new CtMethod(CtClass.intType, "hashCode", new CtClass[0], generatedClass);
+            createBehavior(context, generatedClass, method, 1, code -> {
                 code.aload(0)
-                    .getfield(clazz, "$1", CtClass.intType)
+                    .getfield(generatedClass, "$1", CtClass.intType)
                     .ireturn();
             });
 
-            method = new CtMethod(CtClass.booleanType, "equals", new CtClass[] {ObjectType()}, clazz);
-            createBehavior(context, clazz, method, 2, code -> code
+            method = new CtMethod(CtClass.booleanType, "equals", new CtClass[] {ObjectType()}, generatedClass);
+            createBehavior(context, generatedClass, method, 2, code -> code
                 .aload(0)
                 .aload(1)
                 .if_acmpeq(() -> code
                     .iconst(1),
                 /*else*/ () -> code
                     .aload(1)
-                    .isinstanceof(clazz)
+                    .isinstanceof(generatedClass)
                     .ifeq(() -> {
                         code.iconst(0);
                     }, () -> {

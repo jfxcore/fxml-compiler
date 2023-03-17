@@ -116,102 +116,102 @@ abstract class PropertySegmentGeneratorBase extends SegmentGeneratorBase {
 
     @Override
     public void emitClass(BytecodeEmitContext context) throws Exception {
-        clazz = context.getNestedClasses().create(getClassName());
-        clazz.setModifiers(Modifier.PRIVATE | Modifier.FINAL);
-        interfaces.forEach(itf -> clazz.addInterface(itf));
-        groups[segment].setCompiledClass(clazz);
+        generatedClass = context.getNestedClasses().create(getClassName());
+        generatedClass.setModifiers(Modifier.PRIVATE | Modifier.FINAL);
+        interfaces.forEach(itf -> generatedClass.addInterface(itf));
+        groups[segment].setCompiledClass(generatedClass);
     }
 
     @Override
     public void emitMethods(BytecodeEmitContext context) throws Exception {
         super.emitMethods(context);
 
-        getValueMethod = new CtMethod(ObjectType(), "getValue", new CtClass[0], clazz);
+        getValueMethod = new CtMethod(ObjectType(), "getValue", new CtClass[0], generatedClass);
         getValueMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
 
-        setValueMethod = new CtMethod(CtClass.voidType, "setValue", new CtClass[] {ObjectType()}, clazz);
+        setValueMethod = new CtMethod(CtClass.voidType, "setValue", new CtClass[] {ObjectType()}, generatedClass);
         setValueMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
 
         addInvalidationListenerMethod = new CtMethod(
-            CtClass.voidType, "addListener", new CtClass[] {InvalidationListenerType()}, clazz);
+            CtClass.voidType, "addListener", new CtClass[] {InvalidationListenerType()}, generatedClass);
         addInvalidationListenerMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
 
         removeInvalidationListenerMethod = new CtMethod(
-            CtClass.voidType, "removeListener", new CtClass[] {InvalidationListenerType()}, clazz);
+            CtClass.voidType, "removeListener", new CtClass[] {InvalidationListenerType()}, generatedClass);
         removeInvalidationListenerMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
 
         addChangeListenerMethod = new CtMethod(
-            CtClass.voidType, "addListener", new CtClass[] {ChangeListenerType()}, clazz);
+            CtClass.voidType, "addListener", new CtClass[] {ChangeListenerType()}, generatedClass);
         addChangeListenerMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
 
         removeChangeListenerMethod = new CtMethod(
-            CtClass.voidType, "removeListener", new CtClass[] {ChangeListenerType()}, clazz);
+            CtClass.voidType, "removeListener", new CtClass[] {ChangeListenerType()}, generatedClass);
         removeChangeListenerMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
 
-        bindMethod = new CtMethod(CtClass.voidType, "bind", new CtClass[] {ObservableValueType()}, clazz);
+        bindMethod = new CtMethod(CtClass.voidType, "bind", new CtClass[] {ObservableValueType()}, generatedClass);
         bindMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
 
-        unbindMethod = new CtMethod(CtClass.voidType, "unbind", new CtClass[0], clazz);
+        unbindMethod = new CtMethod(CtClass.voidType, "unbind", new CtClass[0], generatedClass);
         unbindMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
 
-        isBoundMethod = new CtMethod(CtClass.booleanType, "isBound", new CtClass[0], clazz);
+        isBoundMethod = new CtMethod(CtClass.booleanType, "isBound", new CtClass[0], generatedClass);
         isBoundMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
 
         bindBidirectionalMethod = new CtMethod(
-            CtClass.voidType, "bindBidirectional", new CtClass[] {PropertyType()}, clazz);
+            CtClass.voidType, "bindBidirectional", new CtClass[] {PropertyType()}, generatedClass);
         bindBidirectionalMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
 
         unbindBidirectionalMethod = new CtMethod(
-            CtClass.voidType, "unbindBidirectional", new CtClass[] {PropertyType()}, clazz);
+            CtClass.voidType, "unbindBidirectional", new CtClass[] {PropertyType()}, generatedClass);
         unbindBidirectionalMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
 
-        getBeanMethod = new CtMethod(ObjectType(), "getBean", new CtClass[0], clazz);
+        getBeanMethod = new CtMethod(ObjectType(), "getBean", new CtClass[0], generatedClass);
         getBeanMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
 
-        getNameMethod = new CtMethod(StringType(), "getName", new CtClass[0], clazz);
+        getNameMethod = new CtMethod(StringType(), "getName", new CtClass[0], generatedClass);
         getNameMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
 
         if (valueClass.isPrimitive()) {
-            getMethod = new CtMethod(TypeHelper.getWidenedNumericType(valueClass), "get", new CtClass[0], clazz);
+            getMethod = new CtMethod(TypeHelper.getWidenedNumericType(valueClass), "get", new CtClass[0], generatedClass);
             getMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
-            clazz.addMethod(getMethod);
+            generatedClass.addMethod(getMethod);
 
-            setMethod = new CtMethod(CtClass.voidType, "set", new CtClass[] {valueClass}, clazz);
+            setMethod = new CtMethod(CtClass.voidType, "set", new CtClass[] {valueClass}, generatedClass);
             setMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
-            clazz.addMethod(setMethod);
+            generatedClass.addMethod(setMethod);
         }
 
         if (isNumeric) {
-            intValueMethod = new CtMethod(CtClass.intType, "intValue", new CtClass[0], clazz);
+            intValueMethod = new CtMethod(CtClass.intType, "intValue", new CtClass[0], generatedClass);
             intValueMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
-            clazz.addMethod(intValueMethod);
+            generatedClass.addMethod(intValueMethod);
 
-            longValueMethod = new CtMethod(CtClass.longType, "longValue", new CtClass[0], clazz);
+            longValueMethod = new CtMethod(CtClass.longType, "longValue", new CtClass[0], generatedClass);
             longValueMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
-            clazz.addMethod(longValueMethod);
+            generatedClass.addMethod(longValueMethod);
 
-            floatValueMethod = new CtMethod(CtClass.floatType, "floatValue", new CtClass[0], clazz);
+            floatValueMethod = new CtMethod(CtClass.floatType, "floatValue", new CtClass[0], generatedClass);
             floatValueMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
-            clazz.addMethod(floatValueMethod);
+            generatedClass.addMethod(floatValueMethod);
 
-            doubleValueMethod = new CtMethod(CtClass.doubleType, "doubleValue", new CtClass[0], clazz);
+            doubleValueMethod = new CtMethod(CtClass.doubleType, "doubleValue", new CtClass[0], generatedClass);
             doubleValueMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
-            clazz.addMethod(doubleValueMethod);
+            generatedClass.addMethod(doubleValueMethod);
         }
 
-        clazz.addMethod(getValueMethod);
-        clazz.addMethod(setValueMethod);
-        clazz.addMethod(addInvalidationListenerMethod);
-        clazz.addMethod(removeInvalidationListenerMethod);
-        clazz.addMethod(addChangeListenerMethod);
-        clazz.addMethod(removeChangeListenerMethod);
-        clazz.addMethod(bindMethod);
-        clazz.addMethod(unbindMethod);
-        clazz.addMethod(isBoundMethod);
-        clazz.addMethod(bindBidirectionalMethod);
-        clazz.addMethod(unbindBidirectionalMethod);
-        clazz.addMethod(getBeanMethod);
-        clazz.addMethod(getNameMethod);
+        generatedClass.addMethod(getValueMethod);
+        generatedClass.addMethod(setValueMethod);
+        generatedClass.addMethod(addInvalidationListenerMethod);
+        generatedClass.addMethod(removeInvalidationListenerMethod);
+        generatedClass.addMethod(addChangeListenerMethod);
+        generatedClass.addMethod(removeChangeListenerMethod);
+        generatedClass.addMethod(bindMethod);
+        generatedClass.addMethod(unbindMethod);
+        generatedClass.addMethod(isBoundMethod);
+        generatedClass.addMethod(bindBidirectionalMethod);
+        generatedClass.addMethod(unbindBidirectionalMethod);
+        generatedClass.addMethod(getBeanMethod);
+        generatedClass.addMethod(getNameMethod);
     }
 
     @Override

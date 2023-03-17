@@ -59,52 +59,52 @@ public class RuntimeContextGenerator extends ClassGenerator {
     @Override
     public void emitClass(BytecodeEmitContext context) {
         parentArrayType = getParentArrayType();
-        clazz = context.getNestedClasses().create(getClassName());
-        clazz.setModifiers(Modifier.PRIVATE | Modifier.FINAL);
+        generatedClass = context.getNestedClasses().create(getClassName());
+        generatedClass.setModifiers(Modifier.PRIVATE | Modifier.FINAL);
     }
 
     @Override
     public void emitFields(BytecodeEmitContext context) throws Exception {
-        CtField field = new CtField(parentArrayType, PARENTS_FIELD, clazz);
+        CtField field = new CtField(parentArrayType, PARENTS_FIELD, generatedClass);
         field.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
-        clazz.addField(field);
+        generatedClass.addField(field);
 
-        field = new CtField(Classes.ClassType(), TARGET_TYPE_FIELD, clazz);
+        field = new CtField(Classes.ClassType(), TARGET_TYPE_FIELD, generatedClass);
         field.setModifiers(Modifier.PUBLIC);
-        clazz.addField(field);
+        generatedClass.addField(field);
 
-        field = new CtField(CtClass.intType, INDEX_FIELD, clazz);
+        field = new CtField(CtClass.intType, INDEX_FIELD, generatedClass);
         field.setModifiers(Modifier.PRIVATE);
-        clazz.addField(field);
+        generatedClass.addField(field);
     }
 
     @Override
     public void emitMethods(BytecodeEmitContext context) throws Exception {
         super.emitMethods(context);
 
-        constructor = new CtConstructor(new CtClass[] {Classes.ObjectType(), CtClass.intType}, clazz);
-        clazz.addConstructor(constructor);
+        constructor = new CtConstructor(new CtClass[] {Classes.ObjectType(), CtClass.intType}, generatedClass);
+        generatedClass.addConstructor(constructor);
 
-        getTargetTypeMethod = new CtMethod(Classes.ClassType(), "getTargetType", new CtClass[0], clazz);
+        getTargetTypeMethod = new CtMethod(Classes.ClassType(), "getTargetType", new CtClass[0], generatedClass);
         getTargetTypeMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
-        clazz.addMethod(getTargetTypeMethod);
+        generatedClass.addMethod(getTargetTypeMethod);
 
-        getParentsMethod = new CtMethod(parentArrayType, "getParents", new CtClass[0], clazz);
+        getParentsMethod = new CtMethod(parentArrayType, "getParents", new CtClass[0], generatedClass);
         getParentsMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
-        clazz.addMethod(getParentsMethod);
+        generatedClass.addMethod(getParentsMethod);
 
-        pushParentMethod = new CtMethod(CtClass.voidType, PUSH_PARENT_METHOD, new CtClass[] {Classes.ObjectType()}, clazz);
+        pushParentMethod = new CtMethod(CtClass.voidType, PUSH_PARENT_METHOD, new CtClass[] {Classes.ObjectType()}, generatedClass);
         pushParentMethod.setModifiers(Modifier.FINAL);
-        clazz.addMethod(pushParentMethod);
+        generatedClass.addMethod(pushParentMethod);
 
-        popParentMethod = new CtMethod(CtClass.voidType, POP_PARENT_METHOD, new CtClass[0], clazz);
+        popParentMethod = new CtMethod(CtClass.voidType, POP_PARENT_METHOD, new CtClass[0], generatedClass);
         popParentMethod.setModifiers(Modifier.FINAL);
-        clazz.addMethod(popParentMethod);
+        generatedClass.addMethod(popParentMethod);
 
         if (resourceSupport) {
-            getResourceMethod = new CtMethod(Classes.URLType(), GET_RESOURCE_METHOD, new CtClass[] {Classes.StringType()}, clazz);
+            getResourceMethod = new CtMethod(Classes.URLType(), GET_RESOURCE_METHOD, new CtClass[] {Classes.StringType()}, generatedClass);
             getResourceMethod.setModifiers(Modifier.FINAL);
-            clazz.addMethod(getResourceMethod);
+            generatedClass.addMethod(getResourceMethod);
         }
     }
 
@@ -124,18 +124,18 @@ public class RuntimeContextGenerator extends ClassGenerator {
     }
 
     private void emitConstructor(BytecodeEmitContext parentContext) throws Exception {
-        BytecodeEmitContext context = new BytecodeEmitContext(parentContext, clazz, 3, -1);
+        BytecodeEmitContext context = new BytecodeEmitContext(parentContext, generatedClass, 3, -1);
         Bytecode code = context.getOutput();
 
         // this.super()
         code.aload(0)
-            .invokespecial(clazz.getSuperclass(), MethodInfo.nameInit, "()V");
+            .invokespecial(generatedClass.getSuperclass(), MethodInfo.nameInit, "()V");
 
         // this.parents = new Object[$2]
         code.aload(0)
             .iload(2)
             .newarray(Classes.ObjectType())
-            .putfield(clazz, PARENTS_FIELD, parentArrayType)
+            .putfield(generatedClass, PARENTS_FIELD, parentArrayType)
             .vreturn();
 
         constructor.getMethodInfo().setCodeAttribute(code.toCodeAttribute());
@@ -143,11 +143,11 @@ public class RuntimeContextGenerator extends ClassGenerator {
     }
 
     private void emitGetPropertyTypeMethod(BytecodeEmitContext parentContext) throws Exception {
-        BytecodeEmitContext context = new BytecodeEmitContext(parentContext, clazz, 1, -1);
+        BytecodeEmitContext context = new BytecodeEmitContext(parentContext, generatedClass, 1, -1);
         Bytecode code = context.getOutput();
 
         code.aload(0)
-            .getfield(clazz, TARGET_TYPE_FIELD, Classes.ClassType())
+            .getfield(generatedClass, TARGET_TYPE_FIELD, Classes.ClassType())
             .areturn();
 
         getTargetTypeMethod.getMethodInfo().setCodeAttribute(code.toCodeAttribute());
@@ -155,11 +155,11 @@ public class RuntimeContextGenerator extends ClassGenerator {
     }
 
     private void emitGetParentsMethod(BytecodeEmitContext parentContext) throws Exception {
-        BytecodeEmitContext context = new BytecodeEmitContext(parentContext, clazz, 1, -1);
+        BytecodeEmitContext context = new BytecodeEmitContext(parentContext, generatedClass, 1, -1);
         Bytecode code = context.getOutput();
 
         code.aload(0)
-            .getfield(clazz, PARENTS_FIELD, parentArrayType)
+            .getfield(generatedClass, PARENTS_FIELD, parentArrayType)
             .areturn();
 
         getParentsMethod.getMethodInfo().setCodeAttribute(code.toCodeAttribute());
@@ -167,18 +167,18 @@ public class RuntimeContextGenerator extends ClassGenerator {
     }
 
     private void emitPushParentMethod(BytecodeEmitContext parentContext) throws Exception {
-        BytecodeEmitContext context = new BytecodeEmitContext(parentContext, clazz, 2, -1);
+        BytecodeEmitContext context = new BytecodeEmitContext(parentContext, generatedClass, 2, -1);
         Bytecode code = context.getOutput();
 
         code.aload(0)
-            .getfield(clazz, PARENTS_FIELD, parentArrayType)
+            .getfield(generatedClass, PARENTS_FIELD, parentArrayType)
             .aload(0)
             .dup()
-            .getfield(clazz, INDEX_FIELD, CtClass.intType)
+            .getfield(generatedClass, INDEX_FIELD, CtClass.intType)
             .dup_x1()
             .iconst(1)
             .iadd()
-            .putfield(clazz, INDEX_FIELD, CtClass.intType)
+            .putfield(generatedClass, INDEX_FIELD, CtClass.intType)
             .aload(1)
             .ext_arraystore(Classes.ObjectType())
             .vreturn();
@@ -188,18 +188,18 @@ public class RuntimeContextGenerator extends ClassGenerator {
     }
 
     private void emitPopParentMethod(BytecodeEmitContext parentContext) throws Exception {
-        BytecodeEmitContext context = new BytecodeEmitContext(parentContext, clazz, 1, -1);
+        BytecodeEmitContext context = new BytecodeEmitContext(parentContext, generatedClass, 1, -1);
         Bytecode code = context.getOutput();
 
         code.aload(0)
-            .getfield(clazz, PARENTS_FIELD, parentArrayType)
+            .getfield(generatedClass, PARENTS_FIELD, parentArrayType)
             .aload(0)
             .dup()
-            .getfield(clazz, INDEX_FIELD, CtClass.intType)
+            .getfield(generatedClass, INDEX_FIELD, CtClass.intType)
             .iconst(1)
             .isub()
             .dup_x1()
-            .putfield(clazz, INDEX_FIELD, CtClass.intType)
+            .putfield(generatedClass, INDEX_FIELD, CtClass.intType)
             .aconst_null()
             .ext_arraystore(Classes.ObjectType())
             .vreturn();
@@ -210,11 +210,11 @@ public class RuntimeContextGenerator extends ClassGenerator {
 
     @SuppressWarnings("CodeBlock2Expr")
     private void emitGetResourceMethod(BytecodeEmitContext parentContext) throws Exception {
-        BytecodeEmitContext context = new BytecodeEmitContext(parentContext, clazz, 2, -1);
+        BytecodeEmitContext context = new BytecodeEmitContext(parentContext, generatedClass, 2, -1);
         Bytecode code = context.getOutput();
 
         code.aload(0)
-            .getfield(clazz, PARENTS_FIELD, parentArrayType)
+            .getfield(generatedClass, PARENTS_FIELD, parentArrayType)
             .iconst(0)
             .ext_arrayload(Classes.ParentType())
             .invokevirtual(Classes.ObjectType(), "getClass", Descriptors.function(Classes.ClassType()))

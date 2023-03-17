@@ -48,39 +48,39 @@ public class MapAddRemoveChangeGenerator extends ClassGenerator {
 
     @Override
     public void emitClass(BytecodeEmitContext context) throws Exception {
-        clazz = context.getNestedClasses().create(getClassName());
-        clazz.setModifiers(Modifier.PRIVATE | Modifier.FINAL);
-        clazz.setSuperclass(MapChangeListenerChangeType());
+        generatedClass = context.getNestedClasses().create(getClassName());
+        generatedClass.setModifiers(Modifier.PRIVATE | Modifier.FINAL);
+        generatedClass.setSuperclass(MapChangeListenerChangeType());
     }
 
     @Override
     public void emitFields(BytecodeEmitContext context) throws Exception {
-        CtField field = new CtField(ObjectType(), KEY_FIELD, clazz);
+        CtField field = new CtField(ObjectType(), KEY_FIELD, generatedClass);
         field.setModifiers(Modifier.PRIVATE);
-        clazz.addField(field);
+        generatedClass.addField(field);
 
-        field = new CtField(ObjectType(), ADDED_FIELD, clazz);
+        field = new CtField(ObjectType(), ADDED_FIELD, generatedClass);
         field.setModifiers(Modifier.PRIVATE);
-        clazz.addField(field);
+        generatedClass.addField(field);
 
-        field = new CtField(ObjectType(), REMOVED_FIELD, clazz);
+        field = new CtField(ObjectType(), REMOVED_FIELD, generatedClass);
         field.setModifiers(Modifier.PRIVATE);
-        clazz.addField(field);
+        generatedClass.addField(field);
 
-        field = new CtField(booleanType, WAS_ADDED_FIELD, clazz);
+        field = new CtField(booleanType, WAS_ADDED_FIELD, generatedClass);
         field.setModifiers(Modifier.PRIVATE);
-        clazz.addField(field);
+        generatedClass.addField(field);
 
-        field = new CtField(booleanType, WAS_REMOVED_FIELD, clazz);
+        field = new CtField(booleanType, WAS_REMOVED_FIELD, generatedClass);
         field.setModifiers(Modifier.PRIVATE);
-        clazz.addField(field);
+        generatedClass.addField(field);
     }
 
     @Override
     public void emitMethods(BytecodeEmitContext context) throws Exception {
         super.emitMethods(context);
 
-        constructor = new CtConstructor( new CtClass[] {ObservableMapType()}, clazz);
+        constructor = new CtConstructor( new CtClass[] {ObservableMapType()}, generatedClass);
     }
 
     @Override
@@ -90,109 +90,109 @@ public class MapAddRemoveChangeGenerator extends ClassGenerator {
         emitConstructor(context, constructor);
 
         createBehavior(
-            context, clazz,
-            new CtMethod(voidType, INIT_ADD_METHOD_NAME, new CtClass[] {ObjectType(), ObjectType()}, clazz),
+            context, generatedClass,
+            new CtMethod(voidType, INIT_ADD_METHOD_NAME, new CtClass[] {ObjectType(), ObjectType()}, generatedClass),
             3, code -> code
                 .aload(0)
                 .aload(1)
-                .putfield(clazz, KEY_FIELD, ObjectType())
+                .putfield(generatedClass, KEY_FIELD, ObjectType())
                 .aload(0)
                 .aload(2)
-                .putfield(clazz, ADDED_FIELD, ObjectType())
+                .putfield(generatedClass, ADDED_FIELD, ObjectType())
                 .aload(0)
                 .aconst_null()
-                .putfield(clazz, REMOVED_FIELD, ObjectType())
+                .putfield(generatedClass, REMOVED_FIELD, ObjectType())
                 .aload(0)
                 .iconst(1)
-                .putfield(clazz, WAS_ADDED_FIELD, booleanType)
+                .putfield(generatedClass, WAS_ADDED_FIELD, booleanType)
                 .aload(0)
                 .iconst(0)
-                .putfield(clazz, WAS_REMOVED_FIELD, booleanType)
+                .putfield(generatedClass, WAS_REMOVED_FIELD, booleanType)
                 .vreturn());
 
         createBehavior(
-            context, clazz,
-            new CtMethod(voidType, INIT_REMOVE_METHOD_NAME, new CtClass[] {ObjectType(), ObjectType()}, clazz),
+            context, generatedClass,
+            new CtMethod(voidType, INIT_REMOVE_METHOD_NAME, new CtClass[] {ObjectType(), ObjectType()}, generatedClass),
             3, code -> code
                 .aload(0)
                 .aload(1)
-                .putfield(clazz, KEY_FIELD, ObjectType())
+                .putfield(generatedClass, KEY_FIELD, ObjectType())
                 .aload(0)
                 .aconst_null()
-                .putfield(clazz, ADDED_FIELD, ObjectType())
+                .putfield(generatedClass, ADDED_FIELD, ObjectType())
                 .aload(0)
                 .aload(2)
-                .putfield(clazz, REMOVED_FIELD, ObjectType())
+                .putfield(generatedClass, REMOVED_FIELD, ObjectType())
                 .aload(0)
                 .iconst(0)
-                .putfield(clazz, WAS_ADDED_FIELD, booleanType)
+                .putfield(generatedClass, WAS_ADDED_FIELD, booleanType)
                 .aload(0)
                 .iconst(1)
-                .putfield(clazz, WAS_REMOVED_FIELD, booleanType)
+                .putfield(generatedClass, WAS_REMOVED_FIELD, booleanType)
                 .vreturn());
 
         createBehavior(
-            context, clazz,
-            new CtMethod(voidType, INIT_REPLACE_METHOD_NAME, new CtClass[] {ObjectType(), ObjectType(), ObjectType()}, clazz),
+            context, generatedClass,
+            new CtMethod(voidType, INIT_REPLACE_METHOD_NAME, new CtClass[] {ObjectType(), ObjectType(), ObjectType()}, generatedClass),
             4, code -> code
                 .aload(0)
                 .aload(1)
-                .putfield(clazz, KEY_FIELD, ObjectType())
+                .putfield(generatedClass, KEY_FIELD, ObjectType())
                 .aload(0)
                 .aload(2)
-                .putfield(clazz, REMOVED_FIELD, ObjectType())
+                .putfield(generatedClass, REMOVED_FIELD, ObjectType())
                 .aload(0)
                 .aload(3)
-                .putfield(clazz, ADDED_FIELD, ObjectType())
+                .putfield(generatedClass, ADDED_FIELD, ObjectType())
                 .aload(0)
                 .iconst(1)
-                .putfield(clazz, WAS_ADDED_FIELD, booleanType)
+                .putfield(generatedClass, WAS_ADDED_FIELD, booleanType)
                 .aload(0)
                 .iconst(1)
-                .putfield(clazz, WAS_REMOVED_FIELD, booleanType)
+                .putfield(generatedClass, WAS_REMOVED_FIELD, booleanType)
                 .vreturn());
 
         createBehavior(
-            context, clazz,
-            new CtMethod(booleanType, "wasAdded", new CtClass[0], clazz), 1, code -> code
+            context, generatedClass,
+            new CtMethod(booleanType, "wasAdded", new CtClass[0], generatedClass), 1, code -> code
                 .aload(0)
-                .getfield(clazz, WAS_ADDED_FIELD, booleanType)
+                .getfield(generatedClass, WAS_ADDED_FIELD, booleanType)
                 .ireturn());
 
         createBehavior(
-            context, clazz,
-            new CtMethod(booleanType, "wasRemoved", new CtClass[0], clazz), 1, code -> code
+            context, generatedClass,
+            new CtMethod(booleanType, "wasRemoved", new CtClass[0], generatedClass), 1, code -> code
                 .aload(0)
-                .getfield(clazz, WAS_REMOVED_FIELD, booleanType)
+                .getfield(generatedClass, WAS_REMOVED_FIELD, booleanType)
                 .ireturn());
 
         createBehavior(
-            context, clazz,
-            new CtMethod(ObjectType(), "getKey", new CtClass[0], clazz), 1, code -> code
+            context, generatedClass,
+            new CtMethod(ObjectType(), "getKey", new CtClass[0], generatedClass), 1, code -> code
                 .aload(0)
-                .getfield(clazz, KEY_FIELD, ObjectType())
+                .getfield(generatedClass, KEY_FIELD, ObjectType())
                 .areturn());
 
         createBehavior(
-            context, clazz,
-            new CtMethod(ObjectType(), "getValueAdded", new CtClass[0], clazz), 1, code -> code
+            context, generatedClass,
+            new CtMethod(ObjectType(), "getValueAdded", new CtClass[0], generatedClass), 1, code -> code
                 .aload(0)
-                .getfield(clazz, ADDED_FIELD, ObjectType())
+                .getfield(generatedClass, ADDED_FIELD, ObjectType())
                 .areturn());
 
         createBehavior(
-            context, clazz,
-            new CtMethod(ObjectType(), "getValueRemoved", new CtClass[0], clazz), 1, code -> code
+            context, generatedClass,
+            new CtMethod(ObjectType(), "getValueRemoved", new CtClass[0], generatedClass), 1, code -> code
                 .aload(0)
-                .getfield(clazz, REMOVED_FIELD, ObjectType())
+                .getfield(generatedClass, REMOVED_FIELD, ObjectType())
                 .areturn());
     }
 
     private void emitConstructor(BytecodeEmitContext parentContext, CtConstructor constructor) throws Exception {
-        createBehavior(parentContext, clazz, constructor, 2, code -> code
+        createBehavior(parentContext, generatedClass, constructor, 2, code -> code
             .aload(0)
             .aload(1)
-            .invokespecial(clazz.getSuperclass(), MethodInfo.nameInit, constructor(ObservableMapType()))
+            .invokespecial(generatedClass.getSuperclass(), MethodInfo.nameInit, constructor(ObservableMapType()))
             .vreturn());
     }
 

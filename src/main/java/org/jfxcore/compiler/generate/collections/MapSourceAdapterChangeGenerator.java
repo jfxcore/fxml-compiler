@@ -43,25 +43,25 @@ public class MapSourceAdapterChangeGenerator extends ClassGenerator {
 
     @Override
     public void emitClass(BytecodeEmitContext context) throws Exception {
-        clazz = context.getNestedClasses().create(getClassName());
-        clazz.setModifiers(Modifier.PRIVATE | Modifier.FINAL);
-        clazz.setSuperclass(MapChangeListenerChangeType());
+        generatedClass = context.getNestedClasses().create(getClassName());
+        generatedClass.setModifiers(Modifier.PRIVATE | Modifier.FINAL);
+        generatedClass.setSuperclass(MapChangeListenerChangeType());
     }
 
     @Override
     public void emitFields(BytecodeEmitContext context) throws Exception {
-        CtField field = new CtField(MapChangeListenerChangeType(), SOURCE_FIELD, clazz);
+        CtField field = new CtField(MapChangeListenerChangeType(), SOURCE_FIELD, generatedClass);
         field.setModifiers(Modifier.PRIVATE);
-        clazz.addField(field);
+        generatedClass.addField(field);
     }
 
     @Override
     public void emitMethods(BytecodeEmitContext context) throws Exception {
         super.emitMethods(context);
 
-        constructor = new CtConstructor(new CtClass[] {ObservableMapType()}, clazz);
+        constructor = new CtConstructor(new CtClass[] {ObservableMapType()}, generatedClass);
         initChangeMethod = new CtMethod(
-            voidType, INIT_CHANGE_METHOD_NAME, new CtClass[] {MapChangeListenerChangeType()}, clazz);
+            voidType, INIT_CHANGE_METHOD_NAME, new CtClass[] {MapChangeListenerChangeType()}, generatedClass);
     }
 
     @Override
@@ -72,27 +72,27 @@ public class MapSourceAdapterChangeGenerator extends ClassGenerator {
         emitInitChangeMethod(context, initChangeMethod);
 
         CtClass type = MapChangeListenerChangeType();
-        createFieldDelegateMethod(context, clazz, StringType(), SOURCE_FIELD, type, "toString");
-        createFieldDelegateMethod(context, clazz, booleanType, SOURCE_FIELD, type, "wasAdded");
-        createFieldDelegateMethod(context, clazz, booleanType, SOURCE_FIELD, type, "wasRemoved");
-        createFieldDelegateMethod(context, clazz, ObjectType(), SOURCE_FIELD, type, "getValueAdded");
-        createFieldDelegateMethod(context, clazz, ObjectType(), SOURCE_FIELD, type, "getValueRemoved");
-        createFieldDelegateMethod(context, clazz, ObjectType(), SOURCE_FIELD, type, "getKey");
+        createFieldDelegateMethod(context, generatedClass, StringType(), SOURCE_FIELD, type, "toString");
+        createFieldDelegateMethod(context, generatedClass, booleanType, SOURCE_FIELD, type, "wasAdded");
+        createFieldDelegateMethod(context, generatedClass, booleanType, SOURCE_FIELD, type, "wasRemoved");
+        createFieldDelegateMethod(context, generatedClass, ObjectType(), SOURCE_FIELD, type, "getValueAdded");
+        createFieldDelegateMethod(context, generatedClass, ObjectType(), SOURCE_FIELD, type, "getValueRemoved");
+        createFieldDelegateMethod(context, generatedClass, ObjectType(), SOURCE_FIELD, type, "getKey");
     }
 
     private void emitConstructor(BytecodeEmitContext parentContext, CtConstructor constructor) throws Exception {
-        createBehavior(parentContext, clazz, constructor, 2, code -> code
+        createBehavior(parentContext, generatedClass, constructor, 2, code -> code
             .aload(0)
             .aload(1)
-            .invokespecial(clazz.getSuperclass(), MethodInfo.nameInit, constructor(ObservableMapType()))
+            .invokespecial(generatedClass.getSuperclass(), MethodInfo.nameInit, constructor(ObservableMapType()))
             .vreturn());
     }
 
     private void emitInitChangeMethod(BytecodeEmitContext parentContext, CtMethod method) throws Exception {
-        createBehavior(parentContext, clazz, method, 2, code -> code
+        createBehavior(parentContext, generatedClass, method, 2, code -> code
             .aload(0)
             .aload(1)
-            .putfield(clazz, SOURCE_FIELD, MapChangeListenerChangeType())
+            .putfield(generatedClass, SOURCE_FIELD, MapChangeListenerChangeType())
             .vreturn());
     }
 

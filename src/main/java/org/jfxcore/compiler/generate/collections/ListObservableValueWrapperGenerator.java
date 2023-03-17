@@ -78,51 +78,51 @@ public class ListObservableValueWrapperGenerator extends ClassGenerator {
 
     @Override
     public final void emitClass(BytecodeEmitContext context) throws Exception {
-        clazz = context.getNestedClasses().create(getClassName());
-        clazz.setModifiers(Modifier.PRIVATE | Modifier.FINAL);
-        clazz.addInterface(ObservableListValueType());
-        clazz.addInterface(ListChangeListenerType());
-        clazz.addInterface(InvalidationListenerType());
+        generatedClass = context.getNestedClasses().create(getClassName());
+        generatedClass.setModifiers(Modifier.PRIVATE | Modifier.FINAL);
+        generatedClass.addInterface(ObservableListValueType());
+        generatedClass.addInterface(ListChangeListenerType());
+        generatedClass.addInterface(InvalidationListenerType());
     }
 
     @Override
     public void emitFields(BytecodeEmitContext context) throws Exception {
-        CtField field = new CtField(context.getMarkupClass(), ROOT_REF, clazz);
+        CtField field = new CtField(context.getMarkupClass(), ROOT_REF, generatedClass);
         field.setModifiers(Modifier.PRIVATE | Modifier.FINAL);
-        clazz.addField(field);
+        generatedClass.addField(field);
 
-        field = new CtField(ObservableValueType(), OBSERVABLE_FIELD, clazz);
+        field = new CtField(ObservableValueType(), OBSERVABLE_FIELD, generatedClass);
         field.setModifiers(Modifier.PRIVATE | Modifier.FINAL);
-        clazz.addField(field);
+        generatedClass.addField(field);
 
-        field = new CtField(WeakListChangeListenerType(), WEAK_LIST_CHANGE_LISTENER_FIELD, clazz);
+        field = new CtField(WeakListChangeListenerType(), WEAK_LIST_CHANGE_LISTENER_FIELD, generatedClass);
         field.setModifiers(Modifier.PRIVATE | Modifier.FINAL);
-        clazz.addField(field);
+        generatedClass.addField(field);
 
         field = new CtField(context.getNestedClasses().find(ListSourceAdapterChangeGenerator.CLASS_NAME),
-                            ADAPTER_CHANGE_FIELD, clazz);
+                            ADAPTER_CHANGE_FIELD, generatedClass);
         field.setModifiers(Modifier.PRIVATE | Modifier.FINAL);
-        clazz.addField(field);
+        generatedClass.addField(field);
 
-        field = new CtField(ObservableListType(), VALUE_FIELD, clazz);
+        field = new CtField(ObservableListType(), VALUE_FIELD, generatedClass);
         field.setModifiers(Modifier.PRIVATE);
-        clazz.addField(field);
+        generatedClass.addField(field);
 
-        field = new CtField(booleanType, VALID_FIELD, clazz);
+        field = new CtField(booleanType, VALID_FIELD, generatedClass);
         field.setModifiers(Modifier.PRIVATE);
-        clazz.addField(field);
+        generatedClass.addField(field);
 
-        field = new CtField(InvalidationListenerType(), INVALIDATION_LISTENER_FIELD, clazz);
+        field = new CtField(InvalidationListenerType(), INVALIDATION_LISTENER_FIELD, generatedClass);
         field.setModifiers(Modifier.PRIVATE);
-        clazz.addField(field);
+        generatedClass.addField(field);
 
-        field = new CtField(ChangeListenerType(), CHANGE_LISTENER_FIELD, clazz);
+        field = new CtField(ChangeListenerType(), CHANGE_LISTENER_FIELD, generatedClass);
         field.setModifiers(Modifier.PRIVATE);
-        clazz.addField(field);
+        generatedClass.addField(field);
 
-        field = new CtField(ListChangeListenerType(), LIST_CHANGE_LISTENER_FIELD, clazz);
+        field = new CtField(ListChangeListenerType(), LIST_CHANGE_LISTENER_FIELD, generatedClass);
         field.setModifiers(Modifier.PRIVATE);
-        clazz.addField(field);
+        generatedClass.addField(field);
     }
 
     @Override
@@ -134,7 +134,7 @@ public class ListObservableValueWrapperGenerator extends ClassGenerator {
         createObservableListMethods(context);
         createObservableValueMethods(context);
         createInvalidatedMethod(context);
-        createOnChangedMethod(context, clazz);
+        createOnChangedMethod(context, generatedClass);
     }
 
     private void createListMethods(BytecodeEmitContext context) throws Exception {
@@ -179,33 +179,33 @@ public class ListObservableValueWrapperGenerator extends ClassGenerator {
     }
 
     private void createObservableValueMethods(BytecodeEmitContext context) throws Exception {
-        createListenerMethods(context, clazz, INVALIDATION_LISTENER_FIELD, InvalidationListenerType());
-        createListenerMethods(context, clazz, CHANGE_LISTENER_FIELD, ChangeListenerType());
-        createListenerMethods(context, clazz, LIST_CHANGE_LISTENER_FIELD, ListChangeListenerType());
+        createListenerMethods(context, generatedClass, INVALIDATION_LISTENER_FIELD, InvalidationListenerType());
+        createListenerMethods(context, generatedClass, CHANGE_LISTENER_FIELD, ChangeListenerType());
+        createListenerMethods(context, generatedClass, LIST_CHANGE_LISTENER_FIELD, ListChangeListenerType());
         createGetMethod(context);
         createGetValueMethod(context);
     }
 
     private void createGetMethod(BytecodeEmitContext context) throws Exception {
-        CtMethod method = new CtMethod(ObjectType(), "get", new CtClass[0], clazz);
+        CtMethod method = new CtMethod(ObjectType(), "get", new CtClass[0], generatedClass);
         method.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
-        clazz.addMethod(method);
-        var ctx = new BytecodeEmitContext(context, clazz, 1, -1);
+        generatedClass.addMethod(method);
+        var ctx = new BytecodeEmitContext(context, generatedClass, 1, -1);
         Bytecode code = ctx.getOutput();
         Local listLocal = code.acquireLocal(false);
 
         code.aload(0)
-            .getfield(clazz, VALID_FIELD, booleanType)
+            .getfield(generatedClass, VALID_FIELD, booleanType)
             .ifeq(() -> {
                 // if (this.list != null)
                 code.aload(0)
-                    .getfield(clazz, VALUE_FIELD, ObservableListType())
+                    .getfield(generatedClass, VALUE_FIELD, ObservableListType())
                     .ifnonnull(() -> code
                         // this.list.removeListener(weakListChangeListener);
                         .aload(0)
-                        .getfield(clazz, VALUE_FIELD, ObservableListType())
+                        .getfield(generatedClass, VALUE_FIELD, ObservableListType())
                         .aload(0)
-                        .getfield(clazz, WEAK_LIST_CHANGE_LISTENER_FIELD, WeakListChangeListenerType())
+                        .getfield(generatedClass, WEAK_LIST_CHANGE_LISTENER_FIELD, WeakListChangeListenerType())
                         .invokeinterface(ObservableListType(), "removeListener",
                                          function(voidType, ListChangeListenerType()))
                     );
@@ -214,9 +214,9 @@ public class ListObservableValueWrapperGenerator extends ClassGenerator {
                 // List list = source.getValue();
                 code.aload(0)
                     .iconst(1)
-                    .putfield(clazz, VALID_FIELD, booleanType)
+                    .putfield(generatedClass, VALID_FIELD, booleanType)
                     .aload(0)
-                    .getfield(clazz, OBSERVABLE_FIELD, ObservableValueType())
+                    .getfield(generatedClass, OBSERVABLE_FIELD, ObservableValueType())
                     .invokeinterface(ObservableValueType(), "getValue", function(ObjectType()))
                     .astore(listLocal);
 
@@ -229,11 +229,11 @@ public class ListObservableValueWrapperGenerator extends ClassGenerator {
                         .aload(0)
                         .aload(listLocal)
                         .checkcast(ObservableListType())
-                        .putfield(clazz, VALUE_FIELD, ObservableListType())
+                        .putfield(generatedClass, VALUE_FIELD, ObservableListType())
                         .aload(0)
-                        .getfield(clazz, VALUE_FIELD, ObservableListType())
+                        .getfield(generatedClass, VALUE_FIELD, ObservableListType())
                         .aload(0)
-                        .getfield(clazz, WEAK_LIST_CHANGE_LISTENER_FIELD, WeakListChangeListenerType())
+                        .getfield(generatedClass, WEAK_LIST_CHANGE_LISTENER_FIELD, WeakListChangeListenerType())
                         .invokeinterface(ObservableListType(), "addListener",
                                          function(voidType, ListChangeListenerType())),
                     /*else*/ () -> code
@@ -245,44 +245,44 @@ public class ListObservableValueWrapperGenerator extends ClassGenerator {
                             .aload(listLocal)
                             .invokestatic(FXCollectionsType(), "observableList",
                                           function(ObservableListType(), ListType()))
-                            .putfield(clazz, VALUE_FIELD, ObservableListType()),
+                            .putfield(generatedClass, VALUE_FIELD, ObservableListType()),
                         /*else*/ () -> code
                             // else this.list = null;
                             .aload(0)
                             .aconst_null()
-                            .putfield(clazz, VALUE_FIELD, ObservableListType())
+                            .putfield(generatedClass, VALUE_FIELD, ObservableListType())
                         )
                     );
             })
             .aload(0)
-            .getfield(clazz, VALUE_FIELD, ObservableListType())
+            .getfield(generatedClass, VALUE_FIELD, ObservableListType())
             .areturn()
             .releaseLocal(listLocal);
 
         method.getMethodInfo().setCodeAttribute(code.toCodeAttribute());
-        method.getMethodInfo().rebuildStackMap(clazz.getClassPool());
+        method.getMethodInfo().rebuildStackMap(generatedClass.getClassPool());
     }
 
     private void createGetValueMethod(BytecodeEmitContext context) throws Exception {
-        CtMethod method = new CtMethod(ObjectType(), "getValue", new CtClass[0], clazz);
+        CtMethod method = new CtMethod(ObjectType(), "getValue", new CtClass[0], generatedClass);
         method.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
-        clazz.addMethod(method);
+        generatedClass.addMethod(method);
 
-        var ctx = new BytecodeEmitContext(context, clazz, 1, -1);
+        var ctx = new BytecodeEmitContext(context, generatedClass, 1, -1);
         ctx.getOutput()
             .aload(0)
             .invokeinterface(ObservableObjectValueType(), "get", function(ObjectType()))
             .areturn();
 
         method.getMethodInfo().setCodeAttribute(ctx.getOutput().toCodeAttribute());
-        method.getMethodInfo().rebuildStackMap(clazz.getClassPool());
+        method.getMethodInfo().rebuildStackMap(generatedClass.getClassPool());
     }
 
     private void createInvalidatedMethod(BytecodeEmitContext context) throws Exception {
-        CtMethod method = new CtMethod(voidType, "invalidated", new CtClass[]{ObservableType()}, clazz);
+        CtMethod method = new CtMethod(voidType, "invalidated", new CtClass[] {ObservableType()}, generatedClass);
         method.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
-        clazz.addMethod(method);
-        var ctx = new BytecodeEmitContext(context, clazz, 2, -1);
+        generatedClass.addMethod(method);
+        var ctx = new BytecodeEmitContext(context, generatedClass, 2, -1);
         Bytecode code = ctx.getOutput();
         Local oldValueLocal = code.acquireLocal(false);
         Local currentValueLocal = code.acquireLocal(false);
@@ -291,22 +291,22 @@ public class ListObservableValueWrapperGenerator extends ClassGenerator {
 
         // markupRef.clearStaleReferences();
         code.aload(0)
-            .getfield(clazz, ROOT_REF, context.getMarkupClass())
+            .getfield(generatedClass, ROOT_REF, context.getMarkupClass())
             .invokevirtual(context.getMarkupClass(), ReferenceTrackerGenerator.CLEAR_STALE_REFERENCES_METHOD,
                            function(voidType));
 
         // this.valid = false;
         code.aload(0)
             .iconst(0)
-            .putfield(clazz, VALID_FIELD, booleanType);
+            .putfield(generatedClass, VALID_FIELD, booleanType);
 
         // if (invalidationListener != null)
         code.aload(0)
-            .getfield(clazz, INVALIDATION_LISTENER_FIELD, InvalidationListenerType())
+            .getfield(generatedClass, INVALIDATION_LISTENER_FIELD, InvalidationListenerType())
             .ifnonnull(() -> code
                 // invalidationListener.invalidated(this);
                 .aload(0)
-                .getfield(clazz, INVALIDATION_LISTENER_FIELD, InvalidationListenerType())
+                .getfield(generatedClass, INVALIDATION_LISTENER_FIELD, InvalidationListenerType())
                 .aload(0)
                 .invokeinterface(InvalidationListenerType(), "invalidated",
                                  function(voidType, ObservableType()))
@@ -314,12 +314,12 @@ public class ListObservableValueWrapperGenerator extends ClassGenerator {
 
         // if (changeListener != null)
         code.aload(0)
-            .getfield(clazz, CHANGE_LISTENER_FIELD, ChangeListenerType())
+            .getfield(generatedClass, CHANGE_LISTENER_FIELD, ChangeListenerType())
             .ifnonnull(() -> code
                 // ObservableList oldValue = this.list;
                 // ObservableList currentValue = this.get();
                 .aload(0)
-                .getfield(clazz, VALUE_FIELD, ObservableListType())
+                .getfield(generatedClass, VALUE_FIELD, ObservableListType())
                 .astore(oldValueLocal)
                 .aload(0)
                 .invokeinterface(ObservableObjectValueType(), "get", function(ObjectType()))
@@ -331,7 +331,7 @@ public class ListObservableValueWrapperGenerator extends ClassGenerator {
                 .if_acmpne(() -> code
                     // changeListener.changed(this, oldValue, currentValue);
                     .aload(0)
-                    .getfield(clazz, CHANGE_LISTENER_FIELD, ChangeListenerType())
+                    .getfield(generatedClass, CHANGE_LISTENER_FIELD, ChangeListenerType())
                     .aload(0)
                     .aload(oldValueLocal)
                     .aload(currentValueLocal)
@@ -342,12 +342,12 @@ public class ListObservableValueWrapperGenerator extends ClassGenerator {
 
         // if (listChangeListener != null)
         code.aload(0)
-            .getfield(clazz, LIST_CHANGE_LISTENER_FIELD, ListChangeListenerType())
+            .getfield(generatedClass, LIST_CHANGE_LISTENER_FIELD, ListChangeListenerType())
             .ifnonnull(() -> code
                 // ObservableList oldValue = this.list;
                 // ObservableList currentValue = this.get();
                 .aload(0)
-                .getfield(clazz, VALUE_FIELD, ObservableListType())
+                .getfield(generatedClass, VALUE_FIELD, ObservableListType())
                 .astore(oldValueLocal)
                 .aload(0)
                 .invokeinterface(ObservableObjectValueType(), "get", function(ObjectType()))
@@ -387,7 +387,7 @@ public class ListObservableValueWrapperGenerator extends ClassGenerator {
 
                     // listChangeListener.onChanged(new AddRemoveChange(0, safeSize, safeOldValue, this));
                     code.aload(0)
-                        .getfield(clazz, LIST_CHANGE_LISTENER_FIELD, ListChangeListenerType())
+                        .getfield(generatedClass, LIST_CHANGE_LISTENER_FIELD, ListChangeListenerType())
                         .anew(changeType)
                         .dup()
                         .iconst(0)
@@ -408,31 +408,31 @@ public class ListObservableValueWrapperGenerator extends ClassGenerator {
         code.vreturn();
 
         method.getMethodInfo().setCodeAttribute(code.toCodeAttribute());
-        method.getMethodInfo().rebuildStackMap(clazz.getClassPool());
+        method.getMethodInfo().rebuildStackMap(generatedClass.getClassPool());
     }
 
     private void createConstructor(BytecodeEmitContext context) throws Exception {
         CtConstructor constructor = new CtConstructor(
-                new CtClass[]{context.getMarkupClass(), ObservableValueType()}, clazz);
+            new CtClass[] {context.getMarkupClass(), ObservableValueType()}, generatedClass);
         constructor.setModifiers(Modifier.PUBLIC);
-        clazz.addConstructor(constructor);
-        BytecodeEmitContext ctx = new BytecodeEmitContext(context, clazz, 3, -1);
+        generatedClass.addConstructor(constructor);
+        BytecodeEmitContext ctx = new BytecodeEmitContext(context, generatedClass, 3, -1);
         CtClass adapterChangeType = context.getNestedClasses().find(ListSourceAdapterChangeGenerator.CLASS_NAME);
         Bytecode code = ctx.getOutput();
 
         // super()
         code.aload(0)
-            .invokespecial(clazz.getSuperclass(), MethodInfo.nameInit, constructor());
+            .invokespecial(generatedClass.getSuperclass(), MethodInfo.nameInit, constructor());
 
         // markupRef = $1
         code.aload(0)
             .aload(1)
-            .putfield(clazz, ROOT_REF, context.getMarkupClass());
+            .putfield(generatedClass, ROOT_REF, context.getMarkupClass());
 
         // observable = $2
         code.aload(0)
             .aload(2)
-            .putfield(clazz, OBSERVABLE_FIELD, ObservableValueType());
+            .putfield(generatedClass, OBSERVABLE_FIELD, ObservableValueType());
 
         // weakListChangeListener = new WeakListChangeListener(this);
         code.aload(0)
@@ -441,14 +441,14 @@ public class ListObservableValueWrapperGenerator extends ClassGenerator {
             .aload(0)
             .invokespecial(WeakListChangeListenerType(), MethodInfo.nameInit,
                            constructor(ListChangeListenerType()))
-            .putfield(clazz, WEAK_LIST_CHANGE_LISTENER_FIELD, WeakListChangeListenerType());
+            .putfield(generatedClass, WEAK_LIST_CHANGE_LISTENER_FIELD, WeakListChangeListenerType());
 
         code.aload(0)
             .anew(adapterChangeType)
             .dup()
             .aload(0)
             .invokespecial(adapterChangeType, MethodInfo.nameInit, constructor(ObservableListType()))
-            .putfield(clazz, ADAPTER_CHANGE_FIELD, adapterChangeType);
+            .putfield(generatedClass, ADAPTER_CHANGE_FIELD, adapterChangeType);
 
         // $1.addListener(new WeakInvalidationListener(this));
         code.aload(2)
@@ -461,7 +461,7 @@ public class ListObservableValueWrapperGenerator extends ClassGenerator {
             .vreturn();
 
         constructor.getMethodInfo().setCodeAttribute(code.toCodeAttribute());
-        constructor.getMethodInfo().rebuildStackMap(clazz.getClassPool());
+        constructor.getMethodInfo().rebuildStackMap(generatedClass.getClassPool());
     }
 
     /**
@@ -479,7 +479,7 @@ public class ListObservableValueWrapperGenerator extends ClassGenerator {
         boolean delegatesToObservableList = delegateType.subtypeOf(ObservableListType());
 
         createBehavior(
-            context, clazz, new CtMethod(retType, methodName, params, clazz),
+            context, generatedClass, new CtMethod(retType, methodName, params, generatedClass),
             Arrays.stream(params).mapToInt(TypeHelper::getSlots).sum() + 1,
             code -> {
                 Local listLocal = code.acquireLocal(false);

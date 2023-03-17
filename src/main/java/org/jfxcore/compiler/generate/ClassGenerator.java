@@ -17,7 +17,7 @@ import java.util.List;
 
 public abstract class ClassGenerator implements Generator {
 
-    protected CtClass clazz;
+    protected CtClass generatedClass;
 
     private CtMethod forceInitMethod;
 
@@ -44,17 +44,17 @@ public abstract class ClassGenerator implements Generator {
 
     @Override
     public void emitMethods(BytecodeEmitContext context) throws Exception {
-        forceInitMethod = new CtMethod(CtClass.voidType, "forceInit", new CtClass[0], clazz);
+        forceInitMethod = new CtMethod(CtClass.voidType, "forceInit", new CtClass[0], generatedClass);
         forceInitMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL | Modifier.STATIC);
-        clazz.addMethod(forceInitMethod);
+        generatedClass.addMethod(forceInitMethod);
     }
 
     @Override
     public void emitCode(BytecodeEmitContext context) throws Exception {
-        Bytecode code = new Bytecode(clazz, 0);
+        Bytecode code = new Bytecode(generatedClass, 0);
         code.vreturn();
         forceInitMethod.getMethodInfo().setCodeAttribute(code.toCodeAttribute());
-        forceInitMethod.getMethodInfo().rebuildStackMap(clazz.getClassPool());
+        forceInitMethod.getMethodInfo().rebuildStackMap(generatedClass.getClassPool());
     }
 
     public static CtClass emit(BytecodeEmitContext context, ClassGenerator generator) {

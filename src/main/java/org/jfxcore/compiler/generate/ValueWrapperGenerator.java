@@ -102,30 +102,30 @@ public abstract class ValueWrapperGenerator extends ClassGenerator {
 
     @Override
     public void emitClass(BytecodeEmitContext context) {
-        clazz = context.getNestedClasses().create(getClassName());
-        clazz.setModifiers(Modifier.PRIVATE | Modifier.FINAL);
-        clazz.addInterface(observableType.jvmType());
+        generatedClass = context.getNestedClasses().create(getClassName());
+        generatedClass.setModifiers(Modifier.PRIVATE | Modifier.FINAL);
+        generatedClass.addInterface(observableType.jvmType());
     }
 
     @Override
     public void emitFields(BytecodeEmitContext context) throws Exception {
-        CtField field = new CtField(boxedType, BOXED_FIELD, clazz);
+        CtField field = new CtField(boxedType, BOXED_FIELD, generatedClass);
         field.setModifiers(Modifier.PRIVATE | Modifier.FINAL);
-        clazz.addField(field);
+        generatedClass.addField(field);
 
         if (primitiveType != null) {
-            field = new CtField(primitiveType, PRIMITIVE_FIELD, clazz);
+            field = new CtField(primitiveType, PRIMITIVE_FIELD, generatedClass);
             field.setModifiers(Modifier.PRIVATE | Modifier.FINAL);
-            clazz.addField(field);
+            generatedClass.addField(field);
         }
 
-        field = new CtField(InvalidationListenerType(), INVALIDATION_LISTENER_FIELD, clazz);
+        field = new CtField(InvalidationListenerType(), INVALIDATION_LISTENER_FIELD, generatedClass);
         field.setModifiers(Modifier.PRIVATE);
-        clazz.addField(field);
+        generatedClass.addField(field);
 
-        field = new CtField(ChangeListenerType(), CHANGE_LISTENER_FIELD, clazz);
+        field = new CtField(ChangeListenerType(), CHANGE_LISTENER_FIELD, generatedClass);
         field.setModifiers(Modifier.PRIVATE);
-        clazz.addField(field);
+        generatedClass.addField(field);
     }
 
     @Override
@@ -133,40 +133,40 @@ public abstract class ValueWrapperGenerator extends ClassGenerator {
         super.emitMethods(context);
 
         if (primitiveType != null) {
-            primitiveConstructor = new CtConstructor(new CtClass[]{primitiveType}, clazz);
-            clazz.addConstructor(primitiveConstructor);
+            primitiveConstructor = new CtConstructor(new CtClass[]{primitiveType}, generatedClass);
+            generatedClass.addConstructor(primitiveConstructor);
         }
 
-        boxedConstructor = new CtConstructor(new CtClass[] {boxedType}, clazz);
-        clazz.addConstructor(boxedConstructor);
+        boxedConstructor = new CtConstructor(new CtClass[] {boxedType}, generatedClass);
+        generatedClass.addConstructor(boxedConstructor);
 
-        getMethod = new CtMethod(primitiveType != null ? primitiveType : boxedType, "get", new CtClass[0], clazz);
+        getMethod = new CtMethod(primitiveType != null ? primitiveType : boxedType, "get", new CtClass[0], generatedClass);
         getMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
-        clazz.addMethod(getMethod);
+        generatedClass.addMethod(getMethod);
 
-        getValueMethod = new CtMethod(boxedType, "getValue", new CtClass[0], clazz);
+        getValueMethod = new CtMethod(boxedType, "getValue", new CtClass[0], generatedClass);
         getValueMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
-        clazz.addMethod(getValueMethod);
+        generatedClass.addMethod(getValueMethod);
 
-        createListenerMethods(context, clazz, INVALIDATION_LISTENER_FIELD, InvalidationListenerType());
-        createListenerMethods(context, clazz, CHANGE_LISTENER_FIELD, ChangeListenerType());
+        createListenerMethods(context, generatedClass, INVALIDATION_LISTENER_FIELD, InvalidationListenerType());
+        createListenerMethods(context, generatedClass, CHANGE_LISTENER_FIELD, ChangeListenerType());
 
         if (primitiveType != null && TypeHelper.isNumericPrimitive(primitiveType)) {
-            intValueMethod = new CtMethod(CtClass.intType, "intValue", new CtClass[0], clazz);
+            intValueMethod = new CtMethod(CtClass.intType, "intValue", new CtClass[0], generatedClass);
             intValueMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
-            clazz.addMethod(intValueMethod);
+            generatedClass.addMethod(intValueMethod);
 
-            longValueMethod = new CtMethod(CtClass.longType, "longValue", new CtClass[0], clazz);
+            longValueMethod = new CtMethod(CtClass.longType, "longValue", new CtClass[0], generatedClass);
             longValueMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
-            clazz.addMethod(longValueMethod);
+            generatedClass.addMethod(longValueMethod);
 
-            floatValueMethod = new CtMethod(CtClass.floatType, "floatValue", new CtClass[0], clazz);
+            floatValueMethod = new CtMethod(CtClass.floatType, "floatValue", new CtClass[0], generatedClass);
             floatValueMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
-            clazz.addMethod(floatValueMethod);
+            generatedClass.addMethod(floatValueMethod);
 
-            doubleValueMethod = new CtMethod(CtClass.doubleType, "doubleValue", new CtClass[0], clazz);
+            doubleValueMethod = new CtMethod(CtClass.doubleType, "doubleValue", new CtClass[0], generatedClass);
             doubleValueMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
-            clazz.addMethod(doubleValueMethod);
+            generatedClass.addMethod(doubleValueMethod);
         }
     }
 
@@ -189,112 +189,112 @@ public abstract class ValueWrapperGenerator extends ClassGenerator {
     }
 
     private void emitPrimitiveConstructor(BytecodeEmitContext parentContext, CtConstructor constructor) throws Exception {
-        var context = new BytecodeEmitContext(parentContext, clazz, TypeHelper.getSlots(primitiveType) + 1, -1);
+        var context = new BytecodeEmitContext(parentContext, generatedClass, TypeHelper.getSlots(primitiveType) + 1, -1);
         Bytecode code = context.getOutput();
 
         code.aload(0)
-            .invokespecial(clazz.getSuperclass(), MethodInfo.nameInit, Descriptors.constructor())
+            .invokespecial(generatedClass.getSuperclass(), MethodInfo.nameInit, Descriptors.constructor())
             .aload(0)
             .ext_load(primitiveType, 1)
-            .putfield(clazz, PRIMITIVE_FIELD, primitiveType)
+            .putfield(generatedClass, PRIMITIVE_FIELD, primitiveType)
             .aload(0)
             .ext_load(primitiveType, 1)
             .ext_autoconv(SourceInfo.none(), primitiveType, boxedType)
-            .putfield(clazz, BOXED_FIELD, boxedType)
+            .putfield(generatedClass, BOXED_FIELD, boxedType)
             .vreturn();
 
         constructor.getMethodInfo().setCodeAttribute(code.toCodeAttribute());
-        constructor.getMethodInfo().rebuildStackMap(clazz.getClassPool());
+        constructor.getMethodInfo().rebuildStackMap(generatedClass.getClassPool());
     }
 
     private void emitBoxedConstructor(BytecodeEmitContext parentContext, CtConstructor constructor) throws Exception {
-        var context = new BytecodeEmitContext(parentContext, clazz, 2, -1);
+        var context = new BytecodeEmitContext(parentContext, generatedClass, 2, -1);
         Bytecode code = context.getOutput();
 
         code.aload(0)
-            .invokespecial(clazz.getSuperclass(), MethodInfo.nameInit, Descriptors.constructor())
+            .invokespecial(generatedClass.getSuperclass(), MethodInfo.nameInit, Descriptors.constructor())
             .aload(0)
             .ext_load(boxedType, 1)
-            .putfield(clazz, BOXED_FIELD, boxedType);
+            .putfield(generatedClass, BOXED_FIELD, boxedType);
 
         if (primitiveType != null) {
             code.aload(0)
                 .aload(1)
                 .ext_autoconv(SourceInfo.none(), boxedType, primitiveType)
-                .putfield(clazz, PRIMITIVE_FIELD, primitiveType);
+                .putfield(generatedClass, PRIMITIVE_FIELD, primitiveType);
         }
 
         code.vreturn();
 
         constructor.getMethodInfo().setCodeAttribute(code.toCodeAttribute());
-        constructor.getMethodInfo().rebuildStackMap(clazz.getClassPool());
+        constructor.getMethodInfo().rebuildStackMap(generatedClass.getClassPool());
     }
 
     private void emitGetMethod(BytecodeEmitContext parentContext, CtMethod method) throws Exception {
-        var context = new BytecodeEmitContext(parentContext, clazz, 1, -1);
+        var context = new BytecodeEmitContext(parentContext, generatedClass, 1, -1);
         CtClass type = primitiveType != null ? primitiveType : boxedType;
         Bytecode code = context.getOutput();
 
         code.aload(0)
-            .getfield(clazz, primitiveType != null ? PRIMITIVE_FIELD : BOXED_FIELD, type)
+            .getfield(generatedClass, primitiveType != null ? PRIMITIVE_FIELD : BOXED_FIELD, type)
             .ext_return(type);
 
         method.getMethodInfo().setCodeAttribute(code.toCodeAttribute());
-        method.getMethodInfo().rebuildStackMap(clazz.getClassPool());
+        method.getMethodInfo().rebuildStackMap(generatedClass.getClassPool());
     }
 
     private void emitGetValueMethod(BytecodeEmitContext parentContext, CtMethod method) throws Exception {
-        var context = new BytecodeEmitContext(parentContext, clazz, 1, -1);
+        var context = new BytecodeEmitContext(parentContext, generatedClass, 1, -1);
         Bytecode code = context.getOutput();
 
         code.aload(0)
-            .getfield(clazz, BOXED_FIELD, boxedType)
+            .getfield(generatedClass, BOXED_FIELD, boxedType)
             .ext_return(boxedType);
 
         method.getMethodInfo().setCodeAttribute(code.toCodeAttribute());
-        method.getMethodInfo().rebuildStackMap(clazz.getClassPool());
+        method.getMethodInfo().rebuildStackMap(generatedClass.getClassPool());
     }
 
     private void emitConversionMethods(BytecodeEmitContext parentContext) throws Exception {
-        var context = new BytecodeEmitContext(parentContext, clazz, 2, -1);
+        var context = new BytecodeEmitContext(parentContext, generatedClass, 2, -1);
         context.getOutput()
             .aload(0)
-            .getfield(clazz, PRIMITIVE_FIELD, primitiveType)
+            .getfield(generatedClass, PRIMITIVE_FIELD, primitiveType)
             .ext_autoconv(SourceInfo.none(), primitiveType, CtClass.intType)
             .ireturn();
 
         intValueMethod.getMethodInfo().setCodeAttribute(context.getOutput().toCodeAttribute());
-        intValueMethod.getMethodInfo().rebuildStackMap(clazz.getClassPool());
+        intValueMethod.getMethodInfo().rebuildStackMap(generatedClass.getClassPool());
 
-        context = new BytecodeEmitContext(parentContext, clazz, 2, -1);
+        context = new BytecodeEmitContext(parentContext, generatedClass, 2, -1);
         context.getOutput()
             .aload(0)
-            .getfield(clazz, PRIMITIVE_FIELD, primitiveType)
+            .getfield(generatedClass, PRIMITIVE_FIELD, primitiveType)
             .ext_autoconv(SourceInfo.none(), primitiveType, CtClass.longType)
             .lreturn();
 
         longValueMethod.getMethodInfo().setCodeAttribute(context.getOutput().toCodeAttribute());
-        longValueMethod.getMethodInfo().rebuildStackMap(clazz.getClassPool());
+        longValueMethod.getMethodInfo().rebuildStackMap(generatedClass.getClassPool());
 
-        context = new BytecodeEmitContext(parentContext, clazz, 2, -1);
+        context = new BytecodeEmitContext(parentContext, generatedClass, 2, -1);
         context.getOutput()
             .aload(0)
-            .getfield(clazz, PRIMITIVE_FIELD, primitiveType)
+            .getfield(generatedClass, PRIMITIVE_FIELD, primitiveType)
             .ext_autoconv(SourceInfo.none(), primitiveType, CtClass.floatType)
             .freturn();
 
         floatValueMethod.getMethodInfo().setCodeAttribute(context.getOutput().toCodeAttribute());
-        floatValueMethod.getMethodInfo().rebuildStackMap(clazz.getClassPool());
+        floatValueMethod.getMethodInfo().rebuildStackMap(generatedClass.getClassPool());
 
-        context = new BytecodeEmitContext(parentContext, clazz, 2, -1);
+        context = new BytecodeEmitContext(parentContext, generatedClass, 2, -1);
         context.getOutput()
             .aload(0)
-            .getfield(clazz, PRIMITIVE_FIELD, primitiveType)
+            .getfield(generatedClass, PRIMITIVE_FIELD, primitiveType)
             .ext_autoconv(SourceInfo.none(), primitiveType, CtClass.doubleType)
             .dreturn();
 
         doubleValueMethod.getMethodInfo().setCodeAttribute(context.getOutput().toCodeAttribute());
-        doubleValueMethod.getMethodInfo().rebuildStackMap(clazz.getClassPool());
+        doubleValueMethod.getMethodInfo().rebuildStackMap(generatedClass.getClassPool());
     }
 
 }

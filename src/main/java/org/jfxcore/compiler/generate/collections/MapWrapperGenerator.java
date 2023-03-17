@@ -75,38 +75,38 @@ public class MapWrapperGenerator extends ClassGenerator {
 
     @Override
     public final void emitClass(BytecodeEmitContext context) throws Exception {
-        clazz = context.getNestedClasses().create(getClassName());
-        clazz.setModifiers(Modifier.PRIVATE | Modifier.FINAL);
-        clazz.addInterface(ObservableMapValueType());
-        clazz.addInterface(MapChangeListenerType());
+        generatedClass = context.getNestedClasses().create(getClassName());
+        generatedClass.setModifiers(Modifier.PRIVATE | Modifier.FINAL);
+        generatedClass.addInterface(ObservableMapValueType());
+        generatedClass.addInterface(MapChangeListenerType());
     }
 
     @Override
     public void emitFields(BytecodeEmitContext context) throws Exception {
-        CtField field = new CtField(context.getMarkupClass(), ROOT_REF, clazz);
+        CtField field = new CtField(context.getMarkupClass(), ROOT_REF, generatedClass);
         field.setModifiers(Modifier.PRIVATE | Modifier.FINAL);
-        clazz.addField(field);
+        generatedClass.addField(field);
 
-        field = new CtField(ObservableMapType(), VALUE_FIELD, clazz);
+        field = new CtField(ObservableMapType(), VALUE_FIELD, generatedClass);
         field.setModifiers(Modifier.PRIVATE | Modifier.FINAL);
-        clazz.addField(field);
+        generatedClass.addField(field);
 
         field = new CtField(context.getNestedClasses().find(MapSourceAdapterChangeGenerator.CLASS_NAME),
-                            ADAPTER_CHANGE_FIELD, clazz);
+                            ADAPTER_CHANGE_FIELD, generatedClass);
         field.setModifiers(Modifier.PRIVATE | Modifier.FINAL);
-        clazz.addField(field);
+        generatedClass.addField(field);
 
-        field = new CtField(InvalidationListenerType(), INVALIDATION_LISTENER_FIELD, clazz);
+        field = new CtField(InvalidationListenerType(), INVALIDATION_LISTENER_FIELD, generatedClass);
         field.setModifiers(Modifier.PRIVATE);
-        clazz.addField(field);
+        generatedClass.addField(field);
 
-        field = new CtField(ChangeListenerType(), CHANGE_LISTENER_FIELD, clazz);
+        field = new CtField(ChangeListenerType(), CHANGE_LISTENER_FIELD, generatedClass);
         field.setModifiers(Modifier.PRIVATE);
-        clazz.addField(field);
+        generatedClass.addField(field);
 
-        field = new CtField(MapChangeListenerType(), MAP_CHANGE_LISTENER_FIELD, clazz);
+        field = new CtField(MapChangeListenerType(), MAP_CHANGE_LISTENER_FIELD, generatedClass);
         field.setModifiers(Modifier.PRIVATE);
-        clazz.addField(field);
+        generatedClass.addField(field);
     }
 
     @Override
@@ -116,69 +116,69 @@ public class MapWrapperGenerator extends ClassGenerator {
         createConstructor(context);
         createMapMethods(context);
         createObservableValueMethods(context);
-        createOnChangedMethod(context, clazz);
-        createListenerMethods(context, clazz, MAP_CHANGE_LISTENER_FIELD, MapChangeListenerType());
+        createOnChangedMethod(context, generatedClass);
+        createListenerMethods(context, generatedClass, MAP_CHANGE_LISTENER_FIELD, MapChangeListenerType());
     }
 
     private void createMapMethods(BytecodeEmitContext context) throws Exception {
         CtClass fieldType = ObservableMapType();
-        createFieldDelegateMethod(context, clazz, intType, VALUE_FIELD, fieldType, "size");
-        createFieldDelegateMethod(context, clazz, booleanType, VALUE_FIELD, fieldType, "isEmpty");
-        createFieldDelegateMethod(context, clazz, booleanType, VALUE_FIELD, fieldType, "containsKey", ObjectType());
-        createFieldDelegateMethod(context, clazz, booleanType, VALUE_FIELD, fieldType, "containsValue", ObjectType());
-        createFieldDelegateMethod(context, clazz, ObjectType(), VALUE_FIELD, fieldType, "get", ObjectType());
-        createFieldDelegateMethod(context, clazz, ObjectType(), VALUE_FIELD, fieldType, "put", ObjectType(), ObjectType());
-        createFieldDelegateMethod(context, clazz, ObjectType(), VALUE_FIELD, fieldType, "putAll", MapType());
-        createFieldDelegateMethod(context, clazz, ObjectType(), VALUE_FIELD, fieldType, "remove", ObjectType());
-        createFieldDelegateMethod(context, clazz, voidType, VALUE_FIELD, fieldType, "clear");
-        createFieldDelegateMethod(context, clazz, SetType(), VALUE_FIELD, fieldType, "keySet");
-        createFieldDelegateMethod(context, clazz, CollectionType(), VALUE_FIELD, fieldType, "values");
-        createFieldDelegateMethod(context, clazz, SetType(), VALUE_FIELD, fieldType, "entrySet");
-        createFieldDelegateMethod(context, clazz, booleanType, VALUE_FIELD, fieldType, "equals", ObjectType());
-        createFieldDelegateMethod(context, clazz, intType, VALUE_FIELD, fieldType, "hashCode");
+        createFieldDelegateMethod(context, generatedClass, intType, VALUE_FIELD, fieldType, "size");
+        createFieldDelegateMethod(context, generatedClass, booleanType, VALUE_FIELD, fieldType, "isEmpty");
+        createFieldDelegateMethod(context, generatedClass, booleanType, VALUE_FIELD, fieldType, "containsKey", ObjectType());
+        createFieldDelegateMethod(context, generatedClass, booleanType, VALUE_FIELD, fieldType, "containsValue", ObjectType());
+        createFieldDelegateMethod(context, generatedClass, ObjectType(), VALUE_FIELD, fieldType, "get", ObjectType());
+        createFieldDelegateMethod(context, generatedClass, ObjectType(), VALUE_FIELD, fieldType, "put", ObjectType(), ObjectType());
+        createFieldDelegateMethod(context, generatedClass, ObjectType(), VALUE_FIELD, fieldType, "putAll", MapType());
+        createFieldDelegateMethod(context, generatedClass, ObjectType(), VALUE_FIELD, fieldType, "remove", ObjectType());
+        createFieldDelegateMethod(context, generatedClass, voidType, VALUE_FIELD, fieldType, "clear");
+        createFieldDelegateMethod(context, generatedClass, SetType(), VALUE_FIELD, fieldType, "keySet");
+        createFieldDelegateMethod(context, generatedClass, CollectionType(), VALUE_FIELD, fieldType, "values");
+        createFieldDelegateMethod(context, generatedClass, SetType(), VALUE_FIELD, fieldType, "entrySet");
+        createFieldDelegateMethod(context, generatedClass, booleanType, VALUE_FIELD, fieldType, "equals", ObjectType());
+        createFieldDelegateMethod(context, generatedClass, intType, VALUE_FIELD, fieldType, "hashCode");
     }
 
     private void createObservableValueMethods(BytecodeEmitContext context) throws Exception {
-        createListenerMethods(context, clazz, INVALIDATION_LISTENER_FIELD, InvalidationListenerType());
-        createListenerMethods(context, clazz, CHANGE_LISTENER_FIELD, ChangeListenerType());
+        createListenerMethods(context, generatedClass, INVALIDATION_LISTENER_FIELD, InvalidationListenerType());
+        createListenerMethods(context, generatedClass, CHANGE_LISTENER_FIELD, ChangeListenerType());
 
-        CtMethod method = new CtMethod(ObjectType(), "get", new CtClass[0], clazz);
+        CtMethod method = new CtMethod(ObjectType(), "get", new CtClass[0], generatedClass);
         method.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
-        clazz.addMethod(method);
-        var ctx = new BytecodeEmitContext(context, clazz, 1, -1);
-        ctx.getOutput().aload(0).getfield(clazz, VALUE_FIELD, ObservableMapType()).areturn();
+        generatedClass.addMethod(method);
+        var ctx = new BytecodeEmitContext(context, generatedClass, 1, -1);
+        ctx.getOutput().aload(0).getfield(generatedClass, VALUE_FIELD, ObservableMapType()).areturn();
         method.getMethodInfo().setCodeAttribute(ctx.getOutput().toCodeAttribute());
-        method.getMethodInfo().rebuildStackMap(clazz.getClassPool());
+        method.getMethodInfo().rebuildStackMap(generatedClass.getClassPool());
 
-        method = new CtMethod(ObjectType(), "getValue", new CtClass[0], clazz);
+        method = new CtMethod(ObjectType(), "getValue", new CtClass[0], generatedClass);
         method.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
-        clazz.addMethod(method);
-        ctx = new BytecodeEmitContext(context, clazz, 1, -1);
-        ctx.getOutput().aload(0).getfield(clazz, VALUE_FIELD, ObservableMapType()).areturn();
+        generatedClass.addMethod(method);
+        ctx = new BytecodeEmitContext(context, generatedClass, 1, -1);
+        ctx.getOutput().aload(0).getfield(generatedClass, VALUE_FIELD, ObservableMapType()).areturn();
         method.getMethodInfo().setCodeAttribute(ctx.getOutput().toCodeAttribute());
-        method.getMethodInfo().rebuildStackMap(clazz.getClassPool());
+        method.getMethodInfo().rebuildStackMap(generatedClass.getClassPool());
     }
 
     private void createConstructor(BytecodeEmitContext context) throws Exception {
-        CtConstructor constructor = new CtConstructor(new CtClass[] {context.getMarkupClass(), MapType()}, clazz);
+        CtConstructor constructor = new CtConstructor(new CtClass[] {context.getMarkupClass(), MapType()}, generatedClass);
         constructor.setModifiers(Modifier.PUBLIC);
-        clazz.addConstructor(constructor);
-        BytecodeEmitContext ctx = new BytecodeEmitContext(context, clazz, 3, -1);
+        generatedClass.addConstructor(constructor);
+        BytecodeEmitContext ctx = new BytecodeEmitContext(context, generatedClass, 3, -1);
         Bytecode code = ctx.getOutput();
         Local valueLocal = code.acquireLocal(false);
         CtClass adapterChangeType = context.getNestedClasses().find(MapSourceAdapterChangeGenerator.CLASS_NAME);
 
         code.aload(0)
-            .invokespecial(clazz.getSuperclass(), MethodInfo.nameInit, constructor())
+            .invokespecial(generatedClass.getSuperclass(), MethodInfo.nameInit, constructor())
             .aload(0)
             .aload(1)
-            .putfield(clazz, ROOT_REF, context.getMarkupClass())
+            .putfield(generatedClass, ROOT_REF, context.getMarkupClass())
             .aload(0)
             .anew(adapterChangeType)
             .dup()
             .aload(0)
             .invokespecial(adapterChangeType, MethodInfo.nameInit, constructor(ObservableMapType()))
-            .putfield(clazz, ADAPTER_CHANGE_FIELD, adapterChangeType)
+            .putfield(generatedClass, ADAPTER_CHANGE_FIELD, adapterChangeType)
             .aconst_null()
             .astore(valueLocal)
             .aload(2)
@@ -213,12 +213,12 @@ public class MapWrapperGenerator extends ClassGenerator {
             )
             .aload(0)
             .aload(valueLocal)
-            .putfield(clazz, VALUE_FIELD, ObservableMapType())
+            .putfield(generatedClass, VALUE_FIELD, ObservableMapType())
             .vreturn()
             .releaseLocal(valueLocal);
 
         constructor.getMethodInfo().setCodeAttribute(code.toCodeAttribute());
-        constructor.getMethodInfo().rebuildStackMap(clazz.getClassPool());
+        constructor.getMethodInfo().rebuildStackMap(generatedClass.getClassPool());
     }
 
     static void createOnChangedMethod(BytecodeEmitContext context, CtClass clazz) throws Exception {

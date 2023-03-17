@@ -32,14 +32,14 @@ public class EventHandlerGenerator extends ClassGenerator {
     private static final String HANDLER_CLASS_REF = "$0";
 
     private final TypeInstance type;
-    private final CtClass declaringClass;
+    private final CtClass bindingContextClass;
     private final CtClass eventType;
     private final String eventHandlerName;
     private CtConstructor constructor;
     private CtMethod handleMethod;
 
-    public EventHandlerGenerator(CtClass declaringClass, CtClass eventType, String eventHandlerName) {
-        this.declaringClass = declaringClass;
+    public EventHandlerGenerator(CtClass bindingContextClass, CtClass eventType, String eventHandlerName) {
+        this.bindingContextClass = bindingContextClass;
         this.eventType = eventType;
         this.eventHandlerName = eventHandlerName;
 
@@ -59,54 +59,54 @@ public class EventHandlerGenerator extends ClassGenerator {
 
     @Override
     public void emitClass(BytecodeEmitContext context) {
-        clazz = context.getNestedClasses().create(getClassName());
-        clazz.addInterface(Classes.EventHandlerType());
-        clazz.setModifiers(Modifier.PRIVATE | Modifier.FINAL);
+        generatedClass = context.getNestedClasses().create(getClassName());
+        generatedClass.addInterface(Classes.EventHandlerType());
+        generatedClass.setModifiers(Modifier.PRIVATE | Modifier.FINAL);
     }
 
     @Override
     public void emitFields(BytecodeEmitContext context) throws Exception {
-        CtField field = new CtField(declaringClass, HANDLER_CLASS_REF, clazz);
+        CtField field = new CtField(bindingContextClass, HANDLER_CLASS_REF, generatedClass);
         field.setModifiers(Modifier.PRIVATE | Modifier.FINAL);
-        clazz.addField(field);
+        generatedClass.addField(field);
     }
 
     @Override
     public void emitMethods(BytecodeEmitContext context) throws Exception {
         super.emitMethods(context);
 
-        constructor = new CtConstructor(new CtClass[] {declaringClass}, clazz);
+        constructor = new CtConstructor(new CtClass[] {bindingContextClass}, generatedClass);
         constructor.setModifiers(Modifier.PUBLIC);
-        clazz.addConstructor(constructor);
+        generatedClass.addConstructor(constructor);
 
-        handleMethod = new CtMethod(CtClass.voidType, "handle", new CtClass[] {Classes.EventTypent()}, clazz);
+        handleMethod = new CtMethod(CtClass.voidType, "handle", new CtClass[] {Classes.EventTypent()}, generatedClass);
         handleMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
-        clazz.addMethod(handleMethod);
+        generatedClass.addMethod(handleMethod);
     }
 
     @Override
     public void emitCode(BytecodeEmitContext parentContext) throws Exception {
         super.emitCode(parentContext);
 
-        BytecodeEmitContext context = new BytecodeEmitContext(parentContext, clazz, 2, -1);
+        BytecodeEmitContext context = new BytecodeEmitContext(parentContext, generatedClass, 2, -1);
         Bytecode code = context.getOutput();
 
         code.aload(0)
-            .invokespecial(clazz.getSuperclass(), MethodInfo.nameInit, Descriptors.constructor())
+            .invokespecial(generatedClass.getSuperclass(), MethodInfo.nameInit, Descriptors.constructor())
             .aload(0)
             .aload(1)
-            .putfield(clazz, HANDLER_CLASS_REF, declaringClass)
+            .putfield(generatedClass, HANDLER_CLASS_REF, bindingContextClass)
             .vreturn();
 
         constructor.getMethodInfo().setCodeAttribute(code.toCodeAttribute());
-        constructor.getMethodInfo().rebuildStackMap(clazz.getClassPool());
+        constructor.getMethodInfo().rebuildStackMap(generatedClass.getClassPool());
 
-        context = new BytecodeEmitContext(parentContext, clazz, 2, -1);
+        context = new BytecodeEmitContext(parentContext, generatedClass, 2, -1);
         code = context.getOutput();
         CtMethod method = findMethod(context);
 
         code.aload(0)
-            .getfield(clazz, HANDLER_CLASS_REF, declaringClass);
+            .getfield(generatedClass, HANDLER_CLASS_REF, bindingContextClass);
 
         if (method.getParameterTypes().length > 0) {
             code.aload(1)
@@ -117,7 +117,7 @@ public class EventHandlerGenerator extends ClassGenerator {
             .vreturn();
 
         handleMethod.getMethodInfo().setCodeAttribute(code.toCodeAttribute());
-        handleMethod.getMethodInfo().rebuildStackMap(clazz.getClassPool());
+        handleMethod.getMethodInfo().rebuildStackMap(generatedClass.getClassPool());
     }
 
     private CtMethod findMethod(BytecodeEmitContext context) {
@@ -125,7 +125,7 @@ public class EventHandlerGenerator extends ClassGenerator {
         Resolver resolver = new Resolver(sourceInfo);
         boolean[] matchesByName = new boolean[1];
 
-        CtMethod[] methods = resolver.resolveMethods(declaringClass, method -> {
+        CtMethod[] methods = resolver.resolveMethods(bindingContextClass, method -> {
             if (!method.getName().equals(eventHandlerName)) {
                 return false;
             }
@@ -149,7 +149,7 @@ public class EventHandlerGenerator extends ClassGenerator {
                 throw PropertyAssignmentErrors.unsuitableEventHandler(sourceInfo, eventType, eventHandlerName);
             }
 
-            throw SymbolResolutionErrors.memberNotFound(sourceInfo, declaringClass, eventHandlerName);
+            throw SymbolResolutionErrors.memberNotFound(sourceInfo, bindingContextClass, eventHandlerName);
         }
 
         CtMethod selectedMethod = methods[0];

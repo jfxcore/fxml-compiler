@@ -43,25 +43,25 @@ public class SetSourceAdapterChangeGenerator extends ClassGenerator {
 
     @Override
     public void emitClass(BytecodeEmitContext context) throws Exception {
-        clazz = context.getNestedClasses().create(getClassName());
-        clazz.setModifiers(Modifier.PRIVATE | Modifier.FINAL);
-        clazz.setSuperclass(SetChangeListenerChangeType());
+        generatedClass = context.getNestedClasses().create(getClassName());
+        generatedClass.setModifiers(Modifier.PRIVATE | Modifier.FINAL);
+        generatedClass.setSuperclass(SetChangeListenerChangeType());
     }
 
     @Override
     public void emitFields(BytecodeEmitContext context) throws Exception {
-        CtField field = new CtField(SetChangeListenerChangeType(), SOURCE_FIELD, clazz);
+        CtField field = new CtField(SetChangeListenerChangeType(), SOURCE_FIELD, generatedClass);
         field.setModifiers(Modifier.PRIVATE);
-        clazz.addField(field);
+        generatedClass.addField(field);
     }
 
     @Override
     public void emitMethods(BytecodeEmitContext context) throws Exception {
         super.emitMethods(context);
 
-        constructor = new CtConstructor(new CtClass[] {ObservableSetType()}, clazz);
+        constructor = new CtConstructor(new CtClass[] {ObservableSetType()}, generatedClass);
         initChangeMethod = new CtMethod(
-            voidType, INIT_CHANGE_METHOD_NAME, new CtClass[] {SetChangeListenerChangeType()}, clazz);
+            voidType, INIT_CHANGE_METHOD_NAME, new CtClass[] {SetChangeListenerChangeType()}, generatedClass);
     }
 
     @Override
@@ -72,26 +72,26 @@ public class SetSourceAdapterChangeGenerator extends ClassGenerator {
         emitInitChangeMethod(context, initChangeMethod);
 
         CtClass type = SetChangeListenerChangeType();
-        createFieldDelegateMethod(context, clazz, StringType(), SOURCE_FIELD, type, "toString");
-        createFieldDelegateMethod(context, clazz, booleanType, SOURCE_FIELD, type, "wasAdded");
-        createFieldDelegateMethod(context, clazz, booleanType, SOURCE_FIELD, type, "wasRemoved");
-        createFieldDelegateMethod(context, clazz, ObjectType(), SOURCE_FIELD, type, "getElementAdded");
-        createFieldDelegateMethod(context, clazz, ObjectType(), SOURCE_FIELD, type, "getElementRemoved");
+        createFieldDelegateMethod(context, generatedClass, StringType(), SOURCE_FIELD, type, "toString");
+        createFieldDelegateMethod(context, generatedClass, booleanType, SOURCE_FIELD, type, "wasAdded");
+        createFieldDelegateMethod(context, generatedClass, booleanType, SOURCE_FIELD, type, "wasRemoved");
+        createFieldDelegateMethod(context, generatedClass, ObjectType(), SOURCE_FIELD, type, "getElementAdded");
+        createFieldDelegateMethod(context, generatedClass, ObjectType(), SOURCE_FIELD, type, "getElementRemoved");
     }
 
     private void emitConstructor(BytecodeEmitContext parentContext, CtConstructor constructor) throws Exception {
-        createBehavior(parentContext, clazz, constructor, 2, code -> code
+        createBehavior(parentContext, generatedClass, constructor, 2, code -> code
             .aload(0)
             .aload(1)
-            .invokespecial(clazz.getSuperclass(), MethodInfo.nameInit, constructor(ObservableSetType()))
+            .invokespecial(generatedClass.getSuperclass(), MethodInfo.nameInit, constructor(ObservableSetType()))
             .vreturn());
     }
 
     private void emitInitChangeMethod(BytecodeEmitContext parentContext, CtMethod method) throws Exception {
-        createBehavior(parentContext, clazz, method, 2, code -> code
+        createBehavior(parentContext, generatedClass, method, 2, code -> code
             .aload(0)
             .aload(1)
-            .putfield(clazz, SOURCE_FIELD, SetChangeListenerChangeType())
+            .putfield(generatedClass, SOURCE_FIELD, SetChangeListenerChangeType())
             .vreturn());
     }
 
