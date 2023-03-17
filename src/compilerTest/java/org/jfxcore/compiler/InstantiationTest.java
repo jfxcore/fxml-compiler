@@ -1,4 +1,4 @@
-// Copyright (c) 2022, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2023, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler;
@@ -499,7 +499,7 @@ public class InstantiationTest extends CompilerTestBase {
                 </Button>
             """);
 
-            assertReferenced(root, "valueOf");
+            assertMethodCall(root, ms -> ms.stream().anyMatch(m -> m.getName().equals("valueOf")));
             assertEquals(javafx.scene.paint.Color.RED, root.getTextFill());
         }
 
@@ -530,7 +530,7 @@ public class InstantiationTest extends CompilerTestBase {
                         textFill="{fx:value red}"/>
             """);
 
-            assertReferenced(root, "valueOf");
+            assertMethodCall(root, ms -> ms.stream().anyMatch(m -> m.getName().equals("valueOf")));
             assertEquals(javafx.scene.paint.Color.RED, root.getTextFill());
         }
 
@@ -584,7 +584,7 @@ public class InstantiationTest extends CompilerTestBase {
                 </GridPane>
             """);
 
-            assertReferenced(root, "valueOf");
+            assertMethodCall(root, ms -> ms.stream().anyMatch(m -> m.getName().equals("valueOf")));
             assertEquals(5.5, root.getMinHeight(), 0.001);
         }
 

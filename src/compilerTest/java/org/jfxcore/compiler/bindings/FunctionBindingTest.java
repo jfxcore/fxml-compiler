@@ -1,4 +1,4 @@
-// Copyright (c) 2022, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2023, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.bindings;
@@ -193,8 +193,8 @@ public class FunctionBindingTest extends CompilerTestBase {
         root.doubleProp.set(2);
         assertEquals("foo-1.0", root.getId());
 
-        assertReferenced(root, "requireNonNull");
-        assertReferenced(root, "doubleValue");
+        assertMethodCall(root, ms -> ms.stream().anyMatch(m -> m.getName().equals("requireNonNull")));
+        assertMethodCall(root, ms -> ms.stream().anyMatch(m -> m.getName().equals("doubleValue")));
     }
 
     @Test
@@ -207,8 +207,8 @@ public class FunctionBindingTest extends CompilerTestBase {
         assertFalse(root.idProperty().isBound());
         assertEquals("foo-1.0-bar", root.getId());
 
-        assertNotReferenced(root, "requireNonNull");
-        assertNotReferenced(root, "doubleValue");
+        assertMethodCall(root, ms -> ms.stream().noneMatch(m -> m.getName().equals("requireNonNull")));
+        assertMethodCall(root, ms -> ms.stream().noneMatch(m -> m.getName().equals("doubleValue")));
     }
 
     @Test
@@ -225,9 +225,9 @@ public class FunctionBindingTest extends CompilerTestBase {
         root.stringProp.set("baz");
         assertEquals("foo-1.0-bar", root.getId());
 
-        assertReferenced(root, "requireNonNull");
-        assertReferenced(root, "doubleValue");
-        assertReferenced(root, "getValue");
+        assertMethodCall(root, ms -> ms.stream().anyMatch(m -> m.getName().equals("requireNonNull")));
+        assertMethodCall(root, ms -> ms.stream().anyMatch(m -> m.getName().equals("doubleValue")));
+        assertMethodCall(root, ms -> ms.stream().anyMatch(m -> m.getName().equals("getValue")));
     }
 
     @Test

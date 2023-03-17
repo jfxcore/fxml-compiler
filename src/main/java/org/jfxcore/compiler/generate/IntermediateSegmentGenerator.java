@@ -1,4 +1,4 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2023, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.generate;
@@ -16,6 +16,7 @@ import org.jfxcore.compiler.ast.expression.path.FoldedGroup;
 import org.jfxcore.compiler.ast.expression.path.Segment;
 import org.jfxcore.compiler.util.Bytecode;
 import org.jfxcore.compiler.util.Label;
+import org.jfxcore.compiler.util.NameHelper;
 import org.jfxcore.compiler.util.Resolver;
 import org.jfxcore.compiler.util.TypeInstance;
 
@@ -44,48 +45,47 @@ public class IntermediateSegmentGenerator extends SegmentGeneratorBase {
 
     @Override
     public String getClassName() {
-        return groups[segment].getName();
+        return NameHelper.getMangledClassName(groups[segment].getName());
     }
 
     @Override
     public void emitClass(BytecodeEmitContext context) {
-        clazz = context.getMarkupClass().makeNestedClass(getClassName(), true);
-        clazz.addInterface(ChangeListenerType());
-        clazz.setModifiers(Modifier.PRIVATE | Modifier.FINAL);
-        context.getNestedClasses().add(clazz);
-        groups[segment].setCompiledClass(clazz);
+        generatedClass = context.getNestedClasses().create(getClassName());
+        generatedClass.addInterface(ChangeListenerType());
+        generatedClass.setModifiers(Modifier.PRIVATE | Modifier.FINAL);
+        groups[segment].setCompiledClass(generatedClass);
     }
 
     @Override
     public void emitFields(BytecodeEmitContext context) throws Exception {
-        CtField field = new CtField(groups[segment + 1].getCompiledClass(), mangle(NEXT_FIELD), clazz);
+        CtField field = new CtField(groups[segment + 1].getCompiledClass(), mangle(NEXT_FIELD), generatedClass);
         field.setModifiers(Modifier.FINAL);
-        clazz.addField(field);
+        generatedClass.addField(field);
 
         observableType = groups[segment].getFirstPathSegment().getTypeInstance().jvmType();
-        field = new CtField(observableType, mangle(OBSERVABLE_FIELD), clazz);
+        field = new CtField(observableType, mangle(OBSERVABLE_FIELD), generatedClass);
         field.setModifiers(Modifier.PRIVATE);
-        clazz.addField(field);
+        generatedClass.addField(field);
     }
 
     @Override
     public void emitMethods(BytecodeEmitContext context) throws Exception {
-        constructor = CtNewConstructor.defaultConstructor(clazz);
+        constructor = CtNewConstructor.defaultConstructor(generatedClass);
 
         updateMethod = new CtMethod(
-            CtClass.voidType, UPDATE_METHOD, new CtClass[] {observableType}, clazz);
+            CtClass.voidType, UPDATE_METHOD, new CtClass[] {observableType}, generatedClass);
         updateMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
 
         changedMethod = new CtMethod(
             CtClass.voidType,
             "changed",
             new CtClass[] {ObservableValueType(), ObjectType(), ObjectType()},
-            clazz);
+                generatedClass);
         changedMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
 
-        clazz.addConstructor(constructor);
-        clazz.addMethod(updateMethod);
-        clazz.addMethod(changedMethod);
+        generatedClass.addConstructor(constructor);
+        generatedClass.addMethod(updateMethod);
+        generatedClass.addMethod(changedMethod);
     }
 
     @Override
@@ -208,7 +208,7 @@ public class IntermediateSegmentGenerator extends SegmentGeneratorBase {
         }
 
         code.aload(0)
-            .getfield(clazz, mangle(NEXT_FIELD), resolver.resolveClass(nextClassName))
+            .getfield(generatedClass, mangle(NEXT_FIELD), resolver.resolveClass(nextClassName))
             .aload(3)
             .checkcast(nextObservableType.getName())
             .invokevirtual(nextClassName, UPDATE_METHOD, function(CtClass.voidType, nextObservableType))

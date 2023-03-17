@@ -1,4 +1,4 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2023, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.emit;
@@ -7,21 +7,30 @@ import javafx.beans.value.ObservableValue;
 import javafx.beans.value.ObservableListValue;
 import javafx.collections.FXCollections;
 import javassist.CtClass;
-import javassist.NotFoundException;
+import javassist.bytecode.MethodInfo;
 import org.jetbrains.annotations.Nullable;
 import org.jfxcore.compiler.ast.AbstractNode;
+import org.jfxcore.compiler.ast.GeneratorEmitterNode;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.ast.ResolvedTypeNode;
 import org.jfxcore.compiler.ast.Visitor;
-import org.jfxcore.compiler.diagnostic.errors.BindingSourceErrors;
+import org.jfxcore.compiler.generate.ClassGenerator;
+import org.jfxcore.compiler.generate.Generator;
+import org.jfxcore.compiler.generate.collections.ListWrapperGenerator;
+import org.jfxcore.compiler.generate.collections.MapWrapperGenerator;
+import org.jfxcore.compiler.generate.collections.ListObservableValueWrapperGenerator;
+import org.jfxcore.compiler.generate.collections.MapObservableValueWrapperGenerator;
+import org.jfxcore.compiler.generate.collections.SetObservableValueWrapperGenerator;
+import org.jfxcore.compiler.generate.collections.SetWrapperGenerator;
 import org.jfxcore.compiler.util.Bytecode;
+import org.jfxcore.compiler.util.Local;
 import org.jfxcore.compiler.util.Resolver;
 import org.jfxcore.compiler.util.TypeInstance;
 import java.util.List;
 import java.util.Objects;
 
 import static org.jfxcore.compiler.util.Classes.*;
-import static org.jfxcore.compiler.util.Descriptors.function;
+import static org.jfxcore.compiler.util.Descriptors.*;
 
 /**
  * {@link EmitCollectionWrapperNode} supports certain advanced scenarios for binding to lists, sets and maps.
@@ -49,11 +58,13 @@ import static org.jfxcore.compiler.util.Descriptors.function;
  *         ObservableValue&lt;List&lt;T>>
  * </ol>
  */
-public class EmitCollectionWrapperNode extends AbstractNode implements ValueEmitterNode, NullableInfo {
+public class EmitCollectionWrapperNode extends AbstractNode
+        implements ValueEmitterNode, GeneratorEmitterNode, NullableInfo {
 
     private final TypeInstance sourceValueType;
     private final TypeInstance sourceObservableType;
     private final boolean emitObservableValue;
+    private final ClassGenerator wrapperGenerator;
     private EmitterNode child;
     private ResolvedTypeNode type;
 
@@ -86,6 +97,27 @@ public class EmitCollectionWrapperNode extends AbstractNode implements ValueEmit
         }
 
         this.type = new ResolvedTypeNode(type, sourceInfo);
+
+        boolean sourceIsObservableValue =
+            sourceObservableType != null &&
+            sourceObservableType.subtypeOf(ObservableValueType());
+
+        ClassGenerator generator = null;
+
+        if (emitObservableValue || sourceIsObservableValue) {
+            if (sourceValueType.subtypeOf(ListType())) {
+                generator = sourceIsObservableValue ?
+                    new ListObservableValueWrapperGenerator() : new ListWrapperGenerator();
+            } else if (sourceValueType.subtypeOf(SetType())) {
+                generator = sourceIsObservableValue ?
+                    new SetObservableValueWrapperGenerator() : new SetWrapperGenerator();
+            } else if (sourceValueType.subtypeOf(MapType())) {
+                generator = sourceIsObservableValue ?
+                    new MapObservableValueWrapperGenerator() : new MapWrapperGenerator();
+            }
+        }
+
+        wrapperGenerator = generator;
     }
 
     @Override
@@ -99,33 +131,41 @@ public class EmitCollectionWrapperNode extends AbstractNode implements ValueEmit
     }
 
     @Override
+    public List<Generator> emitGenerators(BytecodeEmitContext context) {
+        return wrapperGenerator != null ? List.of(wrapperGenerator) : List.of();
+    }
+
+    @Override
     public void emit(BytecodeEmitContext context) {
         Bytecode code = context.getOutput();
         context.emit(child);
 
-        boolean sourceIsObservableValue =
-            sourceObservableType != null &&
-            sourceObservableType.subtypeOf(ObservableValueType());
+        if (wrapperGenerator != null) {
+            CtClass argType;
+            boolean sourceIsObservableValue =
+                sourceObservableType != null &&
+                sourceObservableType.subtypeOf(ObservableValueType());
 
-        if (emitObservableValue || sourceIsObservableValue) {
             if (sourceValueType.subtypeOf(ListType())) {
-                invokestaticSafe(code,
-                    ObservableListValueType(),
-                    "observableListValue",
-                    function(ObservableListValueType(), sourceIsObservableValue ? ObservableValueType() : ListType()));
+                argType = sourceIsObservableValue ? ObservableValueType() : ListType();
             } else if (sourceValueType.subtypeOf(SetType())) {
-                invokestaticSafe(code,
-                    ObservableSetValueType(),
-                    "observableSetValue",
-                    function(ObservableSetValueType(), sourceIsObservableValue ? ObservableValueType() : SetType()));
+                argType = sourceIsObservableValue ? ObservableValueType() : SetType();
             } else if (sourceValueType.subtypeOf(MapType())) {
-                invokestaticSafe(code,
-                    ObservableMapValueType(),
-                    "observableMapValue",
-                    function(ObservableMapValueType(), sourceIsObservableValue ? ObservableValueType() : MapType()));
+                argType = sourceIsObservableValue ? ObservableValueType() : MapType();
             } else {
-                throw new IllegalArgumentException();
+                throw new IllegalStateException();
             }
+
+            CtClass generatedClass = context.getNestedClasses().find(wrapperGenerator.getClassName());
+            Local local = code.acquireLocal(false);
+
+            code.astore(local)
+                .anew(generatedClass)
+                .dup()
+                .aload(0)
+                .aload(local)
+                .invokespecial(generatedClass, MethodInfo.nameInit, constructor(context.getMarkupClass(), argType))
+                .releaseLocal(local);
         } else {
             if (sourceValueType.subtypeOf(ListType())) {
                 code.invokestatic(
@@ -176,19 +216,6 @@ public class EmitCollectionWrapperNode extends AbstractNode implements ValueEmit
     @Override
     public int hashCode() {
         return Objects.hash(sourceValueType, sourceObservableType, emitObservableValue, child, type);
-    }
-
-    /**
-     * Check whether the method actually exists, as it is exclusive to the JFXcore runtime
-     */
-    private void invokestaticSafe(Bytecode code, CtClass type, String name, String desc) {
-        try {
-            type.getMethod(name, desc);
-        } catch (NotFoundException ex) {
-            throw BindingSourceErrors.bindingNotSupported(getSourceInfo());
-        }
-
-        code.invokestatic(type, name, desc);
     }
 
 }

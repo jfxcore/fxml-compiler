@@ -1,4 +1,4 @@
-// Copyright (c) 2022, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2023, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.transform.markup.util;
@@ -12,7 +12,7 @@ import org.jfxcore.compiler.ast.emit.EmitPropertyBindingNode;
 import org.jfxcore.compiler.ast.emit.EmitPropertySetterNode;
 import org.jfxcore.compiler.ast.emit.EmitStaticPropertySetterNode;
 import org.jfxcore.compiler.ast.emit.EmitUnwrapObservableNode;
-import org.jfxcore.compiler.ast.emit.EmitWrapValueNode;
+import org.jfxcore.compiler.ast.emit.EmitValueWrapperNode;
 import org.jfxcore.compiler.ast.emit.EmitterNode;
 import org.jfxcore.compiler.ast.emit.ValueEmitterNode;
 import org.jfxcore.compiler.ast.expression.BindingEmitterInfo;
@@ -156,7 +156,7 @@ public class BindingEmitterFactory {
         } else {
             if (targetType.isAssignableFrom(result.getValueType())) {
                 if (result.getObservableType() == null) {
-                    value = new EmitWrapValueNode(result.getValue());
+                    value = new EmitValueWrapperNode(result.getValue());
                 } else {
                     value = result.getValue();
                 }

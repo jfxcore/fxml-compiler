@@ -1,4 +1,4 @@
-// Copyright (c) 2022, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2023, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.emit;
@@ -25,6 +25,7 @@ import org.jfxcore.compiler.util.Bytecode;
 import org.jfxcore.compiler.util.Callable;
 import org.jfxcore.compiler.util.CompilationContext;
 import org.jfxcore.compiler.util.ExceptionHelper;
+import org.jfxcore.compiler.util.NameHelper;
 import org.jfxcore.compiler.util.TypeHelper;
 import org.jfxcore.compiler.util.TypeInstance;
 import java.lang.reflect.Modifier;
@@ -166,13 +167,9 @@ public class EmitObservableFunctionNode
     }
 
     private CtMethod emitBridgeMethod(BytecodeEmitContext context, CtBehavior behavior) {
-        String methodName;
-
-        if (behavior instanceof CtConstructor constructor) {
-            methodName = "$bridge$" + constructor.getDeclaringClass().getSimpleName();
-        } else {
-            methodName = "$bridge$" + behavior.getName();
-        }
+        String methodName = NameHelper.getMangledMethodName(
+            "bridge$" + (behavior instanceof CtConstructor ctor ?
+                ctor.getDeclaringClass().getSimpleName() : behavior.getName()));
 
         try {
             return invocationContext.getDeclaredMethod(methodName, behavior.getParameterTypes());

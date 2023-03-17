@@ -1,4 +1,4 @@
-// Copyright (c) 2022, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2023, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.bindings;
@@ -52,8 +52,8 @@ public class StaticPropertyBindingTest extends CompilerTestBase {
 
         Label label = (Label)root.getChildren().get(1);
         assertEquals("foo", label.getText());
-        assertReferenced(root, "getText");
-        assertNotReferenced(root, "textProperty");
+        assertMethodCall(root, ms -> ms.stream().anyMatch(m -> m.getName().equals("getText")));
+        assertMethodCall(root, ms -> ms.stream().noneMatch(m -> m.getName().equals("textProperty")));
     }
 
     @Test
@@ -69,8 +69,8 @@ public class StaticPropertyBindingTest extends CompilerTestBase {
 
         Label label = (Label)root.getChildren().get(1);
         assertEquals("foo", label.getText());
-        assertReferenced(root, "getText");
-        assertNotReferenced(root, "textProperty");
+        assertMethodCall(root, ms -> ms.stream().anyMatch(m -> m.getName().equals("getText")));
+        assertMethodCall(root, ms -> ms.stream().noneMatch(m -> m.getName().equals("textProperty")));
     }
 
     @Test
@@ -87,8 +87,8 @@ public class StaticPropertyBindingTest extends CompilerTestBase {
 
         Label label = (Label)root.getChildren().get(1);
         assertEquals("foo", label.getText());
-        assertReferenced(root, "getText");
-        assertNotReferenced(root, "textProperty");
+        assertMethodCall(root, ms -> ms.stream().anyMatch(m -> m.getName().equals("getText")));
+        assertMethodCall(root, ms -> ms.stream().noneMatch(m -> m.getName().equals("textProperty")));
     }
 
     @Test
@@ -112,8 +112,8 @@ public class StaticPropertyBindingTest extends CompilerTestBase {
         TextSource.setText(pane, "bar");
         assertEquals("bar", label.getText());
 
-        assertReferenced(root, "textProperty");
-        assertNotReferenced(root, "getText");
+        assertMethodCall(root, ms -> ms.stream().anyMatch(m -> m.getName().equals("textProperty")));
+        assertMethodCall(root, ms -> ms.stream().noneMatch(m -> m.getName().equals("getText")));
     }
 
     @Test
@@ -137,8 +137,8 @@ public class StaticPropertyBindingTest extends CompilerTestBase {
         label.setText("baz");
         assertEquals("baz", TextSource.getText(pane));
 
-        assertReferenced(root, "textProperty");
-        assertNotReferenced(root, "getText");
+        assertMethodCall(root, ms -> ms.stream().anyMatch(m -> m.getName().equals("textProperty")));
+        assertMethodCall(root, ms -> ms.stream().noneMatch(m -> m.getName().equals("getText")));
     }
 
     @Test
@@ -162,8 +162,8 @@ public class StaticPropertyBindingTest extends CompilerTestBase {
         label.setText("baz");
         assertEquals("baz", TextSource.getText(pane));
 
-        assertReferenced(root, "textProperty");
-        assertNotReferenced(root, "getText");
+        assertMethodCall(root, ms -> ms.stream().anyMatch(m -> m.getName().equals("textProperty")));
+        assertMethodCall(root, ms -> ms.stream().noneMatch(m -> m.getName().equals("getText")));
     }
 
     @Test
@@ -187,8 +187,8 @@ public class StaticPropertyBindingTest extends CompilerTestBase {
         label.setText("baz");
         assertEquals("baz", TextSource.getText(pane));
 
-        assertReferenced(root, "textProperty");
-        assertNotReferenced(root, "getText");
+        assertMethodCall(root, ms -> ms.stream().anyMatch(m -> m.getName().equals("textProperty")));
+        assertMethodCall(root, ms -> ms.stream().noneMatch(m -> m.getName().equals("getText")));
     }
 
     @Test
@@ -212,8 +212,8 @@ public class StaticPropertyBindingTest extends CompilerTestBase {
         label.setText("baz");
         assertEquals("baz", TextSource.getText(pane));
 
-        assertReferenced(root, "textProperty");
-        assertNotReferenced(root, "getText");
+        assertMethodCall(root, ms -> ms.stream().anyMatch(m -> m.getName().equals("textProperty")));
+        assertMethodCall(root, ms -> ms.stream().noneMatch(m -> m.getName().equals("getText")));
     }
 
     @Test

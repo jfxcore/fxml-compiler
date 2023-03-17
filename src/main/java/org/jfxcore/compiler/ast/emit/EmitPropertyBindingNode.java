@@ -1,4 +1,4 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2023, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.emit;
@@ -13,9 +13,9 @@ import org.jfxcore.compiler.ast.Visitor;
 import org.jfxcore.compiler.diagnostic.errors.GeneralErrors;
 import org.jfxcore.compiler.util.Bytecode;
 import org.jfxcore.compiler.util.Local;
+import org.jfxcore.compiler.util.NameHelper;
 import org.jfxcore.compiler.util.PropertyInfo;
 import org.jfxcore.compiler.util.TypeInstance;
-
 import java.util.Objects;
 
 import static javassist.CtClass.*;
@@ -53,25 +53,27 @@ public class EmitPropertyBindingNode extends AbstractNode implements EmitterNode
         Local local = code.acquireLocal(false);
         code.astore(local);
 
-        if (!(child instanceof NullableInfo) || ((NullableInfo)child).isNullable()) {
+        if (NullableInfo.isNullable(child, true)) {
             code.aload(local)
-                .ifnonnull(() -> emitBinding(code, local));
+                .ifnonnull(() -> emitBinding(context, local));
         } else {
-            emitBinding(code, local);
+            emitBinding(context, local);
         }
 
         code.releaseLocal(local);
     }
 
-    private void emitBinding(Bytecode code, Local local) {
+    private void emitBinding(BytecodeEmitContext context, Local local) {
         if (bindingMode.isBidirectional()) {
-            emitBindBidirectional(code, local);
+            emitBindBidirectional(context, local);
         } else if (bindingMode.isUnidirectional()) {
-            emitBindUnidirectional(code, local);
+            emitBindUnidirectional(context, local);
         }
     }
 
-    private void emitBindBidirectional(Bytecode code, Local local) {
+    private void emitBindBidirectional(BytecodeEmitContext context, Local local) {
+        Bytecode code = context.getOutput();
+
         code.dup()
             .ext_invoke(checkNotNull(propertyInfo.getPropertyGetter()))
             .aload(local);
@@ -79,19 +81,25 @@ public class EmitPropertyBindingNode extends AbstractNode implements EmitterNode
         if (child.getNodeData(NodeDataKey.BIND_BIDIRECTIONAL_NEGATED) == Boolean.TRUE) {
             throw GeneralErrors.unsupported("Negated bidirectional bindings are not supported.");
         } else if (bindingMode.isContent()) {
-            emitBindContent(code, true);
+            emitBindContent(context, true);
         } else {
             code.invokeinterface(PropertyType(), "bindBidirectional", function(voidType, PropertyType()));
         }
     }
 
-    private void emitBindUnidirectional(Bytecode code, Local local) {
+    private void emitBindUnidirectional(BytecodeEmitContext context, Local local) {
+        Bytecode code = context.getOutput();
+
         if (bindingMode.isContent()) {
+            code.acquireLocal(false);
+
             code.dup()
                 .ext_invoke(checkNotNull(propertyInfo.getPropertyGetterOrGetter()))
                 .aload(local);
 
-            emitBindContent(code, false);
+            emitBindContent(context, false);
+
+
         } else {
             code.dup()
                 .ext_invoke(checkNotNull(propertyInfo.getPropertyGetter()))
@@ -100,17 +108,17 @@ public class EmitPropertyBindingNode extends AbstractNode implements EmitterNode
         }
     }
 
-    private void emitBindContent(Bytecode code, boolean bidirectional) {
-        if (!tryEmitBindContentImpl(code, ListType(), ObservableListType(), ReadOnlyListPropertyType(), bidirectional) &&
-                !tryEmitBindContentImpl(code, SetType(), ObservableSetType(), ReadOnlySetPropertyType(), bidirectional) &&
-                !tryEmitBindContentImpl(code, MapType(), ObservableMapType(), ReadOnlyMapPropertyType(), bidirectional)) {
+    private void emitBindContent(BytecodeEmitContext context, boolean bidirectional) {
+        if (!tryEmitBindContentImpl(context, ListType(), ObservableListType(), ReadOnlyListPropertyType(), bidirectional) &&
+                !tryEmitBindContentImpl(context, SetType(), ObservableSetType(), ReadOnlySetPropertyType(), bidirectional) &&
+                !tryEmitBindContentImpl(context, MapType(), ObservableMapType(), ReadOnlyMapPropertyType(), bidirectional)) {
             throw new IllegalArgumentException(propertyInfo.getValueTypeInstance().toString());
         }
     }
 
     @SuppressWarnings("BooleanMethodIsAlwaysInverted")
     private boolean tryEmitBindContentImpl(
-            Bytecode code,
+            BytecodeEmitContext context,
             CtClass collectionType,
             CtClass observableCollectionType,
             CtClass collectionPropertyType,
@@ -118,6 +126,15 @@ public class EmitPropertyBindingNode extends AbstractNode implements EmitterNode
         if (propertyInfo.getValueTypeInstance().subtypeOf(collectionType)) {
             String methodName = bidirectional ? "bindContentBidirectional" : "bindContent";
             TypeInstance observableType = propertyInfo.getObservableTypeInstance();
+            Bytecode code = context.getOutput();
+
+            Local targetLocal = code.acquireLocal(false);
+            Local sourceLocal = code.acquireLocal(false);
+
+            code.astore(sourceLocal)
+                .astore(targetLocal)
+                .aload(targetLocal)
+                .aload(sourceLocal);
 
             if (observableType != null && observableType.subtypeOf(collectionPropertyType)) {
                 code.invokevirtual(collectionPropertyType, methodName, function(voidType, observableCollectionType));
@@ -129,10 +146,27 @@ public class EmitPropertyBindingNode extends AbstractNode implements EmitterNode
                                   function(voidType, collectionType, observableCollectionType));
             }
 
+            if (child instanceof EmitCollectionWrapperNode) {
+                emitAddChildToReferenceTracker(context, targetLocal, sourceLocal);
+            }
+
+            code.releaseLocal(targetLocal);
+            code.releaseLocal(sourceLocal);
+
             return true;
         }
 
         return false;
+    }
+
+    private void emitAddChildToReferenceTracker(BytecodeEmitContext context, Local targetLocal, Local sourceLocal) {
+        context.getOutput()
+            .aload(0)
+            .aload(targetLocal)
+            .aload(sourceLocal)
+            .invokevirtual(context.getMarkupClass(), NameHelper.getMangledMethodName("addReference"),
+                           function(voidType, ObjectType(), ObjectType()));
+
     }
 
     @Override

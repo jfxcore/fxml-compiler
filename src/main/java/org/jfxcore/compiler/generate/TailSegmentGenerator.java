@@ -1,4 +1,4 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2023, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.generate;
@@ -62,38 +62,38 @@ public class TailSegmentGenerator extends PropertySegmentGeneratorBase {
         super.emitClass(context);
         observableClass = Objects.requireNonNull(groups[segment].getFirstPathSegment().getTypeInstance().jvmType());
         boxedValueClass = TypeHelper.getBoxedType(groups[segment].getLastPathSegment().getValueTypeInstance().jvmType());
-        clazz.addInterface(Classes.InvalidationListenerType());
-        clazz.addInterface(Classes.ChangeListenerType());
+        generatedClass.addInterface(Classes.InvalidationListenerType());
+        generatedClass.addInterface(Classes.ChangeListenerType());
     }
 
     @Override
     public void emitFields(BytecodeEmitContext context) throws Exception {
-        CtField invalidationLister = new CtField(Classes.InvalidationListenerType(), mangle(INVALIDATION_LISTENER_FIELD), clazz);
+        CtField invalidationLister = new CtField(Classes.InvalidationListenerType(), mangle(INVALIDATION_LISTENER_FIELD), generatedClass);
         invalidationLister.setModifiers(Modifier.PRIVATE);
 
-        CtField changeListener = new CtField(Classes.ChangeListenerType(), mangle(CHANGE_LISTENER_FIELD), clazz);
+        CtField changeListener = new CtField(Classes.ChangeListenerType(), mangle(CHANGE_LISTENER_FIELD), generatedClass);
         changeListener.setModifiers(Modifier.PRIVATE);
 
-        CtField observable = new CtField(observableClass, mangle(OBSERVABLE_FIELD), clazz);
+        CtField observable = new CtField(observableClass, mangle(OBSERVABLE_FIELD), generatedClass);
         observable.setModifiers(Modifier.PRIVATE);
 
-        clazz.addField(invalidationLister);
-        clazz.addField(changeListener);
-        clazz.addField(observable);
+        generatedClass.addField(invalidationLister);
+        generatedClass.addField(changeListener);
+        generatedClass.addField(observable);
 
         if (hasInvariants = groups[segment].getPath().length > 1) {
-            CtField field = new CtField(CtClass.intType, mangle(FLAGS_FIELD), clazz);
+            CtField field = new CtField(CtClass.intType, mangle(FLAGS_FIELD), generatedClass);
             field.setModifiers(Modifier.PRIVATE);
-            clazz.addField(field);
+            generatedClass.addField(field);
 
-            field = new CtField(boxedValueClass, mangle(VALUE_FIELD), clazz);
+            field = new CtField(boxedValueClass, mangle(VALUE_FIELD), generatedClass);
             field.setModifiers(Modifier.PRIVATE);
-            clazz.addField(field);
+            generatedClass.addField(field);
 
             if (valueClass.isPrimitive()) {
-                field = new CtField(valueClass, mangle(PRIMITIVE_VALUE_FIELD), clazz);
+                field = new CtField(valueClass, mangle(PRIMITIVE_VALUE_FIELD), generatedClass);
                 field.setModifiers(Modifier.PRIVATE);
-                clazz.addField(field);
+                generatedClass.addField(field);
             }
         }
     }
@@ -103,37 +103,37 @@ public class TailSegmentGenerator extends PropertySegmentGeneratorBase {
         super.emitMethods(context);
 
         if (groups.length == 1) {
-            constructor = new CtConstructor(new CtClass[] {observableClass}, clazz);
-            clazz.addConstructor(constructor);
+            constructor = new CtConstructor(new CtClass[] {observableClass}, generatedClass);
+            generatedClass.addConstructor(constructor);
         } else {
-            constructor = CtNewConstructor.defaultConstructor(clazz);
-            updateMethod = new CtMethod(CtClass.voidType, UPDATE_METHOD, new CtClass[] {observableClass}, clazz);
+            constructor = CtNewConstructor.defaultConstructor(generatedClass);
+            updateMethod = new CtMethod(CtClass.voidType, UPDATE_METHOD, new CtClass[] {observableClass}, generatedClass);
             updateMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
-            clazz.addConstructor(constructor);
-            clazz.addMethod(updateMethod);
+            generatedClass.addConstructor(constructor);
+            generatedClass.addMethod(updateMethod);
         }
 
         invalidatedMethod = new CtMethod(
-            CtClass.voidType, "invalidated", new CtClass[] {Classes.ObservableType()}, clazz);
+            CtClass.voidType, "invalidated", new CtClass[] {Classes.ObservableType()}, generatedClass);
         invalidatedMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
-        clazz.addMethod(invalidatedMethod);
+        generatedClass.addMethod(invalidatedMethod);
 
         changedMethod = new CtMethod(
             CtClass.voidType,
             "changed",
             new CtClass[] {Classes.ObservableValueType(), Classes.ObjectType(), Classes.ObjectType()},
-            clazz);
+                generatedClass);
         changedMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
-        clazz.addMethod(changedMethod);
+        generatedClass.addMethod(changedMethod);
 
         if (hasInvariants) {
             validateMethod = new CtMethod(
                 CtClass.voidType,
                 VALIDATE_METHOD,
                 valueClass.isPrimitive() ? new CtClass[] {CtClass.booleanType} : new CtClass[0],
-                clazz);
+                    generatedClass);
             validateMethod.setModifiers(Modifier.PRIVATE | Modifier.FINAL);
-            clazz.addMethod(validateMethod);
+            generatedClass.addMethod(validateMethod);
         }
     }
 
@@ -201,7 +201,7 @@ public class TailSegmentGenerator extends PropertySegmentGeneratorBase {
             .aload(0)
             .invokeinterface(Classes.ObservableValueType(), "getValue", Descriptors.function(Classes.ObjectType()))
             .checkcast(boxedValueClass.getName())
-            .putfield(clazz, mangle(VALUE_FIELD), boxedValueClass)
+            .putfield(generatedClass, mangle(VALUE_FIELD), boxedValueClass)
             .vreturn();
 
         constructor.getMethodInfo().setCodeAttribute(code.toCodeAttribute());
@@ -637,22 +637,22 @@ public class TailSegmentGenerator extends PropertySegmentGeneratorBase {
             if (valueClass.isPrimitive()) {
                 // if (flags == 2)
                 code.aload(0)
-                    .getfield(clazz, mangle(FLAGS_FIELD), CtClass.booleanType)
+                    .getfield(generatedClass, mangle(FLAGS_FIELD), CtClass.booleanType)
                     .iconst(2)
                     .if_icmpeq(
                         () ->
                             // oldValue = this.pvalue
                             code.aload(0)
-                                .getfield(clazz, mangle(PRIMITIVE_VALUE_FIELD), valueClass)
+                                .getfield(generatedClass, mangle(PRIMITIVE_VALUE_FIELD), valueClass)
                                 .ext_box(valueClass),
                         () ->
                             // oldValue = this.value
                             code.aload(0)
-                                .getfield(clazz, mangle(VALUE_FIELD), boxedValueClass))
+                                .getfield(generatedClass, mangle(VALUE_FIELD), boxedValueClass))
                     .ext_store(boxedValueClass, oldValue);
             } else {
                 code.aload(0)
-                    .getfield(clazz, mangle(VALUE_FIELD), valueClass)
+                    .getfield(generatedClass, mangle(VALUE_FIELD), valueClass)
                     .ext_store(valueClass, oldValue);
             }
 
@@ -660,20 +660,20 @@ public class TailSegmentGenerator extends PropertySegmentGeneratorBase {
                 // validate(true)
                 code.aload(0)
                     .iconst(1)
-                    .invokevirtual(clazz, VALIDATE_METHOD, Descriptors.function(CtClass.voidType, CtClass.booleanType));
+                    .invokevirtual(generatedClass, VALIDATE_METHOD, Descriptors.function(CtClass.voidType, CtClass.booleanType));
             } else {
                 // validate()
                 code.aload(0)
-                    .invokevirtual(clazz, VALIDATE_METHOD, Descriptors.function(CtClass.voidType));
+                    .invokevirtual(generatedClass, VALIDATE_METHOD, Descriptors.function(CtClass.voidType));
             }
 
             // this.changeListener.changed(this, oldValue, newValue)
             code.aload(0)
-                .getfield(clazz, mangle(CHANGE_LISTENER_FIELD), Classes.ChangeListenerType())
+                .getfield(generatedClass, mangle(CHANGE_LISTENER_FIELD), Classes.ChangeListenerType())
                 .aload(0)
                 .aload(oldValue)
                 .aload(0)
-                .getfield(clazz, mangle(VALUE_FIELD), boxedValueClass)
+                .getfield(generatedClass, mangle(VALUE_FIELD), boxedValueClass)
                 .invokeinterface(
                     Classes.ChangeListenerType(),
                     "changed",
@@ -684,7 +684,7 @@ public class TailSegmentGenerator extends PropertySegmentGeneratorBase {
         } else {
             // this.changeListener.changed(this, $2, $3)
             code.aload(0)
-                .getfield(clazz, mangle(CHANGE_LISTENER_FIELD), Classes.ChangeListenerType())
+                .getfield(generatedClass, mangle(CHANGE_LISTENER_FIELD), Classes.ChangeListenerType())
                 .aload(0)
                 .aload(2)
                 .aload(3)

@@ -1,4 +1,4 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2023, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.generate;
@@ -36,30 +36,30 @@ public class HeadSegmentGenerator extends PropertySegmentGeneratorBase {
     @Override
     public void emitClass(BytecodeEmitContext context) throws Exception {
         super.emitClass(context);
-        clazz.addInterface(ChangeListenerType());
+        generatedClass.addInterface(ChangeListenerType());
     }
 
     @Override
     public void emitFields(BytecodeEmitContext context) throws Exception {
-        CtField field = new CtField(groups[segment + 1].getCompiledClass(), mangle(NEXT_FIELD), clazz);
+        CtField field = new CtField(groups[segment + 1].getCompiledClass(), mangle(NEXT_FIELD), generatedClass);
         field.setModifiers(Modifier.FINAL);
-        clazz.addField(field);
+        generatedClass.addField(field);
     }
 
     @Override
     public void emitMethods(BytecodeEmitContext context) throws Exception {
         super.emitMethods(context);
 
-        constructor = new CtConstructor(new CtClass[] {ObservableValueType()}, clazz);
-        clazz.addConstructor(constructor);
+        constructor = new CtConstructor(new CtClass[] {ObservableValueType()}, generatedClass);
+        generatedClass.addConstructor(constructor);
 
         changedMethod = new CtMethod(
             CtClass.voidType,
             "changed",
             new CtClass[] {ObservableValueType(), ObjectType(), ObjectType()},
-            clazz);
+                generatedClass);
         changedMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
-        clazz.addMethod(changedMethod);
+        generatedClass.addMethod(changedMethod);
     }
 
     @Override
@@ -265,7 +265,7 @@ public class HeadSegmentGenerator extends PropertySegmentGeneratorBase {
         }
 
         code.aload(0)
-            .getfield(clazz, mangle(NEXT_FIELD), resolver.resolveClass(nextClassName))
+            .getfield(generatedClass, mangle(NEXT_FIELD), resolver.resolveClass(nextClassName))
             .aload(3)
             .invokevirtual(nextClassName, UPDATE_METHOD, function(CtClass.voidType, nextObservableType))
             .vreturn();

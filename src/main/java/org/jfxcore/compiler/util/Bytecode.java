@@ -1,4 +1,4 @@
-// Copyright (c) 2022, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2023, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.util;
@@ -160,6 +160,11 @@ public class Bytecode {
         return this;
     }
 
+    public Bytecode dup2_x2() {
+        bytecode.addOpcode(Opcode.DUP2_X2);
+        return this;
+    }
+
     public Bytecode fconst(float f) {
         bytecode.addFconst(f);
         return this;
@@ -210,6 +215,12 @@ public class Bytecode {
 
     public Bytecode getstatic(String c, String name, String type) {
         bytecode.addGetstatic(c, name, type);
+        return this;
+    }
+
+    public Bytecode goto_position(int position) {
+        bytecode.addOpcode(Opcode.GOTO);
+        bytecode.addIndex(position - bytecode.getSize());
         return this;
     }
 
@@ -352,6 +363,11 @@ public class Bytecode {
         return thenElse(ifnull(), then, else_);
     }
 
+    public Bytecode isinstanceof(CtClass clazz) {
+        bytecode.addInstanceof(clazz.getName());
+        return this;
+    }
+
     public Bytecode invokeinterface(CtClass clazz, String name, String desc) {
         bytecode.addInvokeinterface(clazz, name, desc, getSlotCount(desc));
         return this;
@@ -413,6 +429,11 @@ public class Bytecode {
 
     public Bytecode isub() {
         bytecode.addOpcode(Opcode.ISUB);
+        return this;
+    }
+
+    public Bytecode ixor() {
+        bytecode.addOpcode(Opcode.IXOR);
         return this;
     }
 
@@ -503,6 +524,11 @@ public class Bytecode {
 
     public Bytecode putfield(CtClass declaring, String name, CtClass type) {
         bytecode.addPutfield(declaring, name, Descriptor.of(type));
+        return this;
+    }
+
+    public Bytecode putstatic(CtClass declaring, String name, CtClass type) {
+        bytecode.addPutstatic(declaring, name, Descriptor.of(type));
         return this;
     }
 

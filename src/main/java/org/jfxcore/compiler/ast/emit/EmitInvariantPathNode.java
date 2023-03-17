@@ -1,4 +1,4 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2023, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.emit;
@@ -39,7 +39,7 @@ public class EmitInvariantPathNode extends AbstractNode implements ValueEmitterN
     @Override
     public boolean isNullable() {
         for (EmitterNode child : children) {
-            if (!(child instanceof NullableInfo) || ((NullableInfo)child).isNullable()) {
+            if (NullableInfo.isNullable(child, true)) {
                 return true;
             }
         }
@@ -54,9 +54,7 @@ public class EmitInvariantPathNode extends AbstractNode implements ValueEmitterN
         boolean anyNullable = false;
 
         for (int i = 0; i < children.size() - 1; ++i) {
-            Node child = children.get(i);
-
-            if (child instanceof NullableInfo && ((NullableInfo)child).isNullable()) {
+            if (NullableInfo.isNullable(children.get(i), false)) {
                 anyNullable = true;
                 break;
             }
@@ -73,7 +71,7 @@ public class EmitInvariantPathNode extends AbstractNode implements ValueEmitterN
 
             for (int i = 0; i < children.size(); ++i) {
                 Node child = children.get(i);
-                boolean nullable = child instanceof NullableInfo && ((NullableInfo)child).isNullable();
+                boolean nullable = NullableInfo.isNullable(child, false);
                 boolean lastChild = i == children.size() - 1;
 
                 context.emit(child);
