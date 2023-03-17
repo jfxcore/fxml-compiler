@@ -54,8 +54,8 @@ public class MapWrapperTest extends CompilerTestBase {
 
     @Test
     public void Wrapped_NullValue_Is_Empty_Map() {
-        ObservableMapValue<Integer, String> listWrapper = newInstance(null);
-        assertEquals(Map.of(), listWrapper);
+        ObservableMapValue<Integer, String> wrapper = newInstance(null);
+        assertEquals(Map.of(), wrapper);
     }
 
     @Test

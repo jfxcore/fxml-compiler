@@ -54,8 +54,8 @@ public class SetWrapperTest extends CompilerTestBase {
 
     @Test
     public void Wrapped_NullValue_Is_Empty_Set() {
-        ObservableSetValue<String> listWrapper = newInstance(null);
-        assertEquals(Set.of(), listWrapper);
+        ObservableSetValue<String> wrapper = newInstance(null);
+        assertEquals(Set.of(), wrapper);
     }
 
     @Test
