@@ -1,4 +1,4 @@
-// Copyright (c) 2022, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2023, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.parse;
@@ -34,7 +34,7 @@ import java.util.Map;
 
 public class FxmlParser {
 
-    // Intrinsics that are not interpreted by the markup extension parser.
+    // Intrinsics that are not interpreted by the inline parser.
     private static final Intrinsic[] VERBATIM_INTRINSICS = new Intrinsic[] {
         Intrinsics.ID,
         Intrinsics.TYPE,
@@ -43,9 +43,22 @@ public class FxmlParser {
 
     // Intrinsic properties that are always interpreted as paths.
     private static final IntrinsicProperty[] PATH_INTRINSICS = new IntrinsicProperty[] {
-        Intrinsics.BIND.findProperty("path"),
         Intrinsics.ONCE.findProperty("path"),
-        Intrinsics.SYNC.findProperty("path")
+        Intrinsics.CONTENT.findProperty("path"),
+        Intrinsics.BIND.findProperty("path"),
+        Intrinsics.BIND_CONTENT.findProperty("path"),
+        Intrinsics.BIND_BIDIRECTIONAL.findProperty("path"),
+        Intrinsics.BIND_CONTENT_BIDIRECTIONAL.findProperty("path")
+    };
+
+    private static final String[] INLINE_EXPR_TOKENS = new String[] {
+        "{",
+        InlineParser.COMPACT_BIND_BIDIRECTIONAL_EXPR_PREFIX,
+        InlineParser.COMPACT_BIND_EXPR_PREFIX,
+        InlineParser.COMPACT_BIND_CONTENT_BIDIRECTIONAL_EXPR_PREFIX,
+        InlineParser.COMPACT_BIND_CONTENT_EXPR_PREFIX,
+        InlineParser.COMPACT_CONTENT_EXPR_PREFIX,
+        InlineParser.COMPACT_EXPR_PREFIX
     };
 
     private final String source;
@@ -191,21 +204,31 @@ public class FxmlParser {
         }
 
         if (parseAsPath) {
-            return new MeParser(text, prefix, sourceInfo.getStart()).parsePath();
+            return new InlineParser(text, prefix, sourceInfo.getStart()).parsePath();
         }
 
         if (text.length() > 1) {
             String trimmed = text.trim();
-            if (trimmed.startsWith("{")) {
+            if (isInlineExpression(trimmed)) {
                 if (trimmed.startsWith("{}")) {
                     return new TextNode(text.substring(text.indexOf("{}") + 2), sourceInfo);
                 }
 
-                return new MeParser(text, prefix, sourceInfo.getStart()).parseObject();
+                return new InlineParser(text, prefix, sourceInfo.getStart()).parseObject();
             }
         }
 
         return new TextNode(text, sourceInfo);
+    }
+
+    private boolean isInlineExpression(String text) {
+        for (String token : INLINE_EXPR_TOKENS) {
+            if (text.startsWith(token)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     @SuppressWarnings("unchecked")

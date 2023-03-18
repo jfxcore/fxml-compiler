@@ -1,4 +1,4 @@
-// Copyright (c) 2021, 2022, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2023, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.transform.markup;
@@ -30,7 +30,6 @@ import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.diagnostic.errors.BindingSourceErrors;
 import org.jfxcore.compiler.diagnostic.errors.GeneralErrors;
 import org.jfxcore.compiler.diagnostic.errors.ParserErrors;
-import org.jfxcore.compiler.diagnostic.errors.PropertyAssignmentErrors;
 import org.jfxcore.compiler.transform.Transform;
 import org.jfxcore.compiler.transform.TransformContext;
 import org.jfxcore.compiler.util.Resolver;
@@ -46,7 +45,7 @@ public class BindingTransform implements Transform {
             return node;
         }
 
-        BindingMode bindingMode = getBindingMode(context, objectNode);
+        BindingMode bindingMode = getBindingMode(objectNode);
 
         if (bindingMode == null) {
             return node;
@@ -65,40 +64,22 @@ public class BindingTransform implements Transform {
         return new BindingNode(pathExpression, bindingMode, node.getSourceInfo());
     }
 
-    private BindingMode getBindingMode(TransformContext context, ObjectNode node) {
+    private BindingMode getBindingMode(ObjectNode node) {
         if (node.isIntrinsic(Intrinsics.ONCE)) {
-            return isContent(context, node) ? BindingMode.CONTENT : BindingMode.ONCE;
+            return BindingMode.ONCE;
+        } else if (node.isIntrinsic(Intrinsics.CONTENT)) {
+            return BindingMode.CONTENT;
         } else if (node.isIntrinsic(Intrinsics.BIND)) {
-            return isContent(context, node) ? BindingMode.UNIDIRECTIONAL_CONTENT : BindingMode.UNIDIRECTIONAL;
-        } else if (node.isIntrinsic(Intrinsics.SYNC)) {
-            return isContent(context, node) ? BindingMode.BIDIRECTIONAL_CONTENT : BindingMode.BIDIRECTIONAL;
+            return BindingMode.UNIDIRECTIONAL;
+        } else if (node.isIntrinsic(Intrinsics.BIND_CONTENT)) {
+            return BindingMode.UNIDIRECTIONAL_CONTENT;
+        } else if (node.isIntrinsic(Intrinsics.BIND_BIDIRECTIONAL)) {
+            return BindingMode.BIDIRECTIONAL;
+        } else if (node.isIntrinsic(Intrinsics.BIND_CONTENT_BIDIRECTIONAL)) {
+            return BindingMode.BIDIRECTIONAL_CONTENT;
         }
 
         return null;
-    }
-
-    private boolean isContent(TransformContext context, ObjectNode node) {
-        PropertyNode contentProperty = node.findProperty("content");
-        if (contentProperty == null) {
-            return false;
-        }
-
-        Node valueNode = contentProperty.getSingleValue(context);
-
-        if (valueNode instanceof BooleanNode booleanNode) {
-            return Boolean.parseBoolean(booleanNode.getText());
-        }
-
-        if (valueNode instanceof TextNode textNode) {
-            throw PropertyAssignmentErrors.cannotCoercePropertyValue(
-                contentProperty.getSourceInfo(),
-                node.getType().getMarkupName(),
-                "content",
-                textNode.getText());
-        }
-
-        throw PropertyAssignmentErrors.propertyMustContainText(
-            contentProperty.getSourceInfo(), node.getType().getMarkupName(), "content");
     }
 
     private ExpressionNode tryParseExpression(

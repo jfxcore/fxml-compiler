@@ -1,4 +1,4 @@
-// Copyright (c) 2022, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2023, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.parse;
@@ -18,11 +18,11 @@ import org.jfxcore.compiler.TestBase;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class MeParserTest extends TestBase {
+public class InlineParserTest extends TestBase {
 
     @Test
     public void Parse_Simple_Identifier() {
-        var obj = new MeParser("{foo}", "fx").parseObject();
+        var obj = new InlineParser("{foo}", "fx").parseObject();
         assertFalse(obj.getType().isIntrinsic());
         assertEquals("foo", obj.getType().getName());
         assertEquals("foo", obj.getType().getMarkupName());
@@ -30,7 +30,7 @@ public class MeParserTest extends TestBase {
 
     @Test
     public void Parse_Fully_Qualified_Identifier() {
-        var obj = new MeParser("{foo.bar.baz}", "fx").parseObject();
+        var obj = new InlineParser("{foo.bar.baz}", "fx").parseObject();
         assertFalse(obj.getType().isIntrinsic());
         assertEquals("foo.bar.baz", obj.getType().getName());
         assertEquals("foo.bar.baz", obj.getType().getMarkupName());
@@ -38,7 +38,7 @@ public class MeParserTest extends TestBase {
 
     @Test
     public void Parse_Namespace_With_Identifier() {
-        var obj = new MeParser("{fx:foo}", "fx").parseObject();
+        var obj = new InlineParser("{fx:foo}", "fx").parseObject();
         assertTrue(obj.getType().isIntrinsic());
         assertEquals("foo", obj.getType().getName());
         assertEquals("fx:foo", obj.getType().getMarkupName());
@@ -47,7 +47,7 @@ public class MeParserTest extends TestBase {
     @Test
     public void Parse_Namespace_With_Fully_Qualified_Identifier_Fails() {
         MarkupException ex = assertThrows(MarkupException.class,
-            () -> new MeParser("{fx:foo.bar.baz}", "fx").parseObject());
+            () -> new InlineParser("{fx:foo.bar.baz}", "fx").parseObject());
         assertEquals(ErrorCode.UNEXPECTED_TOKEN, ex.getDiagnostic().getCode());
     }
 
@@ -58,7 +58,7 @@ public class MeParserTest extends TestBase {
         """;
 
         MarkupException ex = assertThrows(MarkupException.class,
-            () -> new MeParser(markup, "fx").parseObject());
+            () -> new InlineParser(markup, "fx").parseObject());
 
         assertEquals(ErrorCode.EXPECTED_TOKEN, ex.getDiagnostic().getCode());
         assertTrue(ex.getDiagnostic().getMessage().contains("{"));
@@ -77,7 +77,7 @@ public class MeParserTest extends TestBase {
             }
         """;
 
-        ObjectNode root = new MeParser(markup, "fx").parseObject();
+        ObjectNode root = new InlineParser(markup, "fx").parseObject();
 
         assertEquals("GridPane", root.getType().getName());
         assertEquals(4, root.getProperties().size());
@@ -128,7 +128,7 @@ public class MeParserTest extends TestBase {
             }
         """;
 
-        ObjectNode root = new MeParser(markup, "fx").parseObject();
+        ObjectNode root = new InlineParser(markup, "fx").parseObject();
 
         assertEquals(2, root.getChildren().size());
 
@@ -152,7 +152,7 @@ public class MeParserTest extends TestBase {
         """;
 
         MarkupException ex = assertThrows(
-            MarkupException.class, () -> new MeParser(markup, "fx").parseObject());
+            MarkupException.class, () -> new InlineParser(markup, "fx").parseObject());
 
         assertEquals(ErrorCode.EXPECTED_TOKEN, ex.getDiagnostic().getCode());
         assertTrue(ex.getDiagnostic().getMessage().contains("}"));
@@ -167,7 +167,7 @@ public class MeParserTest extends TestBase {
         """;
 
         MarkupException ex = assertThrows(
-            MarkupException.class, () -> new MeParser(markup, "fx").parseObject());
+            MarkupException.class, () -> new InlineParser(markup, "fx").parseObject());
 
         assertEquals(ErrorCode.UNEXPECTED_TOKEN, ex.getDiagnostic().getCode());
     }
@@ -187,7 +187,7 @@ public class MeParserTest extends TestBase {
             }
         """;
 
-        ObjectNode root = new MeParser(markup, "fx").parseObject();
+        ObjectNode root = new InlineParser(markup, "fx").parseObject();
         assertEquals(0, root.getChildren().size());
         assertEquals(
             "foo /* not a comment */ bar",
@@ -209,7 +209,7 @@ public class MeParserTest extends TestBase {
             }
         """;
 
-        ObjectNode root = new MeParser(markup, "fx").parseObject();
+        ObjectNode root = new InlineParser(markup, "fx").parseObject();
         assertEquals(0, root.getChildren().size());
         assertEquals(
             "foo // not a comment",
@@ -233,7 +233,7 @@ public class MeParserTest extends TestBase {
             }
         """;
 
-        ObjectNode root = new MeParser(markup, "fx").parseObject();
+        ObjectNode root = new InlineParser(markup, "fx").parseObject();
         assertEquals("foo\bbar", ((TextNode)root.getProperties().get(0).getValues().get(0)).getText());
         assertEquals("foo\tbar", ((TextNode)root.getProperties().get(1).getValues().get(0)).getText());
         assertEquals("foo\nbar", ((TextNode)root.getProperties().get(2).getValues().get(0)).getText());
@@ -255,7 +255,7 @@ public class MeParserTest extends TestBase {
         """;
 
         MarkupException ex = assertThrows(
-            MarkupException.class, () -> new MeParser(markup, "fx").parseObject());
+            MarkupException.class, () -> new InlineParser(markup, "fx").parseObject());
 
         assertEquals(ErrorCode.UNEXPECTED_TOKEN, ex.getDiagnostic().getCode());
     }
@@ -266,7 +266,7 @@ public class MeParserTest extends TestBase {
             { GridPane fx:bar=pane0 foo; { GridPane fx:bar=pane0 } }
         """;
 
-        ObjectNode root = new MeParser(markup, "fx").parseObject();
+        ObjectNode root = new InlineParser(markup, "fx").parseObject();
         assertEquals(1, root.getProperties().size());
         assertTrue(root.getProperties().get(0).isIntrinsic());
         assertEquals("bar", root.getProperties().get(0).getName());
@@ -286,7 +286,7 @@ public class MeParserTest extends TestBase {
             }
         """;
 
-        ObjectNode root = new MeParser(markup, "fx").parseObject();
+        ObjectNode root = new InlineParser(markup, "fx").parseObject();
         PropertyNode prefWidth = ((ObjectNode)root.getChildren().get(0)).findProperty("prefWidth");
         TextNode listNode = (TextNode)((ObjectNode)prefWidth.getValues().get(0)).getChildren().get(0);
         assertEquals("parent[GridPane:1]/prefWidth", listNode.getText());
@@ -294,49 +294,49 @@ public class MeParserTest extends TestBase {
 
     @Test
     public void Intrinsic_Namespace_Is_Detected_When_Intrinsic_Prefix_Is_Specified() {
-        ObjectNode root = new MeParser("{GridPane prefWidth={fx:once foo}}", "fx").parseObject();
+        ObjectNode root = new InlineParser("{GridPane prefWidth={fx:once foo}}", "fx").parseObject();
         assertTrue(((ObjectNode)root.getProperty("prefWidth").getValues().get(0)).getType().isIntrinsic());
 
-        root = new MeParser("{GridPane prefWidth={foo:once foo}}", "foo").parseObject();
+        root = new InlineParser("{GridPane prefWidth={foo:once foo}}", "foo").parseObject();
         assertTrue(((ObjectNode)root.getProperty("prefWidth").getValues().get(0)).getType().isIntrinsic());
     }
 
     @Test
     public void Invalid_Intrinsic_Namespace_Fails() {
         MarkupException ex = assertThrows(MarkupException.class,
-            () -> new MeParser("{GridPane prefWidth={foo:once foo}}", "bar").parseObject());
+            () -> new InlineParser("{GridPane prefWidth={foo:once foo}}", "bar").parseObject());
 
         assertEquals(ErrorCode.UNKNOWN_NAMESPACE, ex.getDiagnostic().getCode());
 
         ex = assertThrows(MarkupException.class,
-            () -> new MeParser("{GridPane prefWidth={fx:once foo}}", null).parseObject());
+            () -> new InlineParser("{GridPane prefWidth={fx:once foo}}", null).parseObject());
 
         assertEquals(ErrorCode.UNKNOWN_NAMESPACE, ex.getDiagnostic().getCode());
     }
 
     @Test
     public void Literal_Is_Parsed_As_Boolean() {
-        ObjectNode root = new MeParser("{Foo bar=true}", null).parseObject();
+        ObjectNode root = new InlineParser("{Foo bar=true}", null).parseObject();
         assertTrue(root.getProperty("bar").getValues().get(0) instanceof BooleanNode);
     }
 
     @Test
     public void Literal_Is_Parsed_As_Number() {
-        ObjectNode root = new MeParser("{Foo bar=5.0}", null).parseObject();
+        ObjectNode root = new InlineParser("{Foo bar=5.0}", null).parseObject();
         assertTrue(root.getProperty("bar").getValues().get(0) instanceof NumberNode);
     }
 
     @Test
     public void Content_After_CurlyBraces_Is_Not_Allowed() {
         MarkupException ex = assertThrows(MarkupException.class,
-            () -> new MeParser("{Foo bar=5.0}, {baz}", null).parseObject());
+            () -> new InlineParser("{Foo bar=5.0}, {baz}", null).parseObject());
 
         assertEquals(ErrorCode.UNEXPECTED_TOKEN, ex.getDiagnostic().getCode());
     }
 
     @Test
     public void ListContent_With_Empty_Strings_Works_Correctly() {
-        ObjectNode root = new MeParser("{Foo '', 'baz', ''}", null).parseObject();
+        ObjectNode root = new InlineParser("{Foo '', 'baz', ''}", null).parseObject();
         assertEquals("baz", ((TextNode)root.getChildren().get(0)).getText());
     }
 

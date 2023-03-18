@@ -1,9 +1,8 @@
-// Copyright (c) 2022, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2023, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.intrinsic;
 
-import javassist.CtClass;
 import org.jfxcore.compiler.ast.ObjectNode;
 import org.jfxcore.compiler.util.Classes;
 import java.util.List;
@@ -61,23 +60,34 @@ public class Intrinsics {
 
     public static final Intrinsic ONCE = new Intrinsic(
         "once", Kind.OBJECT, Placement.ANY,
-        new IntrinsicProperty("path", Classes::StringType, true),
-        new IntrinsicProperty("content", () -> CtClass.booleanType));
+        new IntrinsicProperty("path", Classes::StringType, true));
+
+    public static final Intrinsic CONTENT = new Intrinsic(
+        "content", Kind.OBJECT, Placement.ANY,
+        new IntrinsicProperty("path", Classes::StringType, true));
 
     public static final Intrinsic BIND = new Intrinsic(
         "bind", Kind.OBJECT, Placement.ANY,
-        new IntrinsicProperty("path", Classes::StringType, true),
-        new IntrinsicProperty("content", () -> CtClass.booleanType));
+        new IntrinsicProperty("path", Classes::StringType, true));
 
-    public static final Intrinsic SYNC = new Intrinsic(
-        "sync", Kind.OBJECT, Placement.ANY,
+    public static final Intrinsic BIND_CONTENT = new Intrinsic(
+        "bindContent", Kind.OBJECT, Placement.ANY,
+        new IntrinsicProperty("path", Classes::StringType, true));
+
+    public static final Intrinsic BIND_BIDIRECTIONAL = new Intrinsic(
+        "bindBidirectional", Kind.OBJECT, Placement.ANY,
         new IntrinsicProperty("path", Classes::StringType, true),
-        new IntrinsicProperty("content", () -> CtClass.booleanType),
+        new IntrinsicProperty("inverseMethod", Classes::StringType));
+
+    public static final Intrinsic BIND_CONTENT_BIDIRECTIONAL = new Intrinsic(
+        "bindContentBidirectional", Kind.OBJECT, Placement.ANY,
+        new IntrinsicProperty("path", Classes::StringType, true),
         new IntrinsicProperty("inverseMethod", Classes::StringType));
 
     private static final List<Intrinsic> NODES = List.of(
         NULL, CLASS, CLASS_MODIFIER, CLASS_PARAMETERS, MARKUP_CLASS_NAME, ID, VALUE, CONSTANT, FACTORY,
-        TYPE_ARGUMENTS, ITEM_TYPE, DEFINE, STYLESHEET, TYPE, URL, ONCE, BIND, SYNC);
+        TYPE_ARGUMENTS, ITEM_TYPE, DEFINE, STYLESHEET, TYPE, URL, ONCE, CONTENT, BIND, BIND_CONTENT,
+        BIND_BIDIRECTIONAL, BIND_CONTENT_BIDIRECTIONAL);
 
     public static Intrinsic find(ObjectNode node) {
         if (node.getType().isIntrinsic()){

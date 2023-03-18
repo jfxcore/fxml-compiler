@@ -1,4 +1,4 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2023, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.bindings;
@@ -148,7 +148,7 @@ public class OperatorTest extends CompilerTestBase {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import org.jfxcore.compiler.bindings.BindingPathTest.TestPane?>
             <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                      visible="{fx:sync !invariantContext.doubleVal}"/>
+                      visible="{fx:bindBidirectional !invariantContext.doubleVal}"/>
         """));
 
         assertEquals(ErrorCode.EXPRESSION_NOT_INVERTIBLE, ex.getDiagnostic().getCode());
@@ -160,7 +160,7 @@ public class OperatorTest extends CompilerTestBase {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import org.jfxcore.compiler.bindings.BindingPathTest.TestPane?>
             <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                      visible="{fx:sync !!invariantContext.doubleVal}"/>
+                      visible="{fx:bindBidirectional !!invariantContext.doubleVal}"/>
         """));
 
         assertEquals(ErrorCode.EXPRESSION_NOT_INVERTIBLE, ex.getDiagnostic().getCode());
@@ -173,7 +173,7 @@ public class OperatorTest extends CompilerTestBase {
             <?import org.jfxcore.compiler.bindings.*?>
             <?import org.jfxcore.compiler.bindings.BindingPathTest.TestPane?>
             <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                      visible="{fx:sync !OperatorTest.doubleToString(invariantContext.doubleVal)}"/>
+                      visible="{fx:bindBidirectional !OperatorTest.doubleToString(invariantContext.doubleVal)}"/>
         """));
 
         assertEquals(ErrorCode.EXPRESSION_NOT_INVERTIBLE, ex.getDiagnostic().getCode());
@@ -186,7 +186,7 @@ public class OperatorTest extends CompilerTestBase {
             <?import org.jfxcore.compiler.bindings.*?>
             <?import org.jfxcore.compiler.bindings.BindingPathTest.TestPane?>
             <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                      visible="{fx:sync !!OperatorTest.doubleToString(invariantContext.doubleVal)}"/>
+                      visible="{fx:bindBidirectional !!OperatorTest.doubleToString(invariantContext.doubleVal)}"/>
         """));
 
         assertEquals(ErrorCode.EXPRESSION_NOT_INVERTIBLE, ex.getDiagnostic().getCode());
@@ -199,7 +199,7 @@ public class OperatorTest extends CompilerTestBase {
         BindingPathTest.TestPane root = compileAndRun("""
             <?import org.jfxcore.compiler.bindings.BindingPathTest.TestPane?>
             <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                      visible="{fx:sync !invariantContext.boolVal}"/>
+                      visible="{fx:bindBidirectional !invariantContext.boolVal}"/>
         """);
 
         root.invariantContext.boolValProperty().set(false);

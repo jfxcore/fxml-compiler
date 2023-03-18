@@ -1,4 +1,4 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2023, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler;
@@ -310,7 +310,7 @@ public class TemplatesTest extends CompilerTestBase {
                     <cellFactory>
                         <TemplatedListCellFactory fx:typeArguments="java.lang.String">
                             <Template fx:typeArguments="java.lang.String">
-                                <Label text="{fx:sync this}"/>
+                                <Label text="{fx:bindBidirectional this}"/>
                             </Template>
                         </TemplatedListCellFactory>
                     </cellFactory>
