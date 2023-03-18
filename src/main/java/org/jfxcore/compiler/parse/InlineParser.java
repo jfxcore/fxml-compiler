@@ -1,4 +1,4 @@
-// Copyright (c) 2022, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2023, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.parse;
@@ -29,33 +29,54 @@ import java.util.List;
 
 import static org.jfxcore.compiler.parse.CurlyTokenType.*;
 
-public class MeParser {
+public class InlineParser {
+
+    public static final String COMPACT_EXPR_PREFIX = "$";
+    public static final String COMPACT_BIND_EXPR_PREFIX = "${";
+    public static final String COMPACT_BIND_BIDIRECTIONAL_EXPR_PREFIX = "#{";
+    public static final String COMPACT_CONTENT_EXPR_PREFIX = "[$]";
+    public static final String COMPACT_BIND_CONTENT_EXPR_PREFIX = "[$]{";
+    public static final String COMPACT_BIND_CONTENT_BIDIRECTIONAL_EXPR_PREFIX = "[#]{";
+
+    private record SyntaxMapping(String compact, String expanded, boolean addTrailingCurly) {}
+
+    private static final SyntaxMapping[] COMPACT_SYNTAX_MAPPING = new SyntaxMapping[] {
+        new SyntaxMapping(COMPACT_BIND_EXPR_PREFIX, "{fx:bind ", false),
+        new SyntaxMapping(COMPACT_BIND_BIDIRECTIONAL_EXPR_PREFIX, "{fx:bindBidirectional ", false),
+        new SyntaxMapping(COMPACT_EXPR_PREFIX, "{fx:once ", true),
+        new SyntaxMapping(COMPACT_BIND_CONTENT_EXPR_PREFIX, "{fx:bindContent ", false),
+        new SyntaxMapping(COMPACT_BIND_CONTENT_BIDIRECTIONAL_EXPR_PREFIX, "{fx:bindContentBidirectional ", false),
+        new SyntaxMapping(COMPACT_CONTENT_EXPR_PREFIX, "{fx:content ", true)
+    };
+
+    private record Source(String text, Location sourceOffset) {}
 
     private final String source;
     private final String intrinsicPrefix;
     private final Location sourceOffset;
 
-    public MeParser(String source, @Nullable String intrinsicPrefix) {
+    public InlineParser(String source, @Nullable String intrinsicPrefix) {
         this.source = source;
         this.intrinsicPrefix = intrinsicPrefix;
         this.sourceOffset = new Location(0, 0);
     }
 
-    public MeParser(String source, @Nullable String intrinsicPrefix, Location sourceOffset) {
+    public InlineParser(String source, @Nullable String intrinsicPrefix, Location sourceOffset) {
         this.source = source;
         this.intrinsicPrefix = intrinsicPrefix;
         this.sourceOffset = sourceOffset;
     }
 
     public ValueNode parsePath() {
-        MeTokenizer tokenizer = new MeTokenizer(source, sourceOffset);
+        InlineTokenizer tokenizer = new InlineTokenizer(source, sourceOffset);
         PathNode pathNode = parsePath(tokenizer, true);
         return tokenizer.size() > 0 && tokenizer.peekNotNull().getType() == OPEN_PAREN ?
             parseFunctionExpression(tokenizer, pathNode) : pathNode;
     }
 
     public ObjectNode parseObject() {
-        MeTokenizer tokenizer = new MeTokenizer(source, sourceOffset);
+        Source newSource = expandCompactSyntax(source, sourceOffset);
+        InlineTokenizer tokenizer = new InlineTokenizer(newSource.text, newSource.sourceOffset);
         ObjectNode result = parseObjectExpression(tokenizer);
         if (!tokenizer.isEmpty()) {
             throw ParserErrors.unexpectedToken(tokenizer.peekNotNull());
@@ -64,7 +85,22 @@ public class MeParser {
         return result;
     }
 
-    private ValueNode parseExpression(MeTokenizer tokenizer) {
+    private Source expandCompactSyntax(String text, Location sourceOffset) {
+        for (SyntaxMapping mapping : COMPACT_SYNTAX_MAPPING) {
+            if (text.startsWith(mapping.compact)) {
+                String value = text.substring(mapping.compact.length());
+                return new Source(
+                    mapping.addTrailingCurly ? mapping.expanded + value + "}" : mapping.expanded + value,
+                    new Location(
+                        sourceOffset.getLine(),
+                        sourceOffset.getColumn() - mapping.expanded.length() + mapping.compact.length()));
+            }
+        }
+
+        return new Source(text, sourceOffset);
+    }
+
+    private ValueNode parseExpression(InlineTokenizer tokenizer) {
         List<ValueNode> list = new ArrayList<>();
         List<ValueNode> values = new ArrayList<>();
         CurlyTokenClass nextTokenClass;
@@ -92,20 +128,20 @@ public class MeParser {
         return listNode(list);
     }
 
-    private ValueNode parseSingleExpression(MeTokenizer tokenizer) {
+    private ValueNode parseSingleExpression(InlineTokenizer tokenizer) {
         return switch (tokenizer.peekNotNull().getType()) {
             case NUMBER -> {
-                MeToken number = tokenizer.remove(NUMBER);
+                InlineToken number = tokenizer.remove(NUMBER);
                 yield new NumberNode(number.getValue(), number.getSourceInfo());
             }
 
             case BOOLEAN -> {
-                MeToken bool = tokenizer.remove(BOOLEAN);
+                InlineToken bool = tokenizer.remove(BOOLEAN);
                 yield new BooleanNode(bool.getValue(), bool.getSourceInfo());
             }
 
             case STRING -> {
-                MeToken string = tokenizer.remove(STRING);
+                InlineToken string = tokenizer.remove(STRING);
                 yield TextNode.createRawUnresolved(string.getValue(), string.getSourceInfo());
             }
 
@@ -122,7 +158,7 @@ public class MeParser {
                     yield tokenizer.peekNotNull().getType() == OPEN_PAREN ? parseFunctionExpression(tokenizer, path) : path;
                 }
 
-                MeToken token = tokenizer.remove();
+                InlineToken token = tokenizer.remove();
                 if (token.getType().getTokenClass() == CurlyTokenClass.DELIMITER) {
                     throw ParserErrors.unexpectedToken(token);
                 }
@@ -132,8 +168,8 @@ public class MeParser {
         };
     }
 
-    private ObjectNode parseObjectExpression(MeTokenizer tokenizer) {
-        MeToken openCurly = tokenizer.remove(OPEN_CURLY);
+    private ObjectNode parseObjectExpression(InlineTokenizer tokenizer) {
+        InlineToken openCurly = tokenizer.remove(OPEN_CURLY);
         TextNode name = parseIdentifier(tokenizer);
         String cleanName = cleanIdentifier(name.getText(), name.getSourceInfo());
         List<ValueNode> children = new ArrayList<>();
@@ -163,14 +199,14 @@ public class MeParser {
             throw ex;
         }
 
-        MeToken closeCurly = tokenizer.remove(CLOSE_CURLY);
+        InlineToken closeCurly = tokenizer.remove(CLOSE_CURLY);
 
         return new ObjectNode(
             new TypeNode(cleanName, name.getText(), !cleanName.equals(name.getText()), name.getSourceInfo()),
             properties, children, SourceInfo.span(openCurly.getSourceInfo(), closeCurly.getSourceInfo()));
     }
 
-    private PropertyNode parsePropertyExpression(MeTokenizer tokenizer) {
+    private PropertyNode parsePropertyExpression(InlineTokenizer tokenizer) {
         TextNode propertyName = parseIdentifier(tokenizer);
         String cleanName = cleanIdentifier(propertyName.getText(), propertyName.getSourceInfo());
         tokenizer.remove(EQUALS);
@@ -185,10 +221,10 @@ public class MeParser {
             SourceInfo.span(propertyName.getSourceInfo(), value.getSourceInfo()));
     }
 
-    private FunctionNode parseFunctionExpression(MeTokenizer tokenizer, PathNode functionName) {
+    private FunctionNode parseFunctionExpression(InlineTokenizer tokenizer, PathNode functionName) {
         tokenizer.remove(OPEN_PAREN);
         ValueNode arguments = parseExpression(tokenizer);
-        MeToken lastToken = tokenizer.remove(CLOSE_PAREN);
+        InlineToken lastToken = tokenizer.remove(CLOSE_PAREN);
 
         return new FunctionNode(
             functionName,
@@ -196,10 +232,10 @@ public class MeParser {
             SourceInfo.span(functionName.getSourceInfo(), lastToken.getSourceInfo()));
     }
 
-    private TextNode parseIdentifier(MeTokenizer tokenizer) {
+    private TextNode parseIdentifier(InlineTokenizer tokenizer) {
         var text = new StringBuilder();
         SourceInfo start = tokenizer.peekNotNull().getSourceInfo(), end;
-        MeToken identifier = null;
+        InlineToken identifier = null;
 
         do {
             if (identifier != null && isIntrinsicIdentifier(identifier.getValue(), identifier.getSourceInfo())) {
@@ -218,7 +254,7 @@ public class MeParser {
         return new TextNode(text.toString(), SourceInfo.span(start, end));
     }
 
-    private PathNode parsePath(MeTokenizer tokenizer, boolean allowContextSelector) {
+    private PathNode parsePath(InlineTokenizer tokenizer, boolean allowContextSelector) {
         var segments = new ArrayList<PathSegmentNode>();
         SourceInfo start = tokenizer.peekNotNull().getSourceInfo(), end;
         ContextSelectorNode bindingContextSelector = null;
@@ -252,12 +288,12 @@ public class MeParser {
         return new PathNode(bindingContextSelector, segments, SourceInfo.span(start, end));
     }
 
-    private ContextSelectorNode tryParseContextSelector(MeTokenizer tokenizer) {
+    private ContextSelectorNode tryParseContextSelector(InlineTokenizer tokenizer) {
         ContextSelectorNode result = null;
         tokenizer.mark();
 
         try {
-            MeToken contextName = tokenizer.poll(IDENTIFIER);
+            InlineToken contextName = tokenizer.poll(IDENTIFIER);
             if (contextName == null) {
                 return null;
             }
@@ -333,7 +369,7 @@ public class MeParser {
         }
     }
 
-    private void eatSemis(MeTokenizer tokenizer) {
+    private void eatSemis(InlineTokenizer tokenizer) {
         while (tokenizer.peekSemi() != null) {
             tokenizer.remove();
         }

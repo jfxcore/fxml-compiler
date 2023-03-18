@@ -1,4 +1,4 @@
-// Copyright (c) 2022, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2023, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.diagnostic;
@@ -60,7 +60,7 @@ public final class SourceInfo {
         int sourceStartLine = source.start.getLine();
         int sourceEndLine = source.end.getLine();
 
-        if (source.start.getLine() == 0 && offset.getColumn() > 0) {
+        if (source.start.getLine() == 0) {
             sourceStartCol += offset.getColumn();
             sourceEndCol += offset.getColumn();
         }

@@ -78,7 +78,7 @@
 //            this, "Bind_Bidirectional_To_Delegated_Property", """
 //                <?import org.jfxcore.compiler.bindings.KtBindingPathTest.TestPane0?>
 //                <TestPane0 xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-//                           visible="{fx:sync context.boolProp}"/>
+//                           visible="{fx:bindBidirectional context.boolProp}"/>
 //            """);
 //
 //        assertFalse(root.isVisible());
@@ -124,7 +124,7 @@
 //            this, "Bind_Bidirectional_To_ReadOnly_Delegated_Property_Fails", """
 //                <?import org.jfxcore.compiler.bindings.KtBindingPathTest.TestPane1?>
 //                <TestPane1 xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-//                           prefWidth="{fx:sync context.readOnlyDoubleProp}"/>
+//                           prefWidth="{fx:bindBidirectional context.readOnlyDoubleProp}"/>
 //            """));
 //
 //        assertEquals(ErrorCode.INVALID_BIDIRECTIONAL_BINDING_SOURCE, ex.getDiagnostic().getCode());
@@ -174,7 +174,7 @@
 //            this, "Bind_Bidirectional_To_Val_Delegated_Property_Fails", """
 //                <?import org.jfxcore.compiler.bindings.KtBindingPathTest.TestPane3?>
 //                <TestPane3 xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-//                           visible="{fx:sync context.readOnlyBoolProp}"/>
+//                           visible="{fx:bindBidirectional context.readOnlyBoolProp}"/>
 //            """));
 //
 //        assertEquals(ErrorCode.INVALID_BIDIRECTIONAL_BINDING_SOURCE, ex.getDiagnostic().getCode());

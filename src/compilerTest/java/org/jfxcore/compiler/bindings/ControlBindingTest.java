@@ -1,4 +1,4 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2023, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.bindings;
@@ -154,12 +154,12 @@ public class ControlBindingTest extends CompilerTestBase {
             <?import javafx.scene.layout.*?>
             <Pane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
                 <Button fx:id="btn" text="foo"/>
-                <Label prefWidth="{fx:sync btn.text}"/>
+                <Label prefWidth="{fx:bindBidirectional btn.text}"/>
             </Pane>
         """));
 
         assertEquals(ErrorCode.SOURCE_TYPE_MISMATCH, ex.getDiagnostic().getCode());
-        assertCodeHighlight("{fx:sync btn.text}", ex);
+        assertCodeHighlight("{fx:bindBidirectional btn.text}", ex);
     }
 
     @Test
@@ -169,7 +169,7 @@ public class ControlBindingTest extends CompilerTestBase {
             <?import javafx.scene.layout.*?>
             <Pane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
                 <Label fx:id="lbl" text="foo"/>
-                <Label text="{fx:sync lbl.text}"/>
+                <Label text="{fx:bindBidirectional lbl.text}"/>
             </Pane>
         """);
 
@@ -189,9 +189,9 @@ public class ControlBindingTest extends CompilerTestBase {
             <?import javafx.scene.control.*?>
             <?import javafx.scene.layout.*?>
             <Pane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                  prefWidth="{fx:sync btn.prefWidth}">
-                <Pane fx:id="pane" prefWidth="{fx:sync prefWidth}">
-                    <Pane prefWidth="{fx:sync pane.prefWidth}">
+                  prefWidth="{fx:bindBidirectional btn.prefWidth}">
+                <Pane fx:id="pane" prefWidth="{fx:bindBidirectional prefWidth}">
+                    <Pane prefWidth="{fx:bindBidirectional pane.prefWidth}">
                         <Button fx:id="btn" prefWidth="123"/>
                     </Pane>
                 </Pane>

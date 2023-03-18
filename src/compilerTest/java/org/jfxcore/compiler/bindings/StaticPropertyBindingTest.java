@@ -123,7 +123,7 @@ public class StaticPropertyBindingTest extends CompilerTestBase {
             <?import javafx.scene.control.*?>
             <Pane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
                 <Pane fx:id="pane" TextSource.text="foo"/>
-                <Label text="{fx:sync pane.(TextSource.text)}"/>
+                <Label text="{fx:bindBidirectional pane.(TextSource.text)}"/>
             </Pane>
         """);
 
@@ -198,7 +198,7 @@ public class StaticPropertyBindingTest extends CompilerTestBase {
             <?import javafx.scene.control.*?>
             <Pane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
                 <Label fx:id="lbl" text="foo"/>
-                <Pane TextSource.text="{fx:sync lbl.text}"/>
+                <Pane TextSource.text="{fx:bindBidirectional lbl.text}"/>
             </Pane>
         """);
 

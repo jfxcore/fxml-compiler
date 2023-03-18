@@ -954,7 +954,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     public void Bind_Bidirectional_To_Unresolvable_InverseMethod_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                      prefWidth="{fx:sync sum(doubleProp); inverseMethod=foo.doesNotExist}"/>
+                      prefWidth="{fx:bindBidirectional sum(doubleProp); inverseMethod=foo.doesNotExist}"/>
         """));
 
         assertEquals(ErrorCode.MEMBER_NOT_FOUND, ex.getDiagnostic().getCode());
@@ -965,7 +965,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     public void Bind_Bidirectional_To_Static_Method_With_Two_Parameters_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                      prefWidth="{fx:sync String.format('%s', doubleProp)}"/>
+                      prefWidth="{fx:bindBidirectional String.format('%s', doubleProp)}"/>
         """));
 
         assertEquals(ErrorCode.INVALID_BIDIRECTIONAL_METHOD_PARAM_COUNT, ex.getDiagnostic().getCode());
@@ -976,7 +976,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     public void Bind_Bidirectional_To_Instance_Method_With_Two_Parameters_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                      prefWidth="{fx:sync add(invariantDoubleVal, doubleProp)}"/>
+                      prefWidth="{fx:bindBidirectional add(invariantDoubleVal, doubleProp)}"/>
         """));
 
         assertEquals(ErrorCode.INVALID_BIDIRECTIONAL_METHOD_PARAM_COUNT, ex.getDiagnostic().getCode());
@@ -987,7 +987,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     public void Bind_Bidirectional_To_Indirect_DoubleProperty() {
         BidirectionalTestPane root = compileAndRun("""
             <BidirectionalTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                                   id="{fx:sync doubleToString(indirect.doubleProp)}"/>
+                                   id="{fx:bindBidirectional doubleToString(indirect.doubleProp)}"/>
         """);
 
         assertEquals("1.0", root.getId());
@@ -997,7 +997,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     public void Bind_Bidirectional_To_Indirect_StringProperty() {
         BidirectionalTestPane root = compileAndRun("""
             <BidirectionalTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                                   prefWidth="{fx:sync stringToDouble(indirect.stringProp)}"/>
+                                   prefWidth="{fx:bindBidirectional stringToDouble(indirect.stringProp)}"/>
         """);
 
         assertEquals(1.0, root.getPrefWidth(), 0.001);
@@ -1007,7 +1007,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     public void Bind_Bidirectional_To_NullIndirect_DoubleProperty() {
         BidirectionalTestPane root = compileAndRun("""
             <BidirectionalTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                                   id="{fx:sync doubleToString(nullIndirect.doubleProp)}"/>
+                                   id="{fx:bindBidirectional doubleToString(nullIndirect.doubleProp)}"/>
         """);
 
         assertEquals("0.0", root.getId());
@@ -1017,7 +1017,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     public void Bind_Bidirectional_To_NullIndirect_StringProperty() {
         BidirectionalTestPane root = compileAndRun("""
             <BidirectionalTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                                   prefWidth="{fx:sync stringToDouble(nullIndirect.stringProp)}"/>
+                                   prefWidth="{fx:bindBidirectional stringToDouble(nullIndirect.stringProp)}"/>
         """);
 
         assertEquals(0.0, root.getPrefWidth(), 0.001);
@@ -1027,9 +1027,9 @@ public class FunctionBindingTest extends CompilerTestBase {
     public void Bind_Bidirectional_To_Method_With_InverseMethod() {
         BidirectionalTestPane root = compileAndRun("""
             <BidirectionalTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                                   id="{fx:sync doubleToString(doubleProp)}"
-                                   prefWidth="{fx:sync stringToDouble(stringProp)}"
-                                   visible="{fx:sync instanceNot(boolProp)}"/>
+                                   id="{fx:bindBidirectional doubleToString(doubleProp)}"
+                                   prefWidth="{fx:bindBidirectional stringToDouble(stringProp)}"
+                                   visible="{fx:bindBidirectional instanceNot(boolProp)}"/>
         """);
 
         assertEquals(1, root.doubleToStringCalls);
@@ -1071,7 +1071,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     public void Bind_Bidirectional_To_Static_Method_With_InverseMethod() {
         BidirectionalTestPane root = compileAndRun("""
             <BidirectionalTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                                   visible="{fx:sync BidirectionalTestPane.staticNot(boolProp)}"/>
+                                   visible="{fx:bindBidirectional BidirectionalTestPane.staticNot(boolProp)}"/>
         """);
 
         assertTrue(root.isVisible());
@@ -1084,7 +1084,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     public void Bind_Bidirectional_To_Instance_Method_With_Static_InverseMethod() {
         BidirectionalTestPane root = compileAndRun("""
             <BidirectionalTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                                   visible="{fx:sync instanceNot2(boolProp)}"/>
+                                   visible="{fx:bindBidirectional instanceNot2(boolProp)}"/>
         """);
 
         assertTrue(root.isVisible());
@@ -1097,7 +1097,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     public void Bind_Bidirectional_To_Method_With_Custom_InverseMethod() {
         BidirectionalTestPane root = compileAndRun("""
             <BidirectionalTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                                   visible="{fx:sync instanceNot(boolProp); inverseMethod=customInverseMethod}"/>
+                                   visible="{fx:bindBidirectional instanceNot(boolProp); inverseMethod=customInverseMethod}"/>
         """);
 
         assertTrue(root.isVisible());
@@ -1109,7 +1109,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     public void Bind_Bidirectional_To_Indirect_Method_With_Indirect_Custom_InverseMethod() {
         BidirectionalTestPane root = compileAndRun("""
             <BidirectionalTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                                   visible="{fx:sync c1.c2.instanceNot(boolProp); inverseMethod=c1.c2.customInverseMethodIndirect}"/>
+                                   visible="{fx:bindBidirectional c1.c2.instanceNot(boolProp); inverseMethod=c1.c2.customInverseMethodIndirect}"/>
         """);
 
         assertTrue(root.isVisible());
@@ -1121,7 +1121,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     public void Bind_Bidirectional_To_Statically_Resolvable_Indirect_Method_With_Indirect_Custom_InverseMethod() {
         BidirectionalTestPane root = compileAndRun("""
             <BidirectionalTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                                   visible="{fx:sync static_c1.c2.instanceNot(boolProp); inverseMethod=static_c1.c2.customInverseMethodIndirect}"/>
+                                   visible="{fx:bindBidirectional static_c1.c2.instanceNot(boolProp); inverseMethod=static_c1.c2.customInverseMethodIndirect}"/>
         """);
 
         assertTrue(root.isVisible());
@@ -1133,7 +1133,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     public void Bind_Bidirectional_To_Method_With_InverseConstructor() {
         BidirectionalTestPane root = compileAndRun("""
             <BidirectionalTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                                   prefWidth="{fx:sync doubleContainerToDouble(doubleContainer); inverseMethod=DoubleContainer}"/>
+                                   prefWidth="{fx:bindBidirectional doubleContainerToDouble(doubleContainer); inverseMethod=DoubleContainer}"/>
         """);
 
         assertEquals(5, root.getPrefWidth(), 0.001);
@@ -1145,7 +1145,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     public void Bind_Bidirectional_To_Method_With_Qualified_InverseConstructor() {
         BidirectionalTestPane root = compileAndRun("""
             <BidirectionalTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                                   prefWidth="{fx:sync doubleContainerToDouble(doubleContainer); inverseMethod=BidirectionalTestPane.DoubleContainer}"/>
+                                   prefWidth="{fx:bindBidirectional doubleContainerToDouble(doubleContainer); inverseMethod=BidirectionalTestPane.DoubleContainer}"/>
         """);
 
         assertEquals(5, root.getPrefWidth(), 0.001);
@@ -1157,7 +1157,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     public void Bind_Bidirectional_To_Constructor_With_InverseMethod() {
         BidirectionalTestPane root = compileAndRun("""
             <BidirectionalTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                                   doubleContainer="{fx:sync DoubleContainer(doubleProp); inverseMethod=doubleContainerToDouble}"/>
+                                   doubleContainer="{fx:bindBidirectional DoubleContainer(doubleProp); inverseMethod=doubleContainerToDouble}"/>
         """);
 
         assertEquals(1, root.doubleProp.get(), 0.001);
@@ -1174,7 +1174,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     public void Bind_Bidirectional_To_Constructor_With_Qualified_InverseMethod() {
         BidirectionalTestPane root = compileAndRun("""
             <BidirectionalTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                                   doubleContainer="{fx:sync DoubleContainer(doubleProp); inverseMethod=DoubleContainer.doubleContainerToDouble}"/>
+                                   doubleContainer="{fx:bindBidirectional DoubleContainer(doubleProp); inverseMethod=DoubleContainer.doubleContainerToDouble}"/>
         """);
 
         assertEquals(1, root.doubleProp.get(), 0.001);
@@ -1192,7 +1192,7 @@ public class FunctionBindingTest extends CompilerTestBase {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.fxml.*?>
             <BidirectionalTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                                   id="{fx:sync noInverseMethod(doubleProp)}"/>
+                                   id="{fx:bindBidirectional noInverseMethod(doubleProp)}"/>
         """));
 
         assertEquals(ErrorCode.METHOD_NOT_INVERTIBLE, ex.getDiagnostic().getCode());
@@ -1204,7 +1204,7 @@ public class FunctionBindingTest extends CompilerTestBase {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.fxml.*?>
             <BidirectionalTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                                   id="{fx:sync noInverseMethod(doubleProp); inverseMethod=invalidInverseMethod}"/>
+                                   id="{fx:bindBidirectional noInverseMethod(doubleProp); inverseMethod=invalidInverseMethod}"/>
         """));
 
         assertEquals(ErrorCode.INCOMPATIBLE_RETURN_VALUE, ex.getDiagnostic().getCode());
@@ -1216,7 +1216,7 @@ public class FunctionBindingTest extends CompilerTestBase {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.fxml.*?>
             <BidirectionalTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                                   id="{fx:sync noInverseMethod(doubleProp); inverseMethod=java.lang.String.format}"/>
+                                   id="{fx:bindBidirectional noInverseMethod(doubleProp); inverseMethod=java.lang.String.format}"/>
         """));
 
         assertEquals(ErrorCode.CANNOT_BIND_FUNCTION, ex.getDiagnostic().getCode());
@@ -1231,7 +1231,7 @@ public class FunctionBindingTest extends CompilerTestBase {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.fxml.*?>
             <BidirectionalTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                                   id="{fx:sync noInverseMethod(doubleProp); inverseMethod=doesNotExist}"/>
+                                   id="{fx:bindBidirectional noInverseMethod(doubleProp); inverseMethod=doesNotExist}"/>
         """));
 
         assertEquals(ErrorCode.MEMBER_NOT_FOUND, ex.getDiagnostic().getCode());
@@ -1243,7 +1243,7 @@ public class FunctionBindingTest extends CompilerTestBase {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.fxml.*?>
             <BidirectionalTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                                   id="{fx:sync instanceNot(readOnlyObservableBool)}"/>
+                                   id="{fx:bindBidirectional instanceNot(readOnlyObservableBool)}"/>
         """));
 
         assertEquals(ErrorCode.INVALID_BIDIRECTIONAL_BINDING_SOURCE, ex.getDiagnostic().getCode());
@@ -1255,7 +1255,7 @@ public class FunctionBindingTest extends CompilerTestBase {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.fxml.*?>
             <BidirectionalTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                                   id="{fx:sync instanceNot(instanceNot(boolProp))}"/>
+                                   id="{fx:bindBidirectional instanceNot(instanceNot(boolProp))}"/>
         """));
 
         assertEquals(ErrorCode.INVALID_BIDIRECTIONAL_METHOD_PARAM_KIND, ex.getDiagnostic().getCode());

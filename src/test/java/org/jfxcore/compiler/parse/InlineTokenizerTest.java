@@ -1,4 +1,4 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2023, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.parse;
@@ -8,11 +8,11 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class MeTokenizerTest {
+public class InlineTokenizerTest {
 
     @Test
     public void Mark_And_Reset() {
-        var tokenizer = new MeTokenizer("{foo bar=baz}", new Location(-1, -1));
+        var tokenizer = new InlineTokenizer("{foo bar=baz}", new Location(-1, -1));
         tokenizer.mark();
         tokenizer.remove(CurlyTokenType.OPEN_CURLY);
         tokenizer.remove(CurlyTokenType.IDENTIFIER);
@@ -30,7 +30,7 @@ public class MeTokenizerTest {
 
     @Test
     public void Mark_And_Reset_Recursive() {
-        var tokenizer = new MeTokenizer("{foo bar=baz}", new Location(-1, -1));
+        var tokenizer = new InlineTokenizer("{foo bar=baz}", new Location(-1, -1));
         tokenizer.mark();
         tokenizer.remove(CurlyTokenType.OPEN_CURLY);
         tokenizer.remove(CurlyTokenType.IDENTIFIER);
@@ -58,7 +58,7 @@ public class MeTokenizerTest {
 
     @Test
     public void Mark_And_Forget_Recursive() {
-        var tokenizer = new MeTokenizer("{foo bar=baz}", new Location(-1, -1));
+        var tokenizer = new InlineTokenizer("{foo bar=baz}", new Location(-1, -1));
         tokenizer.mark();
         tokenizer.remove(CurlyTokenType.OPEN_CURLY);
         tokenizer.remove(CurlyTokenType.IDENTIFIER);

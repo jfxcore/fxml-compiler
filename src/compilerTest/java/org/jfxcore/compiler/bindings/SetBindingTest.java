@@ -211,7 +211,7 @@ public class SetBindingTest extends CompilerTestBase {
     public void Once_ContentBinding_To_Vanilla_Set() {
         SetTestPane root = compileAndRun("""
             <SetTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                         setProp="{fx:once set1; content=true}"/>
+                         setProp="{fx:content set1}"/>
         """);
 
         assertNotNewExpr(root, SET_WRAPPER, OBSERVABLE_VALUE_WRAPPER);
@@ -224,7 +224,7 @@ public class SetBindingTest extends CompilerTestBase {
     public void Once_ContentBinding_To_Vanilla_Set_Indirect() {
         SetTestPane root = compileAndRun("""
             <SetTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                         setProp="{fx:once indirect.set1; content=true}"/>
+                         setProp="{fx:content indirect.set1}"/>
         """);
 
         assertNotNewExpr(root, SET_WRAPPER, OBSERVABLE_VALUE_WRAPPER);
@@ -237,7 +237,7 @@ public class SetBindingTest extends CompilerTestBase {
     public void Once_ContentBinding_To_Observable_Set() {
         SetTestPane root = compileAndRun("""
             <SetTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                         setProp="{fx:once set2; content=true}"/>
+                         setProp="{fx:content set2}"/>
         """);
 
         assertNotNewExpr(root, SET_WRAPPER, OBSERVABLE_VALUE_WRAPPER);
@@ -250,7 +250,7 @@ public class SetBindingTest extends CompilerTestBase {
     public void Once_ContentBinding_To_Observable_Set_Indirect() {
         SetTestPane root = compileAndRun("""
             <SetTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                         setProp="{fx:once indirect.set2; content=true}"/>
+                         setProp="{fx:content indirect.set2}"/>
         """);
 
         assertNotNewExpr(root, SET_WRAPPER, OBSERVABLE_VALUE_WRAPPER);
@@ -263,7 +263,7 @@ public class SetBindingTest extends CompilerTestBase {
     public void Once_ContentBinding_To_ObservableValue_Of_Vanilla_Set() {
         SetTestPane root = compileAndRun("""
             <SetTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                         setProp="{fx:once set3; content=true}"/>
+                         setProp="{fx:content set3}"/>
         """);
 
         assertNotNewExpr(root, SET_WRAPPER, OBSERVABLE_VALUE_WRAPPER);
@@ -276,7 +276,7 @@ public class SetBindingTest extends CompilerTestBase {
     public void Once_ContentBinding_To_ObservableValue_Of_Vanilla_Set_Indirect() {
         SetTestPane root = compileAndRun("""
             <SetTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                         setProp="{fx:once indirect.set3; content=true}"/>
+                         setProp="{fx:content indirect.set3}"/>
         """);
 
         assertNotNewExpr(root, SET_WRAPPER, OBSERVABLE_VALUE_WRAPPER);
@@ -289,7 +289,7 @@ public class SetBindingTest extends CompilerTestBase {
     public void Once_ContentBinding_To_ObservableValue_Of_Observable_Set() {
         SetTestPane root = compileAndRun("""
             <SetTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                         setProp="{fx:once set4; content=true}"/>
+                         setProp="{fx:content set4}"/>
         """);
 
         assertNotNewExpr(root, SET_WRAPPER, OBSERVABLE_VALUE_WRAPPER);
@@ -302,7 +302,7 @@ public class SetBindingTest extends CompilerTestBase {
     public void Once_ContentBinding_To_ObservableValue_Of_Observable_Set_Indirect() {
         SetTestPane root = compileAndRun("""
             <SetTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                         setProp="{fx:once indirect.set4; content=true}"/>
+                         setProp="{fx:content indirect.set4}"/>
         """);
 
         assertNotNewExpr(root, SET_WRAPPER, OBSERVABLE_VALUE_WRAPPER);
@@ -329,16 +329,6 @@ public class SetBindingTest extends CompilerTestBase {
         """));
 
         assertEquals(ErrorCode.CANNOT_CONVERT_SOURCE_TYPE, ex.getDiagnostic().getCode());
-    }
-
-    @Test
-    public void ContentBinding_With_Invalid_ContentParameter_Fails() {
-        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
-            <SetTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                         setProp="{fx:sync set2; content=foo}"/>
-        """));
-
-        assertEquals(ErrorCode.CANNOT_COERCE_PROPERTY_VALUE, ex.getDiagnostic().getCode());
     }
 
     /*
@@ -408,7 +398,7 @@ public class SetBindingTest extends CompilerTestBase {
     public void Unidirectional_ContentBinding_To_Vanilla_Set_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <SetTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                         setProp="{fx:bind set1; content=true}"/>
+                         setProp="{fx:bindContent set1}"/>
         """));
 
         assertEquals(ErrorCode.INVALID_CONTENT_BINDING_SOURCE, ex.getDiagnostic().getCode());
@@ -422,7 +412,7 @@ public class SetBindingTest extends CompilerTestBase {
     public void Unidirectional_ContentBinding_Fails_For_ObjectProperty() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <SetTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                         objectProp="{fx:bind set1; content=true}"/>
+                         objectProp="{fx:bindContent set1}"/>
         """));
 
         assertEquals(ErrorCode.INVALID_CONTENT_BINDING_TARGET, ex.getDiagnostic().getCode());
@@ -466,7 +456,7 @@ public class SetBindingTest extends CompilerTestBase {
     public void Unidirectional_ContentBinding_To_ObservableSet() {
         SetTestPane root = compileAndRun("""
             <SetTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                         setProp="{fx:bind set2; content=true}"/>
+                         setProp="{fx:bindContent set2}"/>
         """);
 
         assertNotNewExpr(root, "Constant", OBSERVABLE_VALUE_WRAPPER, SET_WRAPPER);
@@ -530,7 +520,7 @@ public class SetBindingTest extends CompilerTestBase {
     public void Unidirectional_ContentBinding_To_ObservableValue_Of_Vanilla_Set() {
         SetTestPane root = compileAndRun("""
             <SetTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                         setProp="{fx:bind set3; content=true}"/>
+                         setProp="{fx:bindContent set3}"/>
         """);
 
         assertNewExpr(root, OBSERVABLE_VALUE_WRAPPER);
@@ -580,7 +570,7 @@ public class SetBindingTest extends CompilerTestBase {
     public void Unidirectional_ContentBinding_To_ObservableValue_Of_ObservableSet() {
         SetTestPane root = compileAndRun("""
             <SetTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                         setProp="{fx:bind set4; content=true}"/>
+                         setProp="{fx:bindContent set4}"/>
         """);
 
         assertNewExpr(root, OBSERVABLE_VALUE_WRAPPER);
@@ -607,14 +597,14 @@ public class SetBindingTest extends CompilerTestBase {
     public void Bidirectional_Binding_To_Vanilla_Set_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <SetTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                         setProp="{fx:sync set1}"/>
+                         setProp="{fx:bindBidirectional set1}"/>
         """));
 
         assertEquals(ErrorCode.INVALID_BIDIRECTIONAL_BINDING_SOURCE, ex.getDiagnostic().getCode());
 
         ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <SetTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                         objectProp="{fx:sync set1}"/>
+                         objectProp="{fx:bindBidirectional set1}"/>
         """));
 
         assertEquals(ErrorCode.INVALID_BIDIRECTIONAL_BINDING_SOURCE, ex.getDiagnostic().getCode());
@@ -628,7 +618,7 @@ public class SetBindingTest extends CompilerTestBase {
     public void Bidirectional_ContentBinding_To_Vanilla_Set_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <SetTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                         setProp="{fx:sync set1; content=true}"/>
+                         setProp="{fx:bindContentBidirectional set1}"/>
         """));
 
         assertEquals(ErrorCode.INVALID_BIDIRECTIONAL_CONTENT_BINDING_SOURCE, ex.getDiagnostic().getCode());
@@ -642,7 +632,7 @@ public class SetBindingTest extends CompilerTestBase {
     public void Bidirectional_Binding_To_ObservableSet_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <SetTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                         setProp="{fx:sync set2}" objectProp="{fx:sync set2}"/>
+                         setProp="{fx:bindBidirectional set2}" objectProp="{fx:bindBidirectional set2}"/>
         """));
 
         assertEquals(ErrorCode.INVALID_BIDIRECTIONAL_BINDING_SOURCE, ex.getDiagnostic().getCode());
@@ -656,7 +646,7 @@ public class SetBindingTest extends CompilerTestBase {
     public void Bidirectional_ContentBinding_To_ObservableSet() {
         SetTestPane root = compileAndRun("""
             <SetTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                         setProp="{fx:sync set2; content=true}"/>
+                         setProp="{fx:bindContentBidirectional set2}"/>
         """);
 
         assertNotNewExpr(root, "Constant", OBSERVABLE_VALUE_WRAPPER, SET_WRAPPER);
@@ -678,7 +668,7 @@ public class SetBindingTest extends CompilerTestBase {
     public void Bidirectional_Binding_To_ObservableValue_Of_Vanilla_Set_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <SetTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                         setProp="{fx:sync set3}"/>
+                         setProp="{fx:bindBidirectional set3}"/>
         """));
 
         assertEquals(ErrorCode.SOURCE_TYPE_MISMATCH, ex.getDiagnostic().getCode());
@@ -692,7 +682,7 @@ public class SetBindingTest extends CompilerTestBase {
     public void Bidirectional_ContentBinding_To_ObservableValue_Of_Vanilla_Set_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <SetTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                         setProp="{fx:sync set3; content=true}"/>
+                         setProp="{fx:bindContentBidirectional set3}"/>
         """));
 
         assertEquals(ErrorCode.INVALID_BIDIRECTIONAL_CONTENT_BINDING_SOURCE, ex.getDiagnostic().getCode());
@@ -706,7 +696,7 @@ public class SetBindingTest extends CompilerTestBase {
     public void Bidirectional_Binding_To_Property_Of_ObservableSet() {
         SetTestPane root = compileAndRun("""
             <SetTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                         setProp="{fx:sync set4}"/>
+                         setProp="{fx:bindBidirectional set4}"/>
         """);
 
         assertNotNewExpr(root, OBSERVABLE_VALUE_WRAPPER, SET_WRAPPER, "Constant");
@@ -721,7 +711,7 @@ public class SetBindingTest extends CompilerTestBase {
     public void Bidirectional_ContentBinding_To_Property_Of_ObservableSet() {
         SetTestPane root = compileAndRun("""
             <SetTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                         setProp="{fx:sync set4; content=true}"/>
+                         setProp="{fx:bindContentBidirectional set4}"/>
         """);
 
         assertNewExpr(root, OBSERVABLE_VALUE_WRAPPER);
@@ -741,7 +731,7 @@ public class SetBindingTest extends CompilerTestBase {
     public void Bidirectional_Binding_To_ReadOnlyObservableValue_Of_ObservableSet_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <SetTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                         setProp="{fx:sync set4ReadOnly}"/>
+                         setProp="{fx:bindBidirectional set4ReadOnly}"/>
         """));
 
         assertEquals(ErrorCode.INVALID_BIDIRECTIONAL_BINDING_SOURCE, ex.getDiagnostic().getCode());
@@ -755,7 +745,7 @@ public class SetBindingTest extends CompilerTestBase {
     public void Bidirectional_ContentBinding_To_ReadOnlyObservableValue_Of_ObservableSet() {
         SetTestPane root = compileAndRun("""
             <SetTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                         setProp="{fx:sync set4ReadOnly; content=true}"/>
+                         setProp="{fx:bindContentBidirectional set4ReadOnly}"/>
         """);
 
         assertNewExpr(root, OBSERVABLE_VALUE_WRAPPER);

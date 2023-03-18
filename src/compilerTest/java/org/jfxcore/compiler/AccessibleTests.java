@@ -1,4 +1,4 @@
-// Copyright (c) 2022, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2023, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler;
@@ -208,7 +208,7 @@ public class AccessibleTests extends CompilerTestBase {
     public void Bind_Bidirectional_To_Protected_Method_With_Observable_Argument_Succeeds() {
         TestPane root = compileAndRun("""
             <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                      prefWidth="{fx:sync protectedMethod(prefHeight)}"/>
+                      prefWidth="{fx:bindBidirectional protectedMethod(prefHeight)}"/>
         """);
 
         root.setPrefHeight(5);
@@ -219,7 +219,7 @@ public class AccessibleTests extends CompilerTestBase {
     public void Bind_Bidirectional_To_Protected_Method_With_Inaccessible_InverseMethod_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                      prefWidth="{fx:sync protectedMethod(prefHeight); inverseMethod=InaccessibleMethodHolder.protectedMethod}"/>
+                      prefWidth="{fx:bindBidirectional protectedMethod(prefHeight); inverseMethod=InaccessibleMethodHolder.protectedMethod}"/>
         """));
 
         assertEquals(ErrorCode.MEMBER_NOT_ACCESSIBLE, ex.getDiagnostic().getCode());

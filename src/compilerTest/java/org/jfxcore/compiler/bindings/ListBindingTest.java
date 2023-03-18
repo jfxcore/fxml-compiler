@@ -209,7 +209,7 @@ public class ListBindingTest extends CompilerTestBase {
     public void Once_ContentBinding_To_Vanilla_List() {
         ListTestPane root = compileAndRun("""
             <ListTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          listProp="{fx:once list1; content=true}"/>
+                          listProp="{fx:content list1}"/>
         """);
 
         assertNotNewExpr(root, LIST_WRAPPER, OBSERVABLE_VALUE_WRAPPER);
@@ -222,7 +222,7 @@ public class ListBindingTest extends CompilerTestBase {
     public void Once_ContentBinding_To_Vanilla_List_Indirect() {
         ListTestPane root = compileAndRun("""
             <ListTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          listProp="{fx:once indirect.list1; content=true}"/>
+                          listProp="{fx:content indirect.list1}"/>
         """);
 
         assertNotNewExpr(root, LIST_WRAPPER, OBSERVABLE_VALUE_WRAPPER);
@@ -235,7 +235,7 @@ public class ListBindingTest extends CompilerTestBase {
     public void Once_ContentBinding_To_Observable_List() {
         ListTestPane root = compileAndRun("""
             <ListTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          listProp="{fx:once list2; content=true}"/>
+                          listProp="{fx:content list2}"/>
         """);
 
         assertNotNewExpr(root, LIST_WRAPPER, OBSERVABLE_VALUE_WRAPPER);
@@ -248,7 +248,7 @@ public class ListBindingTest extends CompilerTestBase {
     public void Once_ContentBinding_To_Observable_List_Indirect() {
         ListTestPane root = compileAndRun("""
             <ListTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          listProp="{fx:once indirect.list2; content=true}"/>
+                          listProp="{fx:content indirect.list2}"/>
         """);
 
         assertNotNewExpr(root, LIST_WRAPPER, OBSERVABLE_VALUE_WRAPPER);
@@ -261,7 +261,7 @@ public class ListBindingTest extends CompilerTestBase {
     public void Once_ContentBinding_To_ObservableValue_Of_Vanilla_List() {
         ListTestPane root = compileAndRun("""
             <ListTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          listProp="{fx:once list3; content=true}"/>
+                          listProp="{fx:content list3}"/>
         """);
 
         assertNotNewExpr(root, LIST_WRAPPER, OBSERVABLE_VALUE_WRAPPER);
@@ -274,7 +274,7 @@ public class ListBindingTest extends CompilerTestBase {
     public void Once_ContentBinding_To_ObservableValue_Of_Vanilla_List_Indirect() {
         ListTestPane root = compileAndRun("""
             <ListTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          listProp="{fx:once indirect.list3; content=true}"/>
+                          listProp="{fx:content indirect.list3}"/>
         """);
 
         assertNotNewExpr(root, LIST_WRAPPER, OBSERVABLE_VALUE_WRAPPER);
@@ -287,7 +287,7 @@ public class ListBindingTest extends CompilerTestBase {
     public void Once_ContentBinding_To_ObservableValue_Of_Observable_List() {
         ListTestPane root = compileAndRun("""
             <ListTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          listProp="{fx:once list4; content=true}"/>
+                          listProp="{fx:content list4}"/>
         """);
 
         assertNotNewExpr(root, LIST_WRAPPER, OBSERVABLE_VALUE_WRAPPER);
@@ -300,7 +300,7 @@ public class ListBindingTest extends CompilerTestBase {
     public void Once_ContentBinding_To_ObservableValue_Of_Observable_List_Indirect() {
         ListTestPane root = compileAndRun("""
             <ListTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          listProp="{fx:once indirect.list4; content=true}"/>
+                          listProp="{fx:content indirect.list4}"/>
         """);
 
         assertNotNewExpr(root, LIST_WRAPPER, OBSERVABLE_VALUE_WRAPPER);
@@ -327,16 +327,6 @@ public class ListBindingTest extends CompilerTestBase {
         """));
 
         assertEquals(ErrorCode.CANNOT_CONVERT_SOURCE_TYPE, ex.getDiagnostic().getCode());
-    }
-
-    @Test
-    public void ContentBinding_With_Invalid_ContentParameter_Fails() {
-        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
-            <ListTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          listProp="{fx:sync list2; content=foo}"/>
-        """));
-
-        assertEquals(ErrorCode.CANNOT_COERCE_PROPERTY_VALUE, ex.getDiagnostic().getCode());
     }
 
     /*
@@ -406,7 +396,7 @@ public class ListBindingTest extends CompilerTestBase {
     public void Unidirectional_ContentBinding_To_Vanilla_List_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <ListTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          listProp="{fx:bind list1; content=true}"/>
+                          listProp="{fx:bindContent list1}"/>
         """));
 
         assertEquals(ErrorCode.INVALID_CONTENT_BINDING_SOURCE, ex.getDiagnostic().getCode());
@@ -420,7 +410,7 @@ public class ListBindingTest extends CompilerTestBase {
     public void Unidirectional_ContentBinding_Fails_For_ObjectProperty() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <ListTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          objectProp="{fx:bind list1; content=true}"/>
+                          objectProp="{fx:bindContent list1}"/>
         """));
 
         assertEquals(ErrorCode.INVALID_CONTENT_BINDING_TARGET, ex.getDiagnostic().getCode());
@@ -464,7 +454,7 @@ public class ListBindingTest extends CompilerTestBase {
     public void Unidirectional_ContentBinding_To_ObservableList() {
         ListTestPane root = compileAndRun("""
             <ListTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          listProp="{fx:bind list2; content=true}"/>
+                          listProp="{fx:bindContent list2}"/>
         """);
 
         assertNotNewExpr(root, "Constant", OBSERVABLE_VALUE_WRAPPER, LIST_WRAPPER);
@@ -528,7 +518,7 @@ public class ListBindingTest extends CompilerTestBase {
     public void Unidirectional_ContentBinding_To_ObservableValue_Of_Vanilla_List() {
         ListTestPane root = compileAndRun("""
             <ListTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          listProp="{fx:bind list3; content=true}"/>
+                          listProp="{fx:bindContent list3}"/>
         """);
 
         assertNewExpr(root, OBSERVABLE_VALUE_WRAPPER);
@@ -578,7 +568,7 @@ public class ListBindingTest extends CompilerTestBase {
     public void Unidirectional_ContentBinding_To_ObservableValue_Of_ObservableList() {
         ListTestPane root = compileAndRun("""
             <ListTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          listProp="{fx:bind list4; content=true}"/>
+                          listProp="{fx:bindContent list4}"/>
         """);
 
         assertNewExpr(root, OBSERVABLE_VALUE_WRAPPER);
@@ -605,14 +595,14 @@ public class ListBindingTest extends CompilerTestBase {
     public void Bidirectional_Binding_To_Vanilla_List_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <ListTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          listProp="{fx:sync list1}"/>
+                          listProp="{fx:bindBidirectional list1}"/>
         """));
 
         assertEquals(ErrorCode.INVALID_BIDIRECTIONAL_BINDING_SOURCE, ex.getDiagnostic().getCode());
 
         ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <ListTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          objectProp="{fx:sync list1}"/>
+                          objectProp="{fx:bindBidirectional list1}"/>
         """));
 
         assertEquals(ErrorCode.INVALID_BIDIRECTIONAL_BINDING_SOURCE, ex.getDiagnostic().getCode());
@@ -626,7 +616,7 @@ public class ListBindingTest extends CompilerTestBase {
     public void Bidirectional_ContentBinding_To_Vanilla_List_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <ListTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          listProp="{fx:sync list1; content=true}"/>
+                          listProp="{fx:bindContentBidirectional list1}"/>
         """));
 
         assertEquals(ErrorCode.INVALID_BIDIRECTIONAL_CONTENT_BINDING_SOURCE, ex.getDiagnostic().getCode());
@@ -640,7 +630,7 @@ public class ListBindingTest extends CompilerTestBase {
     public void Bidirectional_Binding_To_ObservableList_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <ListTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          listProp="{fx:sync list2}" objectProp="{fx:sync list2}"/>
+                          listProp="{fx:bindBidirectional list2}" objectProp="{fx:bindBidirectional list2}"/>
         """));
 
         assertEquals(ErrorCode.INVALID_BIDIRECTIONAL_BINDING_SOURCE, ex.getDiagnostic().getCode());
@@ -654,7 +644,7 @@ public class ListBindingTest extends CompilerTestBase {
     public void Bidirectional_ContentBinding_To_ObservableList() {
         ListTestPane root = compileAndRun("""
             <ListTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          listProp="{fx:sync list2; content=true}"/>
+                          listProp="{fx:bindContentBidirectional list2}"/>
         """);
 
         assertNotNewExpr(root, "Constant", OBSERVABLE_VALUE_WRAPPER, LIST_WRAPPER);
@@ -676,7 +666,7 @@ public class ListBindingTest extends CompilerTestBase {
     public void Bidirectional_Binding_To_ObservableValue_Of_Vanilla_List_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <ListTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          listProp="{fx:sync list3}"/>
+                          listProp="{fx:bindBidirectional list3}"/>
         """));
 
         assertEquals(ErrorCode.SOURCE_TYPE_MISMATCH, ex.getDiagnostic().getCode());
@@ -690,7 +680,7 @@ public class ListBindingTest extends CompilerTestBase {
     public void Bidirectional_ContentBinding_To_ObservableValue_Of_Vanilla_List_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <ListTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          listProp="{fx:sync list3; content=true}"/>
+                          listProp="{fx:bindContentBidirectional list3}"/>
         """));
 
         assertEquals(ErrorCode.INVALID_BIDIRECTIONAL_CONTENT_BINDING_SOURCE, ex.getDiagnostic().getCode());
@@ -704,7 +694,7 @@ public class ListBindingTest extends CompilerTestBase {
     public void Bidirectional_Binding_To_Property_Of_ObservableList() {
         ListTestPane root = compileAndRun("""
             <ListTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          listProp="{fx:sync list4}"/>
+                          listProp="{fx:bindBidirectional list4}"/>
         """);
 
         assertNotNewExpr(root, OBSERVABLE_VALUE_WRAPPER, LIST_WRAPPER, "Constant");
@@ -718,7 +708,7 @@ public class ListBindingTest extends CompilerTestBase {
     public void Bidirectional_ContentBinding_To_Property_Of_ObservableList() {
         ListTestPane root = compileAndRun("""
             <ListTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          listProp="{fx:sync list4; content=true}"/>
+                          listProp="{fx:bindContentBidirectional list4}"/>
         """);
 
         assertNewExpr(root, OBSERVABLE_VALUE_WRAPPER);
@@ -738,7 +728,7 @@ public class ListBindingTest extends CompilerTestBase {
     public void Bidirectional_Binding_To_ReadOnlyObservableValue_Of_ObservableList_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <ListTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          listProp="{fx:sync list4ReadOnly}"/>
+                          listProp="{fx:bindBidirectional list4ReadOnly}"/>
         """));
 
         assertEquals(ErrorCode.INVALID_BIDIRECTIONAL_BINDING_SOURCE, ex.getDiagnostic().getCode());
@@ -752,7 +742,7 @@ public class ListBindingTest extends CompilerTestBase {
     public void Bidirectional_ContentBinding_To_ReadOnlyObservableValue_Of_ObservableList() {
         ListTestPane root = compileAndRun("""
             <ListTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                          listProp="{fx:sync list4ReadOnly; content=true}"/>
+                          listProp="{fx:bindContentBidirectional list4ReadOnly}"/>
         """);
 
         assertNewExpr(root, OBSERVABLE_VALUE_WRAPPER);

@@ -203,9 +203,9 @@ public class CollectionBindingMatrixTest {
                                                     |          |          |  ObservableValue<ObservableList/Set/Map<T>>
                 ------------------------------------|----------|----------|----------|---------------------------------
                 fx:once                             1          1          1          1
-                fx:content                          +/+/+/2    +/+/2      +/+/+/2    +/+/2
                 fx:bind                             1          1          1          1
                 fx:bindBidirectional                1          1          1          1
+                fx:content                          +/+/+/2    +/+/2      +/+/+/2    +/+/2
                 fx:bindContent                      3          3          3          3
                 fx:bindContentBidirectional         4          4          4          4
 
@@ -215,14 +215,14 @@ public class CollectionBindingMatrixTest {
                 4 = INVALID_BIDIRECTIONAL_CONTENT_BINDING_TARGET
             */
             variants("readOnlyTargetCollection", "{fx:once %s}", ALL_SOURCES, CANNOT_MODIFY_READONLY_PROPERTY),
-            variants("readOnlyTargetCollection", "{fx:once %s; content=true}", COLLECTION_SOURCES, SOURCE_LIST),
-            variants("readOnlyTargetCollection", "{fx:once %s; content=true}", LIST_SOURCES, SOURCE_LIST),
-            variants("readOnlyTargetCollection", "{fx:once %s; content=true}", SET_SOURCES, SOURCE_LIST),
-            variants("readOnlyTargetCollection", "{fx:once %s; content=true}", MAP_SOURCES, INVALID_CONTENT_ASSIGNMENT_SOURCE),
+            variants("readOnlyTargetCollection", "{fx:content %s}", COLLECTION_SOURCES, SOURCE_LIST),
+            variants("readOnlyTargetCollection", "{fx:content %s}", LIST_SOURCES, SOURCE_LIST),
+            variants("readOnlyTargetCollection", "{fx:content %s}", SET_SOURCES, SOURCE_LIST),
+            variants("readOnlyTargetCollection", "{fx:content %s}", MAP_SOURCES, INVALID_CONTENT_ASSIGNMENT_SOURCE),
             variants("readOnlyTargetCollection", "{fx:bind %s}", ALL_SOURCES, CANNOT_MODIFY_READONLY_PROPERTY),
-            variants("readOnlyTargetCollection", "{fx:sync %s}", ALL_SOURCES, CANNOT_MODIFY_READONLY_PROPERTY),
-            variants("readOnlyTargetCollection", "{fx:bind %s; content=true}", ALL_SOURCES, INVALID_CONTENT_BINDING_TARGET),
-            variants("readOnlyTargetCollection", "{fx:sync %s; content=true}", ALL_SOURCES, INVALID_BIDIRECTIONAL_CONTENT_BINDING_TARGET),
+            variants("readOnlyTargetCollection", "{fx:bindBidirectional %s}", ALL_SOURCES, CANNOT_MODIFY_READONLY_PROPERTY),
+            variants("readOnlyTargetCollection", "{fx:bindContent %s}", ALL_SOURCES, INVALID_CONTENT_BINDING_TARGET),
+            variants("readOnlyTargetCollection", "{fx:bindContentBidirectional %s}", ALL_SOURCES, INVALID_BIDIRECTIONAL_CONTENT_BINDING_TARGET),
 
             /*
                 target:                            source:
@@ -232,9 +232,9 @@ public class CollectionBindingMatrixTest {
                                                     |          |          |  ObservableValue<ObservableList/Set/Map<T>>
                 ------------------------------------|----------|----------|----------|---------------------------------
                 fx:once                             +/+/+/4    +/+/4      +/+/+/4    +/+/4
-                fx:content                          +/+/+/5    +/+/5      +/+/+/5    +/+/5
                 fx:bind                             1          1          1          1
                 fx:bindBidirectional                1          1          1          1
+                fx:content                          +/+/+/5    +/+/5      +/+/+/5    +/+/5
                 fx:bindContent                      2          2          2          2
                 fx:bindContentBidirectional         3          3          3          3
 
@@ -248,14 +248,14 @@ public class CollectionBindingMatrixTest {
             variants("targetCollection", "{fx:once %s}", LIST_SOURCES, SOURCE_LIST),
             variants("targetCollection", "{fx:once %s}", SET_SOURCES, SOURCE_LIST),
             variants("targetCollection", "{fx:once %s}", MAP_SOURCES, CANNOT_CONVERT_SOURCE_TYPE),
-            variants("targetCollection", "{fx:once %s; content=true}", COLLECTION_SOURCES, SOURCE_LIST),
-            variants("targetCollection", "{fx:once %s; content=true}", LIST_SOURCES, SOURCE_LIST),
-            variants("targetCollection", "{fx:once %s; content=true}", SET_SOURCES, SOURCE_LIST),
-            variants("targetCollection", "{fx:once %s; content=true}", MAP_SOURCES, INVALID_CONTENT_ASSIGNMENT_SOURCE),
+            variants("targetCollection", "{fx:content %s}", COLLECTION_SOURCES, SOURCE_LIST),
+            variants("targetCollection", "{fx:content %s}", LIST_SOURCES, SOURCE_LIST),
+            variants("targetCollection", "{fx:content %s}", SET_SOURCES, SOURCE_LIST),
+            variants("targetCollection", "{fx:content %s}", MAP_SOURCES, INVALID_CONTENT_ASSIGNMENT_SOURCE),
             variants("targetCollection", "{fx:bind %s}", ALL_SOURCES, INVALID_BINDING_TARGET),
-            variants("targetCollection", "{fx:sync %s}", ALL_SOURCES, INVALID_BINDING_TARGET),
-            variants("targetCollection", "{fx:bind %s; content=true}", ALL_SOURCES, INVALID_CONTENT_BINDING_TARGET),
-            variants("targetCollection", "{fx:sync %s; content=true}", ALL_SOURCES, INVALID_BIDIRECTIONAL_CONTENT_BINDING_TARGET),
+            variants("targetCollection", "{fx:bindBidirectional %s}", ALL_SOURCES, INVALID_BINDING_TARGET),
+            variants("targetCollection", "{fx:bindContent %s}", ALL_SOURCES, INVALID_CONTENT_BINDING_TARGET),
+            variants("targetCollection", "{fx:bindContentBidirectional %s}", ALL_SOURCES, INVALID_BIDIRECTIONAL_CONTENT_BINDING_TARGET),
 
             /*
                 target:                            source:
@@ -265,9 +265,9 @@ public class CollectionBindingMatrixTest {
                                                     |          |          |  ObservableValue<ObservableList/Set/Map<T>>
                 ------------------------------------|----------|----------|----------|---------------------------------
                 fx:once                             1          1          1          1
-                fx:content                          +/+/+/2    +/+/2      +/+/+/2    +/+/2
                 fx:bind                             1          1          1          1
                 fx:bindBidirectional                1          1          1          1
+                fx:content                          +/+/+/2    +/+/2      +/+/+/2    +/+/2
                 fx:bindContent                      3          +/3/3/3    3          +/3/3/3
                 fx:bindContentBidirectional         4          4          4          4
 
@@ -277,19 +277,19 @@ public class CollectionBindingMatrixTest {
                 4 = INVALID_BIDIRECTIONAL_CONTENT_BINDING_TARGET
             */
             variants("readOnlyTargetList", "{fx:once %s}", ALL_SOURCES, CANNOT_MODIFY_READONLY_PROPERTY),
-            variants("readOnlyTargetList", "{fx:once %s; content=true}", COLLECTION_SOURCES, SOURCE_LIST),
-            variants("readOnlyTargetList", "{fx:once %s; content=true}", LIST_SOURCES, SOURCE_LIST),
-            variants("readOnlyTargetList", "{fx:once %s; content=true}", SET_SOURCES, SOURCE_LIST),
-            variants("readOnlyTargetList", "{fx:once %s; content=true}", MAP_SOURCES, INVALID_CONTENT_ASSIGNMENT_SOURCE),
+            variants("readOnlyTargetList", "{fx:content %s}", COLLECTION_SOURCES, SOURCE_LIST),
+            variants("readOnlyTargetList", "{fx:content %s}", LIST_SOURCES, SOURCE_LIST),
+            variants("readOnlyTargetList", "{fx:content %s}", SET_SOURCES, SOURCE_LIST),
+            variants("readOnlyTargetList", "{fx:content %s}", MAP_SOURCES, INVALID_CONTENT_ASSIGNMENT_SOURCE),
             variants("readOnlyTargetList", "{fx:bind %s}", ALL_SOURCES, CANNOT_MODIFY_READONLY_PROPERTY),
-            variants("readOnlyTargetList", "{fx:sync %s}", ALL_SOURCES, CANNOT_MODIFY_READONLY_PROPERTY),
-            variants("readOnlyTargetList", "{fx:bind %s; content=true}", COLLECTION_SOURCES, INVALID_CONTENT_BINDING_SOURCE),
-            variants("readOnlyTargetList", "{fx:bind %s; content=true}", new String[] {"sourceList"}, INVALID_CONTENT_BINDING_SOURCE),
-            variants("readOnlyTargetList", "{fx:bind %s; content=true}", new String[] {"sourcePropertyOfList"}, SOURCE_LIST),
-            variants("readOnlyTargetList", "{fx:bind %s; content=true}", OBSERVABLE_LIST_SOURCES, SOURCE_LIST),
-            variants("readOnlyTargetList", "{fx:bind %s; content=true}", SET_SOURCES, INVALID_CONTENT_BINDING_SOURCE),
-            variants("readOnlyTargetList", "{fx:bind %s; content=true}", MAP_SOURCES, INVALID_CONTENT_BINDING_SOURCE),
-            variants("readOnlyTargetList", "{fx:sync %s; content=true}", ALL_SOURCES, INVALID_BIDIRECTIONAL_CONTENT_BINDING_TARGET),
+            variants("readOnlyTargetList", "{fx:bindBidirectional %s}", ALL_SOURCES, CANNOT_MODIFY_READONLY_PROPERTY),
+            variants("readOnlyTargetList", "{fx:bindContent %s}", COLLECTION_SOURCES, INVALID_CONTENT_BINDING_SOURCE),
+            variants("readOnlyTargetList", "{fx:bindContent %s}", new String[] {"sourceList"}, INVALID_CONTENT_BINDING_SOURCE),
+            variants("readOnlyTargetList", "{fx:bindContent %s}", new String[] {"sourcePropertyOfList"}, SOURCE_LIST),
+            variants("readOnlyTargetList", "{fx:bindContent %s}", OBSERVABLE_LIST_SOURCES, SOURCE_LIST),
+            variants("readOnlyTargetList", "{fx:bindContent %s}", SET_SOURCES, INVALID_CONTENT_BINDING_SOURCE),
+            variants("readOnlyTargetList", "{fx:bindContent %s}", MAP_SOURCES, INVALID_CONTENT_BINDING_SOURCE),
+            variants("readOnlyTargetList", "{fx:bindContentBidirectional %s}", ALL_SOURCES, INVALID_BIDIRECTIONAL_CONTENT_BINDING_TARGET),
 
             /*
                 target:                            source:
@@ -299,9 +299,9 @@ public class CollectionBindingMatrixTest {
                                                     |          |          |  ObservableValue<ObservableList/Set/Map<T>>
                 ------------------------------------|----------|----------|----------|---------------------------------
                 fx:once                             1/+/1/1    +/1/1      1/+/1/1    +/1/1
-                fx:content                          +/+/+/2    +/+/2      +/+/+/2    +/+/2
                 fx:bind                             3          3          3          3
                 fx:bindBidirectional                3          3          3          3
+                fx:content                          +/+/+/2    +/+/2      +/+/+/2    +/+/2
                 fx:bindContent                      4          +/4/4      4/+/4/4    +/4/4
                 fx:bindContentBidirectional         5          5          5          5
 
@@ -315,19 +315,19 @@ public class CollectionBindingMatrixTest {
             variants("targetList", "{fx:once %s}", LIST_SOURCES, SOURCE_LIST),
             variants("targetList", "{fx:once %s}", SET_SOURCES, CANNOT_CONVERT_SOURCE_TYPE),
             variants("targetList", "{fx:once %s}", MAP_SOURCES, CANNOT_CONVERT_SOURCE_TYPE),
-            variants("targetList", "{fx:once %s; content=true}", COLLECTION_SOURCES, SOURCE_LIST),
-            variants("targetList", "{fx:once %s; content=true}", LIST_SOURCES, SOURCE_LIST),
-            variants("targetList", "{fx:once %s; content=true}", SET_SOURCES, SOURCE_LIST),
-            variants("targetList", "{fx:once %s; content=true}", MAP_SOURCES, INVALID_CONTENT_ASSIGNMENT_SOURCE),
+            variants("targetList", "{fx:content %s}", COLLECTION_SOURCES, SOURCE_LIST),
+            variants("targetList", "{fx:content %s}", LIST_SOURCES, SOURCE_LIST),
+            variants("targetList", "{fx:content %s}", SET_SOURCES, SOURCE_LIST),
+            variants("targetList", "{fx:content %s}", MAP_SOURCES, INVALID_CONTENT_ASSIGNMENT_SOURCE),
             variants("targetList", "{fx:bind %s}", ALL_SOURCES, INVALID_BINDING_TARGET),
-            variants("targetList", "{fx:sync %s}", ALL_SOURCES, INVALID_BINDING_TARGET),
-            variants("targetList", "{fx:bind %s; content=true}", COLLECTION_SOURCES, INVALID_CONTENT_BINDING_SOURCE),
-            variants("targetList", "{fx:bind %s; content=true}", new String[] {"sourceList"}, INVALID_CONTENT_BINDING_SOURCE),
-            variants("targetList", "{fx:bind %s; content=true}", new String[] {"sourcePropertyOfList"}, SOURCE_LIST),
-            variants("targetList", "{fx:bind %s; content=true}", OBSERVABLE_LIST_SOURCES, SOURCE_LIST),
-            variants("targetList", "{fx:bind %s; content=true}", SET_SOURCES, INVALID_CONTENT_BINDING_SOURCE),
-            variants("targetList", "{fx:bind %s; content=true}", MAP_SOURCES, INVALID_CONTENT_BINDING_SOURCE),
-            variants("targetList", "{fx:sync %s; content=true}", ALL_SOURCES, INVALID_BIDIRECTIONAL_CONTENT_BINDING_TARGET),
+            variants("targetList", "{fx:bindBidirectional %s}", ALL_SOURCES, INVALID_BINDING_TARGET),
+            variants("targetList", "{fx:bindContent %s}", COLLECTION_SOURCES, INVALID_CONTENT_BINDING_SOURCE),
+            variants("targetList", "{fx:bindContent %s}", new String[] {"sourceList"}, INVALID_CONTENT_BINDING_SOURCE),
+            variants("targetList", "{fx:bindContent %s}", new String[] {"sourcePropertyOfList"}, SOURCE_LIST),
+            variants("targetList", "{fx:bindContent %s}", OBSERVABLE_LIST_SOURCES, SOURCE_LIST),
+            variants("targetList", "{fx:bindContent %s}", SET_SOURCES, INVALID_CONTENT_BINDING_SOURCE),
+            variants("targetList", "{fx:bindContent %s}", MAP_SOURCES, INVALID_CONTENT_BINDING_SOURCE),
+            variants("targetList", "{fx:bindContentBidirectional %s}", ALL_SOURCES, INVALID_BIDIRECTIONAL_CONTENT_BINDING_TARGET),
 
             /*
                 target:                            source:
@@ -337,9 +337,9 @@ public class CollectionBindingMatrixTest {
                                                     |          |          |  ObservableValue<ObservableList/Set/Map<T>>
                 ------------------------------------|----------|----------|----------|---------------------------------
                 fx:once                             1          1          1          1
-                fx:content                          +/+/+/2    +/+/2      +/+/+/2    +/+/2
                 fx:bind                             1          1          1          1
                 fx:bindBidirectional                1          1          1          1
+                fx:content                          +/+/+/2    +/+/2      +/+/+/2    +/+/2
                 fx:bindContent                      3          3/+/3      3          3/+/3
                 fx:bindContentBidirectional         4          4          4          4
 
@@ -349,19 +349,19 @@ public class CollectionBindingMatrixTest {
                 4 = INVALID_BIDIRECTIONAL_CONTENT_BINDING_TARGET
             */
             variants("readOnlyTargetSet", "{fx:once %s}", ALL_SOURCES, CANNOT_MODIFY_READONLY_PROPERTY),
-            variants("readOnlyTargetSet", "{fx:once %s; content=true}", COLLECTION_SOURCES, SOURCE_LIST),
-            variants("readOnlyTargetSet", "{fx:once %s; content=true}", LIST_SOURCES, SOURCE_LIST),
-            variants("readOnlyTargetSet", "{fx:once %s; content=true}", SET_SOURCES, SOURCE_LIST),
-            variants("readOnlyTargetSet", "{fx:once %s; content=true}", MAP_SOURCES, INVALID_CONTENT_ASSIGNMENT_SOURCE),
+            variants("readOnlyTargetSet", "{fx:content %s}", COLLECTION_SOURCES, SOURCE_LIST),
+            variants("readOnlyTargetSet", "{fx:content %s}", LIST_SOURCES, SOURCE_LIST),
+            variants("readOnlyTargetSet", "{fx:content %s}", SET_SOURCES, SOURCE_LIST),
+            variants("readOnlyTargetSet", "{fx:content %s}", MAP_SOURCES, INVALID_CONTENT_ASSIGNMENT_SOURCE),
             variants("readOnlyTargetSet", "{fx:bind %s}", ALL_SOURCES, CANNOT_MODIFY_READONLY_PROPERTY),
-            variants("readOnlyTargetSet", "{fx:sync %s}", ALL_SOURCES, CANNOT_MODIFY_READONLY_PROPERTY),
-            variants("readOnlyTargetSet", "{fx:bind %s; content=true}", COLLECTION_SOURCES, INVALID_CONTENT_BINDING_SOURCE),
-            variants("readOnlyTargetSet", "{fx:bind %s; content=true}", LIST_SOURCES, INVALID_CONTENT_BINDING_SOURCE),
-            variants("readOnlyTargetSet", "{fx:bind %s; content=true}", new String[] {"sourceSet"}, INVALID_CONTENT_BINDING_SOURCE),
-            variants("readOnlyTargetSet", "{fx:bind %s; content=true}", new String[] {"sourcePropertyOfSet"}, SOURCE_SET),
-            variants("readOnlyTargetSet", "{fx:bind %s; content=true}", OBSERVABLE_SET_SOURCES, SOURCE_SET),
-            variants("readOnlyTargetSet", "{fx:bind %s; content=true}", MAP_SOURCES, INVALID_CONTENT_BINDING_SOURCE),
-            variants("readOnlyTargetSet", "{fx:sync %s; content=true}", ALL_SOURCES, INVALID_BIDIRECTIONAL_CONTENT_BINDING_TARGET),
+            variants("readOnlyTargetSet", "{fx:bindBidirectional %s}", ALL_SOURCES, CANNOT_MODIFY_READONLY_PROPERTY),
+            variants("readOnlyTargetSet", "{fx:bindContent %s}", COLLECTION_SOURCES, INVALID_CONTENT_BINDING_SOURCE),
+            variants("readOnlyTargetSet", "{fx:bindContent %s}", LIST_SOURCES, INVALID_CONTENT_BINDING_SOURCE),
+            variants("readOnlyTargetSet", "{fx:bindContent %s}", new String[] {"sourceSet"}, INVALID_CONTENT_BINDING_SOURCE),
+            variants("readOnlyTargetSet", "{fx:bindContent %s}", new String[] {"sourcePropertyOfSet"}, SOURCE_SET),
+            variants("readOnlyTargetSet", "{fx:bindContent %s}", OBSERVABLE_SET_SOURCES, SOURCE_SET),
+            variants("readOnlyTargetSet", "{fx:bindContent %s}", MAP_SOURCES, INVALID_CONTENT_BINDING_SOURCE),
+            variants("readOnlyTargetSet", "{fx:bindContentBidirectional %s}", ALL_SOURCES, INVALID_BIDIRECTIONAL_CONTENT_BINDING_TARGET),
 
             /*
                 target:                            source:
@@ -371,9 +371,9 @@ public class CollectionBindingMatrixTest {
                                                     |          |          |  ObservableValue<ObservableList/Set/Map<T>>
                 ------------------------------------|----------|----------|----------|---------------------------------
                 fx:once                             1/1/+/1    1/+/1      1/1/+/1    1/+/1
-                fx:content                          +/+/+/2    +/+/2      +/+/+/2    +/+/2
                 fx:bind                             3          3          3          3
                 fx:bindBidirectional                3          3          3          3
+                fx:content                          +/+/+/2    +/+/2      +/+/+/2    +/+/2
                 fx:bindContent                      4          4/+/4      4/4/+/4    4/+/4
                 fx:bindContentBidirectional         5          5          5          5
 
@@ -387,19 +387,19 @@ public class CollectionBindingMatrixTest {
             variants("targetSet", "{fx:once %s}", LIST_SOURCES, CANNOT_CONVERT_SOURCE_TYPE),
             variants("targetSet", "{fx:once %s}", SET_SOURCES, SOURCE_SET),
             variants("targetSet", "{fx:once %s}", MAP_SOURCES, CANNOT_CONVERT_SOURCE_TYPE),
-            variants("targetSet", "{fx:once %s; content=true}", COLLECTION_SOURCES, SOURCE_LIST),
-            variants("targetSet", "{fx:once %s; content=true}", LIST_SOURCES, SOURCE_LIST),
-            variants("targetSet", "{fx:once %s; content=true}", SET_SOURCES, SOURCE_LIST),
-            variants("targetSet", "{fx:once %s; content=true}", MAP_SOURCES, INVALID_CONTENT_ASSIGNMENT_SOURCE),
+            variants("targetSet", "{fx:content %s}", COLLECTION_SOURCES, SOURCE_LIST),
+            variants("targetSet", "{fx:content %s}", LIST_SOURCES, SOURCE_LIST),
+            variants("targetSet", "{fx:content %s}", SET_SOURCES, SOURCE_LIST),
+            variants("targetSet", "{fx:content %s}", MAP_SOURCES, INVALID_CONTENT_ASSIGNMENT_SOURCE),
             variants("targetSet", "{fx:bind %s}", ALL_SOURCES, INVALID_BINDING_TARGET),
-            variants("targetSet", "{fx:sync %s}", ALL_SOURCES, INVALID_BINDING_TARGET),
-            variants("targetSet", "{fx:bind %s; content=true}", COLLECTION_SOURCES, INVALID_CONTENT_BINDING_SOURCE),
-            variants("targetSet", "{fx:bind %s; content=true}", LIST_SOURCES, INVALID_CONTENT_BINDING_SOURCE),
-            variants("targetSet", "{fx:bind %s; content=true}", new String[] {"sourceSet"}, INVALID_CONTENT_BINDING_SOURCE),
-            variants("targetSet", "{fx:bind %s; content=true}", new String[] {"sourcePropertyOfSet"}, SOURCE_SET),
-            variants("targetSet", "{fx:bind %s; content=true}", OBSERVABLE_SET_SOURCES, SOURCE_SET),
-            variants("targetSet", "{fx:bind %s; content=true}", MAP_SOURCES, INVALID_CONTENT_BINDING_SOURCE),
-            variants("targetSet", "{fx:sync %s; content=true}", ALL_SOURCES, INVALID_BIDIRECTIONAL_CONTENT_BINDING_TARGET),
+            variants("targetSet", "{fx:bindBidirectional %s}", ALL_SOURCES, INVALID_BINDING_TARGET),
+            variants("targetSet", "{fx:bindContent %s}", COLLECTION_SOURCES, INVALID_CONTENT_BINDING_SOURCE),
+            variants("targetSet", "{fx:bindContent %s}", LIST_SOURCES, INVALID_CONTENT_BINDING_SOURCE),
+            variants("targetSet", "{fx:bindContent %s}", new String[] {"sourceSet"}, INVALID_CONTENT_BINDING_SOURCE),
+            variants("targetSet", "{fx:bindContent %s}", new String[] {"sourcePropertyOfSet"}, SOURCE_SET),
+            variants("targetSet", "{fx:bindContent %s}", OBSERVABLE_SET_SOURCES, SOURCE_SET),
+            variants("targetSet", "{fx:bindContent %s}", MAP_SOURCES, INVALID_CONTENT_BINDING_SOURCE),
+            variants("targetSet", "{fx:bindContentBidirectional %s}", ALL_SOURCES, INVALID_BIDIRECTIONAL_CONTENT_BINDING_TARGET),
 
             /*
                 target:                            source:
@@ -409,9 +409,9 @@ public class CollectionBindingMatrixTest {
                                                     |          |          |  ObservableValue<ObservableList/Set/Map<T>>
                 ------------------------------------|----------|----------|----------|---------------------------------
                 fx:once                             1          1          1          1
-                fx:content                          2/2/2/+    2/2/+      2/2/2/+    2/2/+
                 fx:bind                             1          1          1          1
                 fx:bindBidirectional                1          1          1          1
+                fx:content                          2/2/2/+    2/2/+      2/2/2/+    2/2/+
                 fx:bindContent                      3          3/3/+      3          3/3/+
                 fx:bindContentBidirectional         4          4          4          4
 
@@ -421,19 +421,19 @@ public class CollectionBindingMatrixTest {
                 4 = INVALID_BIDIRECTIONAL_CONTENT_BINDING_TARGET
             */
             variants("readOnlyTargetMap", "{fx:once %s}", ALL_SOURCES, CANNOT_MODIFY_READONLY_PROPERTY),
-            variants("readOnlyTargetMap", "{fx:once %s; content=true}", COLLECTION_SOURCES, INVALID_CONTENT_ASSIGNMENT_SOURCE),
-            variants("readOnlyTargetMap", "{fx:once %s; content=true}", LIST_SOURCES, INVALID_CONTENT_ASSIGNMENT_SOURCE),
-            variants("readOnlyTargetMap", "{fx:once %s; content=true}", SET_SOURCES, INVALID_CONTENT_ASSIGNMENT_SOURCE),
-            variants("readOnlyTargetMap", "{fx:once %s; content=true}", MAP_SOURCES, SOURCE_MAP),
+            variants("readOnlyTargetMap", "{fx:content %s}", COLLECTION_SOURCES, INVALID_CONTENT_ASSIGNMENT_SOURCE),
+            variants("readOnlyTargetMap", "{fx:content %s}", LIST_SOURCES, INVALID_CONTENT_ASSIGNMENT_SOURCE),
+            variants("readOnlyTargetMap", "{fx:content %s}", SET_SOURCES, INVALID_CONTENT_ASSIGNMENT_SOURCE),
+            variants("readOnlyTargetMap", "{fx:content %s}", MAP_SOURCES, SOURCE_MAP),
             variants("readOnlyTargetMap", "{fx:bind %s}", ALL_SOURCES, CANNOT_MODIFY_READONLY_PROPERTY),
-            variants("readOnlyTargetMap", "{fx:sync %s}", ALL_SOURCES, CANNOT_MODIFY_READONLY_PROPERTY),
-            variants("readOnlyTargetMap", "{fx:bind %s; content=true}", COLLECTION_SOURCES, INVALID_CONTENT_BINDING_SOURCE),
-            variants("readOnlyTargetMap", "{fx:bind %s; content=true}", LIST_SOURCES, INVALID_CONTENT_BINDING_SOURCE),
-            variants("readOnlyTargetMap", "{fx:bind %s; content=true}", SET_SOURCES, INVALID_CONTENT_BINDING_SOURCE),
-            variants("readOnlyTargetMap", "{fx:bind %s; content=true}", new String[] {"sourceMap"}, INVALID_CONTENT_BINDING_SOURCE),
-            variants("readOnlyTargetMap", "{fx:bind %s; content=true}", new String[] {"sourcePropertyOfMap"}, SOURCE_MAP),
-            variants("readOnlyTargetMap", "{fx:bind %s; content=true}", OBSERVABLE_MAP_SOURCES, SOURCE_MAP),
-            variants("readOnlyTargetMap", "{fx:sync %s; content=true}", ALL_SOURCES, INVALID_BIDIRECTIONAL_CONTENT_BINDING_TARGET),
+            variants("readOnlyTargetMap", "{fx:bindBidirectional %s}", ALL_SOURCES, CANNOT_MODIFY_READONLY_PROPERTY),
+            variants("readOnlyTargetMap", "{fx:bindContent %s}", COLLECTION_SOURCES, INVALID_CONTENT_BINDING_SOURCE),
+            variants("readOnlyTargetMap", "{fx:bindContent %s}", LIST_SOURCES, INVALID_CONTENT_BINDING_SOURCE),
+            variants("readOnlyTargetMap", "{fx:bindContent %s}", SET_SOURCES, INVALID_CONTENT_BINDING_SOURCE),
+            variants("readOnlyTargetMap", "{fx:bindContent %s}", new String[] {"sourceMap"}, INVALID_CONTENT_BINDING_SOURCE),
+            variants("readOnlyTargetMap", "{fx:bindContent %s}", new String[] {"sourcePropertyOfMap"}, SOURCE_MAP),
+            variants("readOnlyTargetMap", "{fx:bindContent %s}", OBSERVABLE_MAP_SOURCES, SOURCE_MAP),
+            variants("readOnlyTargetMap", "{fx:bindContentBidirectional %s}", ALL_SOURCES, INVALID_BIDIRECTIONAL_CONTENT_BINDING_TARGET),
 
             /*
                 target:                            source:
@@ -443,9 +443,9 @@ public class CollectionBindingMatrixTest {
                                                     |          |          |  ObservableValue<ObservableList/Set/Map<T>>
                 ------------------------------------|----------|----------|----------|---------------------------------
                 fx:once                             1/1/1/+    1/1/+      1/1/1/+    1/1/+
-                fx:content                          2/2/2/+    2/2/+      2/2/2/+    2/2/+
                 fx:bind                             3          3          3          3
                 fx:bindBidirectional                3          3          3          3
+                fx:content                          2/2/2/+    2/2/+      2/2/2/+    2/2/+
                 fx:bindContent                      4          4/4/+      4/4/4/+    4/4/+
                 fx:bindContentBidirectional         5          5          5          5
 
@@ -459,19 +459,19 @@ public class CollectionBindingMatrixTest {
             variants("targetMap", "{fx:once %s}", LIST_SOURCES, CANNOT_CONVERT_SOURCE_TYPE),
             variants("targetMap", "{fx:once %s}", SET_SOURCES, CANNOT_CONVERT_SOURCE_TYPE),
             variants("targetMap", "{fx:once %s}", MAP_SOURCES, SOURCE_MAP),
-            variants("targetMap", "{fx:once %s; content=true}", COLLECTION_SOURCES, INVALID_CONTENT_ASSIGNMENT_SOURCE),
-            variants("targetMap", "{fx:once %s; content=true}", LIST_SOURCES, INVALID_CONTENT_ASSIGNMENT_SOURCE),
-            variants("targetMap", "{fx:once %s; content=true}", SET_SOURCES, INVALID_CONTENT_ASSIGNMENT_SOURCE),
-            variants("targetMap", "{fx:once %s; content=true}", MAP_SOURCES, SOURCE_MAP),
+            variants("targetMap", "{fx:content %s}", COLLECTION_SOURCES, INVALID_CONTENT_ASSIGNMENT_SOURCE),
+            variants("targetMap", "{fx:content %s}", LIST_SOURCES, INVALID_CONTENT_ASSIGNMENT_SOURCE),
+            variants("targetMap", "{fx:content %s}", SET_SOURCES, INVALID_CONTENT_ASSIGNMENT_SOURCE),
+            variants("targetMap", "{fx:content %s}", MAP_SOURCES, SOURCE_MAP),
             variants("targetMap", "{fx:bind %s}", ALL_SOURCES, INVALID_BINDING_TARGET),
-            variants("targetMap", "{fx:sync %s}", ALL_SOURCES, INVALID_BINDING_TARGET),
-            variants("targetMap", "{fx:bind %s; content=true}", COLLECTION_SOURCES, INVALID_CONTENT_BINDING_SOURCE),
-            variants("targetMap", "{fx:bind %s; content=true}", LIST_SOURCES, INVALID_CONTENT_BINDING_SOURCE),
-            variants("targetMap", "{fx:bind %s; content=true}", SET_SOURCES, INVALID_CONTENT_BINDING_SOURCE),
-            variants("targetMap", "{fx:bind %s; content=true}", new String[] {"sourceMap"}, INVALID_CONTENT_BINDING_SOURCE),
-            variants("targetMap", "{fx:bind %s; content=true}", new String[] {"sourcePropertyOfMap"}, SOURCE_MAP),
-            variants("targetMap", "{fx:bind %s; content=true}", OBSERVABLE_MAP_SOURCES, SOURCE_MAP),
-            variants("targetMap", "{fx:sync %s; content=true}", ALL_SOURCES, INVALID_BIDIRECTIONAL_CONTENT_BINDING_TARGET),
+            variants("targetMap", "{fx:bindBidirectional %s}", ALL_SOURCES, INVALID_BINDING_TARGET),
+            variants("targetMap", "{fx:bindContent %s}", COLLECTION_SOURCES, INVALID_CONTENT_BINDING_SOURCE),
+            variants("targetMap", "{fx:bindContent %s}", LIST_SOURCES, INVALID_CONTENT_BINDING_SOURCE),
+            variants("targetMap", "{fx:bindContent %s}", SET_SOURCES, INVALID_CONTENT_BINDING_SOURCE),
+            variants("targetMap", "{fx:bindContent %s}", new String[] {"sourceMap"}, INVALID_CONTENT_BINDING_SOURCE),
+            variants("targetMap", "{fx:bindContent %s}", new String[] {"sourcePropertyOfMap"}, SOURCE_MAP),
+            variants("targetMap", "{fx:bindContent %s}", OBSERVABLE_MAP_SOURCES, SOURCE_MAP),
+            variants("targetMap", "{fx:bindContentBidirectional %s}", ALL_SOURCES, INVALID_BIDIRECTIONAL_CONTENT_BINDING_TARGET),
 
             /*
                 target:                            source:
@@ -482,9 +482,9 @@ public class CollectionBindingMatrixTest {
                 ObservableValue<ObservableSet<T>>   |          |          |          |
                 ------------------------------------|----------|----------|----------|---------------------------------
                 fx:once                             1          1          1          1
-                fx:content                          +/+/+/2    +/+/2      +/+/+/2    +/+/2
                 fx:bind                             1          1          1          1
                 fx:bindBidirectional                1          1          1          1
+                fx:content                          +/+/+/2    +/+/2      +/+/+/2    +/+/2
                 fx:bindContent                      3          3          3          3
                 fx:bindContentBidirectional         4          4          4          4
 
@@ -494,54 +494,54 @@ public class CollectionBindingMatrixTest {
                 4 = INVALID_BIDIRECTIONAL_CONTENT_BINDING_TARGET
             */
             variants("readOnlyTargetCollectionProp", "{fx:once %s}", ALL_SOURCES, CANNOT_MODIFY_READONLY_PROPERTY),
-            variants("readOnlyTargetCollectionProp", "{fx:once %s; content=true}", COLLECTION_SOURCES, SOURCE_LIST),
-            variants("readOnlyTargetCollectionProp", "{fx:once %s; content=true}", LIST_SOURCES, SOURCE_LIST),
-            variants("readOnlyTargetCollectionProp", "{fx:once %s; content=true}", SET_SOURCES, SOURCE_LIST),
-            variants("readOnlyTargetCollectionProp", "{fx:once %s; content=true}", MAP_SOURCES, INVALID_CONTENT_ASSIGNMENT_SOURCE),
+            variants("readOnlyTargetCollectionProp", "{fx:content %s}", COLLECTION_SOURCES, SOURCE_LIST),
+            variants("readOnlyTargetCollectionProp", "{fx:content %s}", LIST_SOURCES, SOURCE_LIST),
+            variants("readOnlyTargetCollectionProp", "{fx:content %s}", SET_SOURCES, SOURCE_LIST),
+            variants("readOnlyTargetCollectionProp", "{fx:content %s}", MAP_SOURCES, INVALID_CONTENT_ASSIGNMENT_SOURCE),
             variants("readOnlyTargetCollectionProp", "{fx:bind %s}", ALL_SOURCES, CANNOT_MODIFY_READONLY_PROPERTY),
-            variants("readOnlyTargetCollectionProp", "{fx:sync %s}", ALL_SOURCES, CANNOT_MODIFY_READONLY_PROPERTY),
-            variants("readOnlyTargetCollectionProp", "{fx:bind %s; content=true}", ALL_SOURCES, INVALID_CONTENT_BINDING_TARGET),
-            variants("readOnlyTargetCollectionProp", "{fx:sync %s; content=true}", ALL_SOURCES, INVALID_BIDIRECTIONAL_CONTENT_BINDING_TARGET),
+            variants("readOnlyTargetCollectionProp", "{fx:bindBidirectional %s}", ALL_SOURCES, CANNOT_MODIFY_READONLY_PROPERTY),
+            variants("readOnlyTargetCollectionProp", "{fx:bindContent %s}", ALL_SOURCES, INVALID_CONTENT_BINDING_TARGET),
+            variants("readOnlyTargetCollectionProp", "{fx:bindContentBidirectional %s}", ALL_SOURCES, INVALID_BIDIRECTIONAL_CONTENT_BINDING_TARGET),
 
             variants("readOnlyTargetObjectListProp", "{fx:once %s}", ALL_SOURCES, CANNOT_MODIFY_READONLY_PROPERTY),
-            variants("readOnlyTargetObjectListProp", "{fx:once %s; content=true}", COLLECTION_SOURCES, SOURCE_LIST),
-            variants("readOnlyTargetObjectListProp", "{fx:once %s; content=true}", LIST_SOURCES, SOURCE_LIST),
-            variants("readOnlyTargetObjectListProp", "{fx:once %s; content=true}", SET_SOURCES, SOURCE_LIST),
-            variants("readOnlyTargetObjectListProp", "{fx:once %s; content=true}", MAP_SOURCES, INVALID_CONTENT_ASSIGNMENT_SOURCE),
+            variants("readOnlyTargetObjectListProp", "{fx:content %s}", COLLECTION_SOURCES, SOURCE_LIST),
+            variants("readOnlyTargetObjectListProp", "{fx:content %s}", LIST_SOURCES, SOURCE_LIST),
+            variants("readOnlyTargetObjectListProp", "{fx:content %s}", SET_SOURCES, SOURCE_LIST),
+            variants("readOnlyTargetObjectListProp", "{fx:content %s}", MAP_SOURCES, INVALID_CONTENT_ASSIGNMENT_SOURCE),
             variants("readOnlyTargetObjectListProp", "{fx:bind %s}", ALL_SOURCES, CANNOT_MODIFY_READONLY_PROPERTY),
-            variants("readOnlyTargetObjectListProp", "{fx:sync %s}", ALL_SOURCES, CANNOT_MODIFY_READONLY_PROPERTY),
-            variants("readOnlyTargetObjectListProp", "{fx:bind %s; content=true}", ALL_SOURCES, INVALID_CONTENT_BINDING_TARGET),
-            variants("readOnlyTargetObjectListProp", "{fx:sync %s; content=true}", ALL_SOURCES, INVALID_BIDIRECTIONAL_CONTENT_BINDING_TARGET),
+            variants("readOnlyTargetObjectListProp", "{fx:bindBidirectional %s}", ALL_SOURCES, CANNOT_MODIFY_READONLY_PROPERTY),
+            variants("readOnlyTargetObjectListProp", "{fx:bindContent %s}", ALL_SOURCES, INVALID_CONTENT_BINDING_TARGET),
+            variants("readOnlyTargetObjectListProp", "{fx:bindContentBidirectional %s}", ALL_SOURCES, INVALID_BIDIRECTIONAL_CONTENT_BINDING_TARGET),
 
             variants("readOnlyTargetObjectSetProp", "{fx:once %s}", ALL_SOURCES, CANNOT_MODIFY_READONLY_PROPERTY),
-            variants("readOnlyTargetObjectSetProp", "{fx:once %s; content=true}", COLLECTION_SOURCES, SOURCE_LIST),
-            variants("readOnlyTargetObjectSetProp", "{fx:once %s; content=true}", LIST_SOURCES, SOURCE_LIST),
-            variants("readOnlyTargetObjectSetProp", "{fx:once %s; content=true}", SET_SOURCES, SOURCE_LIST),
-            variants("readOnlyTargetObjectSetProp", "{fx:once %s; content=true}", MAP_SOURCES, INVALID_CONTENT_ASSIGNMENT_SOURCE),
+            variants("readOnlyTargetObjectSetProp", "{fx:content %s}", COLLECTION_SOURCES, SOURCE_LIST),
+            variants("readOnlyTargetObjectSetProp", "{fx:content %s}", LIST_SOURCES, SOURCE_LIST),
+            variants("readOnlyTargetObjectSetProp", "{fx:content %s}", SET_SOURCES, SOURCE_LIST),
+            variants("readOnlyTargetObjectSetProp", "{fx:content %s}", MAP_SOURCES, INVALID_CONTENT_ASSIGNMENT_SOURCE),
             variants("readOnlyTargetObjectSetProp", "{fx:bind %s}", ALL_SOURCES, CANNOT_MODIFY_READONLY_PROPERTY),
-            variants("readOnlyTargetObjectSetProp", "{fx:sync %s}", ALL_SOURCES, CANNOT_MODIFY_READONLY_PROPERTY),
-            variants("readOnlyTargetObjectSetProp", "{fx:bind %s; content=true}", ALL_SOURCES, INVALID_CONTENT_BINDING_TARGET),
-            variants("readOnlyTargetObjectSetProp", "{fx:sync %s; content=true}", ALL_SOURCES, INVALID_BIDIRECTIONAL_CONTENT_BINDING_TARGET),
+            variants("readOnlyTargetObjectSetProp", "{fx:bindBidirectional %s}", ALL_SOURCES, CANNOT_MODIFY_READONLY_PROPERTY),
+            variants("readOnlyTargetObjectSetProp", "{fx:bindContent %s}", ALL_SOURCES, INVALID_CONTENT_BINDING_TARGET),
+            variants("readOnlyTargetObjectSetProp", "{fx:bindContentBidirectional %s}", ALL_SOURCES, INVALID_BIDIRECTIONAL_CONTENT_BINDING_TARGET),
 
             variants("readOnlyTargetObservableListProp", "{fx:once %s}", ALL_SOURCES, CANNOT_MODIFY_READONLY_PROPERTY),
-            variants("readOnlyTargetObservableListProp", "{fx:once %s; content=true}", COLLECTION_SOURCES, SOURCE_LIST),
-            variants("readOnlyTargetObservableListProp", "{fx:once %s; content=true}", LIST_SOURCES, SOURCE_LIST),
-            variants("readOnlyTargetObservableListProp", "{fx:once %s; content=true}", SET_SOURCES, SOURCE_LIST),
-            variants("readOnlyTargetObservableListProp", "{fx:once %s; content=true}", MAP_SOURCES, INVALID_CONTENT_ASSIGNMENT_SOURCE),
+            variants("readOnlyTargetObservableListProp", "{fx:content %s}", COLLECTION_SOURCES, SOURCE_LIST),
+            variants("readOnlyTargetObservableListProp", "{fx:content %s}", LIST_SOURCES, SOURCE_LIST),
+            variants("readOnlyTargetObservableListProp", "{fx:content %s}", SET_SOURCES, SOURCE_LIST),
+            variants("readOnlyTargetObservableListProp", "{fx:content %s}", MAP_SOURCES, INVALID_CONTENT_ASSIGNMENT_SOURCE),
             variants("readOnlyTargetObservableListProp", "{fx:bind %s}", ALL_SOURCES, CANNOT_MODIFY_READONLY_PROPERTY),
-            variants("readOnlyTargetObservableListProp", "{fx:sync %s}", ALL_SOURCES, CANNOT_MODIFY_READONLY_PROPERTY),
-            variants("readOnlyTargetObservableListProp", "{fx:bind %s; content=true}", ALL_SOURCES, INVALID_CONTENT_BINDING_TARGET),
-            variants("readOnlyTargetObservableListProp", "{fx:sync %s; content=true}", ALL_SOURCES, INVALID_BIDIRECTIONAL_CONTENT_BINDING_TARGET),
+            variants("readOnlyTargetObservableListProp", "{fx:bindBidirectional %s}", ALL_SOURCES, CANNOT_MODIFY_READONLY_PROPERTY),
+            variants("readOnlyTargetObservableListProp", "{fx:bindContent %s}", ALL_SOURCES, INVALID_CONTENT_BINDING_TARGET),
+            variants("readOnlyTargetObservableListProp", "{fx:bindContentBidirectional %s}", ALL_SOURCES, INVALID_BIDIRECTIONAL_CONTENT_BINDING_TARGET),
 
             variants("readOnlyTargetObservableSetProp", "{fx:once %s}", ALL_SOURCES, CANNOT_MODIFY_READONLY_PROPERTY),
-            variants("readOnlyTargetObservableSetProp", "{fx:once %s; content=true}", COLLECTION_SOURCES, SOURCE_LIST),
-            variants("readOnlyTargetObservableSetProp", "{fx:once %s; content=true}", LIST_SOURCES, SOURCE_LIST),
-            variants("readOnlyTargetObservableSetProp", "{fx:once %s; content=true}", SET_SOURCES, SOURCE_LIST),
-            variants("readOnlyTargetObservableSetProp", "{fx:once %s; content=true}", MAP_SOURCES, INVALID_CONTENT_ASSIGNMENT_SOURCE),
+            variants("readOnlyTargetObservableSetProp", "{fx:content %s}", COLLECTION_SOURCES, SOURCE_LIST),
+            variants("readOnlyTargetObservableSetProp", "{fx:content %s}", LIST_SOURCES, SOURCE_LIST),
+            variants("readOnlyTargetObservableSetProp", "{fx:content %s}", SET_SOURCES, SOURCE_LIST),
+            variants("readOnlyTargetObservableSetProp", "{fx:content %s}", MAP_SOURCES, INVALID_CONTENT_ASSIGNMENT_SOURCE),
             variants("readOnlyTargetObservableSetProp", "{fx:bind %s}", ALL_SOURCES, CANNOT_MODIFY_READONLY_PROPERTY),
-            variants("readOnlyTargetObservableSetProp", "{fx:sync %s}", ALL_SOURCES, CANNOT_MODIFY_READONLY_PROPERTY),
-            variants("readOnlyTargetObservableSetProp", "{fx:bind %s; content=true}", ALL_SOURCES, INVALID_CONTENT_BINDING_TARGET),
-            variants("readOnlyTargetObservableSetProp", "{fx:sync %s; content=true}", ALL_SOURCES, INVALID_BIDIRECTIONAL_CONTENT_BINDING_TARGET),
+            variants("readOnlyTargetObservableSetProp", "{fx:bindBidirectional %s}", ALL_SOURCES, CANNOT_MODIFY_READONLY_PROPERTY),
+            variants("readOnlyTargetObservableSetProp", "{fx:bindContent %s}", ALL_SOURCES, INVALID_CONTENT_BINDING_TARGET),
+            variants("readOnlyTargetObservableSetProp", "{fx:bindContentBidirectional %s}", ALL_SOURCES, INVALID_BIDIRECTIONAL_CONTENT_BINDING_TARGET),
 
             /*
                 target:                            source:
@@ -551,9 +551,9 @@ public class CollectionBindingMatrixTest {
                                                     |          |          |  ObservableValue<ObservableList/Set/Map<T>>
                 ------------------------------------|----------|----------|----------|---------------------------------
                 fx:once                             1          1          1          1
-                fx:content                          2/2/2/+    2/2/+      2/2/2/+    2/2/+
                 fx:bind                             1          1          1          1
                 fx:bindBidirectional                1          1          1          1
+                fx:content                          2/2/2/+    2/2/+      2/2/2/+    2/2/+
                 fx:bindContent                      3          3          3          3
                 fx:bindContentBidirectional         4          4          4          4
 
@@ -563,24 +563,24 @@ public class CollectionBindingMatrixTest {
                 4 = INVALID_BIDIRECTIONAL_CONTENT_BINDING_TARGET
             */
             variants("readOnlyTargetObjectMapProp", "{fx:once %s}", ALL_SOURCES, CANNOT_MODIFY_READONLY_PROPERTY),
-            variants("readOnlyTargetObjectMapProp", "{fx:once %s; content=true}", COLLECTION_SOURCES, INVALID_CONTENT_ASSIGNMENT_SOURCE),
-            variants("readOnlyTargetObjectMapProp", "{fx:once %s; content=true}", LIST_SOURCES, INVALID_CONTENT_ASSIGNMENT_SOURCE),
-            variants("readOnlyTargetObjectMapProp", "{fx:once %s; content=true}", SET_SOURCES, INVALID_CONTENT_ASSIGNMENT_SOURCE),
-            variants("readOnlyTargetObjectMapProp", "{fx:once %s; content=true}", MAP_SOURCES, SOURCE_MAP),
+            variants("readOnlyTargetObjectMapProp", "{fx:content %s}", COLLECTION_SOURCES, INVALID_CONTENT_ASSIGNMENT_SOURCE),
+            variants("readOnlyTargetObjectMapProp", "{fx:content %s}", LIST_SOURCES, INVALID_CONTENT_ASSIGNMENT_SOURCE),
+            variants("readOnlyTargetObjectMapProp", "{fx:content %s}", SET_SOURCES, INVALID_CONTENT_ASSIGNMENT_SOURCE),
+            variants("readOnlyTargetObjectMapProp", "{fx:content %s}", MAP_SOURCES, SOURCE_MAP),
             variants("readOnlyTargetObjectMapProp", "{fx:bind %s}", ALL_SOURCES, CANNOT_MODIFY_READONLY_PROPERTY),
-            variants("readOnlyTargetObjectMapProp", "{fx:sync %s}", ALL_SOURCES, CANNOT_MODIFY_READONLY_PROPERTY),
-            variants("readOnlyTargetObjectMapProp", "{fx:bind %s; content=true}", ALL_SOURCES, INVALID_CONTENT_BINDING_TARGET),
-            variants("readOnlyTargetObjectMapProp", "{fx:sync %s; content=true}", ALL_SOURCES, INVALID_BIDIRECTIONAL_CONTENT_BINDING_TARGET),
+            variants("readOnlyTargetObjectMapProp", "{fx:bindBidirectional %s}", ALL_SOURCES, CANNOT_MODIFY_READONLY_PROPERTY),
+            variants("readOnlyTargetObjectMapProp", "{fx:bindContent %s}", ALL_SOURCES, INVALID_CONTENT_BINDING_TARGET),
+            variants("readOnlyTargetObjectMapProp", "{fx:bindContentBidirectional %s}", ALL_SOURCES, INVALID_BIDIRECTIONAL_CONTENT_BINDING_TARGET),
 
             variants("readOnlyTargetObservableMapProp", "{fx:once %s}", ALL_SOURCES, CANNOT_MODIFY_READONLY_PROPERTY),
-            variants("readOnlyTargetObservableMapProp", "{fx:once %s; content=true}", COLLECTION_SOURCES, INVALID_CONTENT_ASSIGNMENT_SOURCE),
-            variants("readOnlyTargetObservableMapProp", "{fx:once %s; content=true}", LIST_SOURCES, INVALID_CONTENT_ASSIGNMENT_SOURCE),
-            variants("readOnlyTargetObservableMapProp", "{fx:once %s; content=true}", SET_SOURCES, INVALID_CONTENT_ASSIGNMENT_SOURCE),
-            variants("readOnlyTargetObservableMapProp", "{fx:once %s; content=true}", MAP_SOURCES, SOURCE_MAP),
+            variants("readOnlyTargetObservableMapProp", "{fx:content %s}", COLLECTION_SOURCES, INVALID_CONTENT_ASSIGNMENT_SOURCE),
+            variants("readOnlyTargetObservableMapProp", "{fx:content %s}", LIST_SOURCES, INVALID_CONTENT_ASSIGNMENT_SOURCE),
+            variants("readOnlyTargetObservableMapProp", "{fx:content %s}", SET_SOURCES, INVALID_CONTENT_ASSIGNMENT_SOURCE),
+            variants("readOnlyTargetObservableMapProp", "{fx:content %s}", MAP_SOURCES, SOURCE_MAP),
             variants("readOnlyTargetObservableMapProp", "{fx:bind %s}", ALL_SOURCES, CANNOT_MODIFY_READONLY_PROPERTY),
-            variants("readOnlyTargetObservableMapProp", "{fx:sync %s}", ALL_SOURCES, CANNOT_MODIFY_READONLY_PROPERTY),
-            variants("readOnlyTargetObservableMapProp", "{fx:bind %s; content=true}", ALL_SOURCES, INVALID_CONTENT_BINDING_TARGET),
-            variants("readOnlyTargetObservableMapProp", "{fx:sync %s; content=true}", ALL_SOURCES, INVALID_BIDIRECTIONAL_CONTENT_BINDING_TARGET),
+            variants("readOnlyTargetObservableMapProp", "{fx:bindBidirectional %s}", ALL_SOURCES, CANNOT_MODIFY_READONLY_PROPERTY),
+            variants("readOnlyTargetObservableMapProp", "{fx:bindContent %s}", ALL_SOURCES, INVALID_CONTENT_BINDING_TARGET),
+            variants("readOnlyTargetObservableMapProp", "{fx:bindContentBidirectional %s}", ALL_SOURCES, INVALID_BIDIRECTIONAL_CONTENT_BINDING_TARGET),
 
             /*
                 target:                            source:
@@ -590,9 +590,9 @@ public class CollectionBindingMatrixTest {
                                                     |          |          |  Property<ObservableList/Set/Map<T>>
                 ------------------------------------|----------|----------|----------|--------------------------
                 fx:once                             1/+/1/1    +/1/1      1/+/1/1    +/1/1
-                fx:content                          +/+/+/2    +/+/2      +/+/+/2    +/+/2
                 fx:bind                             1/+/1/1    +/1/1      1/+/1/1    +/1/1
                 fx:bindBidirectional                3          3          4/+/4/4    +/4/4
+                fx:content                          +/+/+/2    +/+/2      +/+/+/2    +/+/2
                 fx:bindContent                      5          5          5          5
                 fx:bindContentBidirectional         6          6          6          6
 
@@ -607,23 +607,23 @@ public class CollectionBindingMatrixTest {
             variants("targetObjectListProp", "{fx:once %s}", LIST_SOURCES, SOURCE_LIST),
             variants("targetObjectListProp", "{fx:once %s}", SET_SOURCES, CANNOT_CONVERT_SOURCE_TYPE),
             variants("targetObjectListProp", "{fx:once %s}", MAP_SOURCES, CANNOT_CONVERT_SOURCE_TYPE),
-            variants("targetObjectListProp", "{fx:once %s; content=true}", COLLECTION_SOURCES, SOURCE_LIST),
-            variants("targetObjectListProp", "{fx:once %s; content=true}", LIST_SOURCES, SOURCE_LIST),
-            variants("targetObjectListProp", "{fx:once %s; content=true}", SET_SOURCES, SOURCE_LIST),
-            variants("targetObjectListProp", "{fx:once %s; content=true}", MAP_SOURCES, INVALID_CONTENT_ASSIGNMENT_SOURCE),
+            variants("targetObjectListProp", "{fx:content %s}", COLLECTION_SOURCES, SOURCE_LIST),
+            variants("targetObjectListProp", "{fx:content %s}", LIST_SOURCES, SOURCE_LIST),
+            variants("targetObjectListProp", "{fx:content %s}", SET_SOURCES, SOURCE_LIST),
+            variants("targetObjectListProp", "{fx:content %s}", MAP_SOURCES, INVALID_CONTENT_ASSIGNMENT_SOURCE),
             variants("targetObjectListProp", "{fx:bind %s}", COLLECTION_SOURCES, CANNOT_CONVERT_SOURCE_TYPE),
             variants("targetObjectListProp", "{fx:bind %s}", LIST_SOURCES, SOURCE_LIST),
             variants("targetObjectListProp", "{fx:bind %s}", SET_SOURCES, CANNOT_CONVERT_SOURCE_TYPE),
             variants("targetObjectListProp", "{fx:bind %s}", MAP_SOURCES, CANNOT_CONVERT_SOURCE_TYPE),
-            variants("targetObjectListProp", "{fx:sync %s}", new String[] {"sourcePropertyOfList"}, SOURCE_LIST),
-            variants("targetObjectListProp", "{fx:sync %s}", new String[] {"sourcePropertyOfObservableList"}, SOURCE_TYPE_MISMATCH),
-            variants("targetObjectListProp", "{fx:sync %s}", Arrays.stream(LIST_SOURCES).filter(s -> !List.of("sourcePropertyOfList", "sourcePropertyOfObservableList").contains(s)).toArray(String[]::new), INVALID_BIDIRECTIONAL_BINDING_SOURCE),
-            variants("targetObjectListProp", "{fx:sync %s}", new String[] {"sourcePropertyOfSet", "sourcePropertyOfObservableSet"}, SOURCE_TYPE_MISMATCH),
-            variants("targetObjectListProp", "{fx:sync %s}", Arrays.stream(SET_SOURCES).filter(s -> !List.of("sourcePropertyOfSet", "sourcePropertyOfObservableSet").contains(s)).toArray(String[]::new), INVALID_BIDIRECTIONAL_BINDING_SOURCE),
-            variants("targetObjectListProp", "{fx:sync %s}", new String[] {"sourcePropertyOfMap", "sourcePropertyOfObservableMap"}, SOURCE_TYPE_MISMATCH),
-            variants("targetObjectListProp", "{fx:sync %s}", Arrays.stream(MAP_SOURCES).filter(s -> !List.of("sourcePropertyOfMap", "sourcePropertyOfObservableMap").contains(s)).toArray(String[]::new), INVALID_BIDIRECTIONAL_BINDING_SOURCE),
-            variants("targetObjectListProp", "{fx:bind %s; content=true}", ALL_SOURCES, INVALID_CONTENT_BINDING_TARGET),
-            variants("targetObjectListProp", "{fx:sync %s; content=true}", ALL_SOURCES, INVALID_BIDIRECTIONAL_CONTENT_BINDING_TARGET),
+            variants("targetObjectListProp", "{fx:bindBidirectional %s}", new String[] {"sourcePropertyOfList"}, SOURCE_LIST),
+            variants("targetObjectListProp", "{fx:bindBidirectional %s}", new String[] {"sourcePropertyOfObservableList"}, SOURCE_TYPE_MISMATCH),
+            variants("targetObjectListProp", "{fx:bindBidirectional %s}", Arrays.stream(LIST_SOURCES).filter(s -> !List.of("sourcePropertyOfList", "sourcePropertyOfObservableList").contains(s)).toArray(String[]::new), INVALID_BIDIRECTIONAL_BINDING_SOURCE),
+            variants("targetObjectListProp", "{fx:bindBidirectional %s}", new String[] {"sourcePropertyOfSet", "sourcePropertyOfObservableSet"}, SOURCE_TYPE_MISMATCH),
+            variants("targetObjectListProp", "{fx:bindBidirectional %s}", Arrays.stream(SET_SOURCES).filter(s -> !List.of("sourcePropertyOfSet", "sourcePropertyOfObservableSet").contains(s)).toArray(String[]::new), INVALID_BIDIRECTIONAL_BINDING_SOURCE),
+            variants("targetObjectListProp", "{fx:bindBidirectional %s}", new String[] {"sourcePropertyOfMap", "sourcePropertyOfObservableMap"}, SOURCE_TYPE_MISMATCH),
+            variants("targetObjectListProp", "{fx:bindBidirectional %s}", Arrays.stream(MAP_SOURCES).filter(s -> !List.of("sourcePropertyOfMap", "sourcePropertyOfObservableMap").contains(s)).toArray(String[]::new), INVALID_BIDIRECTIONAL_BINDING_SOURCE),
+            variants("targetObjectListProp", "{fx:bindContent %s}", ALL_SOURCES, INVALID_CONTENT_BINDING_TARGET),
+            variants("targetObjectListProp", "{fx:bindContentBidirectional %s}", ALL_SOURCES, INVALID_BIDIRECTIONAL_CONTENT_BINDING_TARGET),
 
             /*
                 target:                            source:
@@ -633,9 +633,9 @@ public class CollectionBindingMatrixTest {
                                                     |          |          |  Property<ObservableList/Set/Map<T>>
                 ------------------------------------|----------|----------|----------|--------------------------
                 fx:once                             1/1/+/1    1/+/1      1/1/+/1    1/+/1
-                fx:content                          +/+/+/2    +/+/2      +/+/+/2    +/+/2
                 fx:bind                             1/1/+/1    1/+/1      1/1/+/1    1/+/1
                 fx:bindBidirectional                3          3          4/4/+/4    4/+/4
+                fx:content                          +/+/+/2    +/+/2      +/+/+/2    +/+/2
                 fx:bindContent                      5          5          5          5
                 fx:bindContentBidirectional         6          6          6          6
 
@@ -650,23 +650,23 @@ public class CollectionBindingMatrixTest {
             variants("targetObjectSetProp", "{fx:once %s}", LIST_SOURCES, CANNOT_CONVERT_SOURCE_TYPE),
             variants("targetObjectSetProp", "{fx:once %s}", SET_SOURCES, SOURCE_SET),
             variants("targetObjectSetProp", "{fx:once %s}", MAP_SOURCES, CANNOT_CONVERT_SOURCE_TYPE),
-            variants("targetObjectSetProp", "{fx:once %s; content=true}", COLLECTION_SOURCES, SOURCE_LIST),
-            variants("targetObjectSetProp", "{fx:once %s; content=true}", LIST_SOURCES, SOURCE_LIST),
-            variants("targetObjectSetProp", "{fx:once %s; content=true}", SET_SOURCES, SOURCE_LIST),
-            variants("targetObjectSetProp", "{fx:once %s; content=true}", MAP_SOURCES, INVALID_CONTENT_ASSIGNMENT_SOURCE),
+            variants("targetObjectSetProp", "{fx:content %s}", COLLECTION_SOURCES, SOURCE_LIST),
+            variants("targetObjectSetProp", "{fx:content %s}", LIST_SOURCES, SOURCE_LIST),
+            variants("targetObjectSetProp", "{fx:content %s}", SET_SOURCES, SOURCE_LIST),
+            variants("targetObjectSetProp", "{fx:content %s}", MAP_SOURCES, INVALID_CONTENT_ASSIGNMENT_SOURCE),
             variants("targetObjectSetProp", "{fx:bind %s}", COLLECTION_SOURCES, CANNOT_CONVERT_SOURCE_TYPE),
             variants("targetObjectSetProp", "{fx:bind %s}", LIST_SOURCES, CANNOT_CONVERT_SOURCE_TYPE),
             variants("targetObjectSetProp", "{fx:bind %s}", SET_SOURCES, SOURCE_SET),
             variants("targetObjectSetProp", "{fx:bind %s}", MAP_SOURCES, CANNOT_CONVERT_SOURCE_TYPE),
-            variants("targetObjectSetProp", "{fx:sync %s}", new String[] {"sourcePropertyOfSet"}, SOURCE_SET),
-            variants("targetObjectSetProp", "{fx:sync %s}", new String[] {"sourcePropertyOfObservableSet"}, SOURCE_TYPE_MISMATCH),
-            variants("targetObjectSetProp", "{fx:sync %s}", Arrays.stream(SET_SOURCES).filter(s -> !List.of("sourcePropertyOfSet", "sourcePropertyOfObservableSet").contains(s)).toArray(String[]::new), INVALID_BIDIRECTIONAL_BINDING_SOURCE),
-            variants("targetObjectSetProp", "{fx:sync %s}", new String[] {"sourcePropertyOfList", "sourcePropertyOfObservableList"}, SOURCE_TYPE_MISMATCH),
-            variants("targetObjectSetProp", "{fx:sync %s}", Arrays.stream(LIST_SOURCES).filter(s -> !List.of("sourcePropertyOfList", "sourcePropertyOfObservableList").contains(s)).toArray(String[]::new), INVALID_BIDIRECTIONAL_BINDING_SOURCE),
-            variants("targetObjectSetProp", "{fx:sync %s}", new String[] {"sourcePropertyOfMap", "sourcePropertyOfObservableMap"}, SOURCE_TYPE_MISMATCH),
-            variants("targetObjectSetProp", "{fx:sync %s}", Arrays.stream(MAP_SOURCES).filter(s -> !List.of("sourcePropertyOfMap", "sourcePropertyOfObservableMap").contains(s)).toArray(String[]::new), INVALID_BIDIRECTIONAL_BINDING_SOURCE),
-            variants("targetObjectSetProp", "{fx:bind %s; content=true}", ALL_SOURCES, INVALID_CONTENT_BINDING_TARGET),
-            variants("targetObjectSetProp", "{fx:sync %s; content=true}", ALL_SOURCES, INVALID_BIDIRECTIONAL_CONTENT_BINDING_TARGET),
+            variants("targetObjectSetProp", "{fx:bindBidirectional %s}", new String[] {"sourcePropertyOfSet"}, SOURCE_SET),
+            variants("targetObjectSetProp", "{fx:bindBidirectional %s}", new String[] {"sourcePropertyOfObservableSet"}, SOURCE_TYPE_MISMATCH),
+            variants("targetObjectSetProp", "{fx:bindBidirectional %s}", Arrays.stream(SET_SOURCES).filter(s -> !List.of("sourcePropertyOfSet", "sourcePropertyOfObservableSet").contains(s)).toArray(String[]::new), INVALID_BIDIRECTIONAL_BINDING_SOURCE),
+            variants("targetObjectSetProp", "{fx:bindBidirectional %s}", new String[] {"sourcePropertyOfList", "sourcePropertyOfObservableList"}, SOURCE_TYPE_MISMATCH),
+            variants("targetObjectSetProp", "{fx:bindBidirectional %s}", Arrays.stream(LIST_SOURCES).filter(s -> !List.of("sourcePropertyOfList", "sourcePropertyOfObservableList").contains(s)).toArray(String[]::new), INVALID_BIDIRECTIONAL_BINDING_SOURCE),
+            variants("targetObjectSetProp", "{fx:bindBidirectional %s}", new String[] {"sourcePropertyOfMap", "sourcePropertyOfObservableMap"}, SOURCE_TYPE_MISMATCH),
+            variants("targetObjectSetProp", "{fx:bindBidirectional %s}", Arrays.stream(MAP_SOURCES).filter(s -> !List.of("sourcePropertyOfMap", "sourcePropertyOfObservableMap").contains(s)).toArray(String[]::new), INVALID_BIDIRECTIONAL_BINDING_SOURCE),
+            variants("targetObjectSetProp", "{fx:bindContent %s}", ALL_SOURCES, INVALID_CONTENT_BINDING_TARGET),
+            variants("targetObjectSetProp", "{fx:bindContentBidirectional %s}", ALL_SOURCES, INVALID_BIDIRECTIONAL_CONTENT_BINDING_TARGET),
 
             /*
                 target:                            source:
@@ -676,9 +676,9 @@ public class CollectionBindingMatrixTest {
                                                     |          |          |  Property<ObservableList/Set/Map<T>>
                 ------------------------------------|----------|----------|----------|--------------------------
                 fx:once                             1/1/1/+    1/1/+      1/1/1/+    1/1/+
-                fx:content                          2/2/2/+    2/2/+      2/2/2/+    2/2/+
                 fx:bind                             1/1/1/+    1/1/+      1/1/1/+    1/1/+
                 fx:bindBidirectional                3          3          4/4/4/+    4/4/+
+                fx:content                          2/2/2/+    2/2/+      2/2/2/+    2/2/+
                 fx:bindContent                      5          5          5          5
                 fx:bindContentBidirectional         6          6          6          6
 
@@ -693,23 +693,23 @@ public class CollectionBindingMatrixTest {
             variants("targetObjectMapProp", "{fx:once %s}", LIST_SOURCES, CANNOT_CONVERT_SOURCE_TYPE),
             variants("targetObjectMapProp", "{fx:once %s}", SET_SOURCES, CANNOT_CONVERT_SOURCE_TYPE),
             variants("targetObjectMapProp", "{fx:once %s}", MAP_SOURCES, SOURCE_MAP),
-            variants("targetObjectMapProp", "{fx:once %s; content=true}", COLLECTION_SOURCES, INVALID_CONTENT_ASSIGNMENT_SOURCE),
-            variants("targetObjectMapProp", "{fx:once %s; content=true}", LIST_SOURCES, INVALID_CONTENT_ASSIGNMENT_SOURCE),
-            variants("targetObjectMapProp", "{fx:once %s; content=true}", SET_SOURCES, INVALID_CONTENT_ASSIGNMENT_SOURCE),
-            variants("targetObjectMapProp", "{fx:once %s; content=true}", MAP_SOURCES, SOURCE_MAP),
+            variants("targetObjectMapProp", "{fx:content %s}", COLLECTION_SOURCES, INVALID_CONTENT_ASSIGNMENT_SOURCE),
+            variants("targetObjectMapProp", "{fx:content %s}", LIST_SOURCES, INVALID_CONTENT_ASSIGNMENT_SOURCE),
+            variants("targetObjectMapProp", "{fx:content %s}", SET_SOURCES, INVALID_CONTENT_ASSIGNMENT_SOURCE),
+            variants("targetObjectMapProp", "{fx:content %s}", MAP_SOURCES, SOURCE_MAP),
             variants("targetObjectMapProp", "{fx:bind %s}", COLLECTION_SOURCES, CANNOT_CONVERT_SOURCE_TYPE),
             variants("targetObjectMapProp", "{fx:bind %s}", LIST_SOURCES, CANNOT_CONVERT_SOURCE_TYPE),
             variants("targetObjectMapProp", "{fx:bind %s}", SET_SOURCES, CANNOT_CONVERT_SOURCE_TYPE),
             variants("targetObjectMapProp", "{fx:bind %s}", MAP_SOURCES, SOURCE_MAP),
-            variants("targetObjectMapProp", "{fx:sync %s}", new String[] {"sourcePropertyOfMap"}, SOURCE_MAP),
-            variants("targetObjectMapProp", "{fx:sync %s}", new String[] {"sourcePropertyOfObservableMap"}, SOURCE_TYPE_MISMATCH),
-            variants("targetObjectMapProp", "{fx:sync %s}", Arrays.stream(MAP_SOURCES).filter(s -> !List.of("sourcePropertyOfMap", "sourcePropertyOfObservableMap").contains(s)).toArray(String[]::new), INVALID_BIDIRECTIONAL_BINDING_SOURCE),
-            variants("targetObjectMapProp", "{fx:sync %s}", new String[] {"sourcePropertyOfList", "sourcePropertyOfObservableList"}, SOURCE_TYPE_MISMATCH),
-            variants("targetObjectMapProp", "{fx:sync %s}", Arrays.stream(LIST_SOURCES).filter(s -> !List.of("sourcePropertyOfList", "sourcePropertyOfObservableList").contains(s)).toArray(String[]::new), INVALID_BIDIRECTIONAL_BINDING_SOURCE),
-            variants("targetObjectMapProp", "{fx:sync %s}", new String[] {"sourcePropertyOfSet", "sourcePropertyOfObservableSet"}, SOURCE_TYPE_MISMATCH),
-            variants("targetObjectMapProp", "{fx:sync %s}", Arrays.stream(SET_SOURCES).filter(s -> !List.of("sourcePropertyOfSet", "sourcePropertyOfObservableSet").contains(s)).toArray(String[]::new), INVALID_BIDIRECTIONAL_BINDING_SOURCE),
-            variants("targetObjectMapProp", "{fx:bind %s; content=true}", ALL_SOURCES, INVALID_CONTENT_BINDING_TARGET),
-            variants("targetObjectMapProp", "{fx:sync %s; content=true}", ALL_SOURCES, INVALID_BIDIRECTIONAL_CONTENT_BINDING_TARGET),
+            variants("targetObjectMapProp", "{fx:bindBidirectional %s}", new String[] {"sourcePropertyOfMap"}, SOURCE_MAP),
+            variants("targetObjectMapProp", "{fx:bindBidirectional %s}", new String[] {"sourcePropertyOfObservableMap"}, SOURCE_TYPE_MISMATCH),
+            variants("targetObjectMapProp", "{fx:bindBidirectional %s}", Arrays.stream(MAP_SOURCES).filter(s -> !List.of("sourcePropertyOfMap", "sourcePropertyOfObservableMap").contains(s)).toArray(String[]::new), INVALID_BIDIRECTIONAL_BINDING_SOURCE),
+            variants("targetObjectMapProp", "{fx:bindBidirectional %s}", new String[] {"sourcePropertyOfList", "sourcePropertyOfObservableList"}, SOURCE_TYPE_MISMATCH),
+            variants("targetObjectMapProp", "{fx:bindBidirectional %s}", Arrays.stream(LIST_SOURCES).filter(s -> !List.of("sourcePropertyOfList", "sourcePropertyOfObservableList").contains(s)).toArray(String[]::new), INVALID_BIDIRECTIONAL_BINDING_SOURCE),
+            variants("targetObjectMapProp", "{fx:bindBidirectional %s}", new String[] {"sourcePropertyOfSet", "sourcePropertyOfObservableSet"}, SOURCE_TYPE_MISMATCH),
+            variants("targetObjectMapProp", "{fx:bindBidirectional %s}", Arrays.stream(SET_SOURCES).filter(s -> !List.of("sourcePropertyOfSet", "sourcePropertyOfObservableSet").contains(s)).toArray(String[]::new), INVALID_BIDIRECTIONAL_BINDING_SOURCE),
+            variants("targetObjectMapProp", "{fx:bindContent %s}", ALL_SOURCES, INVALID_CONTENT_BINDING_TARGET),
+            variants("targetObjectMapProp", "{fx:bindContentBidirectional %s}", ALL_SOURCES, INVALID_BIDIRECTIONAL_CONTENT_BINDING_TARGET),
 
             /*
                 target:                            source:
@@ -719,9 +719,9 @@ public class CollectionBindingMatrixTest {
                                                     |          |          |  Property<ObservableList/Set/Map<T>>
                 ------------------------------------|----------|----------|----------|--------------------------
                 fx:once                             1/+/1/1    +/1/1      1/+/1/1    +/1/1
-                fx:content                          +/+/+/2    +/+/2      +/+/+/2    +/+/2
                 fx:bind                             1/+/1/1    +/1/1      1/+/1/1    +/1/1
                 fx:bindBidirectional                3          3          4          +/4/4
+                fx:content                          +/+/+/2    +/+/2      +/+/+/2    +/+/2
                 fx:bindContent                      5          5          5          5
                 fx:bindContentBidirectional         6          6          6          6
 
@@ -736,23 +736,23 @@ public class CollectionBindingMatrixTest {
             variants("targetObservableListProp", "{fx:once %s}", LIST_SOURCES, SOURCE_LIST),
             variants("targetObservableListProp", "{fx:once %s}", SET_SOURCES, CANNOT_CONVERT_SOURCE_TYPE),
             variants("targetObservableListProp", "{fx:once %s}", MAP_SOURCES, CANNOT_CONVERT_SOURCE_TYPE),
-            variants("targetObservableListProp", "{fx:once %s; content=true}", COLLECTION_SOURCES, SOURCE_LIST),
-            variants("targetObservableListProp", "{fx:once %s; content=true}", LIST_SOURCES, SOURCE_LIST),
-            variants("targetObservableListProp", "{fx:once %s; content=true}", SET_SOURCES, SOURCE_LIST),
-            variants("targetObservableListProp", "{fx:once %s; content=true}", MAP_SOURCES, INVALID_CONTENT_ASSIGNMENT_SOURCE),
+            variants("targetObservableListProp", "{fx:content %s}", COLLECTION_SOURCES, SOURCE_LIST),
+            variants("targetObservableListProp", "{fx:content %s}", LIST_SOURCES, SOURCE_LIST),
+            variants("targetObservableListProp", "{fx:content %s}", SET_SOURCES, SOURCE_LIST),
+            variants("targetObservableListProp", "{fx:content %s}", MAP_SOURCES, INVALID_CONTENT_ASSIGNMENT_SOURCE),
             variants("targetObservableListProp", "{fx:bind %s}", COLLECTION_SOURCES, CANNOT_CONVERT_SOURCE_TYPE),
             variants("targetObservableListProp", "{fx:bind %s}", LIST_SOURCES, SOURCE_LIST),
             variants("targetObservableListProp", "{fx:bind %s}", SET_SOURCES, CANNOT_CONVERT_SOURCE_TYPE),
             variants("targetObservableListProp", "{fx:bind %s}", MAP_SOURCES, CANNOT_CONVERT_SOURCE_TYPE),
-            variants("targetObservableListProp", "{fx:sync %s}", new String[] {"sourcePropertyOfList"}, SOURCE_TYPE_MISMATCH),
-            variants("targetObservableListProp", "{fx:sync %s}", new String[] {"sourcePropertyOfObservableList"}, SOURCE_LIST),
-            variants("targetObservableListProp", "{fx:sync %s}", Arrays.stream(LIST_SOURCES).filter(s -> !List.of("sourcePropertyOfList", "sourcePropertyOfObservableList").contains(s)).toArray(String[]::new), INVALID_BIDIRECTIONAL_BINDING_SOURCE),
-            variants("targetObservableListProp", "{fx:sync %s}", new String[] {"sourcePropertyOfSet", "sourcePropertyOfObservableSet"}, SOURCE_TYPE_MISMATCH),
-            variants("targetObservableListProp", "{fx:sync %s}", Arrays.stream(SET_SOURCES).filter(s -> !List.of("sourcePropertyOfSet", "sourcePropertyOfObservableSet").contains(s)).toArray(String[]::new), INVALID_BIDIRECTIONAL_BINDING_SOURCE),
-            variants("targetObservableListProp", "{fx:sync %s}", new String[] {"sourcePropertyOfMap", "sourcePropertyOfObservableMap"}, SOURCE_TYPE_MISMATCH),
-            variants("targetObservableListProp", "{fx:sync %s}", Arrays.stream(MAP_SOURCES).filter(s -> !List.of("sourcePropertyOfMap", "sourcePropertyOfObservableMap").contains(s)).toArray(String[]::new), INVALID_BIDIRECTIONAL_BINDING_SOURCE),
-            variants("targetObservableListProp", "{fx:bind %s; content=true}", ALL_SOURCES, INVALID_CONTENT_BINDING_TARGET),
-            variants("targetObservableListProp", "{fx:sync %s; content=true}", ALL_SOURCES, INVALID_BIDIRECTIONAL_CONTENT_BINDING_TARGET),
+            variants("targetObservableListProp", "{fx:bindBidirectional %s}", new String[] {"sourcePropertyOfList"}, SOURCE_TYPE_MISMATCH),
+            variants("targetObservableListProp", "{fx:bindBidirectional %s}", new String[] {"sourcePropertyOfObservableList"}, SOURCE_LIST),
+            variants("targetObservableListProp", "{fx:bindBidirectional %s}", Arrays.stream(LIST_SOURCES).filter(s -> !List.of("sourcePropertyOfList", "sourcePropertyOfObservableList").contains(s)).toArray(String[]::new), INVALID_BIDIRECTIONAL_BINDING_SOURCE),
+            variants("targetObservableListProp", "{fx:bindBidirectional %s}", new String[] {"sourcePropertyOfSet", "sourcePropertyOfObservableSet"}, SOURCE_TYPE_MISMATCH),
+            variants("targetObservableListProp", "{fx:bindBidirectional %s}", Arrays.stream(SET_SOURCES).filter(s -> !List.of("sourcePropertyOfSet", "sourcePropertyOfObservableSet").contains(s)).toArray(String[]::new), INVALID_BIDIRECTIONAL_BINDING_SOURCE),
+            variants("targetObservableListProp", "{fx:bindBidirectional %s}", new String[] {"sourcePropertyOfMap", "sourcePropertyOfObservableMap"}, SOURCE_TYPE_MISMATCH),
+            variants("targetObservableListProp", "{fx:bindBidirectional %s}", Arrays.stream(MAP_SOURCES).filter(s -> !List.of("sourcePropertyOfMap", "sourcePropertyOfObservableMap").contains(s)).toArray(String[]::new), INVALID_BIDIRECTIONAL_BINDING_SOURCE),
+            variants("targetObservableListProp", "{fx:bindContent %s}", ALL_SOURCES, INVALID_CONTENT_BINDING_TARGET),
+            variants("targetObservableListProp", "{fx:bindContentBidirectional %s}", ALL_SOURCES, INVALID_BIDIRECTIONAL_CONTENT_BINDING_TARGET),
 
             /*
                 target:                            source:
@@ -762,9 +762,9 @@ public class CollectionBindingMatrixTest {
                                                     |          |          |  Property<ObservableList/Set/Map<T>>
                 ------------------------------------|----------|----------|----------|--------------------------
                 fx:once                             1/1/+/1    1/+/1      1/1/+/1    1/+/1
-                fx:content                          +/+/+/2    +/+/2      +/+/+/2    +/+/2
                 fx:bind                             1/1/+/1    1/+/1      1/1/+/1    1/+/1
                 fx:bindBidirectional                3          3          4          4/+/4
+                fx:content                          +/+/+/2    +/+/2      +/+/+/2    +/+/2
                 fx:bindContent                      5          5          5          5
                 fx:bindContentBidirectional         6          6          6          6
 
@@ -779,23 +779,23 @@ public class CollectionBindingMatrixTest {
             variants("targetObservableSetProp", "{fx:once %s}", LIST_SOURCES, CANNOT_CONVERT_SOURCE_TYPE),
             variants("targetObservableSetProp", "{fx:once %s}", SET_SOURCES, SOURCE_SET),
             variants("targetObservableSetProp", "{fx:once %s}", MAP_SOURCES, CANNOT_CONVERT_SOURCE_TYPE),
-            variants("targetObservableSetProp", "{fx:once %s; content=true}", COLLECTION_SOURCES, SOURCE_LIST),
-            variants("targetObservableSetProp", "{fx:once %s; content=true}", LIST_SOURCES, SOURCE_LIST),
-            variants("targetObservableSetProp", "{fx:once %s; content=true}", SET_SOURCES, SOURCE_LIST),
-            variants("targetObservableSetProp", "{fx:once %s; content=true}", MAP_SOURCES, INVALID_CONTENT_ASSIGNMENT_SOURCE),
+            variants("targetObservableSetProp", "{fx:content %s}", COLLECTION_SOURCES, SOURCE_LIST),
+            variants("targetObservableSetProp", "{fx:content %s}", LIST_SOURCES, SOURCE_LIST),
+            variants("targetObservableSetProp", "{fx:content %s}", SET_SOURCES, SOURCE_LIST),
+            variants("targetObservableSetProp", "{fx:content %s}", MAP_SOURCES, INVALID_CONTENT_ASSIGNMENT_SOURCE),
             variants("targetObservableSetProp", "{fx:bind %s}", COLLECTION_SOURCES, CANNOT_CONVERT_SOURCE_TYPE),
             variants("targetObservableSetProp", "{fx:bind %s}", LIST_SOURCES, CANNOT_CONVERT_SOURCE_TYPE),
             variants("targetObservableSetProp", "{fx:bind %s}", SET_SOURCES, SOURCE_SET),
             variants("targetObservableSetProp", "{fx:bind %s}", MAP_SOURCES, CANNOT_CONVERT_SOURCE_TYPE),
-            variants("targetObservableSetProp", "{fx:sync %s}", new String[] {"sourcePropertyOfSet"}, SOURCE_TYPE_MISMATCH),
-            variants("targetObservableSetProp", "{fx:sync %s}", new String[] {"sourcePropertyOfObservableSet"}, SOURCE_SET),
-            variants("targetObservableSetProp", "{fx:sync %s}", Arrays.stream(SET_SOURCES).filter(s -> !List.of("sourcePropertyOfSet", "sourcePropertyOfObservableSet").contains(s)).toArray(String[]::new), INVALID_BIDIRECTIONAL_BINDING_SOURCE),
-            variants("targetObservableSetProp", "{fx:sync %s}", new String[] {"sourcePropertyOfList", "sourcePropertyOfObservableList"}, SOURCE_TYPE_MISMATCH),
-            variants("targetObservableSetProp", "{fx:sync %s}", Arrays.stream(LIST_SOURCES).filter(s -> !List.of("sourcePropertyOfList", "sourcePropertyOfObservableList").contains(s)).toArray(String[]::new), INVALID_BIDIRECTIONAL_BINDING_SOURCE),
-            variants("targetObservableSetProp", "{fx:sync %s}", new String[] {"sourcePropertyOfMap", "sourcePropertyOfObservableMap"}, SOURCE_TYPE_MISMATCH),
-            variants("targetObservableSetProp", "{fx:sync %s}", Arrays.stream(MAP_SOURCES).filter(s -> !List.of("sourcePropertyOfMap", "sourcePropertyOfObservableMap").contains(s)).toArray(String[]::new), INVALID_BIDIRECTIONAL_BINDING_SOURCE),
-            variants("targetObservableSetProp", "{fx:bind %s; content=true}", ALL_SOURCES, INVALID_CONTENT_BINDING_TARGET),
-            variants("targetObservableSetProp", "{fx:sync %s; content=true}", ALL_SOURCES, INVALID_BIDIRECTIONAL_CONTENT_BINDING_TARGET),
+            variants("targetObservableSetProp", "{fx:bindBidirectional %s}", new String[] {"sourcePropertyOfSet"}, SOURCE_TYPE_MISMATCH),
+            variants("targetObservableSetProp", "{fx:bindBidirectional %s}", new String[] {"sourcePropertyOfObservableSet"}, SOURCE_SET),
+            variants("targetObservableSetProp", "{fx:bindBidirectional %s}", Arrays.stream(SET_SOURCES).filter(s -> !List.of("sourcePropertyOfSet", "sourcePropertyOfObservableSet").contains(s)).toArray(String[]::new), INVALID_BIDIRECTIONAL_BINDING_SOURCE),
+            variants("targetObservableSetProp", "{fx:bindBidirectional %s}", new String[] {"sourcePropertyOfList", "sourcePropertyOfObservableList"}, SOURCE_TYPE_MISMATCH),
+            variants("targetObservableSetProp", "{fx:bindBidirectional %s}", Arrays.stream(LIST_SOURCES).filter(s -> !List.of("sourcePropertyOfList", "sourcePropertyOfObservableList").contains(s)).toArray(String[]::new), INVALID_BIDIRECTIONAL_BINDING_SOURCE),
+            variants("targetObservableSetProp", "{fx:bindBidirectional %s}", new String[] {"sourcePropertyOfMap", "sourcePropertyOfObservableMap"}, SOURCE_TYPE_MISMATCH),
+            variants("targetObservableSetProp", "{fx:bindBidirectional %s}", Arrays.stream(MAP_SOURCES).filter(s -> !List.of("sourcePropertyOfMap", "sourcePropertyOfObservableMap").contains(s)).toArray(String[]::new), INVALID_BIDIRECTIONAL_BINDING_SOURCE),
+            variants("targetObservableSetProp", "{fx:bindContent %s}", ALL_SOURCES, INVALID_CONTENT_BINDING_TARGET),
+            variants("targetObservableSetProp", "{fx:bindContentBidirectional %s}", ALL_SOURCES, INVALID_BIDIRECTIONAL_CONTENT_BINDING_TARGET),
 
             /*
                 target:                            source:
@@ -805,9 +805,9 @@ public class CollectionBindingMatrixTest {
                                                     |          |          |  Property<ObservableList/Set/Map<T>>
                 ------------------------------------|----------|----------|----------|--------------------------
                 fx:once                             1/1/1/+    1/1/+      1/1/1/+    1/1/+
-                fx:content                          2/2/2/+    2/2/+      2/2/2/+    2/2/+
                 fx:bind                             1/1/1/+    1/1/+      1/1/1/+    1/1/+
                 fx:bindBidirectional                3          3          4          4/4/+
+                fx:content                          2/2/2/+    2/2/+      2/2/2/+    2/2/+
                 fx:bindContent                      5          5          5          5
                 fx:bindContentBidirectional         6          6          6          6
 
@@ -822,23 +822,23 @@ public class CollectionBindingMatrixTest {
             variants("targetObservableMapProp", "{fx:once %s}", LIST_SOURCES, CANNOT_CONVERT_SOURCE_TYPE),
             variants("targetObservableMapProp", "{fx:once %s}", SET_SOURCES, CANNOT_CONVERT_SOURCE_TYPE),
             variants("targetObservableMapProp", "{fx:once %s}", MAP_SOURCES, SOURCE_MAP),
-            variants("targetObservableMapProp", "{fx:once %s; content=true}", COLLECTION_SOURCES, INVALID_CONTENT_ASSIGNMENT_SOURCE),
-            variants("targetObservableMapProp", "{fx:once %s; content=true}", LIST_SOURCES, INVALID_CONTENT_ASSIGNMENT_SOURCE),
-            variants("targetObservableMapProp", "{fx:once %s; content=true}", SET_SOURCES, INVALID_CONTENT_ASSIGNMENT_SOURCE),
-            variants("targetObservableMapProp", "{fx:once %s; content=true}", MAP_SOURCES, SOURCE_MAP),
+            variants("targetObservableMapProp", "{fx:content %s}", COLLECTION_SOURCES, INVALID_CONTENT_ASSIGNMENT_SOURCE),
+            variants("targetObservableMapProp", "{fx:content %s}", LIST_SOURCES, INVALID_CONTENT_ASSIGNMENT_SOURCE),
+            variants("targetObservableMapProp", "{fx:content %s}", SET_SOURCES, INVALID_CONTENT_ASSIGNMENT_SOURCE),
+            variants("targetObservableMapProp", "{fx:content %s}", MAP_SOURCES, SOURCE_MAP),
             variants("targetObservableMapProp", "{fx:bind %s}", COLLECTION_SOURCES, CANNOT_CONVERT_SOURCE_TYPE),
             variants("targetObservableMapProp", "{fx:bind %s}", LIST_SOURCES, CANNOT_CONVERT_SOURCE_TYPE),
             variants("targetObservableMapProp", "{fx:bind %s}", SET_SOURCES, CANNOT_CONVERT_SOURCE_TYPE),
             variants("targetObservableMapProp", "{fx:bind %s}", MAP_SOURCES, SOURCE_MAP),
-            variants("targetObservableMapProp", "{fx:sync %s}", new String[] {"sourcePropertyOfMap"}, SOURCE_TYPE_MISMATCH),
-            variants("targetObservableMapProp", "{fx:sync %s}", new String[] {"sourcePropertyOfObservableMap"}, SOURCE_MAP),
-            variants("targetObservableMapProp", "{fx:sync %s}", Arrays.stream(MAP_SOURCES).filter(s -> !List.of("sourcePropertyOfMap", "sourcePropertyOfObservableMap").contains(s)).toArray(String[]::new), INVALID_BIDIRECTIONAL_BINDING_SOURCE),
-            variants("targetObservableMapProp", "{fx:sync %s}", new String[] {"sourcePropertyOfList", "sourcePropertyOfObservableList"}, SOURCE_TYPE_MISMATCH),
-            variants("targetObservableMapProp", "{fx:sync %s}", Arrays.stream(LIST_SOURCES).filter(s -> !List.of("sourcePropertyOfList", "sourcePropertyOfObservableList").contains(s)).toArray(String[]::new), INVALID_BIDIRECTIONAL_BINDING_SOURCE),
-            variants("targetObservableMapProp", "{fx:sync %s}", new String[] {"sourcePropertyOfSet", "sourcePropertyOfObservableSet"}, SOURCE_TYPE_MISMATCH),
-            variants("targetObservableMapProp", "{fx:sync %s}", Arrays.stream(SET_SOURCES).filter(s -> !List.of("sourcePropertyOfSet", "sourcePropertyOfObservableSet").contains(s)).toArray(String[]::new), INVALID_BIDIRECTIONAL_BINDING_SOURCE),
-            variants("targetObservableMapProp", "{fx:bind %s; content=true}", ALL_SOURCES, INVALID_CONTENT_BINDING_TARGET),
-            variants("targetObservableMapProp", "{fx:sync %s; content=true}", ALL_SOURCES, INVALID_BIDIRECTIONAL_CONTENT_BINDING_TARGET),
+            variants("targetObservableMapProp", "{fx:bindBidirectional %s}", new String[] {"sourcePropertyOfMap"}, SOURCE_TYPE_MISMATCH),
+            variants("targetObservableMapProp", "{fx:bindBidirectional %s}", new String[] {"sourcePropertyOfObservableMap"}, SOURCE_MAP),
+            variants("targetObservableMapProp", "{fx:bindBidirectional %s}", Arrays.stream(MAP_SOURCES).filter(s -> !List.of("sourcePropertyOfMap", "sourcePropertyOfObservableMap").contains(s)).toArray(String[]::new), INVALID_BIDIRECTIONAL_BINDING_SOURCE),
+            variants("targetObservableMapProp", "{fx:bindBidirectional %s}", new String[] {"sourcePropertyOfList", "sourcePropertyOfObservableList"}, SOURCE_TYPE_MISMATCH),
+            variants("targetObservableMapProp", "{fx:bindBidirectional %s}", Arrays.stream(LIST_SOURCES).filter(s -> !List.of("sourcePropertyOfList", "sourcePropertyOfObservableList").contains(s)).toArray(String[]::new), INVALID_BIDIRECTIONAL_BINDING_SOURCE),
+            variants("targetObservableMapProp", "{fx:bindBidirectional %s}", new String[] {"sourcePropertyOfSet", "sourcePropertyOfObservableSet"}, SOURCE_TYPE_MISMATCH),
+            variants("targetObservableMapProp", "{fx:bindBidirectional %s}", Arrays.stream(SET_SOURCES).filter(s -> !List.of("sourcePropertyOfSet", "sourcePropertyOfObservableSet").contains(s)).toArray(String[]::new), INVALID_BIDIRECTIONAL_BINDING_SOURCE),
+            variants("targetObservableMapProp", "{fx:bindContent %s}", ALL_SOURCES, INVALID_CONTENT_BINDING_TARGET),
+            variants("targetObservableMapProp", "{fx:bindContentBidirectional %s}", ALL_SOURCES, INVALID_BIDIRECTIONAL_CONTENT_BINDING_TARGET),
 
             /*
                 target:                            source:
@@ -848,9 +848,9 @@ public class CollectionBindingMatrixTest {
                                                     |          |          |  Property<ObservableList/Set/Map<T>>
                 ------------------------------------|----------|----------|----------|--------------------------
                 fx:once                             1/+/1/1    +/1/1      1/+/1/1    +/1/1
-                fx:content                          +/+/+/2    +/+/2      +/+/+/2    +/+/2
                 fx:bind                             1/+/1/1    +/1/1      1/+/1/1    +/1/1
                 fx:bindBidirectional                3          3          4          +/4/4
+                fx:content                          +/+/+/2    +/+/2      +/+/+/2    +/+/2
                 fx:bindContent                      5          5          5          5
                 fx:bindContentBidirectional         6          +/6/6      6          +/6/6
 
@@ -865,25 +865,25 @@ public class CollectionBindingMatrixTest {
             variants("targetListProp", "{fx:once %s}", LIST_SOURCES, SOURCE_LIST),
             variants("targetListProp", "{fx:once %s}", SET_SOURCES, CANNOT_CONVERT_SOURCE_TYPE),
             variants("targetListProp", "{fx:once %s}", MAP_SOURCES, CANNOT_CONVERT_SOURCE_TYPE),
-            variants("targetListProp", "{fx:once %s; content=true}", COLLECTION_SOURCES, SOURCE_LIST),
-            variants("targetListProp", "{fx:once %s; content=true}", LIST_SOURCES, SOURCE_LIST),
-            variants("targetListProp", "{fx:once %s; content=true}", SET_SOURCES, SOURCE_LIST),
-            variants("targetListProp", "{fx:once %s; content=true}", MAP_SOURCES, INVALID_CONTENT_ASSIGNMENT_SOURCE),
+            variants("targetListProp", "{fx:content %s}", COLLECTION_SOURCES, SOURCE_LIST),
+            variants("targetListProp", "{fx:content %s}", LIST_SOURCES, SOURCE_LIST),
+            variants("targetListProp", "{fx:content %s}", SET_SOURCES, SOURCE_LIST),
+            variants("targetListProp", "{fx:content %s}", MAP_SOURCES, INVALID_CONTENT_ASSIGNMENT_SOURCE),
             variants("targetListProp", "{fx:bind %s}", COLLECTION_SOURCES, CANNOT_CONVERT_SOURCE_TYPE),
             variants("targetListProp", "{fx:bind %s}", LIST_SOURCES, SOURCE_LIST),
             variants("targetListProp", "{fx:bind %s}", SET_SOURCES, CANNOT_CONVERT_SOURCE_TYPE),
             variants("targetListProp", "{fx:bind %s}", MAP_SOURCES, CANNOT_CONVERT_SOURCE_TYPE),
-            variants("targetListProp", "{fx:sync %s}", new String[] {"sourcePropertyOfList"}, SOURCE_TYPE_MISMATCH),
-            variants("targetListProp", "{fx:sync %s}", new String[] {"sourcePropertyOfObservableList"}, SOURCE_LIST),
-            variants("targetListProp", "{fx:sync %s}", Arrays.stream(LIST_SOURCES).filter(s -> !List.of("sourcePropertyOfList", "sourcePropertyOfObservableList").contains(s)).toArray(String[]::new), INVALID_BIDIRECTIONAL_BINDING_SOURCE),
-            variants("targetListProp", "{fx:sync %s}", new String[] {"sourcePropertyOfSet", "sourcePropertyOfObservableSet"}, SOURCE_TYPE_MISMATCH),
-            variants("targetListProp", "{fx:sync %s}", Arrays.stream(SET_SOURCES).filter(s -> !List.of("sourcePropertyOfSet", "sourcePropertyOfObservableSet").contains(s)).toArray(String[]::new), INVALID_BIDIRECTIONAL_BINDING_SOURCE),
-            variants("targetListProp", "{fx:sync %s}", new String[] {"sourcePropertyOfMap", "sourcePropertyOfObservableMap"}, SOURCE_TYPE_MISMATCH),
-            variants("targetListProp", "{fx:sync %s}", Arrays.stream(MAP_SOURCES).filter(s -> !List.of("sourcePropertyOfMap", "sourcePropertyOfObservableMap").contains(s)).toArray(String[]::new), INVALID_BIDIRECTIONAL_BINDING_SOURCE),
-            variants("targetListProp", "{fx:bind %s; content=true}", new String[] {"sourceObservableList", "sourcePropertyOfList", "sourcePropertyOfObservableList"}, SOURCE_LIST),
-            variants("targetListProp", "{fx:bind %s; content=true}", Arrays.stream(ALL_SOURCES).filter(s -> !List.of("sourceObservableList", "sourcePropertyOfList", "sourcePropertyOfObservableList").contains(s)).toArray(String[]::new), INVALID_CONTENT_BINDING_SOURCE),
-            variants("targetListProp", "{fx:sync %s; content=true}", new String[] {"sourceObservableList", "sourcePropertyOfObservableList"}, SOURCE_LIST),
-            variants("targetListProp", "{fx:sync %s; content=true}", Arrays.stream(ALL_SOURCES).filter(s -> !List.of("sourceObservableList", "sourcePropertyOfObservableList").contains(s)).toArray(String[]::new), INVALID_BIDIRECTIONAL_CONTENT_BINDING_SOURCE),
+            variants("targetListProp", "{fx:bindBidirectional %s}", new String[] {"sourcePropertyOfList"}, SOURCE_TYPE_MISMATCH),
+            variants("targetListProp", "{fx:bindBidirectional %s}", new String[] {"sourcePropertyOfObservableList"}, SOURCE_LIST),
+            variants("targetListProp", "{fx:bindBidirectional %s}", Arrays.stream(LIST_SOURCES).filter(s -> !List.of("sourcePropertyOfList", "sourcePropertyOfObservableList").contains(s)).toArray(String[]::new), INVALID_BIDIRECTIONAL_BINDING_SOURCE),
+            variants("targetListProp", "{fx:bindBidirectional %s}", new String[] {"sourcePropertyOfSet", "sourcePropertyOfObservableSet"}, SOURCE_TYPE_MISMATCH),
+            variants("targetListProp", "{fx:bindBidirectional %s}", Arrays.stream(SET_SOURCES).filter(s -> !List.of("sourcePropertyOfSet", "sourcePropertyOfObservableSet").contains(s)).toArray(String[]::new), INVALID_BIDIRECTIONAL_BINDING_SOURCE),
+            variants("targetListProp", "{fx:bindBidirectional %s}", new String[] {"sourcePropertyOfMap", "sourcePropertyOfObservableMap"}, SOURCE_TYPE_MISMATCH),
+            variants("targetListProp", "{fx:bindBidirectional %s}", Arrays.stream(MAP_SOURCES).filter(s -> !List.of("sourcePropertyOfMap", "sourcePropertyOfObservableMap").contains(s)).toArray(String[]::new), INVALID_BIDIRECTIONAL_BINDING_SOURCE),
+            variants("targetListProp", "{fx:bindContent %s}", new String[] {"sourceObservableList", "sourcePropertyOfList", "sourcePropertyOfObservableList"}, SOURCE_LIST),
+            variants("targetListProp", "{fx:bindContent %s}", Arrays.stream(ALL_SOURCES).filter(s -> !List.of("sourceObservableList", "sourcePropertyOfList", "sourcePropertyOfObservableList").contains(s)).toArray(String[]::new), INVALID_CONTENT_BINDING_SOURCE),
+            variants("targetListProp", "{fx:bindContentBidirectional %s}", new String[] {"sourceObservableList", "sourcePropertyOfObservableList"}, SOURCE_LIST),
+            variants("targetListProp", "{fx:bindContentBidirectional %s}", Arrays.stream(ALL_SOURCES).filter(s -> !List.of("sourceObservableList", "sourcePropertyOfObservableList").contains(s)).toArray(String[]::new), INVALID_BIDIRECTIONAL_CONTENT_BINDING_SOURCE),
 
             /*
                 target:                            source:
@@ -893,9 +893,9 @@ public class CollectionBindingMatrixTest {
                                                     |          |          |  Property<ObservableList/Set/Map<T>>
                 ------------------------------------|----------|----------|----------|--------------------------
                 fx:once                             1/1/+/1    1/+/1      1/1/+/1    1/+/1
-                fx:content                          +/+/+/2    +/+/2      +/+/+/2    +/+/2
                 fx:bind                             1/1/+/1    1/+/1      1/1/+/1    1/+/1
                 fx:bindBidirectional                3          3          4          4/+/4
+                fx:content                          +/+/+/2    +/+/2      +/+/+/2    +/+/2
                 fx:bindContent                      5          5          5          5
                 fx:bindContentBidirectional         6          6/+/6      6          6/+/6
 
@@ -910,25 +910,25 @@ public class CollectionBindingMatrixTest {
             variants("targetSetProp", "{fx:once %s}", LIST_SOURCES, CANNOT_CONVERT_SOURCE_TYPE),
             variants("targetSetProp", "{fx:once %s}", SET_SOURCES, SOURCE_SET),
             variants("targetSetProp", "{fx:once %s}", MAP_SOURCES, CANNOT_CONVERT_SOURCE_TYPE),
-            variants("targetSetProp", "{fx:once %s; content=true}", COLLECTION_SOURCES, SOURCE_LIST),
-            variants("targetSetProp", "{fx:once %s; content=true}", LIST_SOURCES, SOURCE_LIST),
-            variants("targetSetProp", "{fx:once %s; content=true}", SET_SOURCES, SOURCE_LIST),
-            variants("targetSetProp", "{fx:once %s; content=true}", MAP_SOURCES, INVALID_CONTENT_ASSIGNMENT_SOURCE),
+            variants("targetSetProp", "{fx:content %s}", COLLECTION_SOURCES, SOURCE_LIST),
+            variants("targetSetProp", "{fx:content %s}", LIST_SOURCES, SOURCE_LIST),
+            variants("targetSetProp", "{fx:content %s}", SET_SOURCES, SOURCE_LIST),
+            variants("targetSetProp", "{fx:content %s}", MAP_SOURCES, INVALID_CONTENT_ASSIGNMENT_SOURCE),
             variants("targetSetProp", "{fx:bind %s}", COLLECTION_SOURCES, CANNOT_CONVERT_SOURCE_TYPE),
             variants("targetSetProp", "{fx:bind %s}", LIST_SOURCES, CANNOT_CONVERT_SOURCE_TYPE),
             variants("targetSetProp", "{fx:bind %s}", SET_SOURCES, SOURCE_SET),
             variants("targetSetProp", "{fx:bind %s}", MAP_SOURCES, CANNOT_CONVERT_SOURCE_TYPE),
-            variants("targetSetProp", "{fx:sync %s}", new String[] {"sourcePropertyOfSet"}, SOURCE_TYPE_MISMATCH),
-            variants("targetSetProp", "{fx:sync %s}", new String[] {"sourcePropertyOfObservableSet"}, SOURCE_SET),
-            variants("targetSetProp", "{fx:sync %s}", Arrays.stream(SET_SOURCES).filter(s -> !List.of("sourcePropertyOfSet", "sourcePropertyOfObservableSet").contains(s)).toArray(String[]::new), INVALID_BIDIRECTIONAL_BINDING_SOURCE),
-            variants("targetSetProp", "{fx:sync %s}", new String[] {"sourcePropertyOfList", "sourcePropertyOfObservableList"}, SOURCE_TYPE_MISMATCH),
-            variants("targetSetProp", "{fx:sync %s}", Arrays.stream(LIST_SOURCES).filter(s -> !List.of("sourcePropertyOfList", "sourcePropertyOfObservableList").contains(s)).toArray(String[]::new), INVALID_BIDIRECTIONAL_BINDING_SOURCE),
-            variants("targetSetProp", "{fx:sync %s}", new String[] {"sourcePropertyOfMap", "sourcePropertyOfObservableMap"}, SOURCE_TYPE_MISMATCH),
-            variants("targetSetProp", "{fx:sync %s}", Arrays.stream(MAP_SOURCES).filter(s -> !List.of("sourcePropertyOfMap", "sourcePropertyOfObservableMap").contains(s)).toArray(String[]::new), INVALID_BIDIRECTIONAL_BINDING_SOURCE),
-            variants("targetSetProp", "{fx:bind %s; content=true}", new String[] {"sourceObservableSet", "sourcePropertyOfSet", "sourcePropertyOfObservableSet"}, SOURCE_SET),
-            variants("targetSetProp", "{fx:bind %s; content=true}", Arrays.stream(ALL_SOURCES).filter(s -> !List.of("sourceObservableSet", "sourcePropertyOfSet", "sourcePropertyOfObservableSet").contains(s)).toArray(String[]::new), INVALID_CONTENT_BINDING_SOURCE),
-            variants("targetSetProp", "{fx:sync %s; content=true}", new String[] {"sourceObservableSet", "sourcePropertyOfObservableSet"}, SOURCE_SET),
-            variants("targetSetProp", "{fx:sync %s; content=true}", Arrays.stream(ALL_SOURCES).filter(s -> !List.of("sourceObservableSet", "sourcePropertyOfObservableSet").contains(s)).toArray(String[]::new), INVALID_BIDIRECTIONAL_CONTENT_BINDING_SOURCE),
+            variants("targetSetProp", "{fx:bindBidirectional %s}", new String[] {"sourcePropertyOfSet"}, SOURCE_TYPE_MISMATCH),
+            variants("targetSetProp", "{fx:bindBidirectional %s}", new String[] {"sourcePropertyOfObservableSet"}, SOURCE_SET),
+            variants("targetSetProp", "{fx:bindBidirectional %s}", Arrays.stream(SET_SOURCES).filter(s -> !List.of("sourcePropertyOfSet", "sourcePropertyOfObservableSet").contains(s)).toArray(String[]::new), INVALID_BIDIRECTIONAL_BINDING_SOURCE),
+            variants("targetSetProp", "{fx:bindBidirectional %s}", new String[] {"sourcePropertyOfList", "sourcePropertyOfObservableList"}, SOURCE_TYPE_MISMATCH),
+            variants("targetSetProp", "{fx:bindBidirectional %s}", Arrays.stream(LIST_SOURCES).filter(s -> !List.of("sourcePropertyOfList", "sourcePropertyOfObservableList").contains(s)).toArray(String[]::new), INVALID_BIDIRECTIONAL_BINDING_SOURCE),
+            variants("targetSetProp", "{fx:bindBidirectional %s}", new String[] {"sourcePropertyOfMap", "sourcePropertyOfObservableMap"}, SOURCE_TYPE_MISMATCH),
+            variants("targetSetProp", "{fx:bindBidirectional %s}", Arrays.stream(MAP_SOURCES).filter(s -> !List.of("sourcePropertyOfMap", "sourcePropertyOfObservableMap").contains(s)).toArray(String[]::new), INVALID_BIDIRECTIONAL_BINDING_SOURCE),
+            variants("targetSetProp", "{fx:bindContent %s}", new String[] {"sourceObservableSet", "sourcePropertyOfSet", "sourcePropertyOfObservableSet"}, SOURCE_SET),
+            variants("targetSetProp", "{fx:bindContent %s}", Arrays.stream(ALL_SOURCES).filter(s -> !List.of("sourceObservableSet", "sourcePropertyOfSet", "sourcePropertyOfObservableSet").contains(s)).toArray(String[]::new), INVALID_CONTENT_BINDING_SOURCE),
+            variants("targetSetProp", "{fx:bindContentBidirectional %s}", new String[] {"sourceObservableSet", "sourcePropertyOfObservableSet"}, SOURCE_SET),
+            variants("targetSetProp", "{fx:bindContentBidirectional %s}", Arrays.stream(ALL_SOURCES).filter(s -> !List.of("sourceObservableSet", "sourcePropertyOfObservableSet").contains(s)).toArray(String[]::new), INVALID_BIDIRECTIONAL_CONTENT_BINDING_SOURCE),
 
             /*
                 target:                            source:
@@ -938,9 +938,9 @@ public class CollectionBindingMatrixTest {
                                                     |          |          |  Property<ObservableList/Set/Map<T>>
                 ------------------------------------|----------|----------|----------|--------------------------
                 fx:once                             1/1/1/+    1/1/+      1/1/1/+    1/1/+
-                fx:content                          2/2/2/+    2/2/+      2/2/2/+    2/2/+
                 fx:bind                             1/1/1/+    1/1/+      1/1/1/+    1/1/+
                 fx:bindBidirectional                3          3          4          4/4/+
+                fx:content                          2/2/2/+    2/2/+      2/2/2/+    2/2/+
                 fx:bindContent                      5          5          5          5
                 fx:bindContentBidirectional         6          6/6/+      6          6/6/+
 
@@ -955,25 +955,25 @@ public class CollectionBindingMatrixTest {
             variants("targetMapProp", "{fx:once %s}", LIST_SOURCES, CANNOT_CONVERT_SOURCE_TYPE),
             variants("targetMapProp", "{fx:once %s}", SET_SOURCES, CANNOT_CONVERT_SOURCE_TYPE),
             variants("targetMapProp", "{fx:once %s}", MAP_SOURCES, SOURCE_MAP),
-            variants("targetMapProp", "{fx:once %s; content=true}", COLLECTION_SOURCES, INVALID_CONTENT_ASSIGNMENT_SOURCE),
-            variants("targetMapProp", "{fx:once %s; content=true}", LIST_SOURCES, INVALID_CONTENT_ASSIGNMENT_SOURCE),
-            variants("targetMapProp", "{fx:once %s; content=true}", SET_SOURCES, INVALID_CONTENT_ASSIGNMENT_SOURCE),
-            variants("targetMapProp", "{fx:once %s; content=true}", MAP_SOURCES, SOURCE_MAP),
+            variants("targetMapProp", "{fx:content %s}", COLLECTION_SOURCES, INVALID_CONTENT_ASSIGNMENT_SOURCE),
+            variants("targetMapProp", "{fx:content %s}", LIST_SOURCES, INVALID_CONTENT_ASSIGNMENT_SOURCE),
+            variants("targetMapProp", "{fx:content %s}", SET_SOURCES, INVALID_CONTENT_ASSIGNMENT_SOURCE),
+            variants("targetMapProp", "{fx:content %s}", MAP_SOURCES, SOURCE_MAP),
             variants("targetMapProp", "{fx:bind %s}", COLLECTION_SOURCES, CANNOT_CONVERT_SOURCE_TYPE),
             variants("targetMapProp", "{fx:bind %s}", LIST_SOURCES, CANNOT_CONVERT_SOURCE_TYPE),
             variants("targetMapProp", "{fx:bind %s}", SET_SOURCES, CANNOT_CONVERT_SOURCE_TYPE),
             variants("targetMapProp", "{fx:bind %s}", MAP_SOURCES, SOURCE_MAP),
-            variants("targetMapProp", "{fx:sync %s}", new String[] {"sourcePropertyOfMap"}, SOURCE_TYPE_MISMATCH),
-            variants("targetMapProp", "{fx:sync %s}", new String[] {"sourcePropertyOfObservableMap"}, SOURCE_MAP),
-            variants("targetMapProp", "{fx:sync %s}", Arrays.stream(MAP_SOURCES).filter(s -> !List.of("sourcePropertyOfMap", "sourcePropertyOfObservableMap").contains(s)).toArray(String[]::new), INVALID_BIDIRECTIONAL_BINDING_SOURCE),
-            variants("targetMapProp", "{fx:sync %s}", new String[] {"sourcePropertyOfList", "sourcePropertyOfObservableList"}, SOURCE_TYPE_MISMATCH),
-            variants("targetMapProp", "{fx:sync %s}", Arrays.stream(LIST_SOURCES).filter(s -> !List.of("sourcePropertyOfList", "sourcePropertyOfObservableList").contains(s)).toArray(String[]::new), INVALID_BIDIRECTIONAL_BINDING_SOURCE),
-            variants("targetMapProp", "{fx:sync %s}", new String[] {"sourcePropertyOfSet", "sourcePropertyOfObservableSet"}, SOURCE_TYPE_MISMATCH),
-            variants("targetMapProp", "{fx:sync %s}", Arrays.stream(SET_SOURCES).filter(s -> !List.of("sourcePropertyOfSet", "sourcePropertyOfObservableSet").contains(s)).toArray(String[]::new), INVALID_BIDIRECTIONAL_BINDING_SOURCE),
-            variants("targetMapProp", "{fx:bind %s; content=true}", new String[] {"sourceObservableMap", "sourcePropertyOfMap", "sourcePropertyOfObservableMap"}, SOURCE_MAP),
-            variants("targetMapProp", "{fx:bind %s; content=true}", Arrays.stream(ALL_SOURCES).filter(s -> !List.of("sourceObservableMap", "sourcePropertyOfMap", "sourcePropertyOfObservableMap").contains(s)).toArray(String[]::new), INVALID_CONTENT_BINDING_SOURCE),
-            variants("targetMapProp", "{fx:sync %s; content=true}", new String[] {"sourceObservableMap", "sourcePropertyOfObservableMap"}, SOURCE_MAP),
-            variants("targetMapProp", "{fx:sync %s; content=true}", Arrays.stream(ALL_SOURCES).filter(s -> !List.of("sourceObservableMap", "sourcePropertyOfObservableMap").contains(s)).toArray(String[]::new), INVALID_BIDIRECTIONAL_CONTENT_BINDING_SOURCE)
+            variants("targetMapProp", "{fx:bindBidirectional %s}", new String[] {"sourcePropertyOfMap"}, SOURCE_TYPE_MISMATCH),
+            variants("targetMapProp", "{fx:bindBidirectional %s}", new String[] {"sourcePropertyOfObservableMap"}, SOURCE_MAP),
+            variants("targetMapProp", "{fx:bindBidirectional %s}", Arrays.stream(MAP_SOURCES).filter(s -> !List.of("sourcePropertyOfMap", "sourcePropertyOfObservableMap").contains(s)).toArray(String[]::new), INVALID_BIDIRECTIONAL_BINDING_SOURCE),
+            variants("targetMapProp", "{fx:bindBidirectional %s}", new String[] {"sourcePropertyOfList", "sourcePropertyOfObservableList"}, SOURCE_TYPE_MISMATCH),
+            variants("targetMapProp", "{fx:bindBidirectional %s}", Arrays.stream(LIST_SOURCES).filter(s -> !List.of("sourcePropertyOfList", "sourcePropertyOfObservableList").contains(s)).toArray(String[]::new), INVALID_BIDIRECTIONAL_BINDING_SOURCE),
+            variants("targetMapProp", "{fx:bindBidirectional %s}", new String[] {"sourcePropertyOfSet", "sourcePropertyOfObservableSet"}, SOURCE_TYPE_MISMATCH),
+            variants("targetMapProp", "{fx:bindBidirectional %s}", Arrays.stream(SET_SOURCES).filter(s -> !List.of("sourcePropertyOfSet", "sourcePropertyOfObservableSet").contains(s)).toArray(String[]::new), INVALID_BIDIRECTIONAL_BINDING_SOURCE),
+            variants("targetMapProp", "{fx:bindContent %s}", new String[] {"sourceObservableMap", "sourcePropertyOfMap", "sourcePropertyOfObservableMap"}, SOURCE_MAP),
+            variants("targetMapProp", "{fx:bindContent %s}", Arrays.stream(ALL_SOURCES).filter(s -> !List.of("sourceObservableMap", "sourcePropertyOfMap", "sourcePropertyOfObservableMap").contains(s)).toArray(String[]::new), INVALID_CONTENT_BINDING_SOURCE),
+            variants("targetMapProp", "{fx:bindContentBidirectional %s}", new String[] {"sourceObservableMap", "sourcePropertyOfObservableMap"}, SOURCE_MAP),
+            variants("targetMapProp", "{fx:bindContentBidirectional %s}", Arrays.stream(ALL_SOURCES).filter(s -> !List.of("sourceObservableMap", "sourcePropertyOfObservableMap").contains(s)).toArray(String[]::new), INVALID_BIDIRECTIONAL_CONTENT_BINDING_SOURCE)
         );
     }
 

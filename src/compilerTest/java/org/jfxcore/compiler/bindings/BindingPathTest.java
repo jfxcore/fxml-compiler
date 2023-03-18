@@ -1,4 +1,4 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2023, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.bindings;
@@ -494,7 +494,7 @@ public class BindingPathTest extends CompilerTestBase {
     public void Bind_Bidirectional_To_Single_Invariant_Property_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                      prefWidth="{fx:sync simpleDoubleVal}"/>
+                      prefWidth="{fx:bindBidirectional simpleDoubleVal}"/>
         """));
 
         assertEquals(ErrorCode.INVALID_BIDIRECTIONAL_BINDING_SOURCE, ex.getDiagnostic().getCode());
@@ -505,7 +505,7 @@ public class BindingPathTest extends CompilerTestBase {
     public void Bind_Bidirectional_To_Invariant_Properties_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                      managed="{fx:sync invariantContext.invariantBoolVal}"/>
+                      managed="{fx:bindBidirectional invariantContext.invariantBoolVal}"/>
         """));
 
         assertEquals(ErrorCode.INVALID_BIDIRECTIONAL_BINDING_SOURCE, ex.getDiagnostic().getCode());
@@ -516,7 +516,8 @@ public class BindingPathTest extends CompilerTestBase {
     public void Bind_Bidirectional_To_Observable_Properties() {
         TestPane root = compileAndRun("""
             <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                      managed="{fx:sync context.boolVal}" prefWidth="{fx:sync context.doubleVal}"/>
+                      managed="{fx:bindBidirectional context.boolVal}"
+                      prefWidth="{fx:bindBidirectional context.doubleVal}"/>
         """);
 
         assertFalse(root.managedProperty().isBound()); // bidirectional binding doesn't set isBound()==true
@@ -534,7 +535,8 @@ public class BindingPathTest extends CompilerTestBase {
     public void Bind_Bidirectional_To_Observable_Properties_Works_When_Path_Changes() {
         TestPane root = compileAndRun("""
             <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                      managed="{fx:sync context.boolVal}" prefWidth="{fx:sync context.doubleVal}"/>
+                      managed="{fx:bindBidirectional context.boolVal}"
+                      prefWidth="{fx:bindBidirectional context.doubleVal}"/>
         """);
 
         assertTrue(root.isManaged());
@@ -554,7 +556,7 @@ public class BindingPathTest extends CompilerTestBase {
     public void Bind_Bidirectional_To_Observable_And_Invariant_Properties_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                      managed="{fx:sync context.invariantBoolVal}"/>
+                      managed="{fx:bindBidirectional context.invariantBoolVal}"/>
         """));
 
         assertEquals(ErrorCode.INVALID_BIDIRECTIONAL_BINDING_SOURCE, ex.getDiagnostic().getCode());
@@ -565,7 +567,8 @@ public class BindingPathTest extends CompilerTestBase {
     public void Bind_Bidirectional_To_Invariant_And_Observable_Properties() {
         TestPane root = compileAndRun("""
             <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                      managed="{fx:sync invariantContext.boolVal}" prefWidth="{fx:sync invariantContext.doubleVal}"/>
+                      managed="{fx:bindBidirectional invariantContext.boolVal}"
+                      prefWidth="{fx:bindBidirectional invariantContext.doubleVal}"/>
         """);
 
         assertFalse(root.managedProperty().isBound());
@@ -583,7 +586,7 @@ public class BindingPathTest extends CompilerTestBase {
     public void Bind_Bidirectional_To_Invariant_Null_Context() {
         TestPane root = compileAndRun("""
             <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                      managed="{fx:sync nullContext.boolVal}"/>
+                      managed="{fx:bindBidirectional nullContext.boolVal}"/>
         """);
 
         assertFalse(root.managedProperty().isBound());
@@ -594,12 +597,12 @@ public class BindingPathTest extends CompilerTestBase {
     public void Bind_Bidirectional_Fails_For_ReadOnlyProperty() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                      notBindable="{fx:sync invariantContext.boolVal}"/>
+                      notBindable="{fx:bindBidirectional invariantContext.boolVal}"/>
         """));
 
         assertEquals(ErrorCode.CANNOT_MODIFY_READONLY_PROPERTY, ex.getDiagnostic().getCode());
         assertCodeHighlight("""
-            notBindable="{fx:sync invariantContext.boolVal}"
+            notBindable="{fx:bindBidirectional invariantContext.boolVal}"
         """.trim(), ex);
     }
 
@@ -608,12 +611,12 @@ public class BindingPathTest extends CompilerTestBase {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.scene.layout.*?>
             <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                      GridPane.margin="{fx:sync context.margin}"/>
+                      GridPane.margin="{fx:bindBidirectional context.margin}"/>
         """));
 
         assertEquals(ErrorCode.INVALID_BINDING_TARGET, ex.getDiagnostic().getCode());
         assertCodeHighlight("""
-            GridPane.margin="{fx:sync context.margin}"
+            GridPane.margin="{fx:bindBidirectional context.margin}"
         """.trim(), ex);
     }
 
