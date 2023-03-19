@@ -85,6 +85,8 @@ public class BindingPathTest extends CompilerTestBase {
         public ObservableList<String> observableList = FXCollections.observableArrayList("foo", "bar", "baz");
 
         public Insets margin = new Insets(1, 2, 3, 4);
+
+        public Double nullValue = null;
     }
 
     @SuppressWarnings("unused")
@@ -295,6 +297,16 @@ public class BindingPathTest extends CompilerTestBase {
         """));
 
         assertEquals("nullContext", ex.getMessage());
+    }
+
+    @Test
+    public void Bind_Once_To_Invariant_Null_Value() {
+        TestPane root = compileAndRun("""
+            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                      prefWidth="{fx:once context.nullValue}"/>
+        """);
+
+        assertEquals(0, root.getPrefWidth());
     }
 
     @Test
