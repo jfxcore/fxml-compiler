@@ -46,8 +46,10 @@ public class EmitObservablePathNode
     public EmitObservablePathNode(ResolvedPath path, boolean bidirectional, SourceInfo sourceInfo) {
         this(path, bidirectional, null, sourceInfo);
 
-        this.invariantPath = new EmitInvariantPathNode(
-            path.subPath(0, leadingInvariantSegments).toValueEmitters(sourceInfo), sourceInfo);
+        if (leadingInvariantSegments > 0) {
+            this.invariantPath = new EmitInvariantPathNode(
+                path.subPath(0, leadingInvariantSegments).toValueEmitters(true, sourceInfo), sourceInfo);
+        }
     }
 
     private EmitObservablePathNode(
@@ -97,7 +99,10 @@ public class EmitObservablePathNode
     public void acceptChildren(Visitor visitor) {
         super.acceptChildren(visitor);
         type = (ResolvedTypeNode)type.accept(visitor);
-        invariantPath = (EmitInvariantPathNode)invariantPath.accept(visitor);
+
+        if (invariantPath != null) {
+            invariantPath = (EmitInvariantPathNode)invariantPath.accept(visitor);
+        }
 
         if (leadingValueWrapper != null) {
             leadingValueWrapper = (EmitValueWrapperNode)leadingValueWrapper.accept(visitor);
@@ -137,7 +142,7 @@ public class EmitObservablePathNode
 
         context.emit(invariantPath);
 
-        if (leadingInvariantSegments > 1) {
+        if (leadingInvariantSegments > 1 && invariantPath.isNullable()) {
             Local local = code.acquireLocal(false);
 
             code.astore(local)
@@ -145,7 +150,7 @@ public class EmitObservablePathNode
                 .ifnonnull(
                     () -> {
                         code.aload(local);
-                        context.emit(path.get(leadingInvariantSegments).toEmitter(getSourceInfo()));
+                        context.emit(path.get(leadingInvariantSegments).toEmitter(false, getSourceInfo()));
                     },
                     () -> {
                         if (mayReturnNull || useCompiledPath) {
@@ -158,7 +163,7 @@ public class EmitObservablePathNode
 
             code.releaseLocal(local);
         } else {
-            context.emit(path.get(leadingInvariantSegments).toEmitter(getSourceInfo()));
+            context.emit(path.get(leadingInvariantSegments).toEmitter(false, getSourceInfo()));
         }
 
         if (useCompiledPath) {

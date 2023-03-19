@@ -25,7 +25,7 @@ public class SimplePathEmitterFactory implements EmitterFactory {
         ResolvedPath path = pathExpression.resolvePath(false);
 
         ValueEmitterNode value = new EmitInvariantPathNode(
-            path.toValueEmitters(pathExpression.getSourceInfo()), pathExpression.getSourceInfo());
+            path.toValueEmitters(false, pathExpression.getSourceInfo()), pathExpression.getSourceInfo());
 
         value = pathExpression.getOperator().toEmitter(value, BindingMode.ONCE);
 

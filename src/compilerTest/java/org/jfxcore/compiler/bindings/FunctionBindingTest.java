@@ -1005,22 +1005,22 @@ public class FunctionBindingTest extends CompilerTestBase {
 
     @Test
     public void Bind_Bidirectional_To_NullIndirect_DoubleProperty() {
-        BidirectionalTestPane root = compileAndRun("""
+        NullPointerException ex = assertThrows(NullPointerException.class, () -> compileAndRun("""
             <BidirectionalTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
                                    id="{fx:bindBidirectional doubleToString(nullIndirect.doubleProp)}"/>
-        """);
+        """));
 
-        assertEquals("0.0", root.getId());
+        assertEquals("nullIndirect", ex.getMessage());
     }
 
     @Test
     public void Bind_Bidirectional_To_NullIndirect_StringProperty() {
-        BidirectionalTestPane root = compileAndRun("""
+        NullPointerException ex = assertThrows(NullPointerException.class, () -> compileAndRun("""
             <BidirectionalTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
                                    prefWidth="{fx:bindBidirectional stringToDouble(nullIndirect.stringProp)}"/>
-        """);
+        """));
 
-        assertEquals(0.0, root.getPrefWidth(), 0.001);
+        assertEquals("nullIndirect", ex.getMessage());
     }
 
     @Test

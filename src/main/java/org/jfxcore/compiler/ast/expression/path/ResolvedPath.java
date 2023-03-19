@@ -165,11 +165,11 @@ public class ResolvedPath {
      * Transforms a path into a sequence of code-emitting nodes that resolve the value of the path at runtime,
      * i.e. get the value of each of the path segments until the final value has been resolved.
      */
-    public List<ValueEmitterNode> toValueEmitters(SourceInfo sourceInfo) {
+    public List<ValueEmitterNode> toValueEmitters(boolean requireNonNull, SourceInfo sourceInfo) {
         List<ValueEmitterNode> list = new ArrayList<>();
 
-        for (Segment segment : segments) {
-            list.add(segment.toValueEmitter(sourceInfo));
+        for (int i = 0; i < segments.size(); ++i) {
+            list.add(segments.get(i).toValueEmitter(i < segments.size() - 1 || requireNonNull, sourceInfo));
         }
 
         return list;

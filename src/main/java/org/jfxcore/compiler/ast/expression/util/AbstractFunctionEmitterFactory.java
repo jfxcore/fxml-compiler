@@ -1,4 +1,4 @@
-// Copyright (c) 2022, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2023, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.expression.util;
@@ -448,13 +448,13 @@ abstract class AbstractFunctionEmitterFactory {
     private List<ValueEmitterNode> getMethodReceiverEmitters(
             PathExpressionNode pathExpression, ResolvedPath resolvedPath, CtMethod method) {
         if (resolvedPath != null) {
-            return resolvedPath.toValueEmitters(pathExpression.getSourceInfo());
+            return resolvedPath.toValueEmitters(true, pathExpression.getSourceInfo());
         }
 
         if (!Modifier.isStatic(method.getModifiers())) {
             BindingContextNode bindingSource = pathExpression.getBindingContext();
             var result = new ArrayList<ValueEmitterNode>(1);
-            result.add((bindingSource.toSegment().toValueEmitter(bindingSource.getSourceInfo())));
+            result.add((bindingSource.toSegment().toValueEmitter(true, bindingSource.getSourceInfo())));
             return result;
         }
 

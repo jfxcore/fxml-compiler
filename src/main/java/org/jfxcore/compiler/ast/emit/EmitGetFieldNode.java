@@ -1,4 +1,4 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2023, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.emit;
@@ -9,7 +9,6 @@ import org.jfxcore.compiler.ast.AbstractNode;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.ast.ResolvedTypeNode;
 import org.jfxcore.compiler.util.Bytecode;
-import org.jfxcore.compiler.util.ObservableKind;
 import org.jfxcore.compiler.util.TypeHelper;
 import org.jfxcore.compiler.util.TypeInstance;
 import java.lang.reflect.Modifier;
@@ -26,25 +25,22 @@ public class EmitGetFieldNode extends AbstractNode implements ValueEmitterNode, 
 
     private final CtField field;
     private final ResolvedTypeNode type;
-    private final ObservableKind observableKind;
     private final boolean requireNonNull;
 
     public EmitGetFieldNode(
             CtField field,
             TypeInstance type,
-            ObservableKind observableKind,
             boolean requireNonNull,
             SourceInfo sourceInfo) {
         super(sourceInfo);
         this.field = checkNotNull(field);
         this.type = new ResolvedTypeNode(type, sourceInfo);
-        this.observableKind = checkNotNull(observableKind);
-        this.requireNonNull = requireNonNull || observableKind.isNonNull();
+        this.requireNonNull = requireNonNull;
     }
 
     @Override
     public boolean isNullable() {
-        return !observableKind.isNonNull();
+        return !requireNonNull;
     }
 
     @Override
@@ -74,7 +70,7 @@ public class EmitGetFieldNode extends AbstractNode implements ValueEmitterNode, 
 
     @Override
     public EmitGetFieldNode deepClone() {
-        return new EmitGetFieldNode(field, type.getTypeInstance(), observableKind, requireNonNull, getSourceInfo());
+        return new EmitGetFieldNode(field, type.getTypeInstance(), requireNonNull, getSourceInfo());
     }
 
     @Override
@@ -84,13 +80,12 @@ public class EmitGetFieldNode extends AbstractNode implements ValueEmitterNode, 
         EmitGetFieldNode that = (EmitGetFieldNode)o;
         return TypeHelper.equals(field, that.field) &&
             type.equals(that.type) &&
-            observableKind == that.observableKind &&
             requireNonNull == that.requireNonNull;
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(TypeHelper.hashCode(field), type, observableKind, requireNonNull);
+        return Objects.hash(TypeHelper.hashCode(field), type, requireNonNull);
     }
 
 }
