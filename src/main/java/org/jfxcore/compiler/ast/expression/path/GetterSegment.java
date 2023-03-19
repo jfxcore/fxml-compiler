@@ -1,4 +1,4 @@
-// Copyright (c) 2022, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2023, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.expression.path;
@@ -16,7 +16,7 @@ import java.util.Objects;
 public class GetterSegment extends Segment {
 
     private final CtMethod getter;
-    private final boolean requireNonNull;
+    private final ObservableKind observableKind;
     private final boolean staticPropertyGetter;
 
     public GetterSegment(
@@ -29,7 +29,7 @@ public class GetterSegment extends Segment {
             ObservableKind observableKind) {
         super(name, displayName, type, valueType, observableKind);
         this.getter = Objects.requireNonNull(getter);
-        this.requireNonNull = observableKind.isNonNull();
+        this.observableKind = observableKind;
         this.staticPropertyGetter = staticPropertyGetter;
     }
 
@@ -43,7 +43,7 @@ public class GetterSegment extends Segment {
 
     @Override
     public boolean isNullable() {
-        return !requireNonNull;
+        return !observableKind.isNonNull();
     }
 
     @Override
@@ -52,8 +52,9 @@ public class GetterSegment extends Segment {
     }
 
     @Override
-    public ValueEmitterNode toEmitter(SourceInfo sourceInfo) {
-        return new EmitInvokeGetterNode(getter, getTypeInstance(), getObservableKind(), requireNonNull, sourceInfo);
+    public ValueEmitterNode toEmitter(boolean requireNonNull, SourceInfo sourceInfo) {
+        return new EmitInvokeGetterNode(
+            getter, getTypeInstance(), observableKind, observableKind.isNonNull() || requireNonNull, sourceInfo);
     }
 
     @Override
@@ -63,13 +64,13 @@ public class GetterSegment extends Segment {
         if (!super.equals(o)) return false;
         GetterSegment that = (GetterSegment)o;
         return TypeHelper.equals(getter, that.getter)
-            && requireNonNull == that.requireNonNull
+            && observableKind == that.observableKind
             && staticPropertyGetter == that.staticPropertyGetter;
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(super.hashCode(), TypeHelper.hashCode(getter), requireNonNull, staticPropertyGetter);
+        return Objects.hash(super.hashCode(), TypeHelper.hashCode(getter), observableKind, staticPropertyGetter);
     }
 
 }

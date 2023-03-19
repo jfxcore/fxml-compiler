@@ -1,4 +1,4 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2023, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.expression.util;
@@ -25,7 +25,7 @@ public class SimplePathEmitterFactory implements EmitterFactory {
         ResolvedPath path = pathExpression.resolvePath(false);
 
         ValueEmitterNode value = new EmitInvariantPathNode(
-            path.toValueEmitters(pathExpression.getSourceInfo()), pathExpression.getSourceInfo());
+            path.toValueEmitters(false, pathExpression.getSourceInfo()), pathExpression.getSourceInfo());
 
         value = pathExpression.getOperator().toEmitter(value, BindingMode.ONCE);
 

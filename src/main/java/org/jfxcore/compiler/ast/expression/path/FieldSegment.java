@@ -1,4 +1,4 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2023, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.expression.path;
@@ -16,7 +16,7 @@ import java.util.Objects;
 public class FieldSegment extends Segment {
 
     private final CtField field;
-    private final boolean requireNonNull;
+    private final ObservableKind observableKind;
 
     public FieldSegment(
             String name,
@@ -27,7 +27,7 @@ public class FieldSegment extends Segment {
             ObservableKind observableKind) {
         super(name, displayName, type, valueType, observableKind);
         this.field = Objects.requireNonNull(field);
-        this.requireNonNull = observableKind.isNonNull();
+        this.observableKind = observableKind;
     }
 
     public CtField getField() {
@@ -36,7 +36,7 @@ public class FieldSegment extends Segment {
 
     @Override
     public boolean isNullable() {
-        return !requireNonNull;
+        return !observableKind.isNonNull();
     }
 
     @Override
@@ -45,8 +45,9 @@ public class FieldSegment extends Segment {
     }
 
     @Override
-    public ValueEmitterNode toEmitter(SourceInfo sourceInfo) {
-        return new EmitGetFieldNode(field, getTypeInstance(), getObservableKind(), requireNonNull, sourceInfo);
+    public ValueEmitterNode toEmitter(boolean requireNonNull, SourceInfo sourceInfo) {
+        return new EmitGetFieldNode(
+            field, getTypeInstance(), observableKind.isNonNull() || requireNonNull, sourceInfo);
     }
 
     @Override
@@ -55,12 +56,12 @@ public class FieldSegment extends Segment {
         if (o == null || getClass() != o.getClass()) return false;
         if (!super.equals(o)) return false;
         FieldSegment that = (FieldSegment)o;
-        return TypeHelper.equals(field, that.field) && requireNonNull == that.requireNonNull;
+        return TypeHelper.equals(field, that.field) && observableKind == that.observableKind;
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(super.hashCode(), TypeHelper.hashCode(field), requireNonNull);
+        return Objects.hash(super.hashCode(), TypeHelper.hashCode(field), observableKind);
     }
 
 }

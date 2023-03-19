@@ -85,6 +85,8 @@ public class BindingPathTest extends CompilerTestBase {
         public ObservableList<String> observableList = FXCollections.observableArrayList("foo", "bar", "baz");
 
         public Insets margin = new Insets(1, 2, 3, 4);
+
+        public Double nullValue = null;
     }
 
     @SuppressWarnings("unused")
@@ -288,14 +290,23 @@ public class BindingPathTest extends CompilerTestBase {
     }
 
     @Test
-    public void Bind_Once_To_Invariant_Null_Context() {
-        TestPane root = compileAndRun("""
+    public void Bind_Once_To_Invariant_Null_Context_Throws_NPE() {
+        NullPointerException ex = assertThrows(NullPointerException.class, () -> compileAndRun("""
             <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
                       managed="{fx:once nullContext.boolVal}"/>
+        """));
+
+        assertEquals("nullContext", ex.getMessage());
+    }
+
+    @Test
+    public void Bind_Once_To_Invariant_Null_Value() {
+        TestPane root = compileAndRun("""
+            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                      prefWidth="{fx:once context.nullValue}"/>
         """);
 
-        assertFalse(root.managedProperty().isBound());
-        assertFalse(root.isManaged());
+        assertEquals(0, root.getPrefWidth());
     }
 
     @Test
@@ -453,14 +464,13 @@ public class BindingPathTest extends CompilerTestBase {
     }
 
     @Test
-    public void Bind_Unidirectional_To_Invariant_Null_Context() {
-        TestPane root = compileAndRun("""
+    public void Bind_Unidirectional_To_Invariant_Null_Context_Throws_NPE() {
+        NullPointerException ex = assertThrows(NullPointerException.class, () -> compileAndRun("""
             <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
                       managed="{fx:bind nullContext.boolVal}"/>
-        """);
+        """));
 
-        assertTrue(root.managedProperty().isBound());
-        assertFalse(root.isManaged());
+        assertEquals("nullContext", ex.getMessage());
     }
 
     @Test
@@ -584,13 +594,12 @@ public class BindingPathTest extends CompilerTestBase {
 
     @Test
     public void Bind_Bidirectional_To_Invariant_Null_Context() {
-        TestPane root = compileAndRun("""
+        NullPointerException ex = assertThrows(NullPointerException.class, () -> compileAndRun("""
             <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
                       managed="{fx:bindBidirectional nullContext.boolVal}"/>
-        """);
+        """));
 
-        assertFalse(root.managedProperty().isBound());
-        assertTrue(root.isManaged());
+        assertEquals("nullContext", ex.getMessage());
     }
 
     @Test
