@@ -3,6 +3,8 @@
 
 package org.jfxcore.compiler;
 
+import javafx.beans.property.SimpleStringProperty;
+import javafx.beans.property.StringProperty;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
@@ -18,6 +20,7 @@ import org.jfxcore.compiler.util.TestExtension;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import java.util.ArrayList;
 import java.util.List;
 
 import static org.jfxcore.compiler.util.MoreAssertions.*;
@@ -275,6 +278,71 @@ public class PropertyAssignmentTest {
             assertEquals("bar", root.getText());
         }
 
+        public static class UppercasePropertyTest extends Button {
+            private final StringProperty text = new SimpleStringProperty();
+            public StringProperty TextProperty() { return text; }
+
+            private final StringProperty otherText = new SimpleStringProperty();
+            public StringProperty OtherTextProperty() { return otherText; }
+        }
+
+        @Test
+        public void Uppercase_Property_Name_Is_Valid() {
+            UppercasePropertyTest root = compileAndRun("""
+                <UppercasePropertyTest xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                    <Text>foo</Text>
+                    <OtherText>bar</OtherText>
+                </UppercasePropertyTest>
+            """);
+
+            assertEquals("foo", root.TextProperty().get());
+            assertEquals("bar", root.OtherTextProperty().get());
+        }
+
+        public static class VerbatimMatchTest extends Button {
+            private final StringProperty text = new SimpleStringProperty();
+            public StringProperty text() { return text; }
+
+            private final StringProperty otherText = new SimpleStringProperty();
+            public StringProperty textPropertyProperty() { return otherText; }
+        }
+
+        @Test
+        public void Ambiguous_Property_Name_Matches_Verbatim_Interpretation() {
+            VerbatimMatchTest root = compileAndRun("""
+                <VerbatimMatchTest xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                    <text>foo</text>
+                    <textProperty>bar</textProperty>
+                    <textPropertyProperty>baz</textPropertyProperty>
+                </VerbatimMatchTest>
+            """);
+
+            assertEquals("foo", root.text().get());
+            assertEquals("bar", root.textProperty().get());
+            assertEquals("baz", root.textPropertyProperty().get());
+        }
+
+        @SuppressWarnings("unused")
+        public static class NamingSchemeTest extends Button {
+            final List<String> trace = new ArrayList<>();
+            private final StringProperty myText = new SimpleStringProperty();
+            public StringProperty myText() { trace.add("myText"); return myText; }
+            public StringProperty myTextProperty() { trace.add("myTextProperty"); return myText; }
+            public void setMyText(String text) { trace.add("setMyText"); myText.set(text); }
+            public String getMyText() { trace.add("getMyText"); return myText.get(); }
+        }
+
+        @Test
+        public void Naming_Scheme_Is_Not_Detected_For_Verbatim_Property_Name() {
+            NamingSchemeTest root = compileAndRun("""
+                <NamingSchemeTest xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                    <myText>foo</myText>
+                    <myTextProperty>bar</myTextProperty>
+                </NamingSchemeTest>
+            """);
+
+            assertEquals(List.of("myText", "myTextProperty"), root.trace);
+        }
     }
 
     @Nested
