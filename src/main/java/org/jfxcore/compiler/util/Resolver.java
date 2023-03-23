@@ -316,7 +316,7 @@ public class Resolver {
             return getCache().put(key, null);
         }
 
-        CtMethod propertyGetter = tryResolvePropertyGetter(declaringClass.jvmType(), propertyName);
+        GetterInfo propertyGetter = tryResolvePropertyGetter(declaringClass.jvmType(), propertyName);
         TypeInstance typeInstance = null;
         TypeInstance observableTypeInstance = null;
 
@@ -324,15 +324,20 @@ public class Resolver {
         // For primitive wrappers like ObservableBooleanValue, we define the type of the property
         // to be the primitive value type (i.e. not the boxed value type).
         if (propertyGetter != null) {
-            observableTypeInstance = getTypeInstance(propertyGetter, List.of(declaringClass));
+            observableTypeInstance = getTypeInstance(propertyGetter.method(), List.of(declaringClass));
             typeInstance = findObservableArgument(observableTypeInstance);
         }
 
         // Look for a getter that matches the previously determined property type.
         // If we didn't find a property getter in the previous step, this selects the first getter that
         // matches by name, or in case this is a static property, matches by name and signature.
-        CtMethod getter = tryResolveGetter(declaringClass.jvmType(), propertyName, false,
-                                           typeInstance != null ? typeInstance.jvmType() : null);
+        // We don't look for a getter if we matched the property getter verbatim, as this indicates that
+        // the JavaFX Beans naming schema was not used, or the "Property" suffix was specified explicitly.
+        CtMethod getter = null;
+        if (propertyGetter == null || !propertyGetter.verbatim()) {
+            getter = tryResolveGetter(declaringClass.jvmType(), propertyName, false,
+                                      typeInstance != null ? typeInstance.jvmType() : null);
+        }
 
         try {
             if (typeInstance == null && getter != null) {
@@ -352,8 +357,8 @@ public class Resolver {
             }
 
             PropertyInfo propertyInfo = new PropertyInfo(
-                propertyName, propertyGetter, getter, setter, typeInstance,
-                observableTypeInstance, declaringClass, false);
+                propertyName, propertyGetter != null ? propertyGetter.method() : null, getter, setter,
+                typeInstance, observableTypeInstance, declaringClass, false);
 
             return getCache().put(key, propertyInfo);
         } catch (NotFoundException ex) {
@@ -364,15 +369,21 @@ public class Resolver {
     private PropertyInfo tryResolveStaticPropertyImpl(TypeInstance declaringType, String propertyName) {
         try {
             CtMethod getter = tryResolveStaticGetter(declaringType.jvmType(), propertyName);
-            CtMethod propertyGetter = tryResolveStaticPropertyGetter(declaringType.jvmType(), propertyName);
+            GetterInfo propertyGetter = tryResolveStaticPropertyGetter(declaringType.jvmType(), propertyName);
             TypeInstance observableType = propertyGetter != null ?
-                                          getTypeInstance(propertyGetter, List.of(declaringType)) : null;
+                                          getTypeInstance(propertyGetter.method(), List.of(declaringType)) : null;
             TypeInstance propertyType = observableType != null ? findObservableArgument(observableType) : null;
 
             // If the return type of the getter doesn't match the type of the property getter,
             // we discard the getter and only use the property getter.
             if (propertyType != null && getter != null
                     && !propertyType.equals(getTypeInstance(getter, List.of(declaringType)))) {
+                getter = null;
+            }
+
+            // We also discard the getter if the property getter matched verbatim, as this indicates
+            // that the JavaFX Beans naming scheme was not used.
+            if (propertyGetter != null && propertyGetter.verbatim()) {
                 getter = null;
             }
 
@@ -390,8 +401,8 @@ public class Resolver {
             }
 
             return new PropertyInfo(
-                propertyName, propertyGetter, getter, setter, propertyType,
-                observableType, declaringType, true);
+                propertyName, propertyGetter != null ? propertyGetter.method() : null, getter, setter,
+                propertyType, observableType, declaringType, true);
         } catch (NotFoundException ex) {
             throw SymbolResolutionErrors.classNotFound(sourceInfo, ex.getMessage());
         }
@@ -518,8 +529,15 @@ public class Resolver {
             return (CtMethod)entry.value();
         }
 
-        String alt0 = NameHelper.getGetterName(name, false);
-        String alt1 = NameHelper.getGetterName(name, true);
+        String alt0, alt1;
+
+        if (!verbatim && Character.isLowerCase(name.charAt(0))) {
+            alt0 = NameHelper.getGetterName(name, false);
+            alt1 = NameHelper.getGetterName(name, true);
+        } else {
+            alt0 = null;
+            alt1 = null;
+        }
 
         CtMethod method = findMethod(type, m -> {
             try {
@@ -560,13 +578,18 @@ public class Resolver {
             return (CtMethod)entry.value();
         }
 
-        String setterName = NameHelper.getSetterName(name);
-        boolean verbatimCopy = verbatim || name.equals(setterName);
+        String setterName;
+
+        if (!verbatim && Character.isLowerCase(name.charAt(0))) {
+            setterName = NameHelper.getSetterName(name);
+        } else {
+            setterName = null;
+        }
 
         CtMethod method = findMethod(type, m -> {
             try {
                 if (Modifier.isPublic(m.getModifiers())
-                        && (m.getName().equals(name) || (!verbatimCopy && m.getName().equals(setterName)))
+                        && (m.getName().equals(name) || (!verbatim && m.getName().equals(setterName)))
                         && m.getParameterTypes().length == 1
                         && TypeHelper.equals(m.getReturnType(), CtClass.voidType)
                         && (paramType == null || TypeHelper.equals(paramType, m.getParameterTypes()[0]))
@@ -676,25 +699,31 @@ public class Resolver {
         return method;
     }
 
+    private record GetterInfo(CtMethod method, boolean verbatim) {}
+
     /**
      * Returns a property getter method for the specified property (i.e. a method like Button.textProperty()).
      *
      * @return The method, or {@code null} if no getter can be found.
      */
-    public CtMethod tryResolvePropertyGetter(CtClass declaringClass, String name) {
+    private GetterInfo tryResolvePropertyGetter(CtClass declaringClass, String name) {
         CacheKey key = new CacheKey("tryResolvePropertyGetter", declaringClass, name);
         CacheEntry entry = getCache().get(key);
         if (entry.found() && cacheEnabled) {
-            return (CtMethod)entry.value();
+            return (GetterInfo)entry.value();
         }
 
-        CtMethod method = resolvePropertyGetterImpl(declaringClass, null, NameHelper.getPropertyGetterName(name));
+        GetterInfo getter;
+        CtMethod method = resolvePropertyGetterImpl(declaringClass, null, name);
         if (method == null) {
-            method = resolvePropertyGetterImpl(declaringClass, null, name);
+            method = resolvePropertyGetterImpl(declaringClass, null, NameHelper.getPropertyGetterName(name));
+            getter = method != null ? new GetterInfo(method, false) : null;
+        } else {
+            getter = new GetterInfo(method, true);
         }
 
-        getCache().put(key, method);
-        return method;
+        getCache().put(key, getter);
+        return getter;
     }
 
     /**
@@ -702,22 +731,25 @@ public class Resolver {
      *
      * @return The method, or {@code null} if no getter can be found.
      */
-    public CtMethod tryResolveStaticPropertyGetter(CtClass declaringClass, String name) {
+    private GetterInfo tryResolveStaticPropertyGetter(CtClass declaringClass, String name) {
         CacheKey key = new CacheKey("tryResolveStaticPropertyGetter", declaringClass, name);
         CacheEntry entry = getCache().get(key);
         if (entry.found() && cacheEnabled) {
-            return (CtMethod)entry.value();
+            return (GetterInfo)entry.value();
         }
 
-        CtMethod method = resolvePropertyGetterImpl(
-            declaringClass, Classes.NodeType(), NameHelper.getPropertyGetterName(name));
-
+        GetterInfo getter;
+        CtMethod method = resolvePropertyGetterImpl(declaringClass, Classes.NodeType(), name);
         if (method == null) {
-            method = resolvePropertyGetterImpl(declaringClass, Classes.NodeType(), name);
+            method = resolvePropertyGetterImpl(
+                declaringClass, Classes.NodeType(), NameHelper.getPropertyGetterName(name));
+            getter = method != null ? new GetterInfo(method, false) : null;
+        } else {
+            getter = new GetterInfo(method, true);
         }
 
-        getCache().put(key, method);
-        return method;
+        getCache().put(key, getter);
+        return getter;
     }
 
     private CtMethod resolvePropertyGetterImpl(
@@ -727,6 +759,7 @@ public class Resolver {
 
             try {
                 if (Modifier.isPublic(modifiers)
+                        && (receiverClass == null || Modifier.isStatic(modifiers))
                         && m.getName().equals(methodName)
                         && m.getReturnType().subtypeOf(Classes.ObservableValueType())
                         && !isSynthetic(m)) {
