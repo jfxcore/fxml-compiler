@@ -1,4 +1,4 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2023, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.expression;
@@ -17,17 +17,20 @@ public class BindingContextNode extends AbstractNode {
 
     private final BindingContextSelector selector;
     private final int parentIndex;
+    private final boolean self;
     private ResolvedTypeNode type;
 
     public BindingContextNode(
             BindingContextSelector selector,
             TypeInstance type,
             int parentIndex,
+            boolean self,
             SourceInfo sourceInfo) {
         super(sourceInfo);
         this.type = new ResolvedTypeNode(checkNotNull(type), sourceInfo);
         this.selector = checkNotNull(selector);
         this.parentIndex = parentIndex;
+        this.self = self;
     }
 
     public BindingContextSelector getSelector() {
@@ -36,6 +39,10 @@ public class BindingContextNode extends AbstractNode {
 
     public ResolvedTypeNode getType() {
         return type;
+    }
+
+    public boolean isSelf() {
+        return self;
     }
 
     public Segment toSegment() {
@@ -53,7 +60,7 @@ public class BindingContextNode extends AbstractNode {
 
     @Override
     public BindingContextNode deepClone() {
-        return new BindingContextNode(selector, type.getTypeInstance(), parentIndex, getSourceInfo());
+        return new BindingContextNode(selector, type.getTypeInstance(), parentIndex, self, getSourceInfo());
     }
 
     @Override
@@ -63,12 +70,13 @@ public class BindingContextNode extends AbstractNode {
         BindingContextNode that = (BindingContextNode)o;
         return selector == that.selector &&
             parentIndex == that.parentIndex &&
+            self == that.self &&
             type.equals(that.type);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(selector, parentIndex, type);
+        return Objects.hash(selector, parentIndex, self, type);
     }
 
 }

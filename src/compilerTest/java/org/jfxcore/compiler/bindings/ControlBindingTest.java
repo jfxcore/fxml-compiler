@@ -3,6 +3,7 @@
 
 package org.jfxcore.compiler.bindings;
 
+import javafx.beans.NamedArg;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.scene.control.Label;
@@ -110,6 +111,40 @@ public class ControlBindingTest extends CompilerTestBase {
 
         NonNode child = (NonNode)root.getProperties().get("prop");
         assertEquals(child.prop1.get(), child.prop2.get(), 0.001);
+    }
+
+    @SuppressWarnings("unused")
+    public static class NodeUnderInitialization extends Pane {
+        public NodeUnderInitialization(@NamedArg("arg") double param) {}
+        public DoubleProperty testProperty() { return null; }
+
+        public static double function(double value) { return value; }
+    }
+
+    @Test
+    public void Bind_Once_To_Node_Under_Initialization_Fails() {
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <?import javafx.scene.layout.*?>
+            <Pane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                <NodeUnderInitialization arg="{fx:once parent[0]/test}"/>
+            </Pane>
+        """));
+
+        assertEquals(ErrorCode.CANNOT_REFERENCE_NODE_UNDER_INITIALIZATION, ex.getDiagnostic().getCode());
+        assertCodeHighlight("{fx:once parent[0]/test}", ex);
+    }
+
+    @Test
+    public void Bind_Once_To_Node_Under_Initialization_In_FunctionExpression_Fails() {
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <?import javafx.scene.layout.*?>
+            <Pane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                <NodeUnderInitialization arg="{fx:once NodeUnderInitialization.function(parent[0]/test)}"/>
+            </Pane>
+        """));
+
+        assertEquals(ErrorCode.CANNOT_REFERENCE_NODE_UNDER_INITIALIZATION, ex.getDiagnostic().getCode());
+        assertCodeHighlight("{fx:once NodeUnderInitialization.function(parent[0]/test)}", ex);
     }
 
     @Test
