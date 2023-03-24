@@ -1,4 +1,4 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2023, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.diagnostic.errors;
@@ -44,11 +44,6 @@ public class ParserErrors {
     public static MarkupException unknownNamespace(SourceInfo sourceInfo, String namespace) {
         throw new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
             ErrorCode.UNKNOWN_NAMESPACE, namespace));
-    }
-
-    public static MarkupException elementCannotStartWithLowercaseLetter(SourceInfo sourceInfo, String name) {
-        throw new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
-            ErrorCode.ELEMENT_CANNOT_START_WITH_LOWERCASE_LETTER, name));
     }
 
     public static MarkupException invalidExpression(SourceInfo sourceInfo) {
