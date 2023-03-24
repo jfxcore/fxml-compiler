@@ -173,15 +173,19 @@ public class BindingTransform implements Transform {
     private BindingContextNode parseBindingContext(TransformContext context, PathNode pathNode) {
         ContextSelectorNode contextSelectorNode = pathNode.getContextSelector();
         if (contextSelectorNode == null) {
-            ParentInfo parentInfo = findParent(
-                context, context.getBindingContextClass(), null, pathNode.getSourceInfo());
+            List<Node> parents = context.getParents().stream()
+                .filter(node -> node instanceof ObjectNode)
+                .toList();
 
-            return new BindingContextNode(
-                BindingContextSelector.DEFAULT,
-                parentInfo.type(),
-                parentInfo.parentStackIndex(),
-                parentInfo.self(),
-                pathNode.getSourceInfo());
+            for (int i = parents.size() - 1; i >= 0; --i) {
+                TypeInstance type = TypeHelper.getTypeInstance(parents.get(i));
+                if (type.subtypeOf(context.getBindingContextClass())) {
+                    return new BindingContextNode(
+                        BindingContextSelector.DEFAULT, type, i, i == parents.size() - 1, pathNode.getSourceInfo());
+                }
+            }
+
+            throw ParserErrors.invalidExpression(pathNode.getSourceInfo());
         }
 
         BindingContextSelector bindingContextSelector = parseBindingContextSelector(contextSelectorNode.getSelector());
@@ -199,13 +203,15 @@ public class BindingTransform implements Transform {
             case DEFAULT -> throw new IllegalArgumentException();
 
             case SELF -> {
-                ParentInfo parentInfo = findParent(context, null, 0, contextSelectorNode.getSourceInfo());
+                List<Node> parents = context.getParents().stream()
+                    .filter(node -> node instanceof ObjectNode)
+                    .toList();
 
                 yield new BindingContextNode(
                     bindingContextSelector,
-                    parentInfo.type(),
-                    parentInfo.parentStackIndex(),
-                    parentInfo.self(),
+                    TypeHelper.getTypeInstance(parents.get(parents.size() - 1)),
+                    parents.size() - 1,
+                    true,
                     contextSelectorNode.getSourceInfo());
             }
 
@@ -228,7 +234,7 @@ public class BindingTransform implements Transform {
                     bindingContextSelector,
                     parentInfo.type(),
                     parentInfo.parentStackIndex(),
-                    parentInfo.self(),
+                    false,
                     contextSelectorNode.getSourceInfo());
             }
 
@@ -264,7 +270,7 @@ public class BindingTransform implements Transform {
         }
     }
 
-    private record ParentInfo(TypeInstance type, boolean self, int parentStackIndex) {}
+    private record ParentInfo(TypeInstance type, int parentStackIndex) {}
 
     private ParentInfo findParent(
             TransformContext context,
@@ -278,22 +284,20 @@ public class BindingTransform implements Transform {
             .filter(node -> node instanceof ObjectNode)
             .toList();
 
-        if (level != null && (level < 0 || level > parents.size() - 1)) {
+        if (level != null && (level < 0 || level > parents.size() - 2)) {
             throw BindingSourceErrors.parentIndexOutOfBounds(sourceInfo);
         }
 
         if (searchType == null) {
-            parentIndex = parents.size() - (level != null ? level : 1) - 1;
+            parentIndex = parents.size() - (level != null ? level : 0) - 2;
             parentType = TypeHelper.getTypeInstance(parents.get(parentIndex));
         } else {
-            for (int i = parents.size() - 1, match = 0; i >= 0; --i) {
+            for (int i = parents.size() - 2, match = 0; i >= 0; --i) {
                 parentType = TypeHelper.getTypeInstance(parents.get(i));
 
                 if (parentType.subtypeOf(searchType)) {
                     if (level != null) {
-                        match++;
-
-                        if (match == level) {
+                        if (match++ == level) {
                             parentIndex = i;
                             break;
                         }
@@ -309,7 +313,7 @@ public class BindingTransform implements Transform {
             }
         }
 
-        return new ParentInfo(parentType, parentIndex == parents.size() - 1, parentIndex);
+        return new ParentInfo(parentType, parentIndex);
     }
 
 }

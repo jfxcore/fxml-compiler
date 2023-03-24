@@ -82,7 +82,7 @@ public class ControlBindingTest extends CompilerTestBase {
             <?import javafx.scene.shape.*?>
             <?import javafx.scene.layout.*?>
             <Pane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
-                <Rectangle fill="red" stroke="{fx:once parent[0]/fill}"/>
+                <Rectangle fill="red" stroke="{fx:once self/fill}"/>
             </Pane>
         """);
 
@@ -104,7 +104,7 @@ public class ControlBindingTest extends CompilerTestBase {
             <?import javafx.scene.layout.*?>
             <Pane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
                 <properties>
-                    <NonNode fx:id="prop" prop1="123.0" prop2="{fx:once parent[0]/prop1}"/>
+                    <NonNode fx:id="prop" prop1="123.0" prop2="{fx:once self/prop1}"/>
                 </properties>
             </Pane>
         """);
@@ -126,12 +126,12 @@ public class ControlBindingTest extends CompilerTestBase {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.scene.layout.*?>
             <Pane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
-                <NodeUnderInitialization arg="{fx:once parent[0]/test}"/>
+                <NodeUnderInitialization arg="{fx:once self/test}"/>
             </Pane>
         """));
 
         assertEquals(ErrorCode.CANNOT_REFERENCE_NODE_UNDER_INITIALIZATION, ex.getDiagnostic().getCode());
-        assertCodeHighlight("{fx:once parent[0]/test}", ex);
+        assertCodeHighlight("{fx:once self/test}", ex);
     }
 
     @Test
@@ -139,12 +139,12 @@ public class ControlBindingTest extends CompilerTestBase {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.scene.layout.*?>
             <Pane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
-                <NodeUnderInitialization arg="{fx:once NodeUnderInitialization.function(parent[0]/test)}"/>
+                <NodeUnderInitialization arg="{fx:once NodeUnderInitialization.function(self/test)}"/>
             </Pane>
         """));
 
         assertEquals(ErrorCode.CANNOT_REFERENCE_NODE_UNDER_INITIALIZATION, ex.getDiagnostic().getCode());
-        assertCodeHighlight("{fx:once NodeUnderInitialization.function(parent[0]/test)}", ex);
+        assertCodeHighlight("{fx:once NodeUnderInitialization.function(self/test)}", ex);
     }
 
     @Test
