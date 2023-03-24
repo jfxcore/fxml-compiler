@@ -342,6 +342,8 @@ public class ValueEmitterFactory {
                                             methodSignature,
                                             propertyNode.getName()),
                                         propertyNode.getValues().get(0).getSourceInfo()));
+
+                            default -> throw new AssertionError(result.errorCode().toString());
                         }
 
                         break;
