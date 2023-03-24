@@ -1,10 +1,9 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2023, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.bindings;
 
 import javafx.scene.control.Button;
-import javafx.scene.control.Label;
 import javafx.scene.layout.Pane;
 import org.jfxcore.compiler.diagnostic.ErrorCode;
 import org.jfxcore.compiler.diagnostic.MarkupException;
@@ -21,134 +20,124 @@ import static org.junit.jupiter.api.Assertions.*;
 public class BindingSourceTest extends CompilerTestBase {
 
     @Test
-    public void Bind_Once_To_Local_Control_With_Indexed_Parent_Selector() {
+    public void Bind_Once_To_Parent_Property_With_Indexed_Parent_Selector_Does_Not_Apply_Latest_Value() {
         Pane root = compileAndRun("""
-            <?import javafx.scene.control.*?>
             <?import javafx.scene.layout.*?>
-            <Pane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
-                <Pane fx:id="pane" prefWidth="123">
-                    <Pane prefWidth="{fx:once parent[2]/pane.prefWidth}"/>
+            <Pane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                  prefHeight="123">
+                <Pane fx:id="pane" prefWidth="234">
+                    <Pane prefWidth="{fx:once parent[0]/prefWidth}"
+                          prefHeight="{fx:once parent[1]/prefHeight}"/>
                 </Pane>
             </Pane>
         """);
 
-        assertEquals(123, ((Pane)root.getChildren().get(0)).getPrefWidth(), 0.001);
-        assertEquals(-1, ((Pane)((Pane)root.getChildren().get(0)).getChildren().get(0)).getPrefWidth(), 0.001);
+        var pane = (Pane)root.getChildren().get(0);
+        var pane2 = (Pane)((Pane)root.getChildren().get(0)).getChildren().get(0);
+        assertEquals(123, root.getPrefHeight(), 0.001);
+        assertEquals(234, pane.getPrefWidth(), 0.001);
+        assertEquals(-1, pane2.getPrefHeight(), 0.001);
+        assertEquals(-1, pane2.getPrefWidth(), 0.001);
     }
 
     @Test
     public void Bind_Once_To_Parent_Property_With_Typed_Parent_Selector_Does_Not_Apply_Latest_Value() {
-        BindingPathTest.TestPane root = compileAndRun("""
-            <?import javafx.scene.control.*?>
-            <?import org.jfxcore.compiler.bindings.BindingPathTest.TestPane?>
-            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+        Pane root = compileAndRun("""
+            <?import javafx.scene.layout.*?>
+            <Pane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
                       prefWidth="123">
-                <Label prefWidth="{fx:once parent[TestPane]/prefWidth}"/>
-            </TestPane>
+                <Pane prefWidth="{fx:once parent[Pane]/prefWidth}"/>
+            </Pane>
         """);
 
-        Label label = (Label)root.getChildren().get(0);
-        assertEquals(-1, label.getPrefWidth(), 0.001);
+        Pane pane = (Pane)root.getChildren().get(0);
+        assertEquals(-1, pane.getPrefWidth(), 0.001);
     }
 
     @Test
-    public void Bind_Unidirectional_To_Local_Control_With_Parent_Selector() {
+    public void Bind_Unidirectional_To_Parent_Property_With_Indexed_Parent_Selector() {
         Pane root = compileAndRun("""
-            <?import javafx.scene.control.*?>
             <?import javafx.scene.layout.*?>
-            <Pane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
-                <Pane fx:id="pane" prefWidth="123">
-                    <Pane prefWidth="{fx:bind parent[2]/pane.prefWidth}"/>
+            <Pane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                  prefHeight="123">
+                <Pane fx:id="pane" prefWidth="234">
+                    <Pane prefWidth="{fx:bind parent[0]/prefWidth}"
+                          prefHeight="{fx:bind parent[1]/prefHeight}"/>
                 </Pane>
             </Pane>
         """);
 
-        assertEquals(123.0, ((Pane)root.getChildren().get(0)).getPrefWidth(), 0.001);
-        assertEquals(123.0, ((Pane)((Pane)root.getChildren().get(0)).getChildren().get(0)).getPrefWidth(), 0.001);
+        var pane = (Pane)root.getChildren().get(0);
+        var pane2 = (Pane)((Pane)root.getChildren().get(0)).getChildren().get(0);
+        assertEquals(123, root.getPrefHeight(), 0.001);
+        assertEquals(234, pane.getPrefWidth(), 0.001);
+        assertEquals(123, pane2.getPrefHeight(), 0.001);
+        assertEquals(234, pane2.getPrefWidth(), 0.001);
     }
 
     @Test
-    public void Bind_Unidirectional_To_Parent_Property_Applies_Latest_Value() {
-        BindingPathTest.TestPane root = compileAndRun("""
-            <?import javafx.scene.control.*?>
-            <?import org.jfxcore.compiler.bindings.BindingPathTest.TestPane?>
-            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                      prefWidth="123">
-                <Label prefWidth="{fx:bind parent[TestPane]/prefWidth}"/>
-            </TestPane>
-        """);
-
-        // In this example, the TestPane.prefWidth property is assigned AFTER TestPane.children,
-        // but the unidirectional binding will apply the latest value as soon as TestPane.prefWidth
-        // has been set.
-        Label label = (Label)root.getChildren().get(0);
-        assertEquals(123, label.getPrefWidth(), 0.001);
-    }
-
-    @Test
-    public void Bind_Unidirectional_To_Parent_Property_By_Index() {
-        BindingPathTest.TestPane root = compileAndRun("""
-            <?import javafx.scene.control.*?>
+    public void Bind_Unidirectional_To_Parent_Property_With_NonIndexed_Parent_Selector() {
+        Pane root = compileAndRun("""
             <?import javafx.scene.layout.*?>
-            <?import org.jfxcore.compiler.bindings.BindingPathTest.TestPane?>
-            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                      prefWidth="123">
-                <Pane>
-                    <Label prefWidth="{fx:bind parent[2]/prefWidth}"/>
+            <Pane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                <Pane fx:id="pane" prefWidth="123">
+                    <Pane prefWidth="{fx:bind parent/prefWidth}"/>
                 </Pane>
-            </TestPane>
+            </Pane>
         """);
 
-        Label label = (Label)((Pane)root.getChildren().get(0)).getChildren().get(0);
-        assertEquals(123, label.getPrefWidth(), 0.001);
-    }
-
-    @Test
-    public void Bind_Unidirectional_To_Parent_Property_By_Type_And_Index() {
-        BindingPathTest.TestPane root = compileAndRun("""
-            <?import javafx.scene.control.*?>
-            <?import javafx.scene.layout.*?>
-            <?import org.jfxcore.compiler.bindings.BindingPathTest.TestPane?>
-            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                      prefWidth="123">
-                <Pane>
-                    <Label prefWidth="{fx:bind parent[Pane:2]/prefWidth}"/>
-                </Pane>
-            </TestPane>
-        """);
-
-        Label label = (Label)((Pane)root.getChildren().get(0)).getChildren().get(0);
-        assertEquals(123, label.getPrefWidth(), 0.001);
-    }
-
-    @Test
-    public void Bind_Unidirectional_To_Parent_Property_By_Default_Index() {
-        BindingPathTest.TestPane root = compileAndRun("""
-            <?import javafx.scene.control.*?>
-            <?import javafx.scene.layout.*?>
-            <?import org.jfxcore.compiler.bindings.BindingPathTest.TestPane?>
-            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
-                      prefWidth="123">
-                <Label prefWidth="{fx:bind parent/prefWidth}"/>
-            </TestPane>
-        """);
-
-        Label label = (Label)root.getChildren().get(0);
-        assertEquals(123, label.getPrefWidth(), 0.001);
-    }
-
-    @Test
-    public void Bind_Unidirectional_To_Parent0_Refers_To_Current_Node() {
-        BindingPathTest.TestPane root = compileAndRun("""
-            <?import javafx.scene.layout.*?>
-            <?import org.jfxcore.compiler.bindings.BindingPathTest.TestPane?>
-            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
-                  <Pane prefWidth="123" prefHeight="{fx:bind parent[0]/prefWidth}"/>
-            </TestPane>
-        """);
-
-        Pane pane = (Pane)root.getChildren().get(0);
+        Pane pane = (Pane)((Pane)root.getChildren().get(0)).getChildren().get(0);
         assertEquals(123, pane.getPrefWidth(), 0.001);
+    }
+
+    @Test
+    public void Bind_Unidirectional_To_Parent_Property_With_Indexed_Parent_Selector_And_Named_Element() {
+        Pane root = compileAndRun("""
+            <?import javafx.scene.layout.*?>
+            <Pane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                <Pane fx:id="pane" prefWidth="123">
+                    <Pane prefWidth="{fx:bind parent[1]/pane.prefWidth}"/>
+                </Pane>
+            </Pane>
+        """);
+
+        Pane pane = (Pane)((Pane)root.getChildren().get(0)).getChildren().get(0);
+        assertEquals(123, pane.getPrefWidth(), 0.001);
+    }
+
+    @Test
+    public void Bind_Unidirectional_To_Parent_Property_With_Typed_Parent_Selector() {
+        Pane root = compileAndRun("""
+            <?import javafx.scene.layout.*?>
+            <StackPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                       prefHeight="123">
+                <Pane prefWidth="234">
+                    <Pane prefWidth="{fx:bind parent[Pane]/prefWidth}"
+                          prefHeight="{fx:bind parent[StackPane]/prefHeight}"/>
+                </Pane>
+            </StackPane>
+        """);
+
+        Pane pane = (Pane)((Pane)root.getChildren().get(0)).getChildren().get(0);
+        assertEquals(234, pane.getPrefWidth(), 0.001);
+        assertEquals(123, pane.getPrefHeight(), 0.001);
+    }
+
+    @Test
+    public void Bind_Unidirectional_To_Parent_Property_With_Typed_And_Indexed_Parent_Selector() {
+        Pane root = compileAndRun("""
+            <?import javafx.scene.layout.*?>
+            <Pane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                       prefHeight="123">
+                <Pane prefWidth="234">
+                    <Pane prefWidth="{fx:bind parent[Pane:0]/prefWidth}"
+                          prefHeight="{fx:bind parent[Pane:1]/prefHeight}"/>
+                </Pane>
+            </Pane>
+        """);
+
+        Pane pane = (Pane)((Pane)root.getChildren().get(0)).getChildren().get(0);
+        assertEquals(234, pane.getPrefWidth(), 0.001);
         assertEquals(123, pane.getPrefHeight(), 0.001);
     }
 
@@ -168,7 +157,7 @@ public class BindingSourceTest extends CompilerTestBase {
     }
 
     @Test
-    public void Bind_To_Parent_Index_Out_Of_Bounds_Fails() {
+    public void Bind_To_Negative_Parent_Index_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.scene.control.*?>
             <?import org.jfxcore.compiler.bindings.BindingPathTest.TestPane?>
@@ -179,17 +168,20 @@ public class BindingSourceTest extends CompilerTestBase {
 
         assertEquals(ErrorCode.PARENT_INDEX_OUT_OF_BOUNDS, ex.getDiagnostic().getCode());
         assertCodeHighlight("parent[-1]", ex);
+    }
 
-        ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+    @Test
+    public void Bind_To_Parent_Index_Out_Of_Bounds_Fails() {
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.scene.control.*?>
             <?import org.jfxcore.compiler.bindings.BindingPathTest.TestPane?>
             <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
-                <Label prefWidth="{fx:bind parent[2]/prefWidth}"/>
+                <Label prefWidth="{fx:bind parent[1]/prefWidth}"/>
             </TestPane>
         """));
 
         assertEquals(ErrorCode.PARENT_INDEX_OUT_OF_BOUNDS, ex.getDiagnostic().getCode());
-        assertCodeHighlight("parent[2]", ex);
+        assertCodeHighlight("parent[1]", ex);
     }
 
     @Test
