@@ -180,6 +180,7 @@ public class BindingTransform implements Transform {
                 BindingContextSelector.DEFAULT,
                 parentInfo.type(),
                 parentInfo.parentStackIndex(),
+                parentInfo.self(),
                 pathNode.getSourceInfo());
         }
 
@@ -204,6 +205,7 @@ public class BindingTransform implements Transform {
                     bindingContextSelector,
                     parentInfo.type(),
                     parentInfo.parentStackIndex(),
+                    parentInfo.self(),
                     contextSelectorNode.getSourceInfo());
             }
 
@@ -226,6 +228,7 @@ public class BindingTransform implements Transform {
                     bindingContextSelector,
                     parentInfo.type(),
                     parentInfo.parentStackIndex(),
+                    parentInfo.self(),
                     contextSelectorNode.getSourceInfo());
             }
 
@@ -236,6 +239,7 @@ public class BindingTransform implements Transform {
                         BindingContextSelector.TEMPLATED_ITEM,
                         templateContentNode.getItemType(),
                         0,
+                        false,
                         contextSelectorNode.getSourceInfo());
                 }
 
@@ -260,7 +264,7 @@ public class BindingTransform implements Transform {
         }
     }
 
-    private static record ParentInfo(TypeInstance type, int parentStackIndex) {}
+    private record ParentInfo(TypeInstance type, boolean self, int parentStackIndex) {}
 
     private ParentInfo findParent(
             TransformContext context,
@@ -305,7 +309,7 @@ public class BindingTransform implements Transform {
             }
         }
 
-        return new ParentInfo(parentType, parentIndex);
+        return new ParentInfo(parentType, parentIndex == parents.size() - 1, parentIndex);
     }
 
 }

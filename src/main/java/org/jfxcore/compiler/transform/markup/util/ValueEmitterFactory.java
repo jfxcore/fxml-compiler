@@ -1,4 +1,4 @@
-// Copyright (c) 2022, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2023, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.transform.markup.util;
@@ -313,27 +313,41 @@ public class ValueEmitterFactory {
                 // For scalar properties, check whether the property type is assignable to the
                 // corresponding formal parameter of the current constructor.
                 if (propertyNode != null && propertyNode.getValues().size() == 1) {
-                    ValueNode argument = acceptArgument(
+                    AcceptArgumentResult result = acceptArgument(
                         propertyNode.getValues().get(0), constructorParam.type(), type, vararg);
 
-                    if (argument != null) {
-                        arguments.add(argument);
-                    } else {
+                    if (result.errorCode() != null) {
                         var namedArgs = namedArgsConstructor.namedArgs();
                         var argTypes = Arrays.stream(namedArgs).map(NamedArgParam::type).toArray(TypeInstance[]::new);
                         var argNames = Arrays.stream(namedArgs).map(NamedArgParam::name).toArray(String[]::new);
+                        var methodSignature = NameHelper.getShortMethodSignature(
+                            namedArgsConstructor.constructor(), argTypes, argNames);
 
-                        constructorDiagnostics.add(
-                            new DiagnosticInfo(
-                                Diagnostic.newDiagnosticVariant(
-                                    ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT, "named",
-                                    NameHelper.getShortMethodSignature(namedArgsConstructor.constructor(), argTypes, argNames),
-                                    propertyNode.getName(),
-                                    TypeHelper.getTypeInstance(propertyNode.getValues().get(0)).getJavaName()),
-                                propertyNode.getValues().get(0).getSourceInfo()));
+                        switch (result.errorCode()) {
+                            case CANNOT_ASSIGN_FUNCTION_ARGUMENT ->
+                                constructorDiagnostics.add(
+                                    new DiagnosticInfo(
+                                        Diagnostic.newDiagnosticVariant(
+                                            ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT, "named",
+                                            methodSignature,
+                                            propertyNode.getName(),
+                                            TypeHelper.getTypeInstance(propertyNode.getValues().get(0)).getJavaName()),
+                                        propertyNode.getValues().get(0).getSourceInfo()));
+
+                            case CANNOT_REFERENCE_NODE_UNDER_INITIALIZATION ->
+                                constructorDiagnostics.add(
+                                    new DiagnosticInfo(
+                                        Diagnostic.newDiagnostic(
+                                            ErrorCode.CANNOT_REFERENCE_NODE_UNDER_INITIALIZATION,
+                                            methodSignature,
+                                            propertyNode.getName()),
+                                        propertyNode.getValues().get(0).getSourceInfo()));
+                        }
 
                         break;
                     }
+
+                    arguments.add(result.value());
                 }
 
                 // TODO: We currently don't support collection-type properties in named-arg constructors
@@ -358,38 +372,52 @@ public class ValueEmitterFactory {
         return null;
     }
 
+    private record AcceptArgumentResult(ValueNode value, ErrorCode errorCode) {}
+
     /**
      * Determines whether the input argument is acceptable for the target type and returns
      * a new node that will emit the input argument.
      */
-    private static ValueNode acceptArgument(
+    private static AcceptArgumentResult acceptArgument(
             Node argumentNode, TypeInstance targetType, TypeInstance invokingType, boolean vararg) {
         SourceInfo sourceInfo = argumentNode.getSourceInfo();
-        ValueNode value;
+        ValueNode value = null;
 
         if (argumentNode instanceof BindingNode bindingNode) {
             if (bindingNode.getMode() == BindingMode.ONCE) {
-                value = bindingNode.toEmitter(invokingType).getValue();
+                if (bindingNode.isBindToSelf()) {
+                    return new AcceptArgumentResult(null, ErrorCode.CANNOT_REFERENCE_NODE_UNDER_INITIALIZATION);
+                } else {
+                    value = bindingNode.toEmitter(invokingType).getValue();
+                }
             } else {
                 throw GeneralErrors.expressionNotApplicable(sourceInfo, true);
             }
         } else if (argumentNode instanceof TextNode textNode) {
             value = newObjectByCoercion(targetType, textNode);
-            return value != null ? value :
-                newLiteralValue(textNode.getText(), List.of(targetType), targetType, sourceInfo);
+            if (value != null) {
+                return new AcceptArgumentResult(value, null);
+            }
+
+            value = newLiteralValue(textNode.getText(), List.of(targetType), targetType, sourceInfo);
+            if (value != null) {
+                return new AcceptArgumentResult(value, null);
+            }
         } else if (argumentNode instanceof ValueNode valueNode) {
             value = valueNode;
-        } else {
-            return null;
+        }
+
+        if (value == null) {
+            return new AcceptArgumentResult(null, ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT);
         }
 
         var valueType = TypeHelper.getTypeInstance(value);
         if (targetType.isAssignableFrom(valueType) ||
                 vararg && targetType.getComponentType().isAssignableFrom(valueType)) {
-            return value;
+            return new AcceptArgumentResult(value, null);
         }
 
-        return null;
+        return new AcceptArgumentResult(null, ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT);
     }
 
     private static EmitObjectNode createObjectNode(
