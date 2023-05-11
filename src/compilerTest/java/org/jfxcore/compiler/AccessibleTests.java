@@ -3,11 +3,11 @@
 
 package org.jfxcore.compiler;
 
-import javafx.fxml.InverseMethod;
 import javafx.scene.layout.Pane;
 import org.jfxcore.compiler.diagnostic.ErrorCode;
 import org.jfxcore.compiler.diagnostic.MarkupException;
 import org.jfxcore.compiler.util.CompilerTestBase;
+import org.jfxcore.compiler.util.InverseMethod;
 import org.jfxcore.compiler.util.TestExtension;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

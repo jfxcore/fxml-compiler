@@ -463,9 +463,8 @@ abstract class AbstractFunctionEmitterFactory {
 
     private Callable findInverseFunctionViaAnnotation(
             Callable method, TypeInstance argumentType, TypeInstance returnType, SourceInfo sourceInfo) {
-        var resolver = new Resolver(sourceInfo);
-        Annotation annotation = resolver.tryResolveMethodAnnotation(
-            method.getBehavior(), Classes.InverseMethodAnnotationName);
+        Annotation annotation = new Resolver(sourceInfo).tryResolveMethodAnnotation(
+            method.getBehavior(), "InverseMethod", true);
 
         if (annotation == null) {
             throw BindingSourceErrors.methodNotInvertible(sourceInfo, method.getBehavior());

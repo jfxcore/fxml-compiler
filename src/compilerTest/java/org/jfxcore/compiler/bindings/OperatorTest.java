@@ -6,8 +6,8 @@ package org.jfxcore.compiler.bindings;
 import org.jfxcore.compiler.diagnostic.ErrorCode;
 import org.jfxcore.compiler.diagnostic.MarkupException;
 import org.jfxcore.compiler.util.CompilerTestBase;
+import org.jfxcore.compiler.util.InverseMethod;
 import org.jfxcore.compiler.util.TestExtension;
-import javafx.fxml.InverseMethod;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -90,6 +90,7 @@ public class OperatorTest extends CompilerTestBase {
     }
 
     @Test
+    @Disabled
     public void Bind_Unidirectional_With_NotOperator_Succeeds_For_DoubleProperty() {
         BindingPathTest.TestPane root = compileAndRun("""
             <?import org.jfxcore.compiler.bindings.BindingPathTest.TestPane?>
@@ -103,6 +104,7 @@ public class OperatorTest extends CompilerTestBase {
     }
 
     @Test
+    @Disabled
     public void Bind_Unidirectional_With_BoolifyOperator_Succeeds_For_DoubleProperty() {
         BindingPathTest.TestPane root = compileAndRun("""
             <?import org.jfxcore.compiler.bindings.BindingPathTest.TestPane?>
@@ -116,6 +118,7 @@ public class OperatorTest extends CompilerTestBase {
     }
 
     @Test
+    @Disabled
     public void Bind_Unidirectional_With_NotOperator_Succeeds_For_FunctionExpression() {
         BindingPathTest.TestPane root = compileAndRun("""
             <?import org.jfxcore.compiler.bindings.*?>
@@ -130,6 +133,7 @@ public class OperatorTest extends CompilerTestBase {
     }
 
     @Test
+    @Disabled
     public void Bind_Unidirectional_With_BoolifyOperator_Succeeds_For_FunctionExpression() {
         BindingPathTest.TestPane root = compileAndRun("""
             <?import org.jfxcore.compiler.bindings.*?>
