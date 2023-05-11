@@ -27,7 +27,6 @@ public final class Classes {
 
     public static final String DefaultPropertyAnnotationName = "javafx.beans.DefaultProperty";
     public static final String NamedArgAnnotationName = "javafx.beans.NamedArg";
-    public static final String InverseMethodAnnotationName = "javafx.fxml.InverseMethod";
 
     public static CtClass ObjectType() { return get("java.lang.Object"); }
     public static CtClass ObjectsType() { return get("java.util.Objects"); }

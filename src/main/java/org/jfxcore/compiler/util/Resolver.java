@@ -1,4 +1,4 @@
-// Copyright (c) 2022, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2023, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.util;
@@ -875,7 +875,7 @@ public class Resolver {
     /**
      * Returns the method annotation for the specified name, or <code>null</code> if the annotation was not found.
      */
-    public Annotation tryResolveMethodAnnotation(CtBehavior method, String annotationName) {
+    public Annotation tryResolveMethodAnnotation(CtBehavior method, String annotationName, boolean simpleName) {
         AnnotationsAttribute attr = (AnnotationsAttribute)method
             .getMethodInfo2()
             .getAttribute(AnnotationsAttribute.visibleTag);
@@ -886,7 +886,20 @@ public class Resolver {
                 .getAttribute(AnnotationsAttribute.invisibleTag);
         }
 
-        return attr != null ? attr.getAnnotation(annotationName) : null;
+        if (attr == null){
+            return null;
+        }
+
+        if (simpleName) {
+            for (Annotation annotation : attr.getAnnotations()) {
+                String[] names = annotation.getTypeName().split("\\.");
+                if (names[names.length - 1].equals(annotationName)) {
+                    return annotation;
+                }
+            }
+        }
+
+        return attr.getAnnotation(annotationName);
     }
 
     public CtClass getObservableClass(CtClass type, boolean requestProperty) {
