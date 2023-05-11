@@ -110,9 +110,9 @@ publishing {
             artifact(tasks["sourcesJar"])
             artifact(tasks["javadocJar"])
             pom {
-                url.set("https://github.com/jfxcore/compiler")
-                name.set("compiler")
-                description.set("JFXcore markup compiler")
+                url.set("https://github.com/jfxcore/fxml-compiler")
+                name.set("fxml-compiler")
+                description.set("FXML markup compiler")
                 licenses {
                     license {
                         name.set("BSD-3-Clause")
@@ -128,9 +128,9 @@ publishing {
                     }
                 }
                 scm {
-                    connection.set("scm:git:https://github.com/jfxcore/compiler.git")
-                    developerConnection.set("scm:git:https://github.com/jfxcore/compiler.git")
-                    url.set("https://github.com/jfxcore/compiler")
+                    connection.set("scm:git:https://github.com/jfxcore/fxml-compiler.git")
+                    developerConnection.set("scm:git:https://github.com/jfxcore/fxml-compiler.git")
+                    url.set("https://github.com/jfxcore/fxml-compiler")
                 }
             }
         }
