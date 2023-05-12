@@ -1,10 +1,11 @@
-// Copyright (c) 2022, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2023, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.codebehind;
 
 import javassist.Modifier;
 import org.jetbrains.annotations.Nullable;
+import org.jfxcore.compiler.VersionInfo;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.ast.ObjectNode;
 import org.jfxcore.compiler.ast.PropertyNode;
@@ -93,7 +94,8 @@ public class ClassNode extends ObjectNode implements JavaEmitterNode {
             superClassName += "<" + typeArguments + ">";
         }
 
-        code.append("@javax.annotation.processing.Generated(\"org.jfxcore:compiler\")\r\n")
+        code.append(String.format("@javax.annotation.processing.Generated(\"%s:%s\")\r\n",
+                    VersionInfo.getGroup(), VersionInfo.getName()))
             .append(String.format("%sclass %s extends %s {\r\n", modifiers, className, superClassName));
 
         for (PropertyNode propertyNode : getProperties()) {
