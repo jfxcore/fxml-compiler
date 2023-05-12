@@ -39,7 +39,11 @@ configurations["compilerTestRuntimeOnly"].extendsFrom(configurations.runtimeOnly
 val copyVersionInfo = tasks.create<Copy>("copyVersionInfo") {
     from("$projectDir/src/main/version-info/VersionInfo.java")
     into("$buildDir/generated/java/main/org/jfxcore/compiler")
-    filter { it.replace("\${version}", project.version.toString()) }
+    filter { it
+        .replace("\${group}", project.group.toString())
+        .replace("\${name}", project.name.toString())
+        .replace("\${version}", project.version.toString())
+    }
 }
 
 tasks.compileJava {
