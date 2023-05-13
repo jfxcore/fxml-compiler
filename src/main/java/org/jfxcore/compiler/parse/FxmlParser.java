@@ -100,7 +100,7 @@ public class FxmlParser {
             throw new FxmlParseAbortException(
                 getSourceInfo(rootElement),
                 Diagnostic.newDiagnostic(ErrorCode.NAMESPACE_NOT_SPECIFIED));
-        } else if (!namespace.startsWith(FxmlNamespace.JAVAFX)) {
+        } else if (!FxmlNamespace.JAVAFX.isParentOf(namespace)) {
             throw new FxmlParseAbortException(
                 getSourceInfo(rootElement),
                 Diagnostic.newDiagnostic(ErrorCode.UNKNOWN_NAMESPACE, rootElement.getNamespaceURI()));
@@ -116,7 +116,7 @@ public class FxmlParser {
     private ObjectNode parseElementNode(Element element) {
         String namespace = element.getNamespaceURI();
 
-        if (!FxmlNamespace.JAVAFX.equals(namespace) && !FxmlNamespace.FXML.equals(namespace)) {
+        if (!FxmlNamespace.JAVAFX.isParentOf(namespace) && !FxmlNamespace.FXML.equalsIgnoreCase(namespace)) {
             throw ParserErrors.unknownNamespace(getSourceInfo(element), namespace);
         }
 
@@ -154,7 +154,7 @@ public class FxmlParser {
             new TypeNode(
                 element.getLocalName(),
                 element.getNodeName(),
-                FxmlNamespace.FXML.equals(namespace),
+                FxmlNamespace.FXML.equalsIgnoreCase(namespace),
                 (SourceInfo)element.getUserData(XmlReader.ELEMENT_NAME_SOURCE_INFO_KEY)),
             properties, children, getSourceInfo(element));
     }
@@ -167,7 +167,7 @@ public class FxmlParser {
         boolean parseAsPath = false;
 
         if (node.getParentNode() instanceof Element parent) {
-            if (FxmlNamespace.FXML.equals(parent.getNamespaceURI())) {
+            if (FxmlNamespace.FXML.equalsIgnoreCase(parent.getNamespaceURI())) {
                 for (Intrinsic intrinsic : VERBATIM_INTRINSICS) {
                     if (intrinsic.getName().equals(parent.getLocalName())) {
                         return new TextNode(text, sourceInfo);
@@ -176,7 +176,7 @@ public class FxmlParser {
             }
 
             if (parent.getParentNode() instanceof Element parent2
-                    && FxmlNamespace.FXML.equals(parent2.getNamespaceURI())) {
+                    && FxmlNamespace.FXML.equalsIgnoreCase(parent2.getNamespaceURI())) {
                 for (IntrinsicProperty intrinsicProperty : PATH_INTRINSICS) {
                     if (intrinsicProperty.getIntrinsic().getName().equals(parent2.getLocalName())
                             && intrinsicProperty.getName().equals(parent.getLocalName())) {
@@ -192,7 +192,7 @@ public class FxmlParser {
         if (node instanceof Attr attr) {
             sourceInfo = (SourceInfo)node.getUserData(XmlReader.ATTR_VALUE_SOURCE_INFO_KEY);
 
-            if (!parseAsPath && FxmlNamespace.FXML.equals(attr.getOwnerElement().getNamespaceURI())) {
+            if (!parseAsPath && FxmlNamespace.FXML.equalsIgnoreCase(attr.getOwnerElement().getNamespaceURI())) {
                 for (IntrinsicProperty intrinsicProperty : PATH_INTRINSICS) {
                     if (intrinsicProperty.getIntrinsic().getName().equals(attr.getOwnerElement().getLocalName())
                             && intrinsicProperty.getName().equals(attr.getLocalName())) {
@@ -235,8 +235,8 @@ public class FxmlParser {
     private String getFxmlNamespacePrefix(Node node) {
         if (node instanceof Element element) {
             var prefixMap = (Map<String, String>)element.getUserData(XmlReader.NAMESPACE_TO_PREFIX_MAP_KEY);
-            if (prefixMap != null && prefixMap.get(FxmlNamespace.FXML) != null) {
-                return prefixMap.get(FxmlNamespace.FXML);
+            if (prefixMap != null && prefixMap.get(FxmlNamespace.FXML.toString()) != null) {
+                return prefixMap.get(FxmlNamespace.FXML.toString());
             }
         }
 
@@ -254,7 +254,7 @@ public class FxmlParser {
             String name,
             Collection<? extends ValueNode> values,
             SourceInfo sourceInfo) {
-        if (!FxmlNamespace.JAVAFX.equals(namespace) && !FxmlNamespace.FXML.equals(namespace)) {
+        if (!FxmlNamespace.JAVAFX.isParentOf(namespace) && !FxmlNamespace.FXML.equalsIgnoreCase(namespace)) {
             throw ParserErrors.unknownNamespace(sourceInfo, namespace);
         }
 
@@ -262,7 +262,7 @@ public class FxmlParser {
             name.split("\\."),
             prefix != null ? prefix + ":" + name : name,
             values,
-            prefix != null && FxmlNamespace.FXML.equals(namespace),
+            prefix != null && FxmlNamespace.FXML.equalsIgnoreCase(namespace),
             false,
             sourceInfo);
     }

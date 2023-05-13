@@ -1,4 +1,4 @@
-// Copyright (c) 2022, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2023, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.parse;
@@ -20,7 +20,7 @@ public class FxmlParserTest extends TestBase {
     public void CDataSection_Is_Not_Processed() {
         DocumentNode document = new FxmlParser("""
                 <?xml version="1.0" encoding="UTF-8"?>
-                <Test xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                <Test xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                     CDATA section: <![CDATA[ < > & ]]>.
                 </Test>
             """).parseDocument();
@@ -32,7 +32,7 @@ public class FxmlParserTest extends TestBase {
     public void CDataStart_Can_Appear_Within_CDataSection() {
         DocumentNode document = new FxmlParser("""
                 <?xml version="1.0" encoding="UTF-8"?>
-                <Test xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                <Test xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                     CDATA section: <![CDATA[ <![CDATA[ ]]>.
                 </Test>
             """).parseDocument();
@@ -44,7 +44,7 @@ public class FxmlParserTest extends TestBase {
     public void CDataEnd_Is_Escaped_With_CDataSection() {
         DocumentNode document = new FxmlParser("""
                 <?xml version="1.0" encoding="UTF-8"?>
-                <Test xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                <Test xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                     CDATA section: <![CDATA[<![CDATA[...]]><![CDATA[]]]]><![CDATA[>]]>
                 </Test>
             """).parseDocument();
@@ -57,7 +57,7 @@ public class FxmlParserTest extends TestBase {
         DocumentNode document = new FxmlParser("""
                 <?xml version="1.0" encoding="UTF-8"?>
                 <?import javafx.scene.layout.*?>
-                <GridPane xmlns="http://jfxcore.org/javafx" prefWidth="10"/>
+                <GridPane xmlns="http://javafx.com/javafx" prefWidth="10"/>
             """).parseDocument();
 
         //noinspection ConstantConditions
@@ -69,7 +69,7 @@ public class FxmlParserTest extends TestBase {
         MarkupException ex = assertThrows(MarkupException.class, () -> new FxmlParser("""
                 <?xml version="1.0" encoding="UTF-8"?>
                 <?import javafx.scene.layout.*?>
-                <GridPane xmlns="http://jfxcore.org/javafx" foo:prefWidth="10"/>
+                <GridPane xmlns="http://javafx.com/javafx" foo:prefWidth="10"/>
             """).parseDocument());
 
         assertEquals(ErrorCode.UNKNOWN_NAMESPACE, ex.getDiagnostic().getCode());
@@ -81,7 +81,7 @@ public class FxmlParserTest extends TestBase {
                 <?xml version="1.0" encoding="UTF-8"?>
                 <?import javafx.scene.layout.*?>
                 <?import javafx.scene.control.Label?>
-                <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"/>
+                <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"/>
             """).parseDocument();
 
         assertTrue(document.getImports().contains("javafx.scene.layout.*"));
@@ -92,7 +92,7 @@ public class FxmlParserTest extends TestBase {
     public void Unescape_Character_Entity_References() {
         DocumentNode document = new FxmlParser("""
                 <?xml version="1.0" encoding="UTF-8"?>
-                <Label xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                <Label xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                        gt="&gt;"
                        lt="&lt;"
                        quot="&quot;"
@@ -116,7 +116,7 @@ public class FxmlParserTest extends TestBase {
     public void Quoted_Text_Includes_All_Whitespace() {
         DocumentNode document = new FxmlParser("""
                 <?xml version="1.0" encoding="UTF-8"?>
-                <Label xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                <Label xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                        text1=" foo"
                        text2="  foo  "
                        text3="bar  "
@@ -135,7 +135,7 @@ public class FxmlParserTest extends TestBase {
     public void Escaped_OpenCurly_Is_Not_Processed() {
         DocumentNode document = new FxmlParser("""
                 <?xml version="1.0" encoding="UTF-8"?>
-                <Label xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                <Label xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                        text1="{}foo"
                        text2="  {} bar "/>
             """).parseDocument();

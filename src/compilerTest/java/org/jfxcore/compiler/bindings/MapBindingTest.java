@@ -106,7 +106,7 @@ public class MapBindingTest extends CompilerTestBase {
     @Test
     public void Once_Binding_To_Vanilla_Map() {
         MapTestPane root = compileAndRun("""
-            <MapTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <MapTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                          mapProp="{fx:once map1}" objectProp="{fx:once map1}"/>
         """);
 
@@ -128,7 +128,7 @@ public class MapBindingTest extends CompilerTestBase {
     @Test
     public void Once_Binding_To_ObservableMap() {
         MapTestPane root = compileAndRun("""
-            <MapTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <MapTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                          mapProp="{fx:once map2}" objectProp="{fx:once map2}"/>
         """);
 
@@ -152,7 +152,7 @@ public class MapBindingTest extends CompilerTestBase {
     @Test
     public void Once_Binding_To_ObservableValue_Of_Vanilla_Map() {
         MapTestPane root = compileAndRun("""
-            <MapTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <MapTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                          mapProp="{fx:once map3}" objectProp="{fx:once map3}"/>
         """);
 
@@ -181,7 +181,7 @@ public class MapBindingTest extends CompilerTestBase {
     @Test
     public void Once_Binding_To_ObservableValue_Of_ObservableMap() {
         MapTestPane root = compileAndRun("""
-            <MapTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <MapTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                          mapProp="{fx:once map4}" objectProp="{fx:once map4}"/>
         """);
 
@@ -208,7 +208,7 @@ public class MapBindingTest extends CompilerTestBase {
     @Test
     public void Once_ContentBinding_To_Vanilla_Map() {
         MapTestPane root = compileAndRun("""
-            <MapTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <MapTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                          mapProp="{fx:content map1}"/>
         """);
 
@@ -221,7 +221,7 @@ public class MapBindingTest extends CompilerTestBase {
     @Test
     public void Once_ContentBinding_To_Vanilla_Map_Indirect() {
         MapTestPane root = compileAndRun("""
-            <MapTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <MapTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                          mapProp="{fx:content indirect.map1}"/>
         """);
 
@@ -234,7 +234,7 @@ public class MapBindingTest extends CompilerTestBase {
     @Test
     public void Once_ContentBinding_To_Observable_Map() {
         MapTestPane root = compileAndRun("""
-            <MapTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <MapTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                          mapProp="{fx:content map2}"/>
         """);
 
@@ -247,7 +247,7 @@ public class MapBindingTest extends CompilerTestBase {
     @Test
     public void Once_ContentBinding_To_Observable_Map_Indirect() {
         MapTestPane root = compileAndRun("""
-            <MapTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <MapTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                          mapProp="{fx:content indirect.map2}"/>
         """);
 
@@ -260,7 +260,7 @@ public class MapBindingTest extends CompilerTestBase {
     @Test
     public void Once_ContentBinding_To_ObservableValue_Of_Vanilla_Map() {
         MapTestPane root = compileAndRun("""
-            <MapTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <MapTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                          mapProp="{fx:content map3}"/>
         """);
 
@@ -273,7 +273,7 @@ public class MapBindingTest extends CompilerTestBase {
     @Test
     public void Once_ContentBinding_To_ObservableValue_Of_Vanilla_Map_Indirect() {
         MapTestPane root = compileAndRun("""
-            <MapTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <MapTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                          mapProp="{fx:content indirect.map3}"/>
         """);
 
@@ -286,7 +286,7 @@ public class MapBindingTest extends CompilerTestBase {
     @Test
     public void Once_ContentBinding_To_ObservableValue_Of_Observable_Map() {
         MapTestPane root = compileAndRun("""
-            <MapTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <MapTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                          mapProp="{fx:content map4}"/>
         """);
 
@@ -299,7 +299,7 @@ public class MapBindingTest extends CompilerTestBase {
     @Test
     public void Once_ContentBinding_To_ObservableValue_Of_Observable_Map_Indirect() {
         MapTestPane root = compileAndRun("""
-            <MapTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <MapTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                          mapProp="{fx:content indirect.map4}"/>
         """);
 
@@ -312,7 +312,7 @@ public class MapBindingTest extends CompilerTestBase {
     @Test
     public void Once_Binding_Fails_For_ReadOnlyMapProperty() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
-            <MapTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <MapTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                          readOnlyMapProp="{fx:once map1}"/>
         """));
 
@@ -322,7 +322,7 @@ public class MapBindingTest extends CompilerTestBase {
     @Test
     public void Once_Binding_Fails_For_Incompatible_Map() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
-            <MapTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <MapTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                          mapProp="{fx:once incompatibleMap1}"/>
         """));
 
@@ -337,7 +337,7 @@ public class MapBindingTest extends CompilerTestBase {
     public void Unidirectional_Binding_To_Vanilla_Map() {
         MapTestPane root = compileAndRun("""
             <?import org.jfxcore.compiler.bindings.MapBindingTest.MapTestPane?>
-            <MapTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <MapTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                          mapProp="{fx:bind map1}" objectProp="{fx:bind map1}"/>
         """);
 
@@ -365,7 +365,7 @@ public class MapBindingTest extends CompilerTestBase {
     @Test
     public void Unidirectional_Binding_To_Vanilla_Map_Indirect() {
         MapTestPane root = compileAndRun("""
-            <MapTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <MapTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                          mapProp="{fx:bind indirect.map1}" objectProp="{fx:bind indirect.map1}"/>
         """);
 
@@ -395,7 +395,7 @@ public class MapBindingTest extends CompilerTestBase {
     @Test
     public void Unidirectional_ContentBinding_To_Vanilla_Map_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
-            <MapTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <MapTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                          mapProp="{fx:bindContent map1}"/>
         """));
 
@@ -409,7 +409,7 @@ public class MapBindingTest extends CompilerTestBase {
     @Test
     public void Unidirectional_ContentBinding_Fails_For_ObjectProperty() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
-            <MapTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <MapTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                          objectProp="{fx:bindContent map1}"/>
         """));
 
@@ -423,7 +423,7 @@ public class MapBindingTest extends CompilerTestBase {
     @Test
     public void Unidirectional_Binding_To_ObservableMap() {
         MapTestPane root = compileAndRun("""
-            <MapTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <MapTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                          mapProp="{fx:bind map2}" objectProp="{fx:bind map2}"/>
         """);
 
@@ -453,7 +453,7 @@ public class MapBindingTest extends CompilerTestBase {
     @Test
     public void Unidirectional_ContentBinding_To_ObservableMap() {
         MapTestPane root = compileAndRun("""
-            <MapTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <MapTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                          mapProp="{fx:bindContent map2}"/>
         """);
 
@@ -475,7 +475,7 @@ public class MapBindingTest extends CompilerTestBase {
     @Test
     public void Unidirectional_Binding_To_ObservableValue_Of_Vanilla_Map() throws Exception {
         MapTestPane root = compileAndRun("""
-            <MapTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <MapTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                          mapProp="{fx:bind map3}" objectProp="{fx:bind map3}"/>
         """);
 
@@ -517,7 +517,7 @@ public class MapBindingTest extends CompilerTestBase {
     @Test
     public void Unidirectional_ContentBinding_To_ObservableValue_Of_Vanilla_Map() {
         MapTestPane root = compileAndRun("""
-            <MapTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <MapTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                          mapProp="{fx:bindContent map3}"/>
         """);
 
@@ -533,7 +533,7 @@ public class MapBindingTest extends CompilerTestBase {
     @Test
     public void Unidirectional_Binding_To_ObservableValue_Of_ObservableList() {
         MapTestPane root = compileAndRun("""
-            <MapTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <MapTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                          mapProp="{fx:bind map4}" objectProp="{fx:bind map4}"/>
         """);
 
@@ -567,7 +567,7 @@ public class MapBindingTest extends CompilerTestBase {
     @Test
     public void Unidirectional_ContentBinding_To_ObservableValue_Of_ObservableMap() {
         MapTestPane root = compileAndRun("""
-            <MapTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <MapTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                          mapProp="{fx:bindContent map4}"/>
         """);
 
@@ -594,14 +594,14 @@ public class MapBindingTest extends CompilerTestBase {
     @Test
     public void Bidirectional_Binding_To_Vanilla_Map_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
-            <MapTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <MapTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                          mapProp="{fx:bindBidirectional map1}"/>
         """));
 
         assertEquals(ErrorCode.INVALID_BIDIRECTIONAL_BINDING_SOURCE, ex.getDiagnostic().getCode());
 
         ex = assertThrows(MarkupException.class, () -> compileAndRun("""
-            <MapTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <MapTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                          objectProp="{fx:bindBidirectional map1}"/>
         """));
 
@@ -615,7 +615,7 @@ public class MapBindingTest extends CompilerTestBase {
     @Test
     public void Bidirectional_ContentBinding_To_Vanilla_Map_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
-            <MapTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <MapTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                          mapProp="{fx:bindContentBidirectional map1}"/>
         """));
 
@@ -629,7 +629,7 @@ public class MapBindingTest extends CompilerTestBase {
     @Test
     public void Bidirectional_Binding_To_ObservableMap_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
-            <MapTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <MapTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                          mapProp="{fx:bindBidirectional map2}" objectProp="{fx:bindBidirectional map2}"/>
         """));
 
@@ -643,7 +643,7 @@ public class MapBindingTest extends CompilerTestBase {
     @Test
     public void Bidirectional_ContentBinding_To_ObservableMap() {
         MapTestPane root = compileAndRun("""
-            <MapTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <MapTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                          mapProp="{fx:bindContentBidirectional map2}"/>
         """);
 
@@ -665,7 +665,7 @@ public class MapBindingTest extends CompilerTestBase {
     @Test
     public void Bidirectional_Binding_To_ObservableValue_Of_Vanilla_Map_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
-            <MapTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <MapTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                          mapProp="{fx:bindBidirectional map3}"/>
         """));
 
@@ -679,7 +679,7 @@ public class MapBindingTest extends CompilerTestBase {
     @Test
     public void Bidirectional_ContentBinding_To_ObservableValue_Of_Vanilla_Map_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
-            <MapTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <MapTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                          mapProp="{fx:bindContentBidirectional map3}"/>
         """));
 
@@ -693,7 +693,7 @@ public class MapBindingTest extends CompilerTestBase {
     @Test
     public void Bidirectional_Binding_To_Property_Of_ObservableMap() {
         MapTestPane root = compileAndRun("""
-            <MapTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <MapTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                          mapProp="{fx:bindBidirectional map4}"/>
         """);
 
@@ -708,7 +708,7 @@ public class MapBindingTest extends CompilerTestBase {
     @Test
     public void Bidirectional_ContentBinding_To_Property_Of_ObservableMap() {
         MapTestPane root = compileAndRun("""
-            <MapTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <MapTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                          mapProp="{fx:bindContentBidirectional map4}"/>
         """);
 
@@ -728,7 +728,7 @@ public class MapBindingTest extends CompilerTestBase {
     @Test
     public void Bidirectional_Binding_To_ReadOnlyObservableValue_Of_ObservableMap_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
-            <MapTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <MapTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                          mapProp="{fx:bindBidirectional map4ReadOnly}"/>
         """));
 
@@ -742,7 +742,7 @@ public class MapBindingTest extends CompilerTestBase {
     @Test
     public void Bidirectional_ContentBinding_To_ReadOnlyObservableValue_Of_ObservableMap() {
         MapTestPane root = compileAndRun("""
-            <MapTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <MapTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                          mapProp="{fx:bindContentBidirectional map4ReadOnly}"/>
         """);
 

@@ -1,4 +1,4 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2023, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler;
@@ -26,7 +26,7 @@ public class DefineBlockTest extends CompilerTestBase {
     public void Define_Single_Primitive_Value() {
         GridPane root = compileAndRun("""
             <?import javafx.scene.layout.*?>
-            <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+            <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <fx:define><String fx:id="str0">Hello!</String></fx:define>
             </GridPane>
         """);
@@ -38,7 +38,7 @@ public class DefineBlockTest extends CompilerTestBase {
     public void Define_Multiple_Primitive_Values() {
         GridPane root = compileAndRun("""
             <?import javafx.scene.layout.*?>
-            <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+            <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <fx:define>
                     <String fx:id="v1">Hello1</String>
                     <Byte fx:id="v2">127</Byte>
@@ -69,7 +69,7 @@ public class DefineBlockTest extends CompilerTestBase {
     public void Reference_Value_In_DefineBlock() {
         Label label = compileAndRun("""
             <?import javafx.scene.control.*?>
-            <Label xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml" text="{fx:once str}">
+            <Label xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0" text="{fx:once str}">
                 <fx:define><String fx:id="str">Hello1</String></fx:define>
             </Label>
         """);
@@ -81,7 +81,7 @@ public class DefineBlockTest extends CompilerTestBase {
     public void Reference_Boxed_Value_In_DefineBlock() {
         Label label = compileAndRun("""
             <?import javafx.scene.control.*?>
-            <Label xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml" prefWidth="{fx:once d}">
+            <Label xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0" prefWidth="{fx:once d}">
                 <fx:define><Double fx:id="d">123</Double></fx:define>
             </Label>
         """);
@@ -94,7 +94,7 @@ public class DefineBlockTest extends CompilerTestBase {
         GridPane root = compileAndRun("""
             <?import javafx.scene.layout.*?>
             <?import javafx.scene.control.*?>
-            <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+            <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <Button text="{fx:once str}">
                     <fx:define><String fx:id="str">Hello1</String></fx:define>
                 </Button>
@@ -110,7 +110,7 @@ public class DefineBlockTest extends CompilerTestBase {
         GridPane root = compileAndRun("""
             <?import javafx.geometry.*?>
             <?import javafx.scene.layout.*?>
-            <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+            <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <fx:define>
                     <Insets fx:id="insets0">1,2,3,4</Insets>
                 </fx:define>
@@ -125,7 +125,7 @@ public class DefineBlockTest extends CompilerTestBase {
     public void Duplicate_FxId_Throws_Exception() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.scene.layout.*?>
-            <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+            <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <fx:define>
                     <String fx:id="m0">Hello 1</String>
                     <String fx:id="m0">Hello 2</String>
@@ -141,7 +141,7 @@ public class DefineBlockTest extends CompilerTestBase {
     public void Duplicate_FxId_Outside_Of_DefineBlock_Throws_Exception() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.scene.layout.*?>
-            <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+            <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <fx:define>
                     <String fx:id="m0">Hello 1</String>
                 </fx:define>

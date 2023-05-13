@@ -48,7 +48,7 @@
 //        TestPane0 root = TestCompiler.newInstance(
 //            this, "Bind_Once_To_Delegated_Property", """
 //                    <?import org.jfxcore.compiler.bindings.KtBindingPathTest.TestPane0?>
-//                    <TestPane0 xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+//                    <TestPane0 xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
 //                               visible="{fx:once context.boolProp}"/>
 //                """);
 //
@@ -62,7 +62,7 @@
 //        TestPane0 root = TestCompiler.newInstance(
 //            this, "Bind_Unidirectional_To_Delegated_Property", """
 //                    <?import org.jfxcore.compiler.bindings.KtBindingPathTest.TestPane0?>
-//                    <TestPane0 xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+//                    <TestPane0 xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
 //                               visible="{fx:bind context.boolProp}"/>
 //                """);
 //
@@ -77,7 +77,7 @@
 //        TestPane0 root = TestCompiler.newInstance(
 //            this, "Bind_Bidirectional_To_Delegated_Property", """
 //                <?import org.jfxcore.compiler.bindings.KtBindingPathTest.TestPane0?>
-//                <TestPane0 xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+//                <TestPane0 xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
 //                           visible="{fx:bindBidirectional context.boolProp}"/>
 //            """);
 //
@@ -93,7 +93,7 @@
 //        TestPane1 root = TestCompiler.newInstance(
 //            this, "Bind_Once_To_ReadOnly_Delegated_Property", """
 //                <?import org.jfxcore.compiler.bindings.KtBindingPathTest.TestPane1?>
-//                <TestPane1 xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+//                <TestPane1 xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
 //                           prefWidth="{fx:once context.readOnlyDoubleProp}"/>
 //            """);
 //
@@ -108,7 +108,7 @@
 //        TestPane1 root = TestCompiler.newInstance(
 //            this, "Bind_Unidirectional_To_ReadOnly_Delegated_Property", """
 //                <?import org.jfxcore.compiler.bindings.KtBindingPathTest.TestPane1?>
-//                <TestPane1 xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+//                <TestPane1 xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
 //                           prefWidth="{fx:bind context.readOnlyDoubleProp}"/>
 //            """);
 //
@@ -123,7 +123,7 @@
 //        MarkupException ex = assertThrows(MarkupException.class, () -> TestCompiler.newInstance(
 //            this, "Bind_Bidirectional_To_ReadOnly_Delegated_Property_Fails", """
 //                <?import org.jfxcore.compiler.bindings.KtBindingPathTest.TestPane1?>
-//                <TestPane1 xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+//                <TestPane1 xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
 //                           prefWidth="{fx:bindBidirectional context.readOnlyDoubleProp}"/>
 //            """));
 //
@@ -135,7 +135,7 @@
 //        MarkupException ex = assertThrows(MarkupException.class, () -> TestCompiler.newInstance(
 //            this, "Bind_Unidirectional_To_Inaccessible_Delegated_Property_Fails", """
 //                <?import org.jfxcore.compiler.bindings.KtBindingPathTest.TestPane2?>
-//                <TestPane2 xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+//                <TestPane2 xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
 //                           visible="{fx:bind context.privateBoolProp}"/>
 //            """));
 //
@@ -147,7 +147,7 @@
 //        TestPane3 root = TestCompiler.newInstance(
 //            this, "Bind_Once_To_Val_Delegated_Property", """
 //                <?import org.jfxcore.compiler.bindings.KtBindingPathTest.TestPane3?>
-//                <TestPane3 xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+//                <TestPane3 xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
 //                           visible="{fx:once context.readOnlyBoolProp}"/>
 //            """);
 //
@@ -160,7 +160,7 @@
 //        TestPane3 root = TestCompiler.newInstance(
 //            this, "Bind_Unidirectional_To_Val_Delegated_Property", """
 //                <?import org.jfxcore.compiler.bindings.KtBindingPathTest.TestPane3?>
-//                <TestPane3 xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+//                <TestPane3 xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
 //                           visible="{fx:bind context.readOnlyBoolProp}"/>
 //            """);
 //
@@ -173,7 +173,7 @@
 //        MarkupException ex = assertThrows(MarkupException.class, () -> TestCompiler.newInstance(
 //            this, "Bind_Bidirectional_To_Val_Delegated_Property_Fails", """
 //                <?import org.jfxcore.compiler.bindings.KtBindingPathTest.TestPane3?>
-//                <TestPane3 xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+//                <TestPane3 xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
 //                           visible="{fx:bindBidirectional context.readOnlyBoolProp}"/>
 //            """));
 //
@@ -185,7 +185,7 @@
 //        TestPane4 root = TestCompiler.newInstance(
 //            this, "Bind_Unidirectional_To_ObjectProperty_Of_String", """
 //                <?import org.jfxcore.compiler.bindings.KtBindingPathTest.TestPane4?>
-//                <TestPane4 xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+//                <TestPane4 xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
 //                           id="{fx:bind context.data}"/>
 //            """);
 //
@@ -198,7 +198,7 @@
 //        TestPane5 root = TestCompiler.newInstance(
 //            this, "Bind_Unidirectional_To_ObjectProperty_Of_GenericObject", """
 //                <?import org.jfxcore.compiler.bindings.KtBindingPathTest.TestPane5?>
-//                <TestPane5 xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+//                <TestPane5 xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
 //                           id="{fx:bind context.data.value}"/>
 //            """);
 //
@@ -211,7 +211,7 @@
 //        MarkupException ex = assertThrows(MarkupException.class, () -> TestCompiler.newInstance(
 //            this, "Bind_Unidirectional_To_ObjectProperty_Of_GenericObject_With_InconvertibleType_Fails", """
 //                <?import org.jfxcore.compiler.bindings.KtBindingPathTest.TestPane5?>
-//                <TestPane5 xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+//                <TestPane5 xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
 //                           prefWidth="{fx:bind context.data.value}"/>
 //            """));
 //

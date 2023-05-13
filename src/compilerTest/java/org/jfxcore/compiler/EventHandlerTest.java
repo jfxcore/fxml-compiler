@@ -1,4 +1,4 @@
-// Copyright (c) 2022, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2023, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler;
@@ -57,7 +57,7 @@ public class EventHandlerTest extends CompilerTestBase {
     public void EventHandler_Fails_If_Method_Is_Not_Found() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.scene.control.*?>
-            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <Button onAction="#actionHandlerNotFound"/>
             </TestPane>
         """));
@@ -70,7 +70,7 @@ public class EventHandlerTest extends CompilerTestBase {
     public void EventHandler_Fails_With_Incompatible_EventType() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.scene.control.*?>
-            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <Button onAction="#mouseHandler"/>
             </TestPane>
         """));
@@ -83,7 +83,7 @@ public class EventHandlerTest extends CompilerTestBase {
     public void EventHandler_Method_Is_Invoked() {
         TestPane root = compileAndRun("""
             <?import javafx.scene.control.*?>
-            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <Button onAction="#actionHandler"/>
             </TestPane>
         """);
@@ -97,7 +97,7 @@ public class EventHandlerTest extends CompilerTestBase {
     public void Parameterless_EventHandler_Method_Is_Invoked() {
         TestPane root = compileAndRun("""
             <?import javafx.scene.control.*?>
-            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <Button onAction="#parameterlessHandler"/>
             </TestPane>
         """);
@@ -111,7 +111,7 @@ public class EventHandlerTest extends CompilerTestBase {
     public void EventHandler_Property_Is_Invoked() {
         TestPane root = compileAndRun("""
             <?import javafx.scene.control.*?>
-            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <Button onAction="{fx:once actionHandlerProp}"/>
             </TestPane>
         """);
@@ -125,7 +125,7 @@ public class EventHandlerTest extends CompilerTestBase {
     public void EventHandler_Bound_Property_Is_Invoked() {
         TestPane root = compileAndRun("""
             <?import javafx.scene.control.*?>
-            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <Button onAction="{fx:bind actionHandlerProp}"/>
             </TestPane>
         """);
@@ -139,7 +139,7 @@ public class EventHandlerTest extends CompilerTestBase {
     public void Private_EventHandler_Is_Not_Accessible() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.scene.control.*?>
-            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <Button onAction="#inaccessibleHandler"/>
             </TestPane>
         """));
@@ -151,7 +151,7 @@ public class EventHandlerTest extends CompilerTestBase {
     public void PackagePrivate_EventHandler_Is_Not_Accessible() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.scene.control.*?>
-            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <Button onAction="#packagePrivateHandler"/>
             </TestPane>
         """));

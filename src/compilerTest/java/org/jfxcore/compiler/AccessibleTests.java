@@ -26,7 +26,7 @@ public class AccessibleTests extends CompilerTestBase {
     public void NonPublic_Pane_Is_Not_Accessible() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.scene.layout.*?>
-            <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+            <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <InaccessiblePane/>
             </GridPane>
         """));
@@ -44,7 +44,7 @@ public class AccessibleTests extends CompilerTestBase {
     public void NonPublic_Constant_With_Element_Usage_Is_Not_Accessible() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.scene.layout.*?>
-            <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                       prefWidth="{fx:constant InaccessibleConstant.VALUE}"/>
         """));
 
@@ -56,7 +56,7 @@ public class AccessibleTests extends CompilerTestBase {
     public void NonPublic_Constant_With_Attribute_Usage_Is_Not_Accessible() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.scene.layout.*?>
-            <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+            <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <prefWidth>
                     <Double fx:constant="InaccessibleConstant.VALUE"/>
                 </prefWidth>
@@ -76,7 +76,7 @@ public class AccessibleTests extends CompilerTestBase {
     public void NonPublic_ValueOf_Method_Is_Not_Accessible() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.scene.layout.*?>
-            <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+            <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <fx:define>
                     <ValueOfTest fx:value="foo"/>
                 </fx:define>
@@ -111,7 +111,7 @@ public class AccessibleTests extends CompilerTestBase {
     @Test
     public void Bind_Once_To_Private_Method_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
-            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                       prefWidth="{fx:once privateMethod(123)}"/>
         """));
 
@@ -122,7 +122,7 @@ public class AccessibleTests extends CompilerTestBase {
     @Test
     public void Bind_Once_To_PackagePrivate_Method_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
-            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                       prefWidth="{fx:once packagePrivateMethod(123)}"/>
         """));
 
@@ -133,7 +133,7 @@ public class AccessibleTests extends CompilerTestBase {
     @Test
     public void Bind_Once_To_Protected_Method_With_Constant_Argument_Succeeds() {
         TestPane root = compileAndRun("""
-            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                       prefWidth="{fx:once protectedMethod(123)}"/>
         """);
 
@@ -143,7 +143,7 @@ public class AccessibleTests extends CompilerTestBase {
     @Test
     public void Bind_Once_To_Protected_With_Observable_Argument_Method_Succeeds() {
         TestPane root = compileAndRun("""
-            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                       prefWidth="{fx:once protectedMethod(prefHeight)}"/>
         """);
 
@@ -153,7 +153,7 @@ public class AccessibleTests extends CompilerTestBase {
     @Test
     public void Bind_Once_To_Nested_Protected_Method_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
-            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                       prefWidth="{fx:once Nested.protectedMethod(123)}"/>
         """));
 
@@ -164,7 +164,7 @@ public class AccessibleTests extends CompilerTestBase {
     @Test
     public void Bind_Once_To_Nested_Static_Protected_Method_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
-            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                       prefWidth="{fx:once Nested.staticProtectedMethod(123)}"/>
         """));
 
@@ -175,7 +175,7 @@ public class AccessibleTests extends CompilerTestBase {
     @Test
     public void Bind_Unidirectional_To_PackagePrivate_Method_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
-            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                       prefWidth="{fx:bind packagePrivateMethod(123)}"/>
         """));
 
@@ -186,7 +186,7 @@ public class AccessibleTests extends CompilerTestBase {
     @Test
     public void Bind_Unidirectional_To_Protected_Method_With_Constant_Argument_Succeeds() {
         TestPane root = compileAndRun("""
-            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                       prefWidth="{fx:bind protectedMethod(123)}"/>
         """);
 
@@ -196,7 +196,7 @@ public class AccessibleTests extends CompilerTestBase {
     @Test
     public void Bind_Unidirectional_To_Protected_Method_With_Observable_Argument_Succeeds() {
         TestPane root = compileAndRun("""
-            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                       prefWidth="{fx:bind protectedMethod(prefHeight)}"/>
         """);
 
@@ -207,7 +207,7 @@ public class AccessibleTests extends CompilerTestBase {
     @Test
     public void Bind_Bidirectional_To_Protected_Method_With_Observable_Argument_Succeeds() {
         TestPane root = compileAndRun("""
-            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                       prefWidth="{fx:bindBidirectional protectedMethod(prefHeight)}"/>
         """);
 
@@ -218,7 +218,7 @@ public class AccessibleTests extends CompilerTestBase {
     @Test
     public void Bind_Bidirectional_To_Protected_Method_With_Inaccessible_InverseMethod_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
-            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                       prefWidth="{fx:bindBidirectional protectedMethod(prefHeight); inverseMethod=InaccessibleMethodHolder.protectedMethod}"/>
         """));
 
