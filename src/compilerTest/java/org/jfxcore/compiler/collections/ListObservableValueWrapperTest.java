@@ -50,7 +50,7 @@ public class ListObservableValueWrapperTest extends CompilerTestBase {
             Arrays.stream(root.getClass().getDeclaredClasses())
                   .filter(c -> c.getSimpleName().endsWith(ListObservableValueWrapperGenerator.CLASS_NAME))
                   .findFirst()
-                  .get();
+                  .orElseThrow();
     }
 
     @Test

@@ -51,7 +51,7 @@ public class MapObservableValueWrapperTest extends CompilerTestBase {
             Arrays.stream(root.getClass().getDeclaredClasses())
                   .filter(c -> c.getSimpleName().endsWith(MapObservableValueWrapperGenerator.CLASS_NAME))
                   .findFirst()
-                  .get();
+                  .orElseThrow();
     }
 
     @Test

@@ -51,7 +51,7 @@ public class SetObservableValueWrapperTest extends CompilerTestBase {
             Arrays.stream(root.getClass().getDeclaredClasses())
                   .filter(c -> c.getSimpleName().endsWith(SetObservableValueWrapperGenerator.CLASS_NAME))
                   .findFirst()
-                  .get();
+                  .orElseThrow();
     }
 
     @Test
