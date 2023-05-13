@@ -48,7 +48,7 @@ public class ListWrapperTest extends CompilerTestBase {
             Arrays.stream(root.getClass().getDeclaredClasses())
                   .filter(c -> c.getSimpleName().endsWith(ListWrapperGenerator.CLASS_NAME))
                   .findFirst()
-                  .get();
+                  .orElseThrow();
     }
 
     @Test

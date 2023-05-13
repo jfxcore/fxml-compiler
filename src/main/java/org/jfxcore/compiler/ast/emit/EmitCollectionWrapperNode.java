@@ -3,8 +3,6 @@
 
 package org.jfxcore.compiler.ast.emit;
 
-import javafx.beans.value.ObservableValue;
-import javafx.beans.value.ObservableListValue;
 import javafx.collections.FXCollections;
 import javassist.CtClass;
 import javassist.bytecode.MethodInfo;
@@ -34,27 +32,26 @@ import static org.jfxcore.compiler.util.Descriptors.*;
 
 /**
  * {@link EmitCollectionWrapperNode} supports certain advanced scenarios for binding to lists, sets and maps.
- *
+ * <p>
  * Often, collection-type properties on JavaFX controls are declared as either:
  * <ol>
  *     <li>ListProperty&lt;T> or ObjectProperty&lt;ObservableList&lt;T>>
  *     <li>SetProperty&lt;T> or ObjectProperty&lt;ObservableSet&lt;T>>
  *     <li>MapProperty&lt;K,V> or ObjectProperty&lt;ObservableMap&lt;K,V>>
  * </ol>
- *
  * These properties can only be bound to ObservableList/ObservableSet/ObservableMap instances.
- *
+ * <p>
  * Sometimes, a data class may contain List/Set/Map properties that are not observable. If we want to use
  * such properties as binding sources, we need to make them conform to their respective observable interfaces.
- *
+ * <p>
  * EmitCollectionWrapperNode does this by wrapping non-observable source lists by using one of the
  * following methods (illustrated for List here, but Set and Map work analogously):
  * <ol>
  *     <li>{@link FXCollections#observableList(List)} if the target property is set only once, i.e. the wrapper will
  *         be set using targetProperty().set(ObservableList) or setTargetProperty(ObservableList)
- *     <li>{@link ObservableListValue#observableListValue(List)} if the target property is bound one-way (i.e. the
+ *     <li>{@link ListWrapperGenerator} if the target property is bound one-way (i.e. the
  *         wrapper will be set using targetProperty().bind(ObservableValue)) and the source is of type List&lt;T>
- *     <li>{@link ObservableListValue#observableListValue(ObservableValue)} like 2) but the source is of type
+ *     <li>{@link ListObservableValueWrapperGenerator} like 2) but the source is of type
  *         ObservableValue&lt;List&lt;T>>
  * </ol>
  */

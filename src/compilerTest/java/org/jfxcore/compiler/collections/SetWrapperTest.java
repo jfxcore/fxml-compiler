@@ -49,7 +49,7 @@ public class SetWrapperTest extends CompilerTestBase {
             Arrays.stream(root.getClass().getDeclaredClasses())
                   .filter(c -> c.getSimpleName().endsWith(SetWrapperGenerator.CLASS_NAME))
                   .findFirst()
-                  .get();
+                  .orElseThrow();
     }
 
     @Test
