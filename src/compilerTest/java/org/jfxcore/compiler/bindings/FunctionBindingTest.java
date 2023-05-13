@@ -107,7 +107,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     @Test
     public void Bind_Once_To_Static_Method_With_Incompatible_ReturnType_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
-            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                       prefWidth="{fx:once String.format('foo-%s', invariantDoubleVal)}"/>
         """));
 
@@ -118,7 +118,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     @Test
     public void Bind_Once_To_Static_Method_With_Incompatible_ParamType_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
-            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                       prefWidth="{fx:once staticAdd(1, stringProp)}"/>
         """));
 
@@ -129,7 +129,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     @Test
     public void Bind_Once_To_Instance_Method_With_Incompatible_ParamType_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
-            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                       prefWidth="{fx:once add(1, stringProp)}"/>
         """));
 
@@ -140,7 +140,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     @Test
     public void Bind_Once_To_Static_Method_With_Invariant_Param() {
         TestPane root = compileAndRun("""
-            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                       id="{fx:once String.format('foo-%s', invariantDoubleVal)}"/>
         """);
 
@@ -151,7 +151,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     @Test
     public void Bind_Once_To_Static_Method_With_Invariant_Param_ElementSyntax1() {
         TestPane root = compileAndRun("""
-            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <id>
                     <fx:once path="String.format('foo-%s', invariantDoubleVal)"/>
                 </id>
@@ -165,7 +165,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     @Test
     public void Bind_Once_To_Static_Method_With_Invariant_Param_ElementSyntax2() {
         TestPane root = compileAndRun("""
-            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <id>
                     <fx:once>
                         <path>
@@ -183,7 +183,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     @Test
     public void Bind_Once_To_Static_Method_With_Observable_Param() {
         TestPane root = compileAndRun("""
-            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                       id="{fx:once String.format('foo-%s', doubleProp)}"/>
         """);
 
@@ -200,7 +200,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     @Test
     public void Bind_Once_To_Static_Method_With_Multiple_Invariant_Params() {
         TestPane root = compileAndRun("""
-            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                       id="{fx:once String.format('foo-%s-%s', invariantDoubleVal, invariantStringVal)}"/>
         """);
 
@@ -214,7 +214,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     @Test
     public void Bind_Once_To_Static_Method_With_Multiple_Observable_Params() {
         TestPane root = compileAndRun("""
-            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                       id="{fx:once String.format('foo-%s-%s', doubleProp, stringProp)}"/>
         """);
 
@@ -233,7 +233,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     @Test
     public void Bind_Once_To_Instance_Method_With_Literal_Params() {
         TestPane root = compileAndRun("""
-            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                       prefWidth="{fx:once add(10, 20)}"/>
         """);
 
@@ -244,7 +244,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     @Test
     public void Bind_Once_To_Static_Method_With_Literal_Params() {
         TestPane root = compileAndRun("""
-            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                       prefWidth="{fx:once staticAdd(10, 20)}"/>
         """);
 
@@ -255,7 +255,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     @Test
     public void Bind_Once_To_Nested_Instance_Methods() {
         TestPane root = compileAndRun("""
-            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                       prefWidth="{fx:once add(add(1, 2), add(3, 4))}"
                       prefHeight="{fx:once boxedAdd(boxedAdd(1.0, 2.0), add(3, 4))}"/>
         """);
@@ -270,7 +270,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     @Test
     public void Bind_Once_To_Instance_Method_With_Mixed_Params() {
         TestPane root = compileAndRun("""
-            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                       prefWidth="{fx:once add(invariantDoubleVal, doubleProp)}"
                       prefHeight="{fx:once boxedAdd(invariantDoubleVal, doubleProp)}"/>
         """);
@@ -288,7 +288,7 @@ public class FunctionBindingTest extends CompilerTestBase {
             <?import javafx.scene.layout.*?>
             <?import javafx.scene.control.*?>
             <?import java.text.*?>
-            <Pane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+            <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <fx:define>
                     <DecimalFormat fx:id="fmt">000</DecimalFormat>
                     <Double fx:id="val">7</Double>
@@ -305,7 +305,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     public void Bind_Once_To_Instance_Method_Of_Indirect_Object() {
         Pane root = compileAndRun("""
             <?import javafx.scene.control.*?>
-            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <Label text="{fx:once c1.c2.fmt.format(7)}"/>
             </TestPane>
         """);
@@ -317,7 +317,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     @Test
     public void Bind_Once_To_Constructor() {
         TestPane root = compileAndRun("""
-            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                       id="{fx:once String('foo')}"/>
         """);
 
@@ -328,7 +328,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     @Test
     public void Bind_Once_To_Fully_Qualified_Constructor() {
         TestPane root = compileAndRun("""
-            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                       id="{fx:once java.lang.String('foo')}"/>
         """);
 
@@ -339,7 +339,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     @Test
     public void Bind_Once_To_Varargs_Constructor() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
-            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                       objProp="{fx:once Stringifier(97, 98, 99)}"/>
         """));
 
@@ -354,7 +354,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     @Test
     public void Bind_Once_To_Constructor_With_More_Specific_Argument() {
         TestPane root = compileAndRun("""
-            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                       objProp="{fx:once Stringifier('foo')}"/>
         """);
 
@@ -365,7 +365,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     public void Bind_Once_With_ParentScope_Arguments() {
         TestPane root = compileAndRun("""
             <?import javafx.scene.layout.*?>
-            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <Pane>
                     <Pane id="{fx:once String.format('foo-%s', parent[1]/invariantDoubleVal)}"/>
                 </Pane>
@@ -380,7 +380,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     public void Bind_Once_With_ParentScope_Function_And_Argument_Does_Not_Apply_Latest_Value() {
         TestPane root = compileAndRun("""
             <?import javafx.scene.layout.*?>
-            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                       prefHeight="1">
                 <Pane fx:id="pane" prefWidth="2">
                     <Pane prefWidth="{fx:once parent[1]/add(prefHeight, parent[1]/pane.prefWidth)}"/>
@@ -396,7 +396,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     public void Bind_Once_With_Invalid_ParentScope_Function_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.scene.layout.*?>
-            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <Pane>
                     <Pane prefWidth="{fx:once parent[0]/add(1, 2)}"/>
                 </Pane>
@@ -411,7 +411,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     public void Bind_Once_To_Static_Method_With_ParentScope_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.scene.layout.*?>
-            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <Pane id="{fx:once parent/String.format('%s', 2)}"/>
             </TestPane>
         """));
@@ -424,7 +424,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     public void Bind_Once_To_Interface_Default_Method() {
         TestPane root = compileAndRun("""
             <?import javafx.fxml.*?>
-            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                       id="{fx:once defaultMethod('foo-%s', invariantDoubleVal)}"/>
         """);
 
@@ -435,7 +435,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     public void Bind_Once_With_FxValue_Param_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.fxml.*?>
-            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                       id="{fx:once defaultMethod('foo-%s', {fx:value foo})}"/>
         """));
 
@@ -447,7 +447,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     public void Bind_Once_With_FxConstant_Param() {
         TestPane root = compileAndRun("""
             <?import javafx.fxml.*?>
-            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                       id="{fx:once defaultMethod('foo-%s', {fx:constant Double.POSITIVE_INFINITY})}"/>
         """);
 
@@ -458,7 +458,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     public void Bind_Once_With_FxConstant_Param_Fails_With_Unqualified_Constant() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.fxml.*?>
-            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                       id="{fx:once defaultMethod('foo-%s', {fx:constant POSITIVE_INFINITY})}"/>
         """));
 
@@ -469,7 +469,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     @Test
     public void Bind_Once_With_BindingExpression_Param_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
-            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                       id="{fx:once defaultMethod('foo-%s', {fx:bind doubleProp})}"/>
         """));
 
@@ -480,7 +480,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     @Test
     public void Bind_Once_With_AssignmentExpression_Param_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
-            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                       id="{fx:once defaultMethod('foo-%s', {fx:once doubleProp})}"/>
         """));
 
@@ -491,7 +491,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     @Test
     public void Bind_Unidirectional_To_Static_Method_With_Incompatible_ReturnType_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
-            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                       prefWidth="{fx:bind String.format('foo-%s', invariantDoubleVal)}"/>
         """));
 
@@ -502,7 +502,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     @Test
     public void Bind_Unidirectional_To_Static_Method_With_Incompatible_ParamType_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
-            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                       prefWidth="{fx:bind add(1, stringProp)}"/>
         """));
 
@@ -513,7 +513,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     @Test
     public void Bind_Unidirectional_To_Static_Method_With_Invariant_Param() {
         TestPane root = compileAndRun("""
-            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                       id="{fx:bind String.format('foo-%s', invariantDoubleVal)}"/>
         """);
 
@@ -524,7 +524,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     @Test
     public void Bind_Unidirectional_To_Static_Method_With_Observable_Param() {
         TestPane root = compileAndRun( """
-            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                       id="{fx:bind String.format('foo-%s', doubleProp)}"/>
         """);
 
@@ -538,7 +538,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     @Test
     public void Bind_Unidirectional_To_Static_Method_With_Multiple_Observable_Params() {
         TestPane root = compileAndRun("""
-            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                       id="{fx:bind String.format('foo-%s-%s', doubleProp, stringProp)}"/>
         """);
 
@@ -555,7 +555,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     @Test
     public void Bind_Unidirectional_To_Instance_Method_With_Mixed_Params() {
         TestPane root = compileAndRun("""
-            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                       prefWidth="{fx:bind add(invariantDoubleVal, doubleProp)}"/>
         """);
 
@@ -572,7 +572,7 @@ public class FunctionBindingTest extends CompilerTestBase {
             <?import javafx.scene.layout.*?>
             <?import javafx.scene.control.*?>
             <?import java.text.*?>
-            <Pane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+            <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <fx:define>
                     <DecimalFormat fx:id="fmt">000</DecimalFormat>
                 </fx:define>
@@ -590,7 +590,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     public void Bind_Unidirectional_To_Instance_Method_Of_Indirect_Object() {
         Pane root = compileAndRun("""
             <?import javafx.scene.control.*?>
-            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <Label text="{fx:bind c1.c2.fmt.format(self/prefWidth)}" prefWidth="7"/>
             </TestPane>
         """);
@@ -604,7 +604,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     @Test
     public void Bind_Unidirectional_To_Nested_Instance_Methods() {
         TestPane root = compileAndRun("""
-            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                       prefWidth="{fx:bind add(add(invariantDoubleVal, doubleProp), add(invariantDoubleVal, doubleProp))}"/>
         """);
 
@@ -620,7 +620,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     @Test
     public void Bind_Unidirectional_To_Nested_Instance_Method_With_Incompatible_ParamType_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
-            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                       prefWidth="{fx:bind add(1, add(1, stringProp))}"/>
         """));
 
@@ -631,7 +631,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     @Test
     public void Bind_Unidirectional_To_Varargs_Instance_Method_With_Mixed_Params() {
         TestPane root = compileAndRun("""
-            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                       prefWidth="{fx:bind sum(invariantDoubleVal, doubleProp, doubleProp)}"/>
         """);
 
@@ -645,7 +645,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     @Test
     public void Bind_Unidirectional_To_Static_Varargs_Method_With_Indirect_Path_Params() {
         TestPane root = compileAndRun("""
-            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                       id="{fx:bind String.format('%s-%s-%s', context.invariantDoubleVal, context.doubleVal, context.doubleVal)}"/>
         """);
 
@@ -665,7 +665,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     @Test
     public void Bind_Unidirectional_To_Constructor() {
         TestPane root = compileAndRun("""
-            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                       id="{fx:bind String('foo')}"/>
         """);
 
@@ -676,7 +676,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     @Test
     public void Bind_Unidirectional_To_Varargs_Constructor() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
-            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                       objProp="{fx:bind Stringifier('foo', 97, 98, 99)}"/>
         """));
 
@@ -691,7 +691,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     @Test
     public void Bind_Unidirectional_To_Constructor_With_More_Specific_Argument() {
         TestPane root = compileAndRun("""
-            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                       objProp="{fx:bind Stringifier('foo')}"/>
         """);
 
@@ -701,7 +701,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     @Test
     public void Bind_Unidirectional_To_Varargs_Constructor_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
-            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                       id="{fx:bind String(0, 1, 'foo')}"/>
         """));
 
@@ -713,7 +713,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     public void Bind_Unidirectional_With_ParentScope_Arguments() {
         TestPane root = compileAndRun("""
             <?import javafx.scene.layout.*?>
-            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <Pane prefWidth="123">
                     <Pane id="{fx:bind String.format('foo-%s-%s', parent/prefWidth, parent[1]/invariantDoubleVal)}"/>
                 </Pane>
@@ -728,7 +728,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     public void Bind_Unidirectional_With_This_Argument() {
         TestPane root = compileAndRun("""
             <?import javafx.scene.layout.*?>
-            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <VBox>
                     <Pane id="{fx:bind String.format('foo-%s', this)}"/>
                 </VBox>
@@ -743,7 +743,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     public void Bind_Unidirectional_With_ParentScope_This_Argument() {
         TestPane root = compileAndRun("""
             <?import javafx.scene.layout.*?>
-            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <VBox>
                     <Pane id="{fx:bind String.format('foo-%s', parent/this)}"/>
                 </VBox>
@@ -758,7 +758,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     public void Bind_Unidirectional_With_ParentScope_Function() {
         TestPane root = compileAndRun("""
             <?import javafx.scene.layout.*?>
-            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <Pane>
                     <Pane prefWidth="{fx:bind parent[1]/add(1, 2)}"/>
                 </Pane>
@@ -773,7 +773,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     public void Bind_Unidirectional_With_ParentScope_Function_And_Argument() {
         TestPane root = compileAndRun("""
             <?import javafx.scene.layout.*?>
-            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                       prefHeight="1">
                 <Pane fx:id="pane" prefWidth="2">
                     <Pane prefWidth="{fx:bind parent[1]/add(prefHeight, parent[1]/pane.prefWidth)}"/>
@@ -789,7 +789,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     public void Bind_Unidirectional_With_Invalid_ParentScope_Function_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.scene.layout.*?>
-            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <Pane>
                     <Pane prefWidth="{fx:bind parent[0]/add(1, 2)}"/>
                 </Pane>
@@ -804,7 +804,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     public void Bind_Unidirectional_To_Static_Method_With_ParentScope_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.scene.layout.*?>
-            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <Pane id="{fx:bind parent/String.format('%s', 2)}"/>
             </TestPane>
         """));
@@ -817,7 +817,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     public void Bind_Unidirectional_With_FxConstant_Param() {
         TestPane root = compileAndRun("""
             <?import javafx.fxml.*?>
-            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                       id="{fx:bind defaultMethod('foo-%s', {fx:constant Double.POSITIVE_INFINITY})}"/>
         """);
 
@@ -827,7 +827,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     @Test
     public void Bind_Unidirectional_With_BindingExpression_Param_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
-            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                       id="{fx:bind defaultMethod('foo-%s', {fx:bind doubleProp})}"/>
         """));
 
@@ -838,7 +838,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     @Test
     public void Bind_Unidirectional_With_AssignmentExpression_Param_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
-            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                       id="{fx:bind defaultMethod('foo-%s', {fx:once doubleProp})}"/>
         """));
 
@@ -953,7 +953,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     @Test
     public void Bind_Bidirectional_To_Unresolvable_InverseMethod_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
-            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                       prefWidth="{fx:bindBidirectional sum(doubleProp); inverseMethod=foo.doesNotExist}"/>
         """));
 
@@ -964,7 +964,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     @Test
     public void Bind_Bidirectional_To_Static_Method_With_Two_Parameters_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
-            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                       prefWidth="{fx:bindBidirectional String.format('%s', doubleProp)}"/>
         """));
 
@@ -975,7 +975,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     @Test
     public void Bind_Bidirectional_To_Instance_Method_With_Two_Parameters_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
-            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                       prefWidth="{fx:bindBidirectional add(invariantDoubleVal, doubleProp)}"/>
         """));
 
@@ -986,7 +986,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     @Test
     public void Bind_Bidirectional_To_Indirect_DoubleProperty() {
         BidirectionalTestPane root = compileAndRun("""
-            <BidirectionalTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <BidirectionalTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                                    id="{fx:bindBidirectional doubleToString(indirect.doubleProp)}"/>
         """);
 
@@ -996,7 +996,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     @Test
     public void Bind_Bidirectional_To_Indirect_StringProperty() {
         BidirectionalTestPane root = compileAndRun("""
-            <BidirectionalTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <BidirectionalTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                                    prefWidth="{fx:bindBidirectional stringToDouble(indirect.stringProp)}"/>
         """);
 
@@ -1006,7 +1006,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     @Test
     public void Bind_Bidirectional_To_NullIndirect_DoubleProperty() {
         NullPointerException ex = assertThrows(NullPointerException.class, () -> compileAndRun("""
-            <BidirectionalTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <BidirectionalTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                                    id="{fx:bindBidirectional doubleToString(nullIndirect.doubleProp)}"/>
         """));
 
@@ -1016,7 +1016,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     @Test
     public void Bind_Bidirectional_To_NullIndirect_StringProperty() {
         NullPointerException ex = assertThrows(NullPointerException.class, () -> compileAndRun("""
-            <BidirectionalTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <BidirectionalTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                                    prefWidth="{fx:bindBidirectional stringToDouble(nullIndirect.stringProp)}"/>
         """));
 
@@ -1026,7 +1026,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     @Test
     public void Bind_Bidirectional_To_Method_With_InverseMethod() {
         BidirectionalTestPane root = compileAndRun("""
-            <BidirectionalTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <BidirectionalTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                                    id="{fx:bindBidirectional doubleToString(doubleProp)}"
                                    prefWidth="{fx:bindBidirectional stringToDouble(stringProp)}"
                                    visible="{fx:bindBidirectional instanceNot(boolProp)}"/>
@@ -1070,7 +1070,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     @Test
     public void Bind_Bidirectional_To_Static_Method_With_InverseMethod() {
         BidirectionalTestPane root = compileAndRun("""
-            <BidirectionalTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <BidirectionalTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                                    visible="{fx:bindBidirectional BidirectionalTestPane.staticNot(boolProp)}"/>
         """);
 
@@ -1083,7 +1083,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     @Test
     public void Bind_Bidirectional_To_Instance_Method_With_Static_InverseMethod() {
         BidirectionalTestPane root = compileAndRun("""
-            <BidirectionalTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <BidirectionalTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                                    visible="{fx:bindBidirectional instanceNot2(boolProp)}"/>
         """);
 
@@ -1096,7 +1096,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     @Test
     public void Bind_Bidirectional_To_Method_With_Custom_InverseMethod() {
         BidirectionalTestPane root = compileAndRun("""
-            <BidirectionalTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <BidirectionalTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                                    visible="{fx:bindBidirectional instanceNot(boolProp); inverseMethod=customInverseMethod}"/>
         """);
 
@@ -1108,7 +1108,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     @Test
     public void Bind_Bidirectional_To_Indirect_Method_With_Indirect_Custom_InverseMethod() {
         BidirectionalTestPane root = compileAndRun("""
-            <BidirectionalTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <BidirectionalTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                                    visible="{fx:bindBidirectional c1.c2.instanceNot(boolProp); inverseMethod=c1.c2.customInverseMethodIndirect}"/>
         """);
 
@@ -1120,7 +1120,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     @Test
     public void Bind_Bidirectional_To_Statically_Resolvable_Indirect_Method_With_Indirect_Custom_InverseMethod() {
         BidirectionalTestPane root = compileAndRun("""
-            <BidirectionalTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <BidirectionalTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                                    visible="{fx:bindBidirectional static_c1.c2.instanceNot(boolProp); inverseMethod=static_c1.c2.customInverseMethodIndirect}"/>
         """);
 
@@ -1132,7 +1132,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     @Test
     public void Bind_Bidirectional_To_Method_With_InverseConstructor() {
         BidirectionalTestPane root = compileAndRun("""
-            <BidirectionalTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <BidirectionalTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                                    prefWidth="{fx:bindBidirectional doubleContainerToDouble(doubleContainer); inverseMethod=DoubleContainer}"/>
         """);
 
@@ -1144,7 +1144,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     @Test
     public void Bind_Bidirectional_To_Method_With_Qualified_InverseConstructor() {
         BidirectionalTestPane root = compileAndRun("""
-            <BidirectionalTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <BidirectionalTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                                    prefWidth="{fx:bindBidirectional doubleContainerToDouble(doubleContainer); inverseMethod=BidirectionalTestPane.DoubleContainer}"/>
         """);
 
@@ -1156,7 +1156,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     @Test
     public void Bind_Bidirectional_To_Constructor_With_InverseMethod() {
         BidirectionalTestPane root = compileAndRun("""
-            <BidirectionalTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <BidirectionalTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                                    doubleContainer="{fx:bindBidirectional DoubleContainer(doubleProp); inverseMethod=doubleContainerToDouble}"/>
         """);
 
@@ -1173,7 +1173,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     @Test
     public void Bind_Bidirectional_To_Constructor_With_Qualified_InverseMethod() {
         BidirectionalTestPane root = compileAndRun("""
-            <BidirectionalTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <BidirectionalTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                                    doubleContainer="{fx:bindBidirectional DoubleContainer(doubleProp); inverseMethod=DoubleContainer.doubleContainerToDouble}"/>
         """);
 
@@ -1191,7 +1191,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     public void Bind_Bidirectional_To_Method_Without_InverseMethod_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.fxml.*?>
-            <BidirectionalTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <BidirectionalTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                                    id="{fx:bindBidirectional noInverseMethod(doubleProp)}"/>
         """));
 
@@ -1203,7 +1203,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     public void Bind_Bidirectional_To_Method_With_Incompatible_ReturnType_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.fxml.*?>
-            <BidirectionalTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <BidirectionalTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                                    id="{fx:bindBidirectional noInverseMethod(doubleProp); inverseMethod=invalidInverseMethod}"/>
         """));
 
@@ -1215,7 +1215,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     public void Bind_Bidirectional_To_Method_With_Invalid_Custom_InverseMethod2_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.fxml.*?>
-            <BidirectionalTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <BidirectionalTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                                    id="{fx:bindBidirectional noInverseMethod(doubleProp); inverseMethod=java.lang.String.format}"/>
         """));
 
@@ -1230,7 +1230,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     public void Bind_Bidirectional_To_Method_With_Nonexistent_Custom_InverseMethod_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.fxml.*?>
-            <BidirectionalTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <BidirectionalTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                                    id="{fx:bindBidirectional noInverseMethod(doubleProp); inverseMethod=doesNotExist}"/>
         """));
 
@@ -1242,7 +1242,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     public void Bind_Bidirectional_To_Method_With_ReadOnlyProperty_Argument_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.fxml.*?>
-            <BidirectionalTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <BidirectionalTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                                    id="{fx:bindBidirectional instanceNot(readOnlyObservableBool)}"/>
         """));
 
@@ -1254,7 +1254,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     public void Bind_Bidirectional_To_Method_With_Unsuitable_Parameter_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.fxml.*?>
-            <BidirectionalTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <BidirectionalTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                                    id="{fx:bindBidirectional instanceNot(instanceNot(boolProp))}"/>
         """));
 
@@ -1302,7 +1302,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     @Test
     public void Overloaded_Method_Is_Selected_Correctly() {
         OverloadTestPane root = compileAndRun("""
-            <OverloadTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <OverloadTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                               id="{fx:bind overloadedMethod('ignored')}" stringProp="{fx:bind overloadedMethod(0)}"/>
         """);
 
@@ -1313,7 +1313,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     @Test
     public void Ambiguous_Method_Call_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
-            <OverloadTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <OverloadTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                               id="{fx:bind overloadedMethod(d, d, d)}"/>
         """));
 
@@ -1333,7 +1333,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     @Test
     public void Bind_Once_To_Generic_Method_Of_Raw_Type_Works() {
         GenericTestPane<?> root = compileAndRun("""
-            <GenericTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <GenericTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                              id="{fx:once stringify(prefWidth)}"/>
         """);
 
@@ -1343,7 +1343,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     @Test
     public void Bind_Once_To_Generic_Method_Argument_Out_Of_Bound_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
-            <GenericTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <GenericTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                              fx:typeArguments="java.lang.String" id="{fx:once stringify(prefWidth)}"/>
         """));
 
@@ -1354,7 +1354,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     @Test
     public void Bind_Unidirectional_To_Generic_Method_Of_Raw_Type_Works() {
         GenericTestPane<?> root = compileAndRun("""
-                <GenericTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                <GenericTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                                  id="{fx:bind stringify(prefWidth)}"/>
             """);
 
@@ -1364,7 +1364,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     @Test
     public void Bind_Unidirectional_To_Generic_Method_Argument_Out_Of_Bound_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
-            <GenericTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <GenericTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                              fx:typeArguments="java.lang.String" id="{fx:bind stringify(prefWidth)}"/>
         """));
 

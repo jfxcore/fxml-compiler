@@ -44,7 +44,7 @@ public class StaticPropertyBindingTest extends CompilerTestBase {
         Pane root = compileAndRun("""
             <?import javafx.scene.layout.*?>
             <?import javafx.scene.control.*?>
-            <Pane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+            <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <Pane fx:id="pane" TextSource.text="foo"/>
                 <Label text="{fx:once pane.(TextSource.text)}"/>
             </Pane>
@@ -61,7 +61,7 @@ public class StaticPropertyBindingTest extends CompilerTestBase {
         Pane root = compileAndRun("""
             <?import javafx.scene.layout.*?>
             <?import javafx.scene.control.*?>
-            <Pane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+            <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <Pane fx:id="pane" TextSource.text="foo"/>
                 <Label text="{fx:once pane.(org.jfxcore.compiler.bindings.StaticPropertyBindingTest.TextSource.text)}"/>
             </Pane>
@@ -79,7 +79,7 @@ public class StaticPropertyBindingTest extends CompilerTestBase {
             <?import javafx.scene.layout.*?>
             <?import javafx.scene.control.*?>
             <?import org.jfxcore.compiler.bindings.*?>
-            <Pane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+            <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <Pane fx:id="pane" TextSource.text="foo"/>
                 <Label text="{fx:once pane.(StaticPropertyBindingTest.TextSource.text)}"/>
             </Pane>
@@ -96,7 +96,7 @@ public class StaticPropertyBindingTest extends CompilerTestBase {
         Pane root = compileAndRun("""
             <?import javafx.scene.layout.*?>
             <?import javafx.scene.control.*?>
-            <Pane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+            <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <Pane fx:id="pane"/>
                 <Label text="{fx:bind pane.(TextSource.text)}"/>
             </Pane>
@@ -121,7 +121,7 @@ public class StaticPropertyBindingTest extends CompilerTestBase {
         Pane root = compileAndRun("""
             <?import javafx.scene.layout.*?>
             <?import javafx.scene.control.*?>
-            <Pane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+            <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <Pane fx:id="pane" TextSource.text="foo"/>
                 <Label text="{fx:bindBidirectional pane.(TextSource.text)}"/>
             </Pane>
@@ -146,7 +146,7 @@ public class StaticPropertyBindingTest extends CompilerTestBase {
         Pane root = compileAndRun("""
             <?import javafx.scene.layout.*?>
             <?import javafx.scene.control.*?>
-            <Pane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+            <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <Label fx:id="lbl" text="foo"/>
                 <Pane TextSource.text="{fx:bind lbl.text}"/>
             </Pane>
@@ -171,7 +171,7 @@ public class StaticPropertyBindingTest extends CompilerTestBase {
         Pane root = compileAndRun("""
             <?import javafx.scene.layout.*?>
             <?import javafx.scene.control.*?>
-            <Pane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+            <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <Label fx:id="lbl" text="foo"/>
                 <Pane org.jfxcore.compiler.bindings.StaticPropertyBindingTest.TextSource.text="{fx:bind lbl.text}"/>
             </Pane>
@@ -196,7 +196,7 @@ public class StaticPropertyBindingTest extends CompilerTestBase {
         Pane root = compileAndRun("""
             <?import javafx.scene.layout.*?>
             <?import javafx.scene.control.*?>
-            <Pane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+            <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <Label fx:id="lbl" text="foo"/>
                 <Pane TextSource.text="{fx:bindBidirectional lbl.text}"/>
             </Pane>
@@ -221,7 +221,7 @@ public class StaticPropertyBindingTest extends CompilerTestBase {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.scene.layout.*?>
             <?import javafx.scene.control.*?>
-            <Pane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+            <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <Pane fx:id="pane" TextSource.text="foo"/>
                 <Label text="{fx:once pane.(TextSource.nonexistent)}"/>
             </Pane>
@@ -236,7 +236,7 @@ public class StaticPropertyBindingTest extends CompilerTestBase {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.scene.layout.*?>
             <?import javafx.scene.control.*?>
-            <Pane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+            <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <Label fx:id="lbl" text="foo"/>
                 <Pane TextSource.nonexistent="{fx:bind lbl.text}"/>
             </Pane>
@@ -253,7 +253,7 @@ public class StaticPropertyBindingTest extends CompilerTestBase {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.scene.layout.*?>
             <?import javafx.scene.control.*?>
-            <Pane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+            <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <Pane fx:id="pane"/>
                 <Label text="{fx:once pane.(TextSource.(TextSource.text))}"/>
             </Pane>
@@ -292,7 +292,7 @@ public class StaticPropertyBindingTest extends CompilerTestBase {
         Pane root = compileAndRun("""
             <?import javafx.scene.layout.*?>
             <?import javafx.scene.control.*?>
-            <Pane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+            <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <Pane fx:id="pane">
                     <LabelSource.label>
                         <Label text="foo"/>
@@ -315,7 +315,7 @@ public class StaticPropertyBindingTest extends CompilerTestBase {
         Pane root = compileAndRun("""
             <?import javafx.scene.layout.*?>
             <?import javafx.scene.control.*?>
-            <Pane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+            <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <Pane fx:id="pane">
                     <ObservableLabelSource.label>
                         <Label text="foo"/>

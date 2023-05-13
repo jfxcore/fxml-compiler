@@ -30,7 +30,7 @@ public class TemplatesTest extends CompilerTestBase {
             <?import javafx.scene.layout.*?>
             <?import javafx.scene.control.*?>
             <?import javafx.scene.control.template.*?>
-            <Pane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+            <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <fx:define>
                     <Template fx:typeArguments="java.lang.Double">
                         <VBox/>
@@ -50,7 +50,7 @@ public class TemplatesTest extends CompilerTestBase {
             <?import javafx.scene.layout.*?>
             <?import javafx.scene.control.*?>
             <?import javafx.scene.control.template.*?>
-            <Pane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+            <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <ListView fx:typeArguments="java.lang.Double">
                     <cellFactory>
                         <TemplatedListCellFactory fx:typeArguments="java.lang.Double">
@@ -83,7 +83,7 @@ public class TemplatesTest extends CompilerTestBase {
             <?import javafx.scene.layout.*?>
             <?import javafx.scene.control.*?>
             <?import javafx.scene.control.template.*?>
-            <Pane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+            <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <ListView fx:typeArguments="java.lang.Double">
                     <cellFactory>
                         <TemplatedListCellFactory fx:typeArguments="java.lang.Double">
@@ -116,7 +116,7 @@ public class TemplatesTest extends CompilerTestBase {
             <?import javafx.scene.layout.*?>
             <?import javafx.scene.control.*?>
             <?import javafx.scene.control.template.*?>
-            <Pane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+            <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <fx:define>
                     <TemplatedListCellFactory fx:id="templ" fx:typeArguments="String">
                         <Template fx:typeArguments="java.lang.String">
@@ -170,7 +170,7 @@ public class TemplatesTest extends CompilerTestBase {
             <?import javafx.scene.layout.*?>
             <?import javafx.scene.control.*?>
             <?import javafx.scene.control.template.*?>
-            <Pane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+            <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <fx:define>
                     <Template fx:typeArguments="java.lang.String" fx:id="templ">
                         <Template fx:typeArguments="java.lang.String">
@@ -190,7 +190,7 @@ public class TemplatesTest extends CompilerTestBase {
             <?import javafx.scene.layout.*?>
             <?import javafx.scene.control.*?>
             <?import javafx.scene.control.template.*?>
-            <Pane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+            <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <fx:define>
                     <Template fx:typeArguments="java.lang.String">
                         <ScrollPane fx:id="pane"/>
@@ -208,7 +208,7 @@ public class TemplatesTest extends CompilerTestBase {
             <?import javafx.scene.layout.*?>
             <?import javafx.scene.control.*?>
             <?import javafx.scene.control.template.*?>
-            <Pane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+            <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <fx:define>
                     <Template fx:typeArguments="java.lang.String">
                         <ScrollPane>
@@ -228,7 +228,7 @@ public class TemplatesTest extends CompilerTestBase {
             <?import javafx.scene.layout.*?>
             <?import javafx.scene.control.*?>
             <?import javafx.scene.control.template.*?>
-            <Pane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+            <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <fx:define>
                     <Template fx:typeArguments="java.lang.String">
                         <ScrollPane>
@@ -249,7 +249,7 @@ public class TemplatesTest extends CompilerTestBase {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.scene.layout.*?>
             <?import javafx.scene.control.template.*?>
-            <Pane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+            <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <fx:define>
                     <Template fx:typeArguments="java.lang.String">
                         <FinalLabel/>
@@ -272,7 +272,7 @@ public class TemplatesTest extends CompilerTestBase {
             <?import javafx.scene.control.*?>
             <?import javafx.scene.control.template.*?>
             <?import org.jfxcore.compiler.TemplatesTest.*?>
-            <Pane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+            <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <DerivedListView fx:typeArguments="java.lang.String">
                     <cellFactory>
                         <TemplatedListCellFactory fx:typeArguments="String">
@@ -305,7 +305,7 @@ public class TemplatesTest extends CompilerTestBase {
             <?import javafx.scene.layout.*?>
             <?import javafx.scene.control.*?>
             <?import javafx.scene.control.template.*?>
-            <Pane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+            <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <ListView fx:typeArguments="java.lang.String">
                     <cellFactory>
                         <TemplatedListCellFactory fx:typeArguments="java.lang.String">

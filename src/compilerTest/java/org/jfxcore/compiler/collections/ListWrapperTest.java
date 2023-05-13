@@ -40,7 +40,7 @@ public class ListWrapperTest extends CompilerTestBase {
     @BeforeAll
     public void compile() {
         root = compileAndRun("""
-            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                       listProp="{fx:bind list}"/>
         """);
 

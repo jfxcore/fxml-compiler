@@ -44,7 +44,7 @@ public class OperatorTest extends CompilerTestBase {
         BindingPathTest.TestPane root = compileAndRun("""
             <?import javafx.fxml.*?>
             <?import org.jfxcore.compiler.bindings.BindingPathTest.TestPane?>
-            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                       visible="{fx:once !invariantContext.doubleVal}"/>
         """);
 
@@ -55,7 +55,7 @@ public class OperatorTest extends CompilerTestBase {
     public void Bind_Once_With_BoolifyOperator_Succeeds_For_DoubleProperty() {
         BindingPathTest.TestPane root = compileAndRun("""
             <?import org.jfxcore.compiler.bindings.BindingPathTest.TestPane?>
-            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                       visible="{fx:once !!invariantContext.doubleVal}"/>
         """);
 
@@ -67,7 +67,7 @@ public class OperatorTest extends CompilerTestBase {
         BindingPathTest.TestPane root = compileAndRun("""
             <?import org.jfxcore.compiler.bindings.*?>
             <?import org.jfxcore.compiler.bindings.BindingPathTest.TestPane?>
-            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                       visible="{fx:once !OperatorTest.stringifyWithNull('%s', invariantContext.doubleVal)}"/>
         """);
 
@@ -80,7 +80,7 @@ public class OperatorTest extends CompilerTestBase {
     public void Bind_Once_With_BoolifyOperator_Succeeds_For_FunctionExpression() {
         BindingPathTest.TestPane root = compileAndRun("""
             <?import org.jfxcore.compiler.bindings.BindingPathTest.TestPane?>
-            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                       visible="{fx:once !!java.lang.String.format('%s', invariantContext.doubleVal)}"/>
         """);
 
@@ -94,7 +94,7 @@ public class OperatorTest extends CompilerTestBase {
     public void Bind_Unidirectional_With_NotOperator_Succeeds_For_DoubleProperty() {
         BindingPathTest.TestPane root = compileAndRun("""
             <?import org.jfxcore.compiler.bindings.BindingPathTest.TestPane?>
-            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                       visible="{fx:bind !invariantContext.doubleVal}"/>
         """);
 
@@ -108,7 +108,7 @@ public class OperatorTest extends CompilerTestBase {
     public void Bind_Unidirectional_With_BoolifyOperator_Succeeds_For_DoubleProperty() {
         BindingPathTest.TestPane root = compileAndRun("""
             <?import org.jfxcore.compiler.bindings.BindingPathTest.TestPane?>
-            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                       visible="{fx:bind !!invariantContext.doubleVal}"/>
         """);
 
@@ -123,7 +123,7 @@ public class OperatorTest extends CompilerTestBase {
         BindingPathTest.TestPane root = compileAndRun("""
             <?import org.jfxcore.compiler.bindings.*?>
             <?import org.jfxcore.compiler.bindings.BindingPathTest.TestPane?>
-            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                       visible="{fx:bind !OperatorTest.stringifyWithNull('%s', invariantContext.doubleVal)}"/>
         """);
 
@@ -138,7 +138,7 @@ public class OperatorTest extends CompilerTestBase {
         BindingPathTest.TestPane root = compileAndRun("""
             <?import org.jfxcore.compiler.bindings.*?>
             <?import org.jfxcore.compiler.bindings.BindingPathTest.TestPane?>
-            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                       visible="{fx:bind !!OperatorTest.stringifyWithNull('%s', invariantContext.doubleVal)}"/>
         """);
 
@@ -151,7 +151,7 @@ public class OperatorTest extends CompilerTestBase {
     public void Bind_Bidirectional_With_NotOperator_Fails_For_DoubleProperty() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import org.jfxcore.compiler.bindings.BindingPathTest.TestPane?>
-            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                       visible="{fx:bindBidirectional !invariantContext.doubleVal}"/>
         """));
 
@@ -163,7 +163,7 @@ public class OperatorTest extends CompilerTestBase {
     public void Bind_Bidirectional_With_BoolifyOperator_Fails_For_DoubleProperty() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import org.jfxcore.compiler.bindings.BindingPathTest.TestPane?>
-            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                       visible="{fx:bindBidirectional !!invariantContext.doubleVal}"/>
         """));
 
@@ -176,7 +176,7 @@ public class OperatorTest extends CompilerTestBase {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import org.jfxcore.compiler.bindings.*?>
             <?import org.jfxcore.compiler.bindings.BindingPathTest.TestPane?>
-            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                       visible="{fx:bindBidirectional !OperatorTest.doubleToString(invariantContext.doubleVal)}"/>
         """));
 
@@ -189,7 +189,7 @@ public class OperatorTest extends CompilerTestBase {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import org.jfxcore.compiler.bindings.*?>
             <?import org.jfxcore.compiler.bindings.BindingPathTest.TestPane?>
-            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                       visible="{fx:bindBidirectional !!OperatorTest.doubleToString(invariantContext.doubleVal)}"/>
         """));
 
@@ -202,7 +202,7 @@ public class OperatorTest extends CompilerTestBase {
     public void Bind_Bidirectional_With_NotOperator_Succeeds_For_BooleanProperty() {
         BindingPathTest.TestPane root = compileAndRun("""
             <?import org.jfxcore.compiler.bindings.BindingPathTest.TestPane?>
-            <TestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                       visible="{fx:bindBidirectional !invariantContext.boolVal}"/>
         """);
 

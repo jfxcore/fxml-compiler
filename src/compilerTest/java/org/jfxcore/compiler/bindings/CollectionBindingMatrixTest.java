@@ -990,14 +990,14 @@ public class CollectionBindingMatrixTest {
         if (expectedError != null) {
             MarkupException ex = assertThrows(MarkupException.class, () -> TestCompiler.newInstance(fileName, """
                     <?import org.jfxcore.compiler.bindings.CollectionBindingMatrixTest.CollectionTestPane?>
-                    <CollectionTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml" %s="%s"/>
+                    <CollectionTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0" %s="%s"/>
                 """.formatted(target, source)));
 
             assertEquals(expectedError, ex.getDiagnostic().getCode());
         } else {
             CollectionTestPane root = TestCompiler.newInstance(fileName, """
                     <?import org.jfxcore.compiler.bindings.CollectionBindingMatrixTest.CollectionTestPane?>
-                    <CollectionTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml" %s="%s"/>
+                    <CollectionTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0" %s="%s"/>
                 """.formatted(target, source));
 
             Method getter;

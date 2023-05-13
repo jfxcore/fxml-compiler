@@ -1,4 +1,4 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2023, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler;
@@ -23,7 +23,7 @@ public class IntrinsicsTest extends CompilerTestBase {
     public void Duplicate_FxId_Is_Invalid() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.scene.layout.*?>
-            <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+            <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <GridPane fx:id="pane0">
                     <GridPane fx:id="pane0"/>
                 </GridPane>
@@ -38,7 +38,7 @@ public class IntrinsicsTest extends CompilerTestBase {
     public void FxId_Non_JavaIdentifier_Is_Invalid() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.scene.layout.*?>
-            <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+            <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <GridPane fx:id="foo bar"/>
             </GridPane>
         """));
@@ -51,7 +51,7 @@ public class IntrinsicsTest extends CompilerTestBase {
     public void Unknown_Intrinsic() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.scene.layout.*?>
-            <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+            <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <GridPane fx:foo="foo"/>
             </GridPane>
         """));
@@ -66,7 +66,7 @@ public class IntrinsicsTest extends CompilerTestBase {
     public void Root_Intrinsic_Cannot_Be_Used_On_Child_Element() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compile("""
             <?import javafx.scene.layout.*?>
-            <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+            <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <GridPane fx:class="java.lang.String"/>
             </GridPane>
         """));
@@ -81,7 +81,7 @@ public class IntrinsicsTest extends CompilerTestBase {
     public void Incompatible_Class_Parameters_Are_Invalid() {
         RuntimeException ex = assertThrows(RuntimeException.class, () -> compileAndRun("""
             <?import javafx.scene.layout.*?>
-            <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                       fx:classParameters="java.lang.String"/>
         """));
 
@@ -97,7 +97,7 @@ public class IntrinsicsTest extends CompilerTestBase {
     public void Object_Is_Compiled_With_ClassParameters() {
         Class<?> clazz = compile("""
             <?import org.jfxcore.compiler.IntrinsicsTest.*?>
-            <PaneWithParams xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <PaneWithParams xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                             fx:classParameters="java.lang.String"/>
         """);
 

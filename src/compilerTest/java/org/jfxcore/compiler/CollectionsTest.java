@@ -1,4 +1,4 @@
-// Copyright (c) 2022, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2023, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler;
@@ -32,7 +32,7 @@ public class CollectionsTest {
             GridPane root = compileAndRun("""
                 <?import java.util.*?>
                 <?import javafx.scene.layout.*?>
-                <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                     <properties>
                         <ArrayList fx:typeArguments="Object" fx:id="list">
                             <String fx:id="str0">foo</String>
@@ -57,7 +57,7 @@ public class CollectionsTest {
             MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
                 <?import java.util.*?>
                 <?import javafx.scene.layout.*?>
-                <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                     <properties>
                         <ArrayList fx:typeArguments="Integer" fx:id="list">
                             <String>foo</String>
@@ -75,7 +75,7 @@ public class CollectionsTest {
             GridPane root = compileAndRun("""
                 <?import java.util.*?>
                 <?import javafx.scene.layout.*?>
-                <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                     <properties>
                         <HashSet fx:typeArguments="Object" fx:id="set">
                             <String fx:id="str0">foo</String>
@@ -98,7 +98,7 @@ public class CollectionsTest {
             MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
                 <?import java.util.*?>
                 <?import javafx.scene.layout.*?>
-                <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                     <properties>
                         <HashSet fx:typeArguments="Integer" fx:id="list">
                             <String>foo</String>
@@ -117,7 +117,7 @@ public class CollectionsTest {
                 <?import java.util.*?>
                 <?import javafx.collections.*?>
                 <?import javafx.scene.layout.*?>
-                <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                     <properties>
                         <HashMap fx:id="map0">
                             <String>foo</String>
@@ -156,7 +156,7 @@ public class CollectionsTest {
             MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
                 <?import java.util.*?>
                 <?import javafx.scene.layout.*?>
-                <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                     <properties>
                         <HashMap fx:typeArguments="Integer,String">
                             <String>foo</String>
@@ -176,7 +176,7 @@ public class CollectionsTest {
             MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
                 <?import java.util.*?>
                 <?import javafx.scene.layout.*?>
-                <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                     <properties>
                         <HashMap fx:typeArguments="String,Integer">
                             <String>foo</String>
@@ -196,7 +196,7 @@ public class CollectionsTest {
         public void Literal_Is_Added_To_MapProperty_Fails() {
             MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
                 <?import javafx.scene.layout.*?>
-                <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                     <properties>
                         Hello123
                     </properties>
@@ -220,7 +220,7 @@ public class CollectionsTest {
         public void Object_Is_Added_To_Unsupported_MapProperty_Fails() {
             MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
                 <?import javafx.scene.layout.*?>
-                <UnsupportedKeyTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                <UnsupportedKeyTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                     <unsupportedKeyMap>
                         <String>foo</String>
                     </unsupportedKeyMap>
@@ -236,7 +236,7 @@ public class CollectionsTest {
             GridPane root = compileAndRun("""
                 <?import javafx.scene.layout.*?>
                 <?import javafx.scene.paint.*?>
-                <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                     <properties>
                         <String fx:id="str0">foo</String>
                         <Double fx:id="val0" fx:value="123.5"/>
@@ -271,7 +271,7 @@ public class CollectionsTest {
         public void Object_Are_Added_To_StringKey_MapProperty() {
             StringKeyMapTestPane root = compileAndRun("""
                 <?import javafx.scene.layout.*?>
-                <StringKeyMapTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                <StringKeyMapTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                     <stringKeyMap>
                         <String fx:id="str0">foo</String>
                         <Double fx:id="val0" fx:value="123.5"/>

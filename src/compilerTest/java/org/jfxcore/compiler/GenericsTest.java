@@ -41,7 +41,7 @@ public class GenericsTest extends CompilerTestBase {
     public void GenericObject_Without_TypeArguments_Is_Instantiated() {
         GridPane root = compileAndRun("""
             <?import javafx.scene.layout.*?>
-            <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+            <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <GenericObject fx:id="obj" prop="foo" prop2="foo"/>
             </GridPane>
         """);
@@ -55,7 +55,7 @@ public class GenericsTest extends CompilerTestBase {
     public void GenericObject_With_TypeArguments_Is_Instantiated() {
         GridPane root = compileAndRun("""
             <?import javafx.scene.layout.*?>
-            <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+            <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <GenericObject fx:typeArguments="java.lang.String" fx:id="obj" prop="foo" prop2="foo"/>
             </GridPane>
         """);
@@ -69,7 +69,7 @@ public class GenericsTest extends CompilerTestBase {
     public void CurlySyntax_GenericObject_With_TypeArguments_Is_Instantiated() {
         GridPane root = compileAndRun("""
             <?import javafx.scene.layout.*?>
-            <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                       children="{GenericObject fx:typeArguments=String; fx:id=obj; prop=foo; prop2=foo}"/>
         """);
 
@@ -81,7 +81,7 @@ public class GenericsTest extends CompilerTestBase {
     public void GenericRootObject_With_TypeArguments_Is_Instantiated() throws Exception {
         GenericObject<String> root = compileAndRun("""
             <?import javafx.scene.layout.*?>
-            <GenericObject xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <GenericObject xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                            fx:typeArguments="java.lang.String" prop="foo" prop2="foo"/>
         """);
 
@@ -98,7 +98,7 @@ public class GenericsTest extends CompilerTestBase {
     public void GenericRootObject_Without_TypeArguments_Is_Instantiated_As_RawType() throws Exception {
         GenericObject<String> root = compileAndRun("""
             <?import javafx.scene.layout.*?>
-            <GenericObject xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <GenericObject xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                            prop="foo" prop2="foo"/>
         """);
 
@@ -112,7 +112,7 @@ public class GenericsTest extends CompilerTestBase {
     public void GenericObject_With_Upper_Wildcard_TypeArgument_Cannot_Be_Instantiated() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.scene.layout.*?>
-            <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+            <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <GenericObject fx:typeArguments="? extends String"/>
             </GridPane>
         """));
@@ -125,7 +125,7 @@ public class GenericsTest extends CompilerTestBase {
     public void GenericObject_With_Lower_Wildcard_TypeArgument_Cannot_Be_Instantiated() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.scene.layout.*?>
-            <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+            <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <GenericObject fx:typeArguments="? super String"/>
             </GridPane>
         """));
@@ -138,7 +138,7 @@ public class GenericsTest extends CompilerTestBase {
     public void GenericObject_With_Uncoercible_PropertyValue_Throws_Exception() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.scene.layout.*?>
-            <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+            <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <GenericObject fx:typeArguments="java.lang.Integer" fx:id="obj" prop="foo"/>
             </GridPane>
         """));
@@ -151,7 +151,7 @@ public class GenericsTest extends CompilerTestBase {
     public void GenericObject_With_Uncoercible_SetterValue_Throws_Exception() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.scene.layout.*?>
-            <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+            <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <GenericObject fx:typeArguments="java.lang.Integer" fx:id="obj" prop2="foo"/>
             </GridPane>
         """));
@@ -164,7 +164,7 @@ public class GenericsTest extends CompilerTestBase {
     public void GenericObject_With_Invalid_TypeArguments_Throws_Exception() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.scene.layout.*?>
-            <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+            <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <GenericObject fx:typeArguments="foobar" prop="foo"/>
             </GridPane>
         """));
@@ -177,7 +177,7 @@ public class GenericsTest extends CompilerTestBase {
     public void GenericObject_With_Empty_TypeArguments_Throws_Exception() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.scene.layout.*?>
-            <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+            <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <GenericObject fx:typeArguments="" prop="foo"/>
             </GridPane>
         """));
@@ -192,7 +192,7 @@ public class GenericsTest extends CompilerTestBase {
     public void GenericObject_With_Empty_TypeArguments_And_FxId_Throws_Exception() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.scene.layout.*?>
-            <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+            <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <GenericObject fx:typeArguments="" fx:id="obj" prop="foo"/>
             </GridPane>
         """));
@@ -207,7 +207,7 @@ public class GenericsTest extends CompilerTestBase {
     public void GenericObject_With_Wrong_Number_Of_TypeArguments_Throws_Exception() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.scene.layout.*?>
-            <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+            <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <GenericObject fx:typeArguments="java.lang.String, java.lang.Integer" prop="foo"/>
             </GridPane>
         """));
@@ -245,7 +245,7 @@ public class GenericsTest extends CompilerTestBase {
     public void GenericStringObject_Without_TypeArguments_Is_Instantiated() {
         GridPane root = compileAndRun("""
             <?import javafx.scene.layout.*?>
-            <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+            <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <GenericStringObject fx:id="obj" prop="foo" prop2="foo"/>
             </GridPane>
         """);
@@ -258,7 +258,7 @@ public class GenericsTest extends CompilerTestBase {
     public void GenericDoubleObject_With_RawUsage_Cannot_Assign_Incompatible_Value_To_Erased_Property() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.scene.layout.*?>
-            <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+            <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <GenericDoubleObject fx:id="obj" prop="foo"/>
             </GridPane>
         """));
@@ -271,7 +271,7 @@ public class GenericsTest extends CompilerTestBase {
     public void GenericDoubleObject_With_RawUsage_Can_Assign_Value_To_Erased_Property() {
         GridPane root = compileAndRun("""
             <?import javafx.scene.layout.*?>
-            <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+            <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <GenericDoubleObject fx:id="obj" prop="123.0"/>
             </GridPane>
         """);
@@ -284,7 +284,7 @@ public class GenericsTest extends CompilerTestBase {
     public void GenericDoubleObject_With_OutOfBound_TypeArgument_Throws_Exception() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.scene.layout.*?>
-            <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+            <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <GenericDoubleObject fx:typeArguments="java.lang.String" fx:id="obj" prop="foo"/>
             </GridPane>
         """));
@@ -297,7 +297,7 @@ public class GenericsTest extends CompilerTestBase {
     public void NonGenericObject_With_TypeArguments_Throws_Exception() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.scene.layout.*?>
-            <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+            <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <GridPane fx:typeArguments="java.lang.String"/>
             </GridPane>
         """));
@@ -321,7 +321,7 @@ public class GenericsTest extends CompilerTestBase {
     public void Generic_Method_ReturnType_Resolves_To_TypeBound() {
         GridPane root = compileAndRun("""
             <?import javafx.scene.layout.*?>
-            <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+            <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <GenericMethodsObject fx:id="obj" prop="foo" prop2="foo"/>
             </GridPane>
         """);

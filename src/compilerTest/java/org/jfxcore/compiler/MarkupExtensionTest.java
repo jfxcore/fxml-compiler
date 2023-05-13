@@ -1,4 +1,4 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2023, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler;
@@ -30,7 +30,7 @@ public class MarkupExtensionTest extends CompilerTestBase {
     public void Instantiation_With_MarkupExtension_Syntax() {
         GridPane root = compileAndRun("""
             <?import javafx.scene.layout.*?>
-            <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+            <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <fx:define>
                     <Background fx:id="a" fills="{BackgroundFill fill=#ff0000; radii={fx:null}; insets=1,2,3.5,.4}"/>
                     <Background fx:id="b" fills="{BackgroundFill fill=red; radii=EMPTY; insets=1,2,3.5,.4}"/>
@@ -60,7 +60,7 @@ public class MarkupExtensionTest extends CompilerTestBase {
     public void Missing_CloseCurly_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.scene.control.*?>
-            <Label xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <Label xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                    text="{fx:once foo"/>
         """));
 
@@ -74,7 +74,7 @@ public class MarkupExtensionTest extends CompilerTestBase {
         Label root = compileAndRun("""
             <?import javafx.fxml.*?>
             <?import javafx.scene.control.*?>
-            <Label xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <Label xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                    text="{fx:url image.jpg}"/>
         """);
 
@@ -86,7 +86,7 @@ public class MarkupExtensionTest extends CompilerTestBase {
         Label root = compileAndRun("""
             <?import javafx.fxml.*?>
             <?import javafx.scene.control.*?>
-            <Label xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <Label xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                    text="{fx:url /org/jfxcore/compiler/classes/image.jpg}"/>
         """);
 
@@ -98,7 +98,7 @@ public class MarkupExtensionTest extends CompilerTestBase {
         Label root = compileAndRun("""
             <?import javafx.fxml.*?>
             <?import javafx.scene.control.*?>
-            <Label xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <Label xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                    text="{fx:url '/org/jfxcore/compiler/classes/image with   spaces.jpg'}"/>
         """);
 
@@ -110,7 +110,7 @@ public class MarkupExtensionTest extends CompilerTestBase {
         Label root = compileAndRun("""
             <?import javafx.fxml.*?>
             <?import javafx.scene.control.*?>
-            <Label xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+            <Label xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <stylesheets>
                     <fx:url>image.jpg</fx:url>
                 </stylesheets>
@@ -125,7 +125,7 @@ public class MarkupExtensionTest extends CompilerTestBase {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.fxml.*?>
             <?import javafx.scene.control.*?>
-            <Label xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <Label xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                    prefWidth="{fx:url image.jpg}"/>
         """));
 
@@ -138,7 +138,7 @@ public class MarkupExtensionTest extends CompilerTestBase {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.fxml.*?>
             <?import javafx.scene.control.*?>
-            <Label xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <Label xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                    text="{fx:url {fx:bind foo}}"/>
         """));
 
@@ -151,7 +151,7 @@ public class MarkupExtensionTest extends CompilerTestBase {
         RuntimeException ex = assertThrows(RuntimeException.class, () -> compileAndRun("""
             <?import javafx.fxml.*?>
             <?import javafx.scene.control.*?>
-            <Label xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <Label xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                    text="{fx:url foobarbaz.jpg}"/>
         """));
 
@@ -177,7 +177,7 @@ public class MarkupExtensionTest extends CompilerTestBase {
     public void Type_Can_Be_Assigned_To_Wildcard() {
         TypeIntrinsicTestPane root = compileAndRun("""
             <?import javafx.scene.control.*?>
-            <TypeIntrinsicTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <TypeIntrinsicTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                    wildcardClass="{fx:type TextField}"/>
         """);
 
@@ -188,7 +188,7 @@ public class MarkupExtensionTest extends CompilerTestBase {
     public void Type_Can_Be_Assigned_To_Wildcard_With_Upper_Bound() {
         TypeIntrinsicTestPane root = compileAndRun("""
             <?import javafx.scene.control.*?>
-            <TypeIntrinsicTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <TypeIntrinsicTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                    wildcardClassUpperBound="{fx:type TextField}"/>
         """);
 
@@ -199,7 +199,7 @@ public class MarkupExtensionTest extends CompilerTestBase {
     public void Type_Is_Assigned_To_Wildcard_With_Incompatible_Upper_Bound_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.scene.control.*?>
-            <TypeIntrinsicTestPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <TypeIntrinsicTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                    wildcardClassIncompatibleUpperBound="{fx:type TextField}"/>
         """));
 
@@ -212,7 +212,7 @@ public class MarkupExtensionTest extends CompilerTestBase {
         Label root = compileAndRun("""
             <?import javafx.fxml.*?>
             <?import javafx.scene.control.*?>
-            <Label xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <Label xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                    text="{fx:null}"/>
         """);
 
@@ -224,7 +224,7 @@ public class MarkupExtensionTest extends CompilerTestBase {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.fxml.*?>
             <?import javafx.scene.control.*?>
-            <Label xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <Label xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                    prefWidth="{fx:null}"/>
         """));
 

@@ -21,7 +21,7 @@ public class CompactSyntaxTest extends CompilerTestBase {
     public void FxOnce_Compact_Syntax_Has_Correct_CodeHighlight() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.scene.control.*?>
-            <Button xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <Button xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                     prefHeight="$foo.bar"/>
         """));
 
@@ -33,7 +33,7 @@ public class CompactSyntaxTest extends CompilerTestBase {
     public void FxBind_Compact_Syntax_Has_Correct_CodeHighlight() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.scene.control.*?>
-            <Button xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <Button xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                     prefHeight="${foo.bar}"/>
         """));
 
@@ -45,7 +45,7 @@ public class CompactSyntaxTest extends CompilerTestBase {
     public void FxBindBidirectional_Compact_Syntax_Has_Correct_CodeHighlight() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.scene.control.*?>
-            <Button xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <Button xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                     prefHeight="#{foo.bar}"/>
         """));
 
@@ -57,7 +57,7 @@ public class CompactSyntaxTest extends CompilerTestBase {
     public void FxContent_Compact_Syntax_Has_Correct_CodeHighlight() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.scene.control.*?>
-            <Button xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <Button xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                     styleClass="[$]foo.bar"/>
         """));
 
@@ -69,7 +69,7 @@ public class CompactSyntaxTest extends CompilerTestBase {
     public void FxBindContent_Compact_Syntax_Has_Correct_CodeHighlight() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.scene.control.*?>
-            <Button xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <Button xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                     styleClass="[$]{foo.bar}"/>
         """));
 
@@ -81,7 +81,7 @@ public class CompactSyntaxTest extends CompilerTestBase {
     public void FxBindContentBidirectional_Compact_Syntax_Has_Correct_CodeHighlight() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.scene.control.*?>
-            <Button xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <Button xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                     styleClass="[#]{foo.bar}"/>
         """));
 

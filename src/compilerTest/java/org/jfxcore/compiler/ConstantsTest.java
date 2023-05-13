@@ -1,4 +1,4 @@
-// Copyright (c) 2022, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2023, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler;
@@ -23,7 +23,7 @@ public class ConstantsTest extends CompilerTestBase {
     public void Constant_Is_Referenced_With_FxConstant() {
         Button button = compileAndRun("""
             <?import javafx.scene.control.*?>
-            <Button xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+            <Button xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <minHeight><Double fx:constant="POSITIVE_INFINITY"/></minHeight>
             </Button>
         """);
@@ -35,7 +35,7 @@ public class ConstantsTest extends CompilerTestBase {
     public void Constant_Is_Referenced_With_InContext_FxConstant() {
         Button button = compileAndRun("""
             <?import javafx.scene.control.*?>
-            <Button xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <Button xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                     minHeight="{fx:constant POSITIVE_INFINITY}"/>
         """);
 
@@ -46,7 +46,7 @@ public class ConstantsTest extends CompilerTestBase {
     public void InContext_FxConstant_With_Invalid_Value() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.scene.control.*?>
-            <Button xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <Button xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                     minHeight="{fx:constant {fx:constant POSITIVE_INFINITY}}"/>
         """));
 
@@ -58,7 +58,7 @@ public class ConstantsTest extends CompilerTestBase {
     public void InContext_FxConstant_With_Empty_Value() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.scene.control.*?>
-            <Button xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <Button xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                     minHeight="{fx:constant}"/>
         """));
 
@@ -70,7 +70,7 @@ public class ConstantsTest extends CompilerTestBase {
     public void FxConstant_And_Child_Content_Cannot_Be_Used_At_Same_Time() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.scene.control.*?>
-            <Button xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+            <Button xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <minHeight><Double fx:constant="NEGATIVE_INFINITY">5.0</Double></minHeight>
             </Button>
         """));
@@ -85,7 +85,7 @@ public class ConstantsTest extends CompilerTestBase {
     public void FxConstant_And_FxValue_Content_Cannot_Be_Used_At_Same_Time() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.scene.control.*?>
-            <Button xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+            <Button xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <minHeight><Double fx:constant="NEGATIVE_INFINITY" fx:value="5.0"/></minHeight>
             </Button>
         """));
@@ -101,7 +101,7 @@ public class ConstantsTest extends CompilerTestBase {
         TableView<?> tableView = compileAndRun("""
             <?import javafx.scene.control.*?>
             <?import javafx.util.Callback?>
-            <TableView xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+            <TableView xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <columnResizePolicy>
                     <Callback fx:constant="javafx.scene.control.TableView.CONSTRAINED_RESIZE_POLICY"/>
                 </columnResizePolicy>
@@ -116,7 +116,7 @@ public class ConstantsTest extends CompilerTestBase {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.scene.control.*?>
             <?import javafx.util.Callback?>
-            <TableView xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+            <TableView xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <columnResizePolicy>
                     <Callback fx:typeArguments="java.lang.String,java.lang.Double"
                               fx:constant="javafx.scene.control.TableView.CONSTRAINED_RESIZE_POLICY"/>

@@ -28,7 +28,7 @@ public class ControlBindingTest extends CompilerTestBase {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.scene.control.*?>
             <?import javafx.scene.layout.*?>
-            <Pane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+            <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <Button fx:id="btn" text="foo"/>
                 <Label prefWidth="{fx:once btn.text}"/>
             </Pane>
@@ -43,7 +43,7 @@ public class ControlBindingTest extends CompilerTestBase {
         Pane root = compileAndRun("""
             <?import javafx.scene.control.*?>
             <?import javafx.scene.layout.*?>
-            <Pane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+            <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <Button fx:id="btn" text="foo"/>
                 <Label text="{fx:once btn.text}"/>
                 <Label>
@@ -66,7 +66,7 @@ public class ControlBindingTest extends CompilerTestBase {
         Pane root = compileAndRun("""
             <?import javafx.scene.control.*?>
             <?import javafx.scene.layout.*?>
-            <Pane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+            <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <Button fx:id="btn" prefWidth="123"/>
                 <Label prefWidth="{fx:once btn.prefWidth}"/>
             </Pane>
@@ -81,7 +81,7 @@ public class ControlBindingTest extends CompilerTestBase {
         Pane root = compileAndRun("""
             <?import javafx.scene.shape.*?>
             <?import javafx.scene.layout.*?>
-            <Pane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+            <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <Rectangle fill="red" stroke="{fx:once self/fill}"/>
             </Pane>
         """);
@@ -102,7 +102,7 @@ public class ControlBindingTest extends CompilerTestBase {
     public void Bind_Once_To_NonNode() {
         Pane root = compileAndRun("""
             <?import javafx.scene.layout.*?>
-            <Pane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+            <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <properties>
                     <NonNode fx:id="prop" prop1="123.0" prop2="{fx:once self/prop1}"/>
                 </properties>
@@ -125,7 +125,7 @@ public class ControlBindingTest extends CompilerTestBase {
     public void Bind_Once_To_Node_Under_Initialization_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.scene.layout.*?>
-            <Pane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+            <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <NodeUnderInitialization arg="{fx:once self/test}"/>
             </Pane>
         """));
@@ -138,7 +138,7 @@ public class ControlBindingTest extends CompilerTestBase {
     public void Bind_Once_To_Node_Under_Initialization_In_FunctionExpression_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.scene.layout.*?>
-            <Pane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+            <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <NodeUnderInitialization arg="{fx:once NodeUnderInitialization.function(self/test)}"/>
             </Pane>
         """));
@@ -152,7 +152,7 @@ public class ControlBindingTest extends CompilerTestBase {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.scene.control.*?>
             <?import javafx.scene.layout.*?>
-            <Pane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+            <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <Button fx:id="btn" text="foo"/>
                 <Label prefWidth="{fx:bind btn.text}"/>
             </Pane>
@@ -167,7 +167,7 @@ public class ControlBindingTest extends CompilerTestBase {
         Pane root = compileAndRun("""
             <?import javafx.scene.control.*?>
             <?import javafx.scene.layout.*?>
-            <Pane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                   prefWidth="{fx:bind btn.prefWidth}">
                 <Pane fx:id="pane" prefWidth="{fx:bind prefWidth}">
                     <Pane prefWidth="{fx:bind pane.prefWidth}">
@@ -187,7 +187,7 @@ public class ControlBindingTest extends CompilerTestBase {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.scene.control.*?>
             <?import javafx.scene.layout.*?>
-            <Pane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+            <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <Button fx:id="btn" text="foo"/>
                 <Label prefWidth="{fx:bindBidirectional btn.text}"/>
             </Pane>
@@ -202,7 +202,7 @@ public class ControlBindingTest extends CompilerTestBase {
         Pane root = compileAndRun("""
             <?import javafx.scene.control.*?>
             <?import javafx.scene.layout.*?>
-            <Pane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+            <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <Label fx:id="lbl" text="foo"/>
                 <Label text="{fx:bindBidirectional lbl.text}"/>
             </Pane>
@@ -223,7 +223,7 @@ public class ControlBindingTest extends CompilerTestBase {
         Pane root = compileAndRun("""
             <?import javafx.scene.control.*?>
             <?import javafx.scene.layout.*?>
-            <Pane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+            <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                   prefWidth="{fx:bindBidirectional btn.prefWidth}">
                 <Pane fx:id="pane" prefWidth="{fx:bindBidirectional prefWidth}">
                     <Pane prefWidth="{fx:bindBidirectional pane.prefWidth}">

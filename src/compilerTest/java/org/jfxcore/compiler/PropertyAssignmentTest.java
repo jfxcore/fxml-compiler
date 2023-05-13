@@ -1,4 +1,4 @@
-// Copyright (c) 2022, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2023, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler;
@@ -36,7 +36,7 @@ public class PropertyAssignmentTest {
         public void Duplicate_AttributeProperty_And_ElementProperty_Is_Invalid() {
             MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
                 <?import javafx.scene.layout.*?>
-                <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                     <GridPane prefWidth="10">
                         <prefWidth>20</prefWidth>
                     </GridPane>
@@ -51,7 +51,7 @@ public class PropertyAssignmentTest {
         public void Duplicate_AttributeProperty_Is_Invalid() {
             MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
                 <?import javafx.scene.layout.*?>
-                <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                     <GridPane prefWidth="10" prefWidth="20"/>
                 </GridPane>
             """));
@@ -66,7 +66,7 @@ public class PropertyAssignmentTest {
         public void Duplicate_ElementProperty_Is_Invalid() {
             MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
                 <?import javafx.scene.layout.*?>
-                <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                     <GridPane>
                         <prefWidth>10</prefWidth>
                         <prefWidth>20</prefWidth>
@@ -82,7 +82,7 @@ public class PropertyAssignmentTest {
         public void Property_Without_Value_Is_Invalid() {
             MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
                 <?import javafx.scene.control.*?>
-                <Button xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                <Button xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                     <minHeight></minHeight>
                 </Button>
             """));
@@ -95,7 +95,7 @@ public class PropertyAssignmentTest {
         public void Property_With_Multiple_Values_Is_Invalid() {
             MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
                 <?import javafx.scene.control.*?>
-                <Button xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                <Button xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                     <minHeight><Double fx:constant="NEGATIVE_INFINITY"/>5.0</minHeight>
                 </Button>
             """));
@@ -113,7 +113,7 @@ public class PropertyAssignmentTest {
         public void Unresolvable_Property_Chain_Includes_All_Names_In_Diagnostic() {
             MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
                 <?import javafx.scene.control.*?>
-                <Button xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                <Button xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                         foo.bar.baz="Hello!"/>
             """));
 
@@ -127,7 +127,7 @@ public class PropertyAssignmentTest {
         public void Qualified_Property_With_Element_Notation_Is_Valid(){
             Button root = compileAndRun("""
                 <?import javafx.scene.control.*?>
-                <Button xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                <Button xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                     <Button.text>Hello!</Button.text>
                 </Button>
             """);
@@ -139,7 +139,7 @@ public class PropertyAssignmentTest {
         public void Qualified_Property_With_Attribute_Notation_Is_Invalid() {
             MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
                 <?import javafx.scene.control.*?>
-                <Button xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                <Button xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                         Button.text="Hello!"/>
             """));
 
@@ -152,7 +152,7 @@ public class PropertyAssignmentTest {
         @Test
         public void Qualified_Property_Cannot_Be_Resolved_Without_Import() {
             MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
-                <javafx.scene.control.Button xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                <javafx.scene.control.Button xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                     <Button.text>Hello!</Button.text>
                 </javafx.scene.control.Button>
             """));
@@ -166,7 +166,7 @@ public class PropertyAssignmentTest {
         public void Nonexistent_Qualified_Property_Cannot_Be_Resolved() {
             MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
                 <?import javafx.scene.control.*?>
-                <Button xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                <Button xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                     <Button.doesNotExist>Hello!</Button.doesNotExist>
                 </Button>
             """));
@@ -180,7 +180,7 @@ public class PropertyAssignmentTest {
         public void Qualified_Property_Is_Interpreted_As_Static_Property() {
             MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
                 <?import javafx.scene.control.*?>
-                <Labeled xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                <Labeled xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                     <Button.text>Hello!</Button.text>
                 </Labeled>
             """));
@@ -195,7 +195,7 @@ public class PropertyAssignmentTest {
         public void Qualified_Property_Of_Base_Type_Is_Valid(){
             Button root = compileAndRun("""
                 <?import javafx.scene.control.*?>
-                <Button xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                <Button xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                     <Labeled.text>Hello!</Labeled.text>
                 </Button>
             """);
@@ -207,7 +207,7 @@ public class PropertyAssignmentTest {
         public void Fully_Qualified_Property_Of_Base_Type_Is_Valid(){
             Button root = compileAndRun("""
                 <?import javafx.scene.control.*?>
-                <Button xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                <Button xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                     <javafx.scene.control.Labeled.text>Hello!</javafx.scene.control.Labeled.text>
                 </Button>
             """);
@@ -221,7 +221,7 @@ public class PropertyAssignmentTest {
         public void Lowercase_Element_Is_Valid() {
             Button root = compileAndRun("""
                 <?import javafx.scene.control.*?>
-                <Button xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                <Button xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                     <graphic>
                         <lowercaseButton/>
                     </graphic>
@@ -244,7 +244,7 @@ public class PropertyAssignmentTest {
         @Test
         public void UnqualifiedPropertyName_Is_Not_Interpreted_As_StaticProperty_When_Name_Is_Ambiguous() {
             StaticPropertyButton root = compileAndRun("""
-                <StaticPropertyButton xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                <StaticPropertyButton xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                     <text>foo</text>
                 </StaticPropertyButton>
             """);
@@ -256,7 +256,7 @@ public class PropertyAssignmentTest {
         @Test
         public void QualifiedPropertyName_Is_Interpreted_As_StaticProperty_When_Name_Is_Ambiguous() {
             StaticPropertyButton root = compileAndRun("""
-                <StaticPropertyButton xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                <StaticPropertyButton xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                     <StaticPropertyButton.text>foo</StaticPropertyButton.text>
                 </StaticPropertyButton>
             """);
@@ -268,7 +268,7 @@ public class PropertyAssignmentTest {
         @Test
         public void StaticProperty_And_LocalProperty_With_Same_Name_Are_Valid() {
             StaticPropertyButton root = compileAndRun("""
-                <StaticPropertyButton xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                <StaticPropertyButton xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                     <StaticPropertyButton.text>foo</StaticPropertyButton.text>
                     <text>bar</text>
                 </StaticPropertyButton>
@@ -289,7 +289,7 @@ public class PropertyAssignmentTest {
         @Test
         public void Uppercase_Property_Name_Is_Valid() {
             UppercasePropertyTest root = compileAndRun("""
-                <UppercasePropertyTest xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                <UppercasePropertyTest xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                     <Text>foo</Text>
                     <OtherText>bar</OtherText>
                 </UppercasePropertyTest>
@@ -310,7 +310,7 @@ public class PropertyAssignmentTest {
         @Test
         public void Ambiguous_Property_Name_Matches_Verbatim_Interpretation() {
             VerbatimMatchTest root = compileAndRun("""
-                <VerbatimMatchTest xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                <VerbatimMatchTest xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                     <text>foo</text>
                     <textProperty>bar</textProperty>
                     <textPropertyProperty>baz</textPropertyProperty>
@@ -335,7 +335,7 @@ public class PropertyAssignmentTest {
         @Test
         public void Naming_Scheme_Is_Not_Detected_For_Verbatim_Property_Name() {
             NamingSchemeTest root = compileAndRun("""
-                <NamingSchemeTest xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                <NamingSchemeTest xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                     <myText>foo</myText>
                     <myTextProperty>bar</myTextProperty>
                 </NamingSchemeTest>
@@ -351,7 +351,7 @@ public class PropertyAssignmentTest {
         public void AttributeValue_Is_Coerced_To_String() {
             Button root = compileAndRun("""
                 <?import javafx.scene.control.*?>
-                <Button xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                <Button xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                         text="Hello!"/>
             """);
 
@@ -362,7 +362,7 @@ public class PropertyAssignmentTest {
         public void AttributeValue_Is_Coerced_To_String_And_Preserves_Whitespace() {
             Button root = compileAndRun("""
                 <?import javafx.scene.control.*?>
-                <Button xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                <Button xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                         text="  Hello!  "/>
             """);
 
@@ -373,7 +373,7 @@ public class PropertyAssignmentTest {
         public void AttributeValue_Is_Coerced_To_Number() {
             Button root = compileAndRun("""
                 <?import javafx.scene.control.*?>
-                <Button xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                <Button xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                         prefWidth="123.5"/>
             """);
 
@@ -384,7 +384,7 @@ public class PropertyAssignmentTest {
         public void AttributeValue_Is_Coerced_To_InfiniteDouble() {
             Button root = compileAndRun("""
                 <?import javafx.scene.control.*?>
-                <Button xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                <Button xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                         prefWidth="-Infinity"/>
             """);
 
@@ -395,7 +395,7 @@ public class PropertyAssignmentTest {
         public void AttributeValue_Is_Coerced_To_Boolean() {
             Button root = compileAndRun("""
                 <?import javafx.scene.control.*?>
-                <Button xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                <Button xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                         managed="true" visible="false"/>
             """);
 
@@ -407,7 +407,7 @@ public class PropertyAssignmentTest {
         public void AttributeValue_Is_Coerced_To_Enum() {
             GridPane root = compileAndRun("""
                 <?import javafx.scene.layout.*?>
-                <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                           alignment="CENTER"/>
             """);
 
@@ -418,7 +418,7 @@ public class PropertyAssignmentTest {
         public void AttributeValue_Of_Chained_Property_Is_Coerced_To_Enum() {
             ListView<?> root = compileAndRun("""
                 <?import javafx.scene.control.*?>
-                <ListView xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                <ListView xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                     selectionModel.selectionMode="MULTIPLE"/>
             """);
 
@@ -429,7 +429,7 @@ public class PropertyAssignmentTest {
         public void AttributeValue_Is_Coerced_To_Static_Field_Of_TargetType() {
             GridPane root = compileAndRun("""
                 <?import javafx.scene.layout.*?>
-                <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                           prefWidth="POSITIVE_INFINITY"/>
             """);
 
@@ -448,7 +448,7 @@ public class PropertyAssignmentTest {
         public void AttributeValue_Is_Coerced_To_Static_Field_Of_Raw_GenericClass() {
             GridPane root = compileAndRun("""
                 <?import javafx.scene.layout.*?>
-                <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                     <StaticFieldClass supplier="SUPPLIER"/>
                 </GridPane>
             """);
@@ -460,7 +460,7 @@ public class PropertyAssignmentTest {
         public void AttributeValue_Is_Coerced_To_Static_Field_Of_Typed_GenericClass() {
             GridPane root = compileAndRun("""
                 <?import javafx.scene.layout.*?>
-                <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                     <StaticFieldClass fx:typeArguments="String" supplier="SUPPLIER"/>
                 </GridPane>
             """);
@@ -472,7 +472,7 @@ public class PropertyAssignmentTest {
         public void AttributeValue_Cannot_Be_Coerced_To_Static_Field_Of_Incompatibly_Typed_GenericClass() {
             MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
                 <?import javafx.scene.layout.*?>
-                <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                     <StaticFieldClass fx:typeArguments="Boolean" supplier="SUPPLIER"/>
                 </GridPane>
             """));
@@ -485,7 +485,7 @@ public class PropertyAssignmentTest {
         public void AttributeValue_Is_Coerced_To_Insets() {
             GridPane root = compileAndRun("""
                 <?import javafx.scene.layout.*?>
-                <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml" padding="1"/>
+                <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0" padding="1"/>
             """);
 
             assertEquals(1, root.getPadding().getLeft(), 0.001);
@@ -498,7 +498,7 @@ public class PropertyAssignmentTest {
         public void AttributeValue_Comma_Separated_List_Is_Coerced_To_Insets() {
             GridPane root = compileAndRun("""
                 <?import javafx.scene.layout.*?>
-                <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml" padding="1,2,3,4"/>
+                <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0" padding="1,2,3,4"/>
             """);
 
             assertEquals(1, root.getPadding().getTop(), 0.001);
@@ -511,7 +511,7 @@ public class PropertyAssignmentTest {
         public void AttributeValue_Unmatchable_Coercion_Throws_Exception() {
             MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
                 <?import javafx.scene.layout.*?>
-                <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml" padding="1,2"/>
+                <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0" padding="1,2"/>
             """));
 
             assertEquals(ErrorCode.CANNOT_COERCE_PROPERTY_VALUE, ex.getDiagnostic().getCode());
@@ -522,7 +522,7 @@ public class PropertyAssignmentTest {
         public void ElementValue_Is_Coerced_To_String() {
             Button root = compileAndRun("""
                 <?import javafx.scene.control.*?>
-                <Button xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                <Button xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                     <text>Hello!</text>
                 </Button>
             """);
@@ -534,7 +534,7 @@ public class PropertyAssignmentTest {
         public void ElementValue_Is_Coerced_To_String_And_Removes_Insinificant_Whitespace() {
             Button root = compileAndRun("""
                 <?import javafx.scene.control.*?>
-                <Button xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                <Button xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                     <text>
                         foo
                             bar
@@ -550,7 +550,7 @@ public class PropertyAssignmentTest {
         public void ElementValue_Is_Coerced_To_Number() {
             Button root = compileAndRun("""
                 <?import javafx.scene.control.*?>
-                <Button xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                <Button xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                     <prefWidth>123.5</prefWidth>
                 </Button>
             """);
@@ -562,7 +562,7 @@ public class PropertyAssignmentTest {
         public void ElementValue_Is_Coerced_To_InfiniteDouble() {
             Button root = compileAndRun("""
                 <?import javafx.scene.control.*?>
-                <Button xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                <Button xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                     <prefWidth>-Infinity</prefWidth>
                 </Button>
             """);
@@ -574,7 +574,7 @@ public class PropertyAssignmentTest {
         public void ElementValue_Is_Coerced_To_Boolean() {
             Button root = compileAndRun("""
                 <?import javafx.scene.control.*?>
-                <Button xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                <Button xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                     <managed>true</managed>
                     <visible>false</visible>
                 </Button>
@@ -588,7 +588,7 @@ public class PropertyAssignmentTest {
         public void ElementValue_Is_Coerced_To_Enum() {
             GridPane root = compileAndRun("""
                 <?import javafx.scene.layout.*?>
-                <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                     <alignment>
                         CENTER
                     </alignment>
@@ -602,7 +602,7 @@ public class PropertyAssignmentTest {
         public void ElementValue_Of_Chained_Property_Is_Coerced_To_Enum() {
             ListView<?> root = compileAndRun("""
                 <?import javafx.scene.control.*?>
-                <ListView xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                <ListView xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                     <selectionModel.selectionMode>MULTIPLE</selectionModel.selectionMode>
                 </ListView>
             """);
@@ -632,7 +632,7 @@ public class PropertyAssignmentTest {
         @Test
         public void Single_Value_Is_Coerced_To_Array() {
             CsvArrayPane root = compileAndRun("""
-                <CsvArrayPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                <CsvArrayPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                               doubleArray="0.5"/>
             """);
 
@@ -643,7 +643,7 @@ public class PropertyAssignmentTest {
         @Test
         public void Single_Value_Is_Coerced_To_Varargs_Array() {
             CsvArrayPane root = compileAndRun("""
-                <CsvArrayPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                <CsvArrayPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                               varargsDoubleArray="0.5"/>
             """);
 
@@ -654,7 +654,7 @@ public class PropertyAssignmentTest {
         @Test
         public void Comma_Separated_String_Is_Coerced_To_Array() {
             CsvArrayPane root = compileAndRun("""
-                <CsvArrayPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                <CsvArrayPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                               doubleArray="1,2,3"/>
             """);
 
@@ -667,7 +667,7 @@ public class PropertyAssignmentTest {
         @Test
         public void Comma_Separated_String_Is_Coerced_To_Varargs_Array() {
             CsvArrayPane root = compileAndRun("""
-                <CsvArrayPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                <CsvArrayPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                               varargsDoubleArray="1,2,3"/>
             """);
 
@@ -680,7 +680,7 @@ public class PropertyAssignmentTest {
         @Test
         public void Comma_Separated_String_With_Inconvertible_Components_Cannot_Be_Coerced_To_Array() {
             MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
-                <CsvArrayPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                <CsvArrayPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                               intArray="1.5,2,3"/>
             """));
 
@@ -690,7 +690,7 @@ public class PropertyAssignmentTest {
         @Test
         public void Comma_Separated_String_With_Inconvertible_Components_Cannot_Be_Coerced_To_Varargs_Array() {
             MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
-                <CsvArrayPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                <CsvArrayPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                               varargsIntArray="1.5,2,3"/>
             """));
 
@@ -701,7 +701,7 @@ public class PropertyAssignmentTest {
         public void Comma_Separated_String_Is_Coerced_To_Collection() {
             GridPane root = compileAndRun("""
                 <?import javafx.scene.layout.*?>
-                <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                           styleClass="style1, style2, style3"/>
             """);
 
@@ -715,7 +715,7 @@ public class PropertyAssignmentTest {
             GridPane root = compileAndRun("""
                 <?import java.util.*?>
                 <?import javafx.scene.layout.*?>
-                <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                     <fx:define>
                         <ArrayList fx:id="list">
                             style1, style2, style3
@@ -735,7 +735,7 @@ public class PropertyAssignmentTest {
             MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
                 <?import java.util.*?>
                 <?import javafx.scene.layout.*?>
-                <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                     <fx:define>
                         <ArrayList fx:id="list" fx:typeArguments="java.lang.Double">
                             style1, style2, style3
@@ -751,7 +751,7 @@ public class PropertyAssignmentTest {
         public void StaticProperty_PropertyText_Is_Coerced_To_Integer() {
             GridPane root = compileAndRun("""
                 <?import javafx.scene.layout.*?>
-                <GridPane xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                      <Pane GridPane.columnIndex="1"/>
                 </GridPane>
             """);
@@ -763,7 +763,7 @@ public class PropertyAssignmentTest {
         public void StaticProperty_PropertyText_Is_Coerced_To_Insets() {
             VBox root = compileAndRun("""
                 <?import javafx.scene.layout.*?>
-                <VBox xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                <VBox xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                     <Pane VBox.margin="10"/>
                     <Pane VBox.margin="10, 20,30, 40"/>
                 </VBox>
@@ -787,7 +787,7 @@ public class PropertyAssignmentTest {
         public void StaticProperty_ElementText_Is_Coerced_To_Insets() {
             VBox root = compileAndRun("""
                 <?import javafx.scene.layout.*?>
-                <VBox xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                <VBox xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                     <Pane><VBox.margin>10</VBox.margin></Pane>
                     <Pane><VBox.margin>10,20,30, 40</VBox.margin></Pane>
                 </VBox>
@@ -811,7 +811,7 @@ public class PropertyAssignmentTest {
         public void StaticProperty_PropertyText_Cannot_Be_Coerced_To_Insets() {
             MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
                 <?import javafx.scene.layout.*?>
-                <VBox xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                <VBox xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                     <Pane VBox.margin="10,10"/>
                 </VBox>
             """));
@@ -824,7 +824,7 @@ public class PropertyAssignmentTest {
         public void StaticProperty_String_Cannot_Be_Assigned_To_Insets() {
             MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
                 <?import javafx.scene.layout.*?>
-                <VBox xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml">
+                <VBox xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                     <Pane>
                         <VBox.margin><String>10</String></VBox.margin>
                     </Pane>
@@ -839,7 +839,7 @@ public class PropertyAssignmentTest {
         public void NamedColor_Is_Coerced_To_Paint() {
             Button root = compileAndRun("""
                 <?import javafx.scene.control.*?>
-                <Button xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                <Button xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                         textFill="red"/>
             """);
 
@@ -850,7 +850,7 @@ public class PropertyAssignmentTest {
         public void WebColor_Is_Coerced_To_Paint() {
             Button root = compileAndRun("""
                 <?import javafx.scene.control.*?>
-                <Button xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                <Button xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                         textFill="#12345678"/>
             """);
 
@@ -861,7 +861,7 @@ public class PropertyAssignmentTest {
         public void WebColor_Is_Coerced_To_Named_Color_Field() {
             Button root = compileAndRun("""
                 <?import javafx.scene.control.*?>
-                <Button xmlns="http://jfxcore.org/javafx" xmlns:fx="http://jfxcore.org/fxml"
+                <Button xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                         textFill="#ff0000"/>
             """);
 
