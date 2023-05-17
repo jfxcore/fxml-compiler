@@ -40,7 +40,7 @@ public class EmitMapToBooleanNode extends AbstractNode
         super(sourceInfo);
 
         Resolver resolver = new Resolver(sourceInfo);
-        TypeInstance typeInstance = resolver.getTypeInstance(TypeHelper.getJvmType(child));
+        TypeInstance typeInstance = TypeHelper.getTypeInstance(child);
         CtClass valueType = TypeHelper.getBoxedType(resolver.findObservableArgument(typeInstance).jvmType());
 
         this.generator = new BooleanMapperGenerator(valueType, invert);

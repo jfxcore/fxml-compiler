@@ -7,15 +7,19 @@ import org.jfxcore.compiler.diagnostic.ErrorCode;
 import org.jfxcore.compiler.diagnostic.MarkupException;
 import org.jfxcore.compiler.util.CompilerTestBase;
 import org.jfxcore.compiler.util.InverseMethod;
+import org.jfxcore.compiler.util.NameHelper;
 import org.jfxcore.compiler.util.TestExtension;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
+import javafx.beans.InvalidationListener;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleDoubleProperty;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.scene.layout.Pane;
 
 import static org.jfxcore.compiler.util.MoreAssertions.*;
@@ -45,9 +49,18 @@ public class OperatorTest extends CompilerTestBase {
         return Double.parseDouble(value);
     }
 
+    @SuppressWarnings("unused")
     public static class TestPane extends Pane {
         public final DoubleProperty doubleProp = new SimpleDoubleProperty(123);
         public final BooleanProperty booleanProp = new SimpleBooleanProperty(true);
+
+        public final ObservableValue<Boolean> observableBool = new ObservableValue<>() {
+            @Override public void addListener(ChangeListener<? super Boolean> changeListener) {}
+            @Override public void removeListener(ChangeListener<? super Boolean> changeListener) {}
+            @Override public void addListener(InvalidationListener invalidationListener) {}
+            @Override public void removeListener(InvalidationListener invalidationListener) {}
+            @Override public Boolean getValue() { return true; }
+        };
     }
 
     @Test
@@ -106,15 +119,33 @@ public class OperatorTest extends CompilerTestBase {
     }
 
     @Test
-    public void Bind_Unidirectional_With_NotOperator_Uses_NotBinding() {
+    public void Bind_Unidirectional_With_NotOperator_Succeeds_For_ObservableValue() {
+        TestPane root = compileAndRun("""
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                      visible="{fx:bind !observableBool}"/>
+        """);
+
+        assertFalse(root.isVisible());
+
+        assertNewExpr(root, ctors -> ctors.stream().anyMatch(
+            ctor -> ctor.getName().endsWith(NameHelper.getMangledClassName("BooleanToInvBoolean"))));
+    }
+
+    @Test
+    public void Bind_Unidirectional_With_NotOperator_Succeeds_For_BooleanProperty() {
         TestPane root = compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                       visible="{fx:bind !booleanProp}"/>
         """);
 
         assertFalse(root.isVisible());
-        assertMethodCall(root, methods -> methods.stream().anyMatch(method -> method.getLongName().equals(
-                "javafx.beans.binding.Bindings.not(javafx.beans.value.ObservableBooleanValue)")));
+        root.booleanProp.set(false);
+        assertTrue(root.isVisible());
+        root.booleanProp.set(true);
+        assertFalse(root.isVisible());
+
+        assertNewExpr(root, ctors -> ctors.stream().anyMatch(
+            ctor -> ctor.getName().endsWith(NameHelper.getMangledClassName("BooleanToInvBoolean"))));
     }
 
     @Test
@@ -125,8 +156,12 @@ public class OperatorTest extends CompilerTestBase {
         """);
 
         assertTrue(root.isVisible());
-        assertMethodCall(root, methods -> methods.stream().noneMatch(method -> method.getLongName().equals(
-                "javafx.beans.binding.Bindings.not(javafx.beans.value.ObservableBooleanValue)")));
+        root.booleanProp.set(false);
+        assertFalse(root.isVisible());
+        root.booleanProp.set(true);
+        assertTrue(root.isVisible());
+
+        assertNewExpr(root, ctors -> ctors.stream().noneMatch(ctor -> ctor.getName().endsWith("ToBoolean")));
     }
 
     @Test
@@ -139,6 +174,11 @@ public class OperatorTest extends CompilerTestBase {
         assertFalse(root.isVisible());
         root.doubleProp.set(0);
         assertTrue(root.isVisible());
+        root.doubleProp.set(1);
+        assertFalse(root.isVisible());
+
+        assertNewExpr(root, ctors -> ctors.stream().anyMatch(
+            ctor -> ctor.getName().endsWith(NameHelper.getMangledClassName("DoubleToInvBoolean"))));
     }
 
     @Test
@@ -151,6 +191,11 @@ public class OperatorTest extends CompilerTestBase {
         assertTrue(root.isVisible());
         root.doubleProp.set(0);
         assertFalse(root.isVisible());
+        root.doubleProp.set(1);
+        assertTrue(root.isVisible());
+
+        assertNewExpr(root, ctors -> ctors.stream().anyMatch(
+            ctor -> ctor.getName().endsWith(NameHelper.getMangledClassName("DoubleToBoolean"))));
     }
 
     @Test
@@ -166,6 +211,9 @@ public class OperatorTest extends CompilerTestBase {
         assertTrue(root.isVisible());
         root.doubleProp.set(1);
         assertFalse(root.isVisible());
+
+        assertNewExpr(root, ctors -> ctors.stream().anyMatch(
+            ctor -> ctor.getName().endsWith(NameHelper.getMangledClassName("ObjectToInvBoolean"))));
     }
 
     @Test
@@ -181,6 +229,9 @@ public class OperatorTest extends CompilerTestBase {
         assertFalse(root.isVisible());
         root.doubleProp.set(1);
         assertTrue(root.isVisible());
+
+        assertNewExpr(root, ctors -> ctors.stream().anyMatch(
+            ctor -> ctor.getName().endsWith(NameHelper.getMangledClassName("ObjectToBoolean"))));
     }
 
     @Test

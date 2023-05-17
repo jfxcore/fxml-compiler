@@ -4,21 +4,16 @@
 package org.jfxcore.compiler.ast.expression;
 
 import javassist.CtClass;
-import javassist.CtMethod;
 import org.jfxcore.compiler.ast.BindingMode;
 import org.jfxcore.compiler.ast.NodeDataKey;
-import org.jfxcore.compiler.ast.emit.EmitMapToBooleanNode;
 import org.jfxcore.compiler.ast.emit.EmitConvertToBooleanNode;
-import org.jfxcore.compiler.ast.emit.EmitMethodCallNode;
+import org.jfxcore.compiler.ast.emit.EmitMapToBooleanNode;
 import org.jfxcore.compiler.ast.emit.ValueEmitterNode;
-import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.util.Resolver;
 import org.jfxcore.compiler.util.TypeHelper;
 import org.jfxcore.compiler.util.TypeInstance;
-import java.util.List;
 
 import static org.jfxcore.compiler.util.Classes.*;
-import static org.jfxcore.compiler.util.ExceptionHelper.*;
 
 public enum Operator {
 
@@ -60,21 +55,14 @@ public enum Operator {
 
             case UNIDIRECTIONAL -> {
                 Resolver resolver = new Resolver(child.getSourceInfo());
-                TypeInstance typeInstance = resolver.getTypeInstance(TypeHelper.getJvmType(child));
+                TypeInstance typeInstance = TypeHelper.getTypeInstance(child);
                 TypeInstance argType = resolver.findObservableArgument(typeInstance);
 
-                if (!argType.equals(BooleanType()) && !argType.equals(CtClass.booleanType)) {
-                    yield new EmitMapToBooleanNode(child, this == NOT, child.getSourceInfo());
+                if (this == BOOLIFY && (argType.equals(BooleanType()) || argType.equals(CtClass.booleanType))) {
+                    yield child;
                 }
 
-                if (this == NOT) {
-                    CtMethod method = unchecked(SourceInfo.none(), () -> BindingsType().getMethod(
-                        "not", "(Ljavafx/beans/value/ObservableBooleanValue;)Ljavafx/beans/binding/BooleanBinding;"));
-
-                    yield new EmitMethodCallNode(method, List.of(), List.of(child), child.getSourceInfo());
-                }
-
-                yield child;
+                yield new EmitMapToBooleanNode(child, this == NOT, child.getSourceInfo());
             }
 
             case BIDIRECTIONAL -> {

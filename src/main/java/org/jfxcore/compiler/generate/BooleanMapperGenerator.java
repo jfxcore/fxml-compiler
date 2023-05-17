@@ -31,17 +31,15 @@ public class BooleanMapperGenerator extends ClassGenerator {
     private final boolean invert;
 
     public BooleanMapperGenerator(CtClass valueType, boolean invert) {
-        if (unchecked(SourceInfo.none(), () -> valueType.subtypeOf(BooleanType()))) {
-            throw new IllegalArgumentException("valueType");
-        }
-
         this.valueType = valueType;
         this.invert = invert;
 
         String name;
         CtClass boxedType = TypeHelper.getBoxedType(valueType);
 
-        if (unchecked(SourceInfo.none(), () -> boxedType.subtypeOf(FloatType()))) {
+        if (unchecked(SourceInfo.none(), () -> boxedType.subtypeOf(BooleanType()))) {
+            name = "Boolean";
+        } else if (unchecked(SourceInfo.none(), () -> boxedType.subtypeOf(FloatType()))) {
             name = "Float";
         } else if (unchecked(SourceInfo.none(), () -> boxedType.subtypeOf(DoubleType()))) {
             name = "Double";
@@ -114,7 +112,10 @@ public class BooleanMapperGenerator extends ClassGenerator {
                 .getfield(generatedClass, "observable", ObservableValueType())
                 .invokeinterface(ObservableValueType(), "getValue", function(ObjectType()));
 
-            if (valueType.subtypeOf(FloatType())) {
+            if (valueType.subtypeOf(BooleanType())) {
+                code.checkcast(BooleanType())
+                    .ext_castconv(SourceInfo.none(), BooleanType(), CtClass.booleanType);
+            } else if (valueType.subtypeOf(FloatType())) {
                 code.checkcast(FloatType())
                     .ext_castconv(SourceInfo.none(), FloatType(), CtClass.floatType)
                     .fconst(0)
