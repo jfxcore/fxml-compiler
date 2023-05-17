@@ -1,4 +1,4 @@
-// Copyright (c) 2022, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2023, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.util;
@@ -181,7 +181,7 @@ public class TypeHelper {
      * Returns whether the specified type is a boxed number.
      */
     public static boolean isNumericBox(CtClass type) {
-        return isIntegralBox(type) || isFPBox(type);
+        return isIntegralBox(type) || isFPBox(type) || equals(type, NumberType());
     }
 
     /**
