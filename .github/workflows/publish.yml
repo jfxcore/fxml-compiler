@@ -47,7 +47,7 @@ jobs:
 
       - name: Choose repository
         id: remoteRepository
-        run: echo ::set-output name=location::$([ "${{ github.ref }}" = "refs/heads/master" ] && echo "${SNAPSHOT}" || echo "${STAGING}")
+        run: echo location=$([ "${{ github.ref }}" = "refs/heads/master" ] && echo "${SNAPSHOT}" || echo "${STAGING}") >> $GITHUB_OUTPUT
         env:
           SNAPSHOT: https://oss.sonatype.org/content/repositories/snapshots
           STAGING: https://oss.sonatype.org/service/local/staging/deploy/maven2
