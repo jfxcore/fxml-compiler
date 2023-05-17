@@ -1,4 +1,4 @@
-// Copyright (c) 2022, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2023, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.diagnostic.errors;
@@ -112,11 +112,6 @@ public class BindingSourceErrors {
     public static MarkupException invalidInverseMethodAnnotationValue(SourceInfo sourceInfo, CtBehavior behavior) {
         return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
             ErrorCode.INVALID_INVERSE_METHOD_ANNOTATION_VALUE, NameHelper.getLongMethodSignature(behavior)));
-    }
-
-    public static MarkupException bindingNotSupported(SourceInfo sourceInfo) {
-        return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
-            ErrorCode.BINDING_NOT_SUPPORTED));
     }
 
 }
