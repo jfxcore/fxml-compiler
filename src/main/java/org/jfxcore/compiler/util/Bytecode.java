@@ -165,6 +165,11 @@ public class Bytecode {
         return this;
     }
 
+    public Bytecode fcmpl() {
+        bytecode.addOpcode(Opcode.FCMPL);
+        return this;
+    }
+
     public Bytecode fconst(float f) {
         bytecode.addFconst(f);
         return this;
