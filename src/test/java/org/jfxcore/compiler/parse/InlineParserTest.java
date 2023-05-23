@@ -10,11 +10,14 @@ import org.jfxcore.compiler.ast.text.FunctionNode;
 import org.jfxcore.compiler.ast.text.ListNode;
 import org.jfxcore.compiler.ast.ObjectNode;
 import org.jfxcore.compiler.ast.text.NumberNode;
+import org.jfxcore.compiler.ast.text.PathNode;
 import org.jfxcore.compiler.ast.text.TextNode;
 import org.jfxcore.compiler.diagnostic.ErrorCode;
 import org.jfxcore.compiler.diagnostic.MarkupException;
 import org.junit.jupiter.api.Test;
 import org.jfxcore.compiler.TestBase;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -338,6 +341,104 @@ public class InlineParserTest extends TestBase {
     public void ListContent_With_Empty_Strings_Works_Correctly() {
         ObjectNode root = new InlineParser("{Foo '', 'baz', ''}", null).parseObject();
         assertEquals("baz", ((TextNode)root.getChildren().get(0)).getText());
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "$foo.bar.baz,once",
+            "${foo.bar.baz},bind",
+            "#{foo.bar.baz},bindBidirectional",
+            "[$]foo.bar.baz,content",
+            "[$]{foo.bar.baz},bindContent",
+            "[#]{foo.bar.baz},bindContentBidirectional"
+    })
+    public void Compact_Syntax_Is_Expanded(String compactIntrinsic, String intrinsicName) {
+        ObjectNode objectNode = new InlineParser(compactIntrinsic, "fx").parseObject();
+        assertEquals(objectNode.getType().getName(), intrinsicName);
+        assertTrue(objectNode.getChildren().get(0) instanceof PathNode n && n.getText().equals("foo.bar.baz"));
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+        "$parent[Pane:1]/foo.bar.baz,once",
+        "${parent[Pane:1]/foo.bar.baz},bind",
+        "#{parent[Pane:1]/foo.bar.baz},bindBidirectional",
+        "[$]parent[Pane:1]/foo.bar.baz,content",
+        "[$]{parent[Pane:1]/foo.bar.baz},bindContent",
+        "[#]{parent[Pane:1]/foo.bar.baz},bindContentBidirectional"
+    })
+    public void Compact_Syntax_With_ContextSelector_Is_Expanded(String compactIntrinsic, String intrinsicName) {
+        ObjectNode objectNode = new InlineParser(compactIntrinsic, "fx").parseObject();
+        assertEquals(objectNode.getType().getName(), intrinsicName);
+        PathNode pathNode = (PathNode)objectNode.getChildren().get(0);
+        assertEquals(3, pathNode.getSegments().size());
+        assertEquals("foo", pathNode.getSegments().get(0).getText());
+        assertEquals("bar", pathNode.getSegments().get(1).getText());
+        assertEquals("baz", pathNode.getSegments().get(2).getText());
+        assertEquals("parent", pathNode.getContextSelector().getSelector().getText());
+        assertEquals("Pane", pathNode.getContextSelector().getSearchType().getText());
+        assertEquals("1", pathNode.getContextSelector().getLevel().getText());
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+        "$foo.bar.baz,once",
+        "${foo.bar.baz},bind",
+        "#{foo.bar.baz},bindBidirectional",
+        "[$]foo.bar.baz,content",
+        "[$]{foo.bar.baz},bindContent",
+        "[#]{foo.bar.baz},bindContentBidirectional"
+    })
+    public void Compact_Syntax_Is_Expanded_Within_ListExpression(String compactIntrinsic, String intrinsicName) {
+        String input = String.format("{Test qux, %s}", compactIntrinsic);
+        ListNode list = (ListNode)new InlineParser(input, "fx").parseObject().getChildren().get(0);
+        assertEquals(2, list.getValues().size());
+        assertEquals("qux", ((TextNode)list.getValues().get(0)).getText());
+        ObjectNode objectNode = (ObjectNode)list.getValues().get(1);
+        assertEquals(objectNode.getType().getName(), intrinsicName);
+        assertTrue(objectNode.getChildren().get(0) instanceof PathNode n && n.getText().equals("foo.bar.baz"));
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+        "$foo.bar.baz,once",
+        "${foo.bar.baz},bind",
+        "#{foo.bar.baz},bindBidirectional",
+        "[$]foo.bar.baz,content",
+        "[$]{foo.bar.baz},bindContent",
+        "[#]{foo.bar.baz},bindContentBidirectional"
+    })
+    public void Compact_Syntax_Is_Expanded_Within_PropertyExpression(String compactIntrinsic, String intrinsicName) {
+        String input = String.format("{Test qux=%s}", compactIntrinsic);
+        PropertyNode property = new InlineParser(input, "fx").parseObject().getProperties().get(0);
+        assertEquals("qux", property.getName());
+        assertEquals(1, property.getValues().size());
+        ObjectNode objectNode = (ObjectNode)property.getValues().get(0);
+        assertEquals(objectNode.getType().getName(), intrinsicName);
+        assertTrue(objectNode.getChildren().get(0) instanceof PathNode n && n.getText().equals("foo.bar.baz"));
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "$foo.bar.baz,once",
+            "${foo.bar.baz},bind",
+            "#{foo.bar.baz},bindBidirectional",
+            "[$]foo.bar.baz,content",
+            "[$]{foo.bar.baz},bindContent",
+            "[#]{foo.bar.baz},bindContentBidirectional"
+    })
+    public void Compact_Syntax_Is_Expanded_Within_FunctionExpression(String compactIntrinsic, String intrinsicName) {
+        String input = String.format("{Test qux=func(%s, 'quux')}", compactIntrinsic);
+        PropertyNode property = new InlineParser(input, "fx").parseObject().getProperties().get(0);
+        assertEquals("qux", property.getName());
+        assertEquals(1, property.getValues().size());
+        FunctionNode functionNode = (FunctionNode)property.getValues().get(0);
+        assertEquals("func", functionNode.getPath().getText());
+        assertEquals(2, functionNode.getArguments().size());
+        ObjectNode objectNode = (ObjectNode)functionNode.getArguments().get(0);
+        assertEquals(objectNode.getType().getName(), intrinsicName);
+        assertTrue(objectNode.getChildren().get(0) instanceof PathNode n && n.getText().equals("foo.bar.baz"));
+        assertTrue(functionNode.getArguments().get(1) instanceof TextNode n && n.getText().equals("quux"));
     }
 
 }
