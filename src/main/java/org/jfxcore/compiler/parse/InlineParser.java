@@ -8,6 +8,8 @@ import org.jfxcore.compiler.ast.ObjectNode;
 import org.jfxcore.compiler.ast.PropertyNode;
 import org.jfxcore.compiler.ast.TypeNode;
 import org.jfxcore.compiler.ast.ValueNode;
+import org.jfxcore.compiler.ast.intrinsic.Intrinsic;
+import org.jfxcore.compiler.ast.intrinsic.Intrinsics;
 import org.jfxcore.compiler.ast.text.CompositeNode;
 import org.jfxcore.compiler.ast.text.ContextSelectorNode;
 import org.jfxcore.compiler.ast.text.BooleanNode;
@@ -38,18 +40,16 @@ public class InlineParser {
     public static final String COMPACT_BIND_CONTENT_EXPR_PREFIX = "[$]{";
     public static final String COMPACT_BIND_CONTENT_BIDIRECTIONAL_EXPR_PREFIX = "[#]{";
 
-    private record SyntaxMapping(String compact, String expanded, boolean addTrailingCurly) {}
+    private record SyntaxMapping(String compact, Intrinsic intrinsic, boolean closingCurly) {}
 
     private static final SyntaxMapping[] COMPACT_SYNTAX_MAPPING = new SyntaxMapping[] {
-        new SyntaxMapping(COMPACT_BIND_EXPR_PREFIX, "{fx:bind ", false),
-        new SyntaxMapping(COMPACT_BIND_BIDIRECTIONAL_EXPR_PREFIX, "{fx:bindBidirectional ", false),
-        new SyntaxMapping(COMPACT_EXPR_PREFIX, "{fx:once ", true),
-        new SyntaxMapping(COMPACT_BIND_CONTENT_EXPR_PREFIX, "{fx:bindContent ", false),
-        new SyntaxMapping(COMPACT_BIND_CONTENT_BIDIRECTIONAL_EXPR_PREFIX, "{fx:bindContentBidirectional ", false),
-        new SyntaxMapping(COMPACT_CONTENT_EXPR_PREFIX, "{fx:content ", true)
+        new SyntaxMapping(COMPACT_BIND_EXPR_PREFIX, Intrinsics.BIND, true),
+        new SyntaxMapping(COMPACT_BIND_BIDIRECTIONAL_EXPR_PREFIX, Intrinsics.BIND_BIDIRECTIONAL, true),
+        new SyntaxMapping(COMPACT_EXPR_PREFIX, Intrinsics.ONCE, false),
+        new SyntaxMapping(COMPACT_BIND_CONTENT_EXPR_PREFIX, Intrinsics.BIND_CONTENT, true),
+        new SyntaxMapping(COMPACT_BIND_CONTENT_BIDIRECTIONAL_EXPR_PREFIX, Intrinsics.BIND_CONTENT_BIDIRECTIONAL, true),
+        new SyntaxMapping(COMPACT_CONTENT_EXPR_PREFIX, Intrinsics.CONTENT, false)
     };
-
-    private record Source(String text, Location sourceOffset) {}
 
     private final String source;
     private final String intrinsicPrefix;
@@ -75,9 +75,8 @@ public class InlineParser {
     }
 
     public ObjectNode parseObject() {
-        Source newSource = expandCompactSyntax(source, sourceOffset);
-        InlineTokenizer tokenizer = new InlineTokenizer(newSource.text, newSource.sourceOffset);
-        ObjectNode result = parseObjectExpression(tokenizer);
+        InlineTokenizer tokenizer = new InlineTokenizer(source, sourceOffset);
+        ObjectNode result = parseObjectExpression(tokenizer, tryGetSyntaxMapping(tokenizer));
         if (!tokenizer.isEmpty()) {
             throw ParserErrors.unexpectedToken(tokenizer.peekNotNull());
         }
@@ -85,28 +84,17 @@ public class InlineParser {
         return result;
     }
 
-    private Source expandCompactSyntax(String text, Location sourceOffset) {
-        for (SyntaxMapping mapping : COMPACT_SYNTAX_MAPPING) {
-            if (text.startsWith(mapping.compact)) {
-                String value = text.substring(mapping.compact.length());
-                return new Source(
-                    mapping.addTrailingCurly ? mapping.expanded + value + "}" : mapping.expanded + value,
-                    new Location(
-                        sourceOffset.getLine(),
-                        sourceOffset.getColumn() - mapping.expanded.length() + mapping.compact.length()));
-            }
-        }
-
-        return new Source(text, sourceOffset);
-    }
-
-    private ValueNode parseExpression(InlineTokenizer tokenizer) {
+    private ValueNode parseExpression(InlineTokenizer tokenizer, boolean singleExpressionOnly) {
         List<ValueNode> list = new ArrayList<>();
         List<ValueNode> values = new ArrayList<>();
         CurlyTokenClass nextTokenClass;
 
         do {
             values.add(parseSingleExpression(tokenizer));
+
+            if (singleExpressionOnly) {
+                break;
+            }
 
             if (tokenizer.peekNotNull().getType() == COMMA) {
                 tokenizer.remove(COMMA);
@@ -128,7 +116,36 @@ public class InlineParser {
         return listNode(list);
     }
 
+    private SyntaxMapping tryGetSyntaxMapping(InlineTokenizer tokenizer) {
+        outerLoop:
+        for (SyntaxMapping mapping : COMPACT_SYNTAX_MAPPING) {
+            String value = tokenizer.peekNotNull().getValue();
+            if (value.isEmpty() || value.charAt(0) != mapping.compact().charAt(0)) {
+                continue;
+            }
+
+            InlineToken[] tokens = tokenizer.peekAhead(mapping.compact().length());
+            if (tokens != null) {
+                for (int i = 0; i < tokens.length; ++i) {
+                    if (tokens[i].getValue().length() > 1 ||
+                            tokens[i].getValue().charAt(0) != mapping.compact().charAt(i)) {
+                        continue outerLoop;
+                    }
+                }
+
+                return mapping;
+            }
+        }
+
+        return null;
+    }
+
     private ValueNode parseSingleExpression(InlineTokenizer tokenizer) {
+        SyntaxMapping mapping = tryGetSyntaxMapping(tokenizer);
+        if (mapping != null) {
+            return parseObjectExpression(tokenizer, mapping);
+        }
+
         return switch (tokenizer.peekNotNull().getType()) {
             case NUMBER -> {
                 InlineToken number = tokenizer.remove(NUMBER);
@@ -147,10 +164,11 @@ public class InlineParser {
 
             case IDENTIFIER -> {
                 PathNode path = parsePath(tokenizer, true);
-                yield tokenizer.peekNotNull().getType() == OPEN_PAREN ? parseFunctionExpression(tokenizer, path) : path;
+                InlineToken token = tokenizer.peek();
+                yield token != null && token.getType() == OPEN_PAREN ? parseFunctionExpression(tokenizer, path) : path;
             }
 
-            case OPEN_CURLY -> parseObjectExpression(tokenizer);
+            case OPEN_CURLY -> parseObjectExpression(tokenizer, null);
 
             default -> {
                 if (tokenizer.containsAhead(COLON, COLON)) {
@@ -168,24 +186,58 @@ public class InlineParser {
         };
     }
 
-    private ObjectNode parseObjectExpression(InlineTokenizer tokenizer) {
-        InlineToken openCurly = tokenizer.remove(OPEN_CURLY);
-        TextNode name = parseIdentifier(tokenizer);
-        String cleanName = cleanIdentifier(name.getText(), name.getSourceInfo());
+    private ObjectNode parseObjectExpression(InlineTokenizer tokenizer, SyntaxMapping mapping) {
+        SourceInfo sourceStart, sourceEnd;
+        TextNode name;
+        String cleanName;
+
+        if (mapping != null) {
+            sourceStart = tokenizer.remove().getSourceInfo();
+            cleanName = mapping.intrinsic().getName();
+
+            for (int i = 0; i < mapping.compact().length() - 1; ++i) {
+                tokenizer.remove();
+            }
+
+            sourceEnd = new SourceInfo(
+                sourceStart.getStart().getLine(),
+                sourceStart.getStart().getColumn() + mapping.compact().length());
+
+            name = new TextNode(mapping.compact(), SourceInfo.span(sourceStart, sourceEnd));
+        } else {
+            sourceStart = sourceEnd = tokenizer.remove(OPEN_CURLY).getSourceInfo();
+            name = parseIdentifier(tokenizer);
+            cleanName = cleanIdentifier(name.getText(), name.getSourceInfo());
+        }
+
         List<ValueNode> children = new ArrayList<>();
         List<PropertyNode> properties = new ArrayList<>();
         eatSemis(tokenizer);
 
         try {
             while (tokenizer.peek(CLOSE_CURLY) == null) {
+                if (mapping != null) {
+                    if (tokenizer.isEmpty()) {
+                        break;
+                    }
+
+                    CurlyTokenClass tokenClass = tokenizer.peekNotNull().getType().getTokenClass();
+                    if (!mapping.closingCurly() && tokenClass == CurlyTokenClass.DELIMITER) {
+                        break;
+                    }
+                }
+
                 tokenizer.mark();
-                ValueNode key = parseExpression(tokenizer);
+                ValueNode key = parseExpression(tokenizer, mapping != null);
 
                 if (tokenizer.poll(EQUALS) != null) {
                     tokenizer.resetToMark();
-                    properties.add(parsePropertyExpression(tokenizer));
+                    PropertyNode propertyNode = parsePropertyExpression(tokenizer);
+                    sourceEnd = propertyNode.getSourceInfo();
+                    properties.add(propertyNode);
                 } else {
                     tokenizer.forgetMark();
+                    sourceEnd = key.getSourceInfo();
                     children.add(key);
                 }
 
@@ -199,18 +251,20 @@ public class InlineParser {
             throw ex;
         }
 
-        InlineToken closeCurly = tokenizer.remove(CLOSE_CURLY);
+        if (mapping == null || mapping.closingCurly()) {
+            sourceEnd = tokenizer.remove(CLOSE_CURLY).getSourceInfo();
+        }
 
         return new ObjectNode(
             new TypeNode(cleanName, name.getText(), !cleanName.equals(name.getText()), name.getSourceInfo()),
-            properties, children, SourceInfo.span(openCurly.getSourceInfo(), closeCurly.getSourceInfo()));
+            properties, children, SourceInfo.span(sourceStart, sourceEnd));
     }
 
     private PropertyNode parsePropertyExpression(InlineTokenizer tokenizer) {
         TextNode propertyName = parseIdentifier(tokenizer);
         String cleanName = cleanIdentifier(propertyName.getText(), propertyName.getSourceInfo());
         tokenizer.remove(EQUALS);
-        ValueNode value = parseExpression(tokenizer);
+        ValueNode value = parseExpression(tokenizer, false);
 
         return new PropertyNode(
             cleanName.split("\\."),
@@ -223,7 +277,7 @@ public class InlineParser {
 
     private FunctionNode parseFunctionExpression(InlineTokenizer tokenizer, PathNode functionName) {
         tokenizer.remove(OPEN_PAREN);
-        ValueNode arguments = parseExpression(tokenizer);
+        ValueNode arguments = parseExpression(tokenizer, false);
         InlineToken lastToken = tokenizer.remove(CLOSE_PAREN);
 
         return new FunctionNode(
