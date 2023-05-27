@@ -47,7 +47,7 @@ public class EmitMapToBooleanNode extends AbstractNode
         this.child = checkNotNull(child);
         this.invert = invert;
         this.type = new ResolvedTypeNode(
-            resolver.getTypeInstance(ObservableValueType(), List.of(resolver.getTypeInstance(BooleanType()))),
+            resolver.getTypeInstance(ObservableValueType(), List.of(TypeInstance.BooleanType())),
             sourceInfo);
     }
 

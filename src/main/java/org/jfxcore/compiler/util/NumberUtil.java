@@ -1,9 +1,7 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2023, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.util;
-
-import javassist.CtClass;
 
 public class NumberUtil {
 
@@ -38,23 +36,23 @@ public class NumberUtil {
         Number number = parse(value);
 
         if (number instanceof Integer) {
-            return new TypeInstance(CtClass.intType);
+            return TypeInstance.intType();
         }
 
         if (number instanceof Long) {
-            return new TypeInstance(CtClass.longType);
+            return TypeInstance.longType();
         }
 
         if (number instanceof Float) {
-            return new TypeInstance(CtClass.floatType);
+            return TypeInstance.floatType();
         }
 
         if (number instanceof Double) {
-            return new TypeInstance(CtClass.doubleType);
+            return TypeInstance.doubleType();
         }
 
         if (number instanceof Short) {
-            return new TypeInstance(CtClass.shortType);
+            return TypeInstance.shortType();
         }
 
         throw new IllegalArgumentException("value");

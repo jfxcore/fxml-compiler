@@ -1,4 +1,4 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2023, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.text;
@@ -10,7 +10,6 @@ import org.jfxcore.compiler.ast.TypeNode;
 import org.jfxcore.compiler.ast.ValueNode;
 import org.jfxcore.compiler.ast.Visitor;
 import org.jfxcore.compiler.util.Classes;
-import org.jfxcore.compiler.util.Resolver;
 import org.jfxcore.compiler.util.TypeInstance;
 import java.util.Objects;
 
@@ -25,8 +24,7 @@ public class TextNode extends AbstractNode implements ValueNode {
     }
 
     public static TextNode createRawResolved(String text, SourceInfo sourceInfo) {
-        TypeInstance typeInstance = new Resolver(sourceInfo).getTypeInstance(Classes.StringType());
-        return new TextNode(text, true, new ResolvedTypeNode(typeInstance, sourceInfo), sourceInfo);
+        return new TextNode(text, true, new ResolvedTypeNode(TypeInstance.StringType(), sourceInfo), sourceInfo);
     }
 
     public TextNode(String text, SourceInfo sourceInfo) {

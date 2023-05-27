@@ -1,4 +1,4 @@
-// Copyright (c) 2022, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2023, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.util;
@@ -216,7 +216,7 @@ public class ResolverTest extends TestBase {
         Resolver resolver = new Resolver(SourceInfo.none());
         TypeInstance typeInstance = resolver.getTypeInstance(
             resolver.resolveClass(GenericClass.class.getName()),
-            List.of(new TypeInstance(Classes.StringType())));
+            List.of(TypeInstance.StringType()));
 
         assertEquals("ResolverTest$GenericClass<String>", typeInstance.toString());
     }
@@ -227,7 +227,7 @@ public class ResolverTest extends TestBase {
             Resolver resolver = new Resolver(SourceInfo.none());
             resolver.getTypeInstance(
                 resolver.resolveClass(GenericClassWithStringBound.class.getName()),
-                List.of(new TypeInstance(Classes.DoubleType())));
+                List.of(TypeInstance.DoubleType()));
         });
 
         assertEquals(ErrorCode.TYPE_ARGUMENT_OUT_OF_BOUND, ex.getDiagnostic().getCode());

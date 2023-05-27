@@ -201,12 +201,12 @@ public class TypeHelper {
             case "short":
             case "byte":
             case "char":
-                return new TypeInstance(CtClass.intType);
+                return TypeInstance.intType();
 
             case ShortName:
             case ByteName:
             case CharacterName:
-                return new TypeInstance(Classes.IntegerType());
+                return TypeInstance.IntegerType();
         }
 
         return type;

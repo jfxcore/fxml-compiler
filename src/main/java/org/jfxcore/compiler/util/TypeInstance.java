@@ -6,17 +6,54 @@ package org.jfxcore.compiler.util;
 import javassist.CtClass;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
-import static org.jfxcore.compiler.util.ExceptionHelper.unchecked;
+import static org.jfxcore.compiler.util.ExceptionHelper.*;
 
 /**
  * Represents the instantiation tree of a type, in which all generic arguments are replaced with concrete types.
  */
 public class TypeInstance {
+
+    public static TypeInstance booleanType() { return resolveTypeInstance(CtClass.booleanType); }
+    public static TypeInstance charType() { return resolveTypeInstance(CtClass.charType); }
+    public static TypeInstance byteType() { return resolveTypeInstance(CtClass.byteType); }
+    public static TypeInstance shortType() { return resolveTypeInstance(CtClass.shortType); }
+    public static TypeInstance intType() { return resolveTypeInstance(CtClass.intType); }
+    public static TypeInstance longType() { return resolveTypeInstance(CtClass.longType); }
+    public static TypeInstance floatType() { return resolveTypeInstance(CtClass.floatType); }
+    public static TypeInstance doubleType() { return resolveTypeInstance(CtClass.doubleType); }
+    public static TypeInstance BooleanType() { return resolveTypeInstance(Classes.BooleanType()); }
+    public static TypeInstance CharacterType() { return resolveTypeInstance(Classes.CharacterType()); }
+    public static TypeInstance ByteType() { return resolveTypeInstance(Classes.ByteType()); }
+    public static TypeInstance ShortType() { return resolveTypeInstance(Classes.ShortType()); }
+    public static TypeInstance IntegerType() { return resolveTypeInstance(Classes.IntegerType()); }
+    public static TypeInstance LongType() { return resolveTypeInstance(Classes.LongType()); }
+    public static TypeInstance FloatType() { return resolveTypeInstance(Classes.FloatType()); }
+    public static TypeInstance DoubleType() { return resolveTypeInstance(Classes.DoubleType()); }
+    public static TypeInstance StringType() { return resolveTypeInstance(Classes.StringType()); }
+    public static TypeInstance ObjectType() { return resolveTypeInstance(Classes.ObjectType()); }
+
+    private static TypeInstance resolveTypeInstance(CtClass clazz) {
+        TypeInstance typeInstance = getClassCache().get(clazz);
+        if (typeInstance == null) {
+            typeInstance = new Resolver(SourceInfo.none()).getTypeInstance(clazz);
+            getClassCache().put(clazz, typeInstance);
+        }
+
+        return typeInstance;
+    }
+
+    @SuppressWarnings("unchecked")
+    private static Map<CtClass, TypeInstance> getClassCache() {
+        return (Map<CtClass, TypeInstance>)CompilationContext.getCurrent()
+            .computeIfAbsent(TypeInstance.class, key -> new HashMap<CtClass, TypeInstance>());
+    }
 
     public enum WildcardType {
         NONE,

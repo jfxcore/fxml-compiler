@@ -1,4 +1,4 @@
-// Copyright (c) 2022, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2023, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.transform.markup.util;
@@ -15,7 +15,6 @@ import org.jfxcore.compiler.ast.text.TextNode;
 import org.jfxcore.compiler.diagnostic.errors.GeneralErrors;
 import org.jfxcore.compiler.util.Classes;
 import org.jfxcore.compiler.util.NameHelper;
-import org.jfxcore.compiler.util.Resolver;
 import org.jfxcore.compiler.util.TypeHelper;
 import org.jfxcore.compiler.util.TypeInstance;
 import java.util.ArrayList;
@@ -32,9 +31,8 @@ public class AdderFactory {
             throw new IllegalArgumentException();
         }
 
-        Resolver resolver = new Resolver(collection.getSourceInfo());
         List<TypeInstance> typeArgs = TypeHelper.getTypeInstance(collection).getArguments();
-        TypeInstance itemType = typeArgs.size() > 0 ? typeArgs.get(0) : resolver.getTypeInstance(Classes.ObjectType());
+        TypeInstance itemType = typeArgs.size() > 0 ? typeArgs.get(0) : TypeInstance.ObjectType();
 
         if (child instanceof TextNode textNode) {
             if (textNode.isRawText()) {
@@ -90,10 +88,9 @@ public class AdderFactory {
             throw new IllegalArgumentException();
         }
 
-        Resolver resolver = new Resolver(map.getSourceInfo());
         List<TypeInstance> typeArgs = TypeHelper.getTypeInstance(map).getArguments();
-        TypeInstance keyType = typeArgs.size() > 0 ? typeArgs.get(0) : resolver.getTypeInstance(Classes.ObjectType());
-        TypeInstance itemType = typeArgs.size() > 0 ? typeArgs.get(1) : resolver.getTypeInstance(Classes.ObjectType());
+        TypeInstance keyType = typeArgs.size() > 0 ? typeArgs.get(0) : TypeInstance.ObjectType();
+        TypeInstance itemType = typeArgs.size() > 0 ? typeArgs.get(1) : TypeInstance.ObjectType();
 
         if (!(child instanceof ObjectNode)) {
             throw GeneralErrors.cannotAddItemIncompatibleValue(
@@ -113,12 +110,11 @@ public class AdderFactory {
     }
 
     private static ValueNode createKey(ObjectNode node, TypeInstance keyType) {
-        Resolver resolver = new Resolver(node.getSourceInfo());
         PropertyNode id = node.findIntrinsicProperty(Intrinsics.ID);
         if (id != null) {
             return ValueEmitterFactory.newLiteralValue(
                 ((TextNode)id.getValues().get(0)).getText(),
-                resolver.getTypeInstance(Classes.StringType()),
+                TypeInstance.StringType(),
                 node.getSourceInfo());
         }
 
@@ -126,13 +122,13 @@ public class AdderFactory {
             return ValueEmitterFactory.newLiteralValue(
                 NameHelper.getUniqueName(
                     UUID.nameUUIDFromBytes(TypeHelper.getJvmType(node).getName().getBytes()).toString(), node),
-                resolver.getTypeInstance(Classes.StringType()),
+                TypeInstance.StringType(),
                 node.getSourceInfo());
         }
 
         return EmitObjectNode
             .constructor(
-                resolver.getTypeInstance(Classes.ObjectType()),
+                TypeInstance.ObjectType(),
                 unchecked(node.getSourceInfo(), () -> Classes.ObjectType().getConstructor("()V")),
                 Collections.emptyList(),
                 node.getSourceInfo())

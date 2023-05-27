@@ -1,4 +1,4 @@
-// Copyright (c) 2022, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2023, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.transform.markup;
@@ -55,16 +55,14 @@ public class ValueIntrinsicTransform implements Transform {
         if (objectNode.getChildren().get(0) instanceof ValueEmitterNode n) {
             content = n;
         } else if (objectNode.getChildren().get(0) instanceof TextNode n) {
-            TypeInstance stringType = new Resolver(node.getSourceInfo()).getTypeInstance(Classes.StringType());
-            content = new EmitLiteralNode(stringType, n.getText(), n.getSourceInfo());
+            content = new EmitLiteralNode(TypeInstance.StringType(), n.getText(), n.getSourceInfo());
         } else {
             throw ParserErrors.invalidExpression(objectNode.getChildren().get(0).getSourceInfo());
         }
 
         if (unchecked(content.getSourceInfo(), () -> !Classes.StringType().subtypeOf(TypeHelper.getJvmType(content)))) {
             throw GeneralErrors.incompatibleValue(
-                content.getSourceInfo(), TypeHelper.getTypeInstance(content),
-                new Resolver(content.getSourceInfo()).getTypeInstance(Classes.StringType()));
+                content.getSourceInfo(), TypeHelper.getTypeInstance(content), TypeInstance.StringType());
         }
 
         return createValueOfNode(TypeHelper.getTypeInstance(objectNode), content, node.getSourceInfo());
