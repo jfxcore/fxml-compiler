@@ -612,7 +612,7 @@ public class TypeInstanceTest extends TestBase {
         Resolver resolver = new Resolver(SourceInfo.none());
         TypeInstance typeInstance = resolver.getTypeInstance(
             resolver.resolveClass(Type5.class.getName()),
-            List.of(resolver.getTypeInstance(Classes.StringType()), resolver.getTypeInstance(Classes.DoubleType())));
+            List.of(TypeInstance.StringType(), TypeInstance.DoubleType()));
 
         assertEquals("TypeInstanceTest$Type5<String,Double>", typeInstance.toString());
         assertEquals("TypeInstanceTest$Type4<Double,String>", typeInstance.getSuperTypes().get(0).toString());
@@ -779,7 +779,7 @@ public class TypeInstanceTest extends TestBase {
     public void IsAssignableFrom_Subtype() {
         Resolver resolver = new Resolver(SourceInfo.none());
         TypeInstance t6 = resolver.getTypeInstance(
-            resolver.resolveClass(Type6.class.getName()), List.of(resolver.getTypeInstance(Classes.StringType())));
+            resolver.resolveClass(Type6.class.getName()), List.of(TypeInstance.StringType()));
         TypeInstance t7 = resolver.getTypeInstance(resolver.resolveClass(Type7.class.getName()));
         assertTrue(t6.isAssignableFrom(t7));
     }
@@ -807,7 +807,7 @@ public class TypeInstanceTest extends TestBase {
     public void TypeArgument_Out_Of_Bounds_Throws() {
         Resolver resolver = new Resolver(SourceInfo.none());
         MarkupException ex = assertThrows(MarkupException.class, () -> resolver.getTypeInstance(
-            resolver.resolveClass(Type8.class.getName()), List.of(resolver.getTypeInstance(Classes.DoubleType()))));
+            resolver.resolveClass(Type8.class.getName()), List.of(TypeInstance.DoubleType())));
         assertEquals(ErrorCode.TYPE_ARGUMENT_OUT_OF_BOUND, ex.getDiagnostic().getCode());
     }
 
@@ -815,7 +815,7 @@ public class TypeInstanceTest extends TestBase {
     public void IsAssignable_With_RawUsage() {
         var resolver = new Resolver(SourceInfo.none());
         var clazz = resolver.resolveClass(Type5.class.getName());
-        var args = List.of(resolver.getTypeInstance(Classes.DoubleType()), resolver.getTypeInstance(Classes.StringType()));
+        var args = List.of(TypeInstance.DoubleType(), TypeInstance.StringType());
         var type1 = resolver.getTypeInstance(clazz, args);
         var type2 = resolver.getTypeInstance(clazz, Collections.emptyList());
 
@@ -842,7 +842,7 @@ public class TypeInstanceTest extends TestBase {
     public void TypeArgument_Is_Erased_To_UpperBound() {
         var resolver = new Resolver(SourceInfo.none());
         var rawType = resolver.getTypeInstance(resolver.resolveClass(Type12.class.getName()), Collections.emptyList());
-        var stringType = resolver.getTypeInstance(resolver.resolveClass("java.lang.String"));
+        var stringType = TypeInstance.StringType();
 
         assertTrue(rawType.isRaw());
         assertTrue(stringType.isAssignableFrom(rawType.getArguments().get(0)));

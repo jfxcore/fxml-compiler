@@ -138,58 +138,58 @@ public class ValueEmitterFactory {
         case "boolean":
         case Classes.BooleanName:
             if (trimmedValue.equalsIgnoreCase("true")) {
-                return new EmitLiteralNode(id, new TypeInstance(CtClass.booleanType), true, sourceInfo);
+                return new EmitLiteralNode(id, TypeInstance.booleanType(), true, sourceInfo);
             } else if (trimmedValue.equalsIgnoreCase("false")) {
-                return new EmitLiteralNode(id, new TypeInstance(CtClass.booleanType), false, sourceInfo);
+                return new EmitLiteralNode(id, TypeInstance.booleanType(), false, sourceInfo);
             }
 
             break;
         case "char":
         case Classes.CharacterName:
             if (trimmedValue.length() == 1) {
-                return new EmitLiteralNode(id, new TypeInstance(CtClass.charType), trimmedValue.charAt(0), sourceInfo);
+                return new EmitLiteralNode(id, TypeInstance.charType(), trimmedValue.charAt(0), sourceInfo);
             }
 
             break;
         case "byte":
         case Classes.ByteName:
             try {
-                return new EmitLiteralNode(id, new TypeInstance(CtClass.byteType), Byte.parseByte(trimmedValue), sourceInfo);
+                return new EmitLiteralNode(id, TypeInstance.byteType(), Byte.parseByte(trimmedValue), sourceInfo);
             } catch (NumberFormatException ex) {
                 break;
             }
         case "short":
         case Classes.ShortName:
             try {
-                return new EmitLiteralNode(id, new TypeInstance(CtClass.shortType), Short.parseShort(trimmedValue), sourceInfo);
+                return new EmitLiteralNode(id, TypeInstance.shortType(), Short.parseShort(trimmedValue), sourceInfo);
             } catch (NumberFormatException ex) {
                 break;
             }
         case "int":
         case Classes.IntegerName:
             try {
-                return new EmitLiteralNode(id, new TypeInstance(CtClass.intType), Integer.parseInt(trimmedValue), sourceInfo);
+                return new EmitLiteralNode(id, TypeInstance.intType(), Integer.parseInt(trimmedValue), sourceInfo);
             } catch (NumberFormatException ex) {
                 break;
             }
         case "long":
         case Classes.LongName:
             try {
-                return new EmitLiteralNode(id, new TypeInstance(CtClass.longType), Long.parseLong(trimmedValue), sourceInfo);
+                return new EmitLiteralNode(id, TypeInstance.longType(), Long.parseLong(trimmedValue), sourceInfo);
             } catch (NumberFormatException ex) {
                 break;
             }
         case "float":
         case Classes.FloatName:
             try {
-                return new EmitLiteralNode(id, new TypeInstance(CtClass.floatType), Float.parseFloat(trimmedValue), sourceInfo);
+                return new EmitLiteralNode(id, TypeInstance.floatType(), Float.parseFloat(trimmedValue), sourceInfo);
             } catch (NumberFormatException ex) {
                 break;
             }
         case "double":
         case Classes.DoubleName:
             try {
-                return new EmitLiteralNode(id, new TypeInstance(CtClass.doubleType), Double.parseDouble(trimmedValue), sourceInfo);
+                return new EmitLiteralNode(id, TypeInstance.doubleType(), Double.parseDouble(trimmedValue), sourceInfo);
             } catch (NumberFormatException ex) {
                 break;
             }
@@ -204,7 +204,7 @@ public class ValueEmitterFactory {
         }
 
         if (unchecked(sourceInfo, () -> Classes.StringType().subtypeOf(targetType.jvmType()))) {
-            return new EmitLiteralNode(id, new Resolver(sourceInfo).getTypeInstance(Classes.StringType()), value, sourceInfo);
+            return new EmitLiteralNode(id, TypeInstance.StringType(), value, sourceInfo);
         }
 
         if (unchecked(sourceInfo, () -> Classes.ColorType().subtypeOf(targetType.jvmType()))) {

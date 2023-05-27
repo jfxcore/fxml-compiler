@@ -1,4 +1,4 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2023, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.emit;
@@ -7,12 +7,11 @@ import javassist.CtClass;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.ast.AbstractNode;
 import org.jfxcore.compiler.ast.ResolvedTypeNode;
-import org.jfxcore.compiler.ast.TypeNode;
 import org.jfxcore.compiler.ast.Visitor;
 import org.jfxcore.compiler.ast.expression.Operator;
 import org.jfxcore.compiler.util.Bytecode;
-import org.jfxcore.compiler.util.Resolver;
 import org.jfxcore.compiler.util.TypeHelper;
+import org.jfxcore.compiler.util.TypeInstance;
 import java.util.Objects;
 
 /**
@@ -28,7 +27,7 @@ public class EmitConvertToBooleanNode extends AbstractNode implements ValueEmitt
         super(sourceInfo);
         this.child = checkNotNull(child);
         this.operator = checkNotNull(operator);
-        this.type = new ResolvedTypeNode(new Resolver(sourceInfo).getTypeInstance(CtClass.booleanType), sourceInfo);
+        this.type = new ResolvedTypeNode(TypeInstance.booleanType(), sourceInfo);
     }
 
     @Override

@@ -48,7 +48,7 @@ public class RuntimeContextGenerator extends ClassGenerator {
 
     @Override
     public TypeInstance getTypeInstance() {
-        return new TypeInstance(Classes.ObjectType());
+        return TypeInstance.ObjectType();
     }
 
     @Override

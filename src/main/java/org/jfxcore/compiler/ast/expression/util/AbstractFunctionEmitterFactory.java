@@ -193,10 +193,9 @@ abstract class AbstractFunctionEmitterFactory {
     private EmitMethodArgumentNode createSingleFunctionArgumentValue(
             Node argument, TypeInstance paramType, boolean bidirectional, boolean preferObservable) {
         SourceInfo sourceInfo = argument.getSourceInfo();
-        Resolver resolver = new Resolver(sourceInfo);
 
         if (argument instanceof BooleanNode booleanArg) {
-            if (!paramType.isAssignableFrom(resolver.getTypeInstance(Classes.BooleanType()))) {
+            if (!paramType.isAssignableFrom(TypeInstance.BooleanType())) {
                 throw new InconvertibleArgumentException(Classes.BooleanName);
             }
 
@@ -226,7 +225,7 @@ abstract class AbstractFunctionEmitterFactory {
         }
 
         if (argument instanceof TextNode textArg) {
-            if (!paramType.isAssignableFrom(resolver.getTypeInstance(Classes.StringType()))) {
+            if (!paramType.isAssignableFrom(TypeInstance.StringType())) {
                 throw new InconvertibleArgumentException(Classes.StringName);
             }
 
@@ -426,17 +425,17 @@ abstract class AbstractFunctionEmitterFactory {
             Operator operator = pathExpressionArg.getOperator();
 
             if (operator == Operator.NOT || operator == Operator.BOOLIFY) {
-                return resolver.getTypeInstance(CtClass.booleanType);
+                return TypeInstance.booleanType();
             } else {
                 return pathExpressionArg.resolvePath(preferObservable).getValueTypeInstance();
             }
         } else if (argument instanceof TextNode) {
             if (argument instanceof BooleanNode) {
-                return resolver.getTypeInstance(Classes.BooleanType());
+                return TypeInstance.BooleanType();
             } else if (argument instanceof NumberNode numberNode) {
                 return NumberUtil.parseType(numberNode.getText());
             } else {
-                return resolver.getTypeInstance(Classes.StringType());
+                return TypeInstance.StringType();
             }
         } else if (argument instanceof ValueEmitterNode) {
             return TypeHelper.getTypeInstance(argument);

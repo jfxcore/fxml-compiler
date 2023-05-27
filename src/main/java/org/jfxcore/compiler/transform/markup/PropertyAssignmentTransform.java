@@ -1,4 +1,4 @@
-// Copyright (c) 2022, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2023, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.transform.markup;
@@ -45,7 +45,7 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.jfxcore.compiler.util.Classes.*;
-import static org.jfxcore.compiler.util.ExceptionHelper.unchecked;
+import static org.jfxcore.compiler.util.ExceptionHelper.*;
 
 /**
  * Replaces all instances of {@link PropertyNode} in the AST with nodes that represent property assignments
@@ -225,11 +225,11 @@ public class PropertyAssignmentTransform implements Transform {
         TypeInstance keyType, itemType;
 
         if (isMap) {
-            keyType = itemTypes.size() != 0 ? itemTypes.get(0) : resolver.getTypeInstance(ObjectType());
-            itemType = itemTypes.size() != 0 ? itemTypes.get(1) : resolver.getTypeInstance(ObjectType());
+            keyType = itemTypes.size() != 0 ? itemTypes.get(0) : TypeInstance.ObjectType();
+            itemType = itemTypes.size() != 0 ? itemTypes.get(1) : TypeInstance.ObjectType();
         } else {
             keyType = null;
-            itemType = itemTypes.size() != 0 ? itemTypes.get(0) : resolver.getTypeInstance(ObjectType());
+            itemType = itemTypes.size() != 0 ? itemTypes.get(0) : TypeInstance.ObjectType();
         }
 
         List<ValueNode> keys = new ArrayList<>();
@@ -303,12 +303,10 @@ public class PropertyAssignmentTransform implements Transform {
             return null;
         }
 
-        Resolver resolver = new Resolver(node.getSourceInfo());
-
         if (node instanceof ReferenceableNode refNode) {
             if (refNode.getId() != null) {
                 return ValueEmitterFactory.newLiteralValue(
-                    refNode.getId(), resolver.getTypeInstance(StringType()), node.getSourceInfo());
+                    refNode.getId(), TypeInstance.StringType(), node.getSourceInfo());
             }
         }
 
@@ -323,14 +321,14 @@ public class PropertyAssignmentTransform implements Transform {
             String id = NameHelper.getUniqueName(
                 UUID.nameUUIDFromBytes(builder.toString().getBytes()).toString(), this);
 
-            return ValueEmitterFactory.newLiteralValue(
-                id, resolver.getTypeInstance(StringType()), node.getSourceInfo());
+            return ValueEmitterFactory.newLiteralValue(id, TypeInstance.StringType(), node.getSourceInfo());
         }
 
         // The key of unnamed templates is their data item class literal, which is used by the
         // templating system to match templates to data items at runtime.
         TypeInstance nodeType = TypeHelper.getTypeInstance(node);
         if (Core.TemplateType() != null && nodeType.subtypeOf(Core.TemplateType())) {
+            Resolver resolver = new Resolver(node.getSourceInfo());
             TypeInstance itemType = resolver.tryFindArgument(nodeType, Core.TemplateType());
 
             return new EmitLiteralNode(
@@ -341,7 +339,7 @@ public class PropertyAssignmentTransform implements Transform {
 
         return EmitObjectNode
             .constructor(
-                resolver.getTypeInstance(ObjectType()),
+                TypeInstance.ObjectType(),
                 unchecked(node.getSourceInfo(), () -> ObjectType().getConstructor("()V")),
                 Collections.emptyList(),
                 node.getSourceInfo())

@@ -208,7 +208,7 @@ public class Resolver {
                             methodSignature.getTypeParameters(),
                             invocationChain,
                             Collections.emptyList()),
-                        new TypeInstance(Classes.ObjectType()));
+                        TypeInstance.ObjectType());
                 }
             }
 
@@ -262,7 +262,7 @@ public class Resolver {
                             methodSignature.getTypeParameters(),
                             invocationChain,
                             Collections.emptyList()),
-                        new TypeInstance(Classes.ObjectType()));
+                        TypeInstance.ObjectType());
                 }
             }
 
@@ -1019,7 +1019,7 @@ public class Resolver {
                 invocationChain,
                 Collections.emptyList());
 
-            return getCache().put(key, Objects.requireNonNullElse(typeInstance, new TypeInstance(Classes.ObjectType())));
+            return getCache().put(key, Objects.requireNonNullElse(typeInstance, TypeInstance.ObjectType()));
         } catch (NotFoundException ex) {
             throw SymbolResolutionErrors.classNotFound(sourceInfo, ex.getMessage());
         } catch (BadBytecode ex) {
@@ -1052,7 +1052,7 @@ public class Resolver {
                     Collections.emptyList());
             }
 
-            return getCache().put(key, Objects.requireNonNullElse(typeInstance, new TypeInstance(Classes.ObjectType())));
+            return getCache().put(key, Objects.requireNonNullElse(typeInstance, TypeInstance.ObjectType()));
         } catch (NotFoundException ex) {
             throw SymbolResolutionErrors.classNotFound(sourceInfo, ex.getMessage());
         } catch (BadBytecode ex) {
@@ -1086,18 +1086,18 @@ public class Resolver {
 
     public @Nullable TypeInstance tryFindObservableArgument(TypeInstance propertyType) {
         if (propertyType.subtypeOf(Classes.ObservableBooleanValueType())) {
-            return new TypeInstance(CtClass.booleanType);
+            return TypeInstance.booleanType();
         } else if (propertyType.subtypeOf(Classes.ObservableIntegerValueType())) {
-            return new TypeInstance(CtClass.intType);
+            return TypeInstance.intType();
         } else if (propertyType.subtypeOf(Classes.ObservableLongValueType())) {
-            return new TypeInstance(CtClass.longType);
+            return TypeInstance.longType();
         } else if (propertyType.subtypeOf(Classes.ObservableFloatValueType())) {
-            return new TypeInstance(CtClass.floatType);
+            return TypeInstance.floatType();
         } else if (propertyType.subtypeOf(Classes.ObservableDoubleValueType())) {
-            return new TypeInstance(CtClass.doubleType);
+            return TypeInstance.doubleType();
         } else if (TypeHelper.equals(propertyType.jvmType(), Classes.ObservableValueType())) {
             return propertyType.getArguments().isEmpty() ?
-                new TypeInstance(Classes.ObjectType()) : propertyType.getArguments().get(0);
+                TypeInstance.ObjectType() : propertyType.getArguments().get(0);
         }
 
         for (TypeInstance superType : propertyType.getSuperTypes()) {
@@ -1121,18 +1121,18 @@ public class Resolver {
 
     public @Nullable TypeInstance tryFindWritableArgument(TypeInstance propertyType) {
         if (propertyType.subtypeOf(Classes.WritableBooleanValueType())) {
-            return new TypeInstance(CtClass.booleanType);
+            return TypeInstance.booleanType();
         } else if (propertyType.subtypeOf(Classes.WritableIntegerValueType())) {
-            return new TypeInstance(CtClass.intType);
+            return TypeInstance.intType();
         } else if (propertyType.subtypeOf(Classes.WritableLongValueType())) {
-            return new TypeInstance(CtClass.longType);
+            return TypeInstance.longType();
         } else if (propertyType.subtypeOf(Classes.WritableFloatValueType())) {
-            return new TypeInstance(CtClass.floatType);
+            return TypeInstance.floatType();
         } else if (propertyType.subtypeOf(Classes.WritableDoubleValueType())) {
-            return new TypeInstance(CtClass.doubleType);
+            return TypeInstance.doubleType();
         } else if (TypeHelper.equals(propertyType.jvmType(), Classes.WritableValueType())) {
             return propertyType.getArguments().isEmpty() ?
-                new TypeInstance(Classes.ObjectType()) : propertyType.getArguments().get(0);
+                TypeInstance.ObjectType() : propertyType.getArguments().get(0);
         }
 
         for (TypeInstance superType : propertyType.getSuperTypes()) {
@@ -1190,7 +1190,7 @@ public class Resolver {
                 }
 
                 if (bound == null) {
-                    bound = getTypeInstance(Classes.ObjectType());
+                    bound = TypeInstance.ObjectType();
                 }
 
                 if (providedArguments.size() > 0) {

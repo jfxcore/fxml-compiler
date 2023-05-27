@@ -1,4 +1,4 @@
-// Copyright (c) 2022, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2023, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.transform.markup;
@@ -17,7 +17,7 @@ import org.jfxcore.compiler.util.Resolver;
 import org.jfxcore.compiler.util.TypeHelper;
 import org.jfxcore.compiler.util.TypeInstance;
 
-import static org.jfxcore.compiler.util.ExceptionHelper.unchecked;
+import static org.jfxcore.compiler.util.ExceptionHelper.*;
 
 public class UrlIntrinsicTransform implements Transform {
 
@@ -55,7 +55,7 @@ public class UrlIntrinsicTransform implements Transform {
         } else if (unchecked(node.getSourceInfo(), () -> propertyValueType.subtypeOf(Classes.URIType()))) {
             targetType = resolver.getTypeInstance(Classes.URIType());
         } else if (unchecked(node.getSourceInfo(), () -> propertyValueType.subtypeOf(Classes.StringType()))) {
-            targetType = resolver.getTypeInstance(Classes.StringType());
+            targetType = TypeInstance.StringType();
         } else {
             throw PropertyAssignmentErrors.incompatiblePropertyType(
                 node.getSourceInfo(), propertyInfo, resolver.getTypeInstance(Classes.URLType()));

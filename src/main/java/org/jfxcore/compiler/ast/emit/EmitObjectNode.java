@@ -1,4 +1,4 @@
-// Copyright (c) 2022, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2023, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.emit;
@@ -101,8 +101,7 @@ public class EmitObjectNode extends ReferenceableNode {
         }
 
         public ValueOfBuilder textValue(String value) {
-            this.value = new EmitLiteralNode(
-                new Resolver(sourceInfo).getTypeInstance(Classes.StringType()), value, sourceInfo);
+            this.value = new EmitLiteralNode(TypeInstance.StringType(), value, sourceInfo);
             return this;
         }
 

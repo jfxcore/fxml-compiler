@@ -33,7 +33,7 @@ public enum Operator {
             return operandType;
         }
 
-        return new TypeInstance(CtClass.booleanType);
+        return TypeInstance.booleanType();
     }
 
     public boolean isInvertible(TypeInstance operandType) {
