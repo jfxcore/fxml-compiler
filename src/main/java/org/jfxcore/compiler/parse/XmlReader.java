@@ -1,4 +1,4 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2023, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.parse;
@@ -108,7 +108,7 @@ public class XmlReader {
         }
 
         StringBuilder builder = new StringBuilder();
-        SourceInfo start = nextToken.getSourceInfo();
+        SourceInfo start = nextToken.getSourceInfo(), end;
         boolean characterData = false;
 
         do {
@@ -123,21 +123,22 @@ public class XmlReader {
                 tokenizer.remove();
             }
 
-            builder.append(tokenizer.remove().getValue());
+            XmlToken token = tokenizer.remove();
+            end = token.getSourceInfo();
+            builder.append(token.getValue());
             nextToken = tokenizer.peekNotNull();
         } while (characterData || nextToken.getType() != OPEN_BRACKET && nextToken.getType() != COMMENT_START);
 
         String value;
-        SourceInfo sourceInfo = SourceInfo.span(start, tokenizer.peekNotNull().getSourceInfo());
 
         try {
             value = StringHelper.unescapeXml(builder.toString());
         } catch (NumberFormatException ex) {
-            throw ParserErrors.invalidExpression(sourceInfo);
+            throw ParserErrors.invalidExpression(SourceInfo.span(start, end));
         }
 
         Node node = document.createTextNode(StringHelper.removeInsignificantWhitespace(value));
-        node.setUserData(SOURCE_INFO_KEY, sourceInfo, null);
+        node.setUserData(SOURCE_INFO_KEY, SourceInfo.span(start, end), null);
         return node;
     }
 
