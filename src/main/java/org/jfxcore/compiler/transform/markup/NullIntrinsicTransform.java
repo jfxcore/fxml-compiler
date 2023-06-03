@@ -1,4 +1,4 @@
-// Copyright (c) 2022, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2023, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.transform.markup;
@@ -38,7 +38,7 @@ public class NullIntrinsicTransform implements Transform {
         Resolver resolver = new Resolver(propertyNode.getSourceInfo());
         PropertyInfo propertyInfo = resolver.resolveProperty(
             parentType, propertyNode.isAllowQualifiedName(), propertyNode.getNames());
-        TypeInstance valueType = propertyInfo.getValueTypeInstance();
+        TypeInstance valueType = propertyInfo.getType();
 
         if (valueType.isPrimitive()) {
             throw PropertyAssignmentErrors.incompatiblePropertyType(

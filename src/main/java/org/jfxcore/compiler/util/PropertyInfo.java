@@ -1,4 +1,4 @@
-// Copyright (c) 2022, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2023, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.util;
@@ -6,7 +6,6 @@ package org.jfxcore.compiler.util;
 import javafx.beans.property.Property;
 import javafx.beans.value.ObservableValue;
 import javafx.beans.value.WritableValue;
-import javassist.CtClass;
 import javassist.CtMethod;
 import javassist.NotFoundException;
 import org.jetbrains.annotations.Nullable;
@@ -62,7 +61,7 @@ public class PropertyInfo {
             CtMethod propertyGetter,
             CtMethod getter,
             CtMethod setter,
-            TypeInstance typeInstance,
+            TypeInstance type,
             TypeInstance observableType,
             TypeInstance declaringType,
             boolean isStatic) throws NotFoundException {
@@ -70,7 +69,7 @@ public class PropertyInfo {
         this.propertyGetter = propertyGetter;
         this.getter = getter;
         this.setter = setter;
-        this.typeInstance = typeInstance;
+        this.typeInstance = type;
         this.observableType = observableType;
         this.declaringType = declaringType;
         this.isStatic = isStatic;
@@ -130,39 +129,24 @@ public class PropertyInfo {
     }
 
     /**
-     * Returns the value type of the property.
+     * Returns the type of the property.
      * For properties that use primitive wrappers like ObservableBooleanValue, returns the primitive type.
      */
-    public TypeInstance getValueTypeInstance() {
+    public TypeInstance getType() {
         return typeInstance;
-    }
-
-    /**
-     * Returns the value type of the property.
-     * For properties that use primitive wrappers like ObservableBooleanValue, returns the primitive type.
-     */
-    public CtClass getValueType() {
-        return typeInstance.jvmType();
     }
 
     /**
      * Returns the observable type of the property.
      */
-    public TypeInstance getObservableTypeInstance() {
+    public TypeInstance getObservableType() {
         return observableType;
     }
 
     /**
      * Returns the declaring type of the property.
      */
-    public CtClass getDeclaringType() {
-        return declaringType.jvmType();
-    }
-
-    /**
-     * Returns the declaring type of the property.
-     */
-    public TypeInstance getDeclaringTypeInstance() {
+    public TypeInstance getDeclaringType() {
         return declaringType;
     }
 

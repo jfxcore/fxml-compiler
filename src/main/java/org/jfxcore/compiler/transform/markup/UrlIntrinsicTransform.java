@@ -44,10 +44,10 @@ public class UrlIntrinsicTransform implements Transform {
         TypeInstance targetType;
         TypeInstance propertyValueType;
 
-        if (propertyInfo.getValueTypeInstance().subtypeOf(Classes.CollectionType())) {
-            propertyValueType = resolver.tryFindArgument(propertyInfo.getValueTypeInstance(), Classes.CollectionType());
+        if (propertyInfo.getType().subtypeOf(Classes.CollectionType())) {
+            propertyValueType = resolver.tryFindArgument(propertyInfo.getType(), Classes.CollectionType());
         } else {
-            propertyValueType = propertyInfo.getValueTypeInstance();
+            propertyValueType = propertyInfo.getType();
         }
 
         if (unchecked(node.getSourceInfo(), () -> propertyValueType.subtypeOf(Classes.URLType()))) {

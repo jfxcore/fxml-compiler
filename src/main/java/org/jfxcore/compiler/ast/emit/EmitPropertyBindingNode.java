@@ -112,7 +112,7 @@ public class EmitPropertyBindingNode extends AbstractNode implements EmitterNode
         if (!tryEmitBindContentImpl(context, ListType(), ObservableListType(), ReadOnlyListPropertyType(), bidirectional) &&
                 !tryEmitBindContentImpl(context, SetType(), ObservableSetType(), ReadOnlySetPropertyType(), bidirectional) &&
                 !tryEmitBindContentImpl(context, MapType(), ObservableMapType(), ReadOnlyMapPropertyType(), bidirectional)) {
-            throw new IllegalArgumentException(propertyInfo.getValueTypeInstance().toString());
+            throw new IllegalArgumentException(propertyInfo.getType().toString());
         }
     }
 
@@ -123,9 +123,9 @@ public class EmitPropertyBindingNode extends AbstractNode implements EmitterNode
             CtClass observableCollectionType,
             CtClass collectionPropertyType,
             boolean bidirectional) {
-        if (propertyInfo.getValueTypeInstance().subtypeOf(collectionType)) {
+        if (propertyInfo.getType().subtypeOf(collectionType)) {
             String methodName = bidirectional ? "bindContentBidirectional" : "bindContent";
-            TypeInstance observableType = propertyInfo.getObservableTypeInstance();
+            TypeInstance observableType = propertyInfo.getObservableType();
             Bytecode code = context.getOutput();
 
             Local targetLocal = code.acquireLocal(false);

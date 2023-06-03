@@ -1,4 +1,4 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2023, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.emit;
@@ -101,13 +101,13 @@ public class EmitPropertySetterNode extends AbstractNode implements EmitterNode 
                     code.dup()
                         .ext_invoke(propertyInfo.getPropertyGetter());
 
-                    if (propertyInfo.getValueTypeInstance().subtypeOf(CollectionType()) &&
-                            !propertyInfo.getObservableTypeInstance().subtypeOf(CollectionType())) {
+                    if (propertyInfo.getType().subtypeOf(CollectionType()) &&
+                            !propertyInfo.getObservableType().subtypeOf(CollectionType())) {
                         code.invokeinterface(ObservableValueType(), "getValue", function(ObjectType()))
                             .checkcast(CollectionType());
                     }
-                    else if (propertyInfo.getValueTypeInstance().subtypeOf(MapType()) &&
-                                !propertyInfo.getObservableTypeInstance().subtypeOf(MapType())) {
+                    else if (propertyInfo.getType().subtypeOf(MapType()) &&
+                                !propertyInfo.getObservableType().subtypeOf(MapType())) {
                         code.invokeinterface(ObservableValueType(), "getValue", function(ObjectType()))
                             .checkcast(MapType());
                     }
@@ -115,13 +115,13 @@ public class EmitPropertySetterNode extends AbstractNode implements EmitterNode 
                     code.aload(local);
                 }
 
-                if (propertyInfo.getValueTypeInstance().subtypeOf(CollectionType())) {
+                if (propertyInfo.getType().subtypeOf(CollectionType())) {
                     code.invokeinterface(CollectionType(), "addAll", function(booleanType, CollectionType()))
                         .pop();
-                } else if (propertyInfo.getValueTypeInstance().subtypeOf(MapType())) {
+                } else if (propertyInfo.getType().subtypeOf(MapType())) {
                     code.invokeinterface(MapType(), "putAll", function(voidType, MapType()));
                 } else {
-                    throw new IllegalArgumentException(propertyInfo.getValueTypeInstance().toString());
+                    throw new IllegalArgumentException(propertyInfo.getType().toString());
                 }
             });
     }

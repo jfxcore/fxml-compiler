@@ -1,4 +1,4 @@
-// Copyright (c) 2022, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2023, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.util;
@@ -7,8 +7,6 @@ import org.jfxcore.compiler.ast.ObjectNode;
 import org.jfxcore.compiler.ast.PropertyNode;
 import java.util.ArrayList;
 import java.util.List;
-
-import static org.jfxcore.compiler.util.ExceptionHelper.unchecked;
 
 public class PropertyHelper {
 
@@ -34,11 +32,11 @@ public class PropertyHelper {
                 continue;
             }
 
-            TypeInstance propertyType = propertyInfo.getValueTypeInstance();
+            TypeInstance propertyType = propertyInfo.getType();
 
-            if (unchecked(property.getSourceInfo(), () -> propertyInfo.getValueType().subtypeOf(Classes.CollectionType()))) {
+            if (propertyInfo.getType().subtypeOf(Classes.CollectionType())) {
                 List<TypeInstance> typeArguments = resolver.getPropertyTypeArguments(propertyInfo);
-                propertyType = typeArguments.size() == 1 ? typeArguments.get(0) : propertyInfo.getValueTypeInstance();
+                propertyType = typeArguments.size() == 1 ? typeArguments.get(0) : propertyInfo.getType();
             }
 
             if (propertyType.subtypeOf(Classes.NodeType())) {

@@ -44,8 +44,8 @@ public class BindingEmitterFactory {
     private static EmitterNode createPropertyAssignmentEmitter(BindingNode bindingNode, PropertyInfo propertyInfo) {
         SourceInfo sourceInfo = bindingNode.getSourceInfo();
         BindingMode bindingMode = bindingNode.getMode();
-        TypeInstance targetType = propertyInfo.getValueTypeInstance();
-        BindingEmitterInfo result = bindingNode.toEmitter(propertyInfo.getDeclaringTypeInstance());
+        TypeInstance targetType = propertyInfo.getType();
+        BindingEmitterInfo result = bindingNode.toEmitter(propertyInfo.getDeclaringType());
         ValueEmitterNode value = null;
 
         if (bindingMode.isContent()) {
@@ -93,7 +93,7 @@ public class BindingEmitterFactory {
 
         if (propertyInfo.isStatic()) {
             return new EmitStaticPropertySetterNode(
-                propertyInfo.getDeclaringTypeInstance(), propertyInfo.getSetter(), value, sourceInfo);
+                propertyInfo.getDeclaringType(), propertyInfo.getSetter(), value, sourceInfo);
         }
 
         return new EmitPropertySetterNode(propertyInfo, value, bindingMode.isContent(), sourceInfo);
@@ -101,12 +101,12 @@ public class BindingEmitterFactory {
 
     private static EmitterNode createPropertyBindingEmitter(BindingNode bindingNode, PropertyInfo propertyInfo) {
         BindingMode bindingMode = bindingNode.getMode();
-        TypeInstance targetType = propertyInfo.getValueTypeInstance();
+        TypeInstance targetType = propertyInfo.getType();
         ValueEmitterNode value;
         BindingEmitterInfo result;
 
         try {
-            result = bindingNode.toEmitter(propertyInfo.getDeclaringTypeInstance());
+            result = bindingNode.toEmitter(propertyInfo.getDeclaringType());
         } catch (MarkupException ex) {
             TypeInstance sourceType = (TypeInstance)ex.getProperties().get("sourceType");
 

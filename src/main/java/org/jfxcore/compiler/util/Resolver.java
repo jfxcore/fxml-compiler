@@ -1493,12 +1493,12 @@ public class Resolver {
      */
     public List<TypeInstance> getPropertyTypeArguments(PropertyInfo propertyInfo) {
         if (propertyInfo.getGetter() != null) {
-            return getTypeInstance(propertyInfo.getGetter(), List.of(propertyInfo.getDeclaringTypeInstance())).getArguments();
+            return getTypeInstance(propertyInfo.getGetter(), List.of(propertyInfo.getDeclaringType())).getArguments();
         }
 
         if (propertyInfo.getPropertyGetter() != null) {
             TypeInstance propertyType = getTypeInstance(
-                propertyInfo.getPropertyGetter(), List.of(propertyInfo.getDeclaringTypeInstance()));
+                propertyInfo.getPropertyGetter(), List.of(propertyInfo.getDeclaringType()));
 
             return findObservableArgument(propertyType).getArguments();
         }
