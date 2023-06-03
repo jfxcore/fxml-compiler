@@ -1,4 +1,4 @@
-// Copyright (c) 2022, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2023, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.diagnostic.errors;
@@ -23,7 +23,7 @@ public class PropertyAssignmentErrors {
             SourceInfo sourceInfo, PropertyInfo propertyInfo, TypeInstance assignType) {
         return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
             ErrorCode.INCOMPATIBLE_PROPERTY_TYPE, formatPropertyName(propertyInfo),
-            propertyInfo.getValueTypeInstance().getJavaName(), assignType != null ? assignType.getJavaName() : "'null'"));
+            propertyInfo.getType().getJavaName(), assignType != null ? assignType.getJavaName() : "'null'"));
     }
 
     public static MarkupException incompatiblePropertyType(
@@ -36,14 +36,14 @@ public class PropertyAssignmentErrors {
     public static MarkupException incompatiblePropertyItems(SourceInfo sourceInfo, PropertyInfo propertyInfo) {
         return new MarkupException(sourceInfo, Diagnostic.newDiagnosticVariant(
             ErrorCode.INCOMPATIBLE_PROPERTY_TYPE, "items",
-            formatPropertyName(propertyInfo), propertyInfo.getValueTypeInstance().getJavaName()));
+            formatPropertyName(propertyInfo), propertyInfo.getType().getJavaName()));
     }
 
     public static MarkupException cannotCoercePropertyValue(
             SourceInfo sourceInfo, PropertyInfo propertyInfo, String value, boolean raw) {
         return new MarkupException(sourceInfo, raw ?
             Diagnostic.newDiagnosticVariant(
-                ErrorCode.CANNOT_COERCE_PROPERTY_VALUE, "raw", propertyInfo.getValueTypeInstance().getJavaName()) :
+                ErrorCode.CANNOT_COERCE_PROPERTY_VALUE, "raw", propertyInfo.getType().getJavaName()) :
             Diagnostic.newDiagnostic(
                 ErrorCode.CANNOT_COERCE_PROPERTY_VALUE, formatPropertyName(propertyInfo), value));
     }

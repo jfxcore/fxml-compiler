@@ -91,7 +91,7 @@ public class PropertyAssignmentTransform implements Transform {
 
                 ValueEmitterNode emitter = new EmitInvokeGetterNode(
                     propertyInfo.getGetterOrPropertyGetter(),
-                    hasGetter ? propertyInfo.getValueTypeInstance() : propertyInfo.getObservableTypeInstance(),
+                    hasGetter ? propertyInfo.getType() : propertyInfo.getObservableType(),
                     hasGetter ? ObservableKind.NONE : ObservableKind.FX_OBSERVABLE,
                     true,
                     sourceInfo);
@@ -192,19 +192,19 @@ public class PropertyAssignmentTransform implements Transform {
             return null;
         }
 
-        ValueEmitterNode value = createEventHandlerNode(context, node, propertyInfo.getValueTypeInstance());
+        ValueEmitterNode value = createEventHandlerNode(context, node, propertyInfo.getType());
         if (value == null) {
-            value = createTemplateContentNode(node, propertyInfo.getValueTypeInstance());
+            value = createTemplateContentNode(node, propertyInfo.getType());
             if (value == null) {
                 value = createValueNode(
-                    node, propertyInfo.getDeclaringTypeInstance(), propertyInfo.getValueTypeInstance());
+                    node, propertyInfo.getDeclaringType(), propertyInfo.getType());
             }
         }
 
         if (value != null) {
             if (propertyInfo.isStatic()) {
                 return new EmitStaticPropertySetterNode(
-                    propertyInfo.getDeclaringTypeInstance(), propertyInfo.getSetter(), value, node.getSourceInfo());
+                    propertyInfo.getDeclaringType(), propertyInfo.getSetter(), value, node.getSourceInfo());
             } else {
                 return new EmitPropertySetterNode(propertyInfo, value, false, node.getSourceInfo());
             }
@@ -215,8 +215,8 @@ public class PropertyAssignmentTransform implements Transform {
 
     private Node tryAddValue(
             TransformContext context, PropertyNode propertyNode, PropertyInfo propertyInfo, TypeInstance declaringType) {
-        boolean isMap = propertyInfo.getValueTypeInstance().subtypeOf(MapType());
-        if (!isMap && !propertyInfo.getValueTypeInstance().subtypeOf(CollectionType())) {
+        boolean isMap = propertyInfo.getType().subtypeOf(MapType());
+        if (!isMap && !propertyInfo.getType().subtypeOf(CollectionType())) {
             return null;
         }
 
