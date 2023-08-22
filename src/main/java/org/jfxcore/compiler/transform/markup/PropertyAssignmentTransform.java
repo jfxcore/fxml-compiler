@@ -220,14 +220,14 @@ public class PropertyAssignmentTransform implements Transform {
             return null;
         }
 
-        Resolver resolver = new Resolver(propertyNode.getSourceInfo());
-        List<TypeInstance> itemTypes = resolver.getPropertyTypeArguments(propertyInfo);
         TypeInstance keyType, itemType;
 
         if (isMap) {
+            List<TypeInstance> itemTypes = TypeHelper.getTypeArguments(propertyInfo.getType(), MapType());
             keyType = itemTypes.size() != 0 ? itemTypes.get(0) : TypeInstance.ObjectType();
             itemType = itemTypes.size() != 0 ? itemTypes.get(1) : TypeInstance.ObjectType();
         } else {
+            List<TypeInstance> itemTypes = TypeHelper.getTypeArguments(propertyInfo.getType(), CollectionType());
             keyType = null;
             itemType = itemTypes.size() != 0 ? itemTypes.get(0) : TypeInstance.ObjectType();
         }

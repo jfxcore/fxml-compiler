@@ -35,7 +35,7 @@ public class PropertyHelper {
             TypeInstance propertyType = propertyInfo.getType();
 
             if (propertyInfo.getType().subtypeOf(Classes.CollectionType())) {
-                List<TypeInstance> typeArguments = resolver.getPropertyTypeArguments(propertyInfo);
+                var typeArguments = TypeHelper.getTypeArguments(propertyInfo.getType(), Classes.CollectionType());
                 propertyType = typeArguments.size() == 1 ? typeArguments.get(0) : propertyInfo.getType();
             }
 
