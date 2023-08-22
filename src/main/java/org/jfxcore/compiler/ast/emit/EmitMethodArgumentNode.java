@@ -1,4 +1,4 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2023, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.emit;
@@ -9,6 +9,7 @@ import org.jfxcore.compiler.ast.AbstractNode;
 import org.jfxcore.compiler.ast.ResolvedTypeNode;
 import org.jfxcore.compiler.ast.Visitor;
 import org.jfxcore.compiler.util.Bytecode;
+import org.jfxcore.compiler.util.Resolver;
 import org.jfxcore.compiler.util.TypeHelper;
 import org.jfxcore.compiler.util.TypeInstance;
 import java.util.ArrayList;
@@ -28,33 +29,30 @@ public class EmitMethodArgumentNode extends AbstractNode implements ValueEmitter
     private final boolean varargs;
     private final boolean observable;
 
-    public EmitMethodArgumentNode(
+    public static EmitMethodArgumentNode newScalar(
             TypeInstance type,
             ValueEmitterNode node,
             boolean observable,
             SourceInfo sourceInfo) {
-        super(sourceInfo);
-        this.type = new ResolvedTypeNode(type, sourceInfo);
-        this.children = new ArrayList<>(1);
-        this.children.add(node);
-        this.varargs = false;
-        this.observable = observable;
+        return new EmitMethodArgumentNode(
+            new ResolvedTypeNode(type, sourceInfo), List.of(node), false, observable, sourceInfo);
     }
 
-    public EmitMethodArgumentNode(
+    public static EmitMethodArgumentNode newVariadic(
             TypeInstance componentType,
             List<EmitMethodArgumentNode> children,
             SourceInfo sourceInfo) {
-        super(sourceInfo);
-        this.type = new ResolvedTypeNode(
-            new TypeInstance(componentType.jvmType(), 1, componentType.getArguments(),
-                componentType.getSuperTypes()),
+        CtClass arrayType = new Resolver(sourceInfo).resolveClass(componentType.jvmType().getName() + "[]");
+        return new EmitMethodArgumentNode(
+            new ResolvedTypeNode(
+                new TypeInstance(arrayType, 1, componentType.getArguments(), componentType.getSuperTypes()),
+                sourceInfo),
+            children.stream()
+                .flatMap(n -> n.children.stream())
+                .collect(Collectors.toCollection(ArrayList::new)),
+            true,
+            children.stream().anyMatch(EmitMethodArgumentNode::isObservable),
             sourceInfo);
-        this.children = children.stream()
-            .flatMap(n -> n.children.stream())
-            .collect(Collectors.toCollection(ArrayList::new));
-        this.observable = children.stream().anyMatch(EmitMethodArgumentNode::isObservable);
-        this.varargs = true;
     }
 
     private EmitMethodArgumentNode(
@@ -99,7 +97,7 @@ public class EmitMethodArgumentNode extends AbstractNode implements ValueEmitter
         boolean assignable = TypeHelper.getTypeInstance(children.get(0)).subtypeOf(type.getTypeInstance());
 
         if (varargs && !(children.size() == 1 && assignable)) {
-            CtClass componentType = type.getTypeInstance().jvmType();
+            CtClass componentType = type.getTypeInstance().getComponentType().jvmType();
             code.newarray(componentType, children.size());
 
             for (int i = 0; i < children.size(); ++i) {

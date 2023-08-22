@@ -563,7 +563,9 @@ public class ObservableFunctionGenerator extends ClassGenerator {
         }
 
         for (EmitMethodArgumentNode argument : arguments) {
-            TypeInstance requestedType = argument.getType().getTypeInstance();
+            TypeInstance requestedType = argument.isVarargs() ?
+                argument.getType().getTypeInstance().getComponentType() :
+                argument.getType().getTypeInstance();
 
             if (argument.isVarargs()) {
                 code.newarray(requestedType.jvmType(), argument.getChildren().size())

@@ -179,7 +179,7 @@ abstract class AbstractFunctionEmitterFactory {
                 values.add(createSingleFunctionArgumentValue(argument, componentType, bidirectional, preferObservable));
             }
 
-            return new EmitMethodArgumentNode(componentType, values, sourceInfo);
+            return EmitMethodArgumentNode.newVariadic(componentType, values, sourceInfo);
         } catch (InconvertibleArgumentException ex) {
             if (ex.getCause() instanceof MarkupException) {
                 throw (MarkupException)ex.getCause();
@@ -201,7 +201,7 @@ abstract class AbstractFunctionEmitterFactory {
 
             boolean value = Boolean.parseBoolean(booleanArg.getText());
 
-            return new EmitMethodArgumentNode(
+            return EmitMethodArgumentNode.newScalar(
                 paramType, new EmitLiteralNode(paramType, value, sourceInfo), false, sourceInfo);
         }
 
@@ -220,7 +220,7 @@ abstract class AbstractFunctionEmitterFactory {
                 throw new InconvertibleArgumentException(Classes.NumberName);
             }
 
-            return new EmitMethodArgumentNode(
+            return EmitMethodArgumentNode.newScalar(
                 paramType, new EmitLiteralNode(paramType, value, sourceInfo), false, sourceInfo);
         }
 
@@ -229,7 +229,7 @@ abstract class AbstractFunctionEmitterFactory {
                 throw new InconvertibleArgumentException(Classes.StringName);
             }
 
-            return new EmitMethodArgumentNode(
+            return EmitMethodArgumentNode.newScalar(
                 paramType,
                 new EmitLiteralNode(paramType, textArg.getText(), sourceInfo),
                 false,
@@ -264,7 +264,7 @@ abstract class AbstractFunctionEmitterFactory {
                 BindingEmitterInfo emitterInfo = factory instanceof ObservableEmitterFactory observableFactory ?
                     observableFactory.newInstance(bidirectional) : factory.newInstance();
 
-                return new EmitMethodArgumentNode(
+                return EmitMethodArgumentNode.newScalar(
                     paramType, emitterInfo.getValue(), emitterInfo.getObservableType() != null, sourceInfo);
             } catch (MarkupException ex) {
                 throw new InconvertibleArgumentException(argument.getClass().getName(), ex);
@@ -272,7 +272,7 @@ abstract class AbstractFunctionEmitterFactory {
         }
 
         if (argument instanceof ValueEmitterNode valueEmitterArg) {
-            return new EmitMethodArgumentNode(paramType, valueEmitterArg, false, sourceInfo);
+            return EmitMethodArgumentNode.newScalar(paramType, valueEmitterArg, false, sourceInfo);
         }
 
         throw new InconvertibleArgumentException(argument.getClass().getName());

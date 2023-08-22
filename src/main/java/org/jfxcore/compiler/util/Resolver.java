@@ -1332,12 +1332,13 @@ public class Resolver {
         if (invokedType instanceof SignatureAttribute.ArrayType arrayType) {
             SignatureAttribute.Type componentType = arrayType.getComponentType();
             int dimension = arrayType.getDimension();
-            TypeInstance typeInst = invokeType(
+            TypeInstance typeInst = Objects.requireNonNull(invokeType(
                 invokingClass, componentType, TypeInstance.WildcardType.NONE, classTypeParams,
-                methodTypeParams, invocationChain, providedArguments);
+                methodTypeParams, invocationChain, providedArguments));
 
-            return typeInst == null ? null : new TypeInstance(
-                typeInst.jvmType(), dimension, typeInst.getArguments(), typeInst.getSuperTypes(), wildcard);
+            return new TypeInstance(
+                resolveClass(typeInst.jvmType().getName() + "[]".repeat(dimension)),
+                dimension, typeInst.getArguments(), typeInst.getSuperTypes(), wildcard);
         }
 
         if (invokedType instanceof SignatureAttribute.ClassType classType) {
@@ -1359,7 +1360,7 @@ public class Resolver {
                             invokingClass, typeArg.getType(), TypeInstance.WildcardType.of(typeArg.getKind()),
                             classTypeParams, methodTypeParams, invocationChain, providedArguments);
 
-                        arguments.add(typeInst);
+                        arguments.add(Objects.requireNonNull(typeInst));
                     }
                 }
 

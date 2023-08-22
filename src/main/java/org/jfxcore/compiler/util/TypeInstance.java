@@ -169,6 +169,17 @@ public class TypeInstance {
     public TypeInstance(CtClass type, int dimensions, List<TypeInstance> arguments, List<TypeInstance> superTypes, WildcardType wildcard) {
         checkArguments(type, arguments);
 
+        int d = 0;
+        CtClass t = type;
+        while (t.isArray()) {
+            t = unchecked(SourceInfo.none(), t::getComponentType);
+            ++d;
+        }
+
+        if (dimensions != d) {
+            throw new IllegalArgumentException("dimensions");
+        }
+
         this.type = type;
         this.dimensions = dimensions;
         this.arguments = arguments;
