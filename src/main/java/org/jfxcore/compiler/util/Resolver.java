@@ -17,6 +17,7 @@ import javassist.bytecode.SignatureAttribute;
 import javassist.bytecode.SyntheticAttribute;
 import javassist.bytecode.annotation.Annotation;
 import org.jetbrains.annotations.Nullable;
+import org.jfxcore.compiler.diagnostic.ErrorCode;
 import org.jfxcore.compiler.diagnostic.MarkupException;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.diagnostic.errors.GeneralErrors;
@@ -207,7 +208,7 @@ public class Resolver {
                             classSignature != null ? classSignature.getParameters() : new SignatureAttribute.TypeParameter[0],
                             methodSignature.getTypeParameters(),
                             invocationChain,
-                            Collections.emptyList()),
+                            Map.of()),
                         TypeInstance.ObjectType());
                 }
             }
@@ -261,7 +262,7 @@ public class Resolver {
                             new SignatureAttribute.TypeParameter[0],
                             methodSignature.getTypeParameters(),
                             invocationChain,
-                            Collections.emptyList()),
+                            Map.of()),
                         TypeInstance.ObjectType());
                 }
             }
@@ -295,6 +296,7 @@ public class Resolver {
         String propertyName = names[names.length - 1];
 
         if (names.length > 1) {
+            TypeInstance receiverClass = declaringClass;
             String className = String.join(".", Arrays.copyOf(names, names.length - 1));
             CtClass clazz = tryResolveClassAgainstImports(className);
             if (clazz != null) {
@@ -305,7 +307,7 @@ public class Resolver {
                 return null;
             }
 
-            PropertyInfo propertyInfo = tryResolveStaticPropertyImpl(declaringClass, propertyName);
+            PropertyInfo propertyInfo = tryResolveStaticPropertyImpl(declaringClass, receiverClass, propertyName);
             if (propertyInfo != null) {
                 return getCache().put(key, propertyInfo);
             }
@@ -366,12 +368,25 @@ public class Resolver {
         }
     }
 
-    private PropertyInfo tryResolveStaticPropertyImpl(TypeInstance declaringType, String propertyName) {
+    private PropertyInfo tryResolveStaticPropertyImpl(TypeInstance declaringType, TypeInstance receiverType,
+                                                      String propertyName) {
         try {
-            CtMethod getter = tryResolveStaticGetter(declaringType.jvmType(), propertyName);
-            GetterInfo propertyGetter = tryResolveStaticPropertyGetter(declaringType.jvmType(), propertyName);
-            TypeInstance observableType = propertyGetter != null ?
-                                          getTypeInstance(propertyGetter.method(), List.of(declaringType)) : null;
+            CtMethod getter = tryResolveStaticGetter(declaringType.jvmType(), receiverType.jvmType(), propertyName, false);
+            GetterInfo propertyGetter = tryResolveStaticPropertyGetter(declaringType.jvmType(), receiverType.jvmType(), propertyName);
+            TypeInstance observableType = null;
+
+            if (propertyGetter != null) {
+                try {
+                    observableType = getTypeInstance(propertyGetter.method(), List.of(declaringType), List.of(receiverType));
+                } catch (MarkupException ex) {
+                    if (ex.getDiagnostic().getCode() != ErrorCode.NUM_TYPE_ARGUMENTS_MISMATCH) {
+                        throw ex;
+                    }
+
+                    observableType = getTypeInstance(propertyGetter.method(), List.of(declaringType));
+                }
+            }
+
             TypeInstance propertyType = observableType != null ? findObservableArgument(observableType) : null;
 
             // If the return type of the getter doesn't match the type of the property getter,
@@ -388,7 +403,15 @@ public class Resolver {
             }
 
             if (propertyGetter == null && getter != null) {
-                propertyType = getTypeInstance(getter, List.of(declaringType));
+                try {
+                    propertyType = getTypeInstance(getter, List.of(declaringType), List.of(receiverType));
+                } catch (MarkupException ex) {
+                    if (ex.getDiagnostic().getCode() != ErrorCode.NUM_TYPE_ARGUMENTS_MISMATCH) {
+                        throw ex;
+                    }
+
+                    propertyType = getTypeInstance(getter, List.of(declaringType));
+                }
             }
 
             CtMethod setter = null;
@@ -649,15 +672,6 @@ public class Resolver {
     /**
      * Returns the getter for the specified static property (i.e. a method like GridPane.getRowIndex).
      *
-     * @return The method, or {@code null} if no getter can be found.
-     */
-    public CtMethod tryResolveStaticGetter(CtClass declaringClass, String name) {
-        return tryResolveStaticGetter(declaringClass, Classes.NodeType(), name, false);
-    }
-
-    /**
-     * Returns the getter for the specified static property (i.e. a method like GridPane.getRowIndex).
-     *
      * @param declaringClass the class that declares the getter method
      * @param receiverClass the parameter of the getter method (usually a subclass of Node)
      * @param name the name of the property
@@ -731,7 +745,7 @@ public class Resolver {
      *
      * @return The method, or {@code null} if no getter can be found.
      */
-    private GetterInfo tryResolveStaticPropertyGetter(CtClass declaringClass, String name) {
+    private GetterInfo tryResolveStaticPropertyGetter(CtClass declaringClass, CtClass receiverClass, String name) {
         CacheKey key = new CacheKey("tryResolveStaticPropertyGetter", declaringClass, name);
         CacheEntry entry = getCache().get(key);
         if (entry.found() && cacheEnabled) {
@@ -739,7 +753,7 @@ public class Resolver {
         }
 
         GetterInfo getter;
-        CtMethod method = resolvePropertyGetterImpl(declaringClass, Classes.NodeType(), name);
+        CtMethod method = resolvePropertyGetterImpl(declaringClass, receiverClass, name);
         if (method == null) {
             method = resolvePropertyGetterImpl(
                 declaringClass, Classes.NodeType(), NameHelper.getPropertyGetterName(name));
@@ -963,7 +977,7 @@ public class Resolver {
         }
 
         try {
-            TypeInstance typeInstance = invokeType(clazz.getDeclaringClass(), clazz, Collections.emptyList());
+            TypeInstance typeInstance = invokeType(clazz.getDeclaringClass(), clazz, Map.of());
             return getCache().put(key, typeInstance);
         } catch (NotFoundException ex) {
             throw SymbolResolutionErrors.classNotFound(sourceInfo, ex.getMessage());
@@ -985,7 +999,10 @@ public class Resolver {
                 return getTypeInstance(clazz);
             }
 
-            return getCache().put(key, invokeType(clazz.getDeclaringClass(), clazz, arguments));
+            Map<String, TypeInstance> providedArguments = associateProvidedArguments(
+                clazz, arguments, classSignature.getParameters(), new SignatureAttribute.TypeParameter[0]);
+
+            return getCache().put(key, invokeType(clazz.getDeclaringClass(), clazz, providedArguments));
         } catch (NotFoundException ex) {
             throw SymbolResolutionErrors.classNotFound(sourceInfo, ex.getMessage());
         } catch (BadBytecode ex) {
@@ -1003,7 +1020,7 @@ public class Resolver {
         try {
             SignatureAttribute.ObjectType fieldType = getGenericFieldSignature(field);
             if (fieldType == null) {
-                return invokeType(field.getDeclaringClass(), field.getType(), Collections.emptyList());
+                return invokeType(field.getDeclaringClass(), field.getType(), Map.of());
             }
 
             SignatureAttribute.ClassSignature classSignature = getGenericClassSignature(field.getDeclaringClass());
@@ -1017,7 +1034,7 @@ public class Resolver {
                 classTypeParams,
                 new SignatureAttribute.TypeParameter[0],
                 invocationChain,
-                Collections.emptyList());
+                Map.of());
 
             return getCache().put(key, Objects.requireNonNullElse(typeInstance, TypeInstance.ObjectType()));
         } catch (NotFoundException ex) {
@@ -1028,6 +1045,12 @@ public class Resolver {
     }
 
     public TypeInstance getTypeInstance(CtMethod method, List<TypeInstance> invocationChain) {
+        return getTypeInstance(method, invocationChain, List.of());
+    }
+
+    public TypeInstance getTypeInstance(CtMethod method,
+                                        List<TypeInstance> invocationChain,
+                                        List<TypeInstance> providedArguments) {
         CacheKey key = new CacheKey("getTypeInstance", method, invocationChain);
         CacheEntry entry = getCache().get(key);
         if (entry.found() && cacheEnabled) {
@@ -1040,16 +1063,21 @@ public class Resolver {
             TypeInstance typeInstance;
 
             if (methodSignature == null) {
-                typeInstance = invokeType(method.getDeclaringClass(), method.getReturnType(), Collections.emptyList());
+                typeInstance = invokeType(method.getDeclaringClass(), method.getReturnType(), Map.of());
             } else {
+                SignatureAttribute.TypeParameter[] classTypeParams =
+                    classSignature != null ? classSignature.getParameters() : new SignatureAttribute.TypeParameter[0];
+
                 typeInstance = invokeType(
                     method.getDeclaringClass(),
                     methodSignature.getReturnType(),
                     TypeInstance.WildcardType.NONE,
-                    classSignature != null ? classSignature.getParameters() : new SignatureAttribute.TypeParameter[0],
+                    classTypeParams,
                     methodSignature.getTypeParameters(),
                     invocationChain,
-                    Collections.emptyList());
+                    associateProvidedArguments(
+                        method.getDeclaringClass(), providedArguments, classTypeParams,
+                        methodSignature.getTypeParameters()));
             }
 
             return getCache().put(key, Objects.requireNonNullElse(typeInstance, TypeInstance.ObjectType()));
@@ -1160,7 +1188,55 @@ public class Resolver {
         return signature != null ? SignatureAttribute.toMethodSignature(signature) : null;
     }
 
-    private TypeInstance invokeType(CtClass invokingClass, CtClass invokedClass, List<TypeInstance> providedArguments)
+    private Map<String, TypeInstance> associateProvidedArguments(
+            CtClass declaringType,
+            List<TypeInstance> providedArguments,
+            SignatureAttribute.TypeParameter[] classTypeParams,
+            SignatureAttribute.TypeParameter[] methodTypeParams)
+                throws NotFoundException, BadBytecode {
+        if (providedArguments.isEmpty()) {
+            return Map.of();
+        }
+
+        var typeParams = Arrays.copyOf(classTypeParams, classTypeParams.length + methodTypeParams.length);
+        System.arraycopy(methodTypeParams, 0, typeParams, classTypeParams.length, methodTypeParams.length);
+
+        if (typeParams.length != providedArguments.size()) {
+            throw GeneralErrors.numTypeArgumentsMismatch(
+                sourceInfo, declaringType, typeParams.length, providedArguments.size());
+        }
+
+        Map<String, TypeInstance> result = new HashMap<>();
+
+        for (int i = 0; i < typeParams.length; ++i) {
+            checkProvidedArgument(providedArguments.get(i), typeParams[i], classTypeParams, methodTypeParams);
+            result.put(typeParams[i].getName(), providedArguments.get(i));
+        }
+
+        return result;
+    }
+
+    private void checkProvidedArgument(
+            TypeInstance argumentType,
+            SignatureAttribute.TypeParameter requiredType,
+            SignatureAttribute.TypeParameter[] classTypeParams,
+            SignatureAttribute.TypeParameter[] methodTypeParams)
+                throws NotFoundException, BadBytecode {
+        TypeInstance bound = requiredType.getClassBound() != null ?
+            invokeType(
+                null, requiredType.getClassBound(), TypeInstance.WildcardType.NONE,
+                classTypeParams, methodTypeParams, List.of(), Map.of()) :
+            invokeType(
+                null, requiredType.getInterfaceBound()[0], TypeInstance.WildcardType.NONE,
+                classTypeParams, methodTypeParams, List.of(), Map.of());
+
+        if (bound != null && !bound.isAssignableFrom(argumentType)) {
+            throw GeneralErrors.typeArgumentOutOfBound(sourceInfo, argumentType, bound);
+        }
+    }
+
+    private TypeInstance invokeType(CtClass invokingClass, CtClass invokedClass,
+                                    Map<String, TypeInstance> providedArguments)
             throws NotFoundException, BadBytecode {
         SignatureAttribute.ClassSignature classSignature = getGenericClassSignature(invokedClass);
         List<TypeInstance> arguments = new ArrayList<>();
@@ -1194,11 +1270,7 @@ public class Resolver {
                 }
 
                 if (providedArguments.size() > 0) {
-                    if (!providedArguments.get(i).subtypeOf(bound)) {
-                        throw GeneralErrors.typeArgumentOutOfBound(sourceInfo, providedArguments.get(i), bound);
-                    }
-
-                    arguments.add(providedArguments.get(i));
+                    arguments.add(providedArguments.get(typeParam.getName()));
                 } else {
                     arguments.add(TypeInstance.erased(bound));
                 }
@@ -1211,7 +1283,7 @@ public class Resolver {
                 classSignature.getParameters(),
                 empty,
                 List.of(invokedTypeInstance),
-                Collections.emptyList());
+                Map.of());
 
             if (superType != null) {
                 superTypes.add(superType);
@@ -1225,7 +1297,7 @@ public class Resolver {
                     classSignature.getParameters(),
                     empty,
                     List.of(invokedTypeInstance),
-                    Collections.emptyList());
+                    Map.of());
 
                 if (superType != null) {
                     superTypes.add(superType);
@@ -1233,11 +1305,11 @@ public class Resolver {
             }
         } else {
             if (invokedClass.getSuperclass() != null) {
-                superTypes.add(invokeType(null, invokedClass.getSuperclass(), Collections.emptyList()));
+                superTypes.add(invokeType(null, invokedClass.getSuperclass(), Map.of()));
             }
 
             for (CtClass intfClass : invokedClass.getInterfaces()) {
-                superTypes.add(invokeType(null, intfClass, Collections.emptyList()));
+                superTypes.add(invokeType(null, intfClass, Map.of()));
             }
         }
 
@@ -1246,18 +1318,18 @@ public class Resolver {
 
     private @Nullable TypeInstance invokeType(
             CtClass invokingClass,
-            SignatureAttribute.Type type,
+            SignatureAttribute.Type invokedType,
             TypeInstance.WildcardType wildcard,
             SignatureAttribute.TypeParameter[] classTypeParams,
             SignatureAttribute.TypeParameter[] methodTypeParams,
             List<TypeInstance> invocationChain,
-            List<TypeInstance> providedArguments)
+            Map<String, TypeInstance> providedArguments)
                 throws NotFoundException, BadBytecode {
-        if (type instanceof SignatureAttribute.BaseType baseType) {
+        if (invokedType instanceof SignatureAttribute.BaseType baseType) {
             return new TypeInstance(baseType.getCtlass(), wildcard);
         }
 
-        if (type instanceof SignatureAttribute.ArrayType arrayType) {
+        if (invokedType instanceof SignatureAttribute.ArrayType arrayType) {
             SignatureAttribute.Type componentType = arrayType.getComponentType();
             int dimension = arrayType.getDimension();
             TypeInstance typeInst = invokeType(
@@ -1268,46 +1340,26 @@ public class Resolver {
                 typeInst.jvmType(), dimension, typeInst.getArguments(), typeInst.getSuperTypes(), wildcard);
         }
 
-        if (type instanceof SignatureAttribute.ClassType classType) {
-            CtClass clazz = resolveClass(type.jvmTypeName());
+        if (invokedType instanceof SignatureAttribute.ClassType classType) {
+            CtClass clazz = resolveClass(invokedType.jvmTypeName());
             TypeInstance typeInstance;
             SignatureAttribute.ClassSignature classSignature = getGenericClassSignature(clazz);
 
             if (classSignature != null) {
                 List<TypeInstance> arguments;
 
-                if (providedArguments.isEmpty()) {
+                if (classType.getTypeArguments() == null || providedArguments.isEmpty()) {
                     arguments = invokeTypeArguments(
                         invokingClass, classType, classTypeParams, methodTypeParams, invocationChain);
                 } else {
                     arguments = new ArrayList<>();
-                    SignatureAttribute.TypeParameter[] empty = new SignatureAttribute.TypeParameter[0];
 
-                    for (int i = 0; i < classSignature.getParameters().length; ++i) {
-                        SignatureAttribute.TypeParameter typeParam = classSignature.getParameters()[i];
-                        TypeInstance bound = null;
+                    for (SignatureAttribute.TypeArgument typeArg : classType.getTypeArguments()) {
+                        TypeInstance typeInst = invokeType(
+                            invokingClass, typeArg.getType(), TypeInstance.WildcardType.of(typeArg.getKind()),
+                            classTypeParams, methodTypeParams, invocationChain, providedArguments);
 
-                        if (typeParam.getClassBound() != null) {
-                            bound = invokeType(
-                                invokingClass, typeParam.getClassBound(), TypeInstance.WildcardType.NONE,
-                                empty, empty, Collections.emptyList(), providedArguments);
-                        } else if (typeParam.getInterfaceBound().length > 0) {
-                            bound = invokeType(
-                                invokingClass, typeParam.getInterfaceBound()[0], TypeInstance.WildcardType.NONE,
-                                empty, empty, Collections.emptyList(), providedArguments);
-                        }
-
-                        if (bound == null) {
-                            bound = getTypeInstance(Classes.ObjectType());
-                        }
-
-                        if (providedArguments.size() > 0) {
-                            if (!providedArguments.get(i).subtypeOf(bound)) {
-                                throw GeneralErrors.typeArgumentOutOfBound(sourceInfo, providedArguments.get(i), bound);
-                            }
-
-                            arguments.add(providedArguments.get(i));
-                        }
+                        arguments.add(typeInst);
                     }
                 }
 
@@ -1321,7 +1373,7 @@ public class Resolver {
 
                 TypeInstance superType = invokeType(
                     clazz, classSignature.getSuperClass(), TypeInstance.WildcardType.NONE, typeParams, empty,
-                    extendedInvocationChain, Collections.emptyList());
+                    extendedInvocationChain, Map.of());
 
                 if (superType != null) {
                     typeInstance.getSuperTypes().add(superType);
@@ -1330,7 +1382,7 @@ public class Resolver {
                 for (SignatureAttribute.ClassType intfClass : classSignature.getInterfaces()) {
                     superType = invokeType(
                         clazz, intfClass, TypeInstance.WildcardType.NONE, typeParams, empty,
-                        extendedInvocationChain, Collections.emptyList());
+                        extendedInvocationChain, Map.of());
 
                     if (superType != null) {
                         typeInstance.getSuperTypes().add(superType);
@@ -1341,24 +1393,37 @@ public class Resolver {
 
                 if (clazz.getSuperclass() != null) {
                     typeInstance.getSuperTypes().add(
-                        invokeType(null, clazz.getSuperclass(), Collections.emptyList()));
+                        invokeType(null, clazz.getSuperclass(), Map.of()));
                 }
 
                 for (CtClass intfClass : clazz.getInterfaces()) {
-                    typeInstance.getSuperTypes().add(invokeType(null, intfClass, Collections.emptyList()));
+                    typeInstance.getSuperTypes().add(invokeType(null, intfClass, Map.of()));
                 }
             }
 
             return typeInstance;
         }
 
-        if (type instanceof SignatureAttribute.TypeVariable typeVar) {
+        if (invokedType instanceof SignatureAttribute.TypeVariable typeVar) {
+            if (providedArguments.size() > 0) {
+                TypeInstance result = providedArguments.get(typeVar.getName());
+                if (wildcard == TypeInstance.WildcardType.NONE) {
+                    return result;
+                }
+
+                return new TypeInstance(
+                    result.jvmType(), result.getDimensions(), result.getArguments(),
+                    result.getSuperTypes(), wildcard);
+            }
+
             return findTypeParameter(
                 invokingClass, typeVar.getName(), classTypeParams, methodTypeParams, invocationChain);
         }
 
         throw new IllegalArgumentException();
     }
+
+
 
     private List<TypeInstance> invokeTypeArguments(
             CtClass invokingClass,
@@ -1408,7 +1473,7 @@ public class Resolver {
                 if (existingInstance == null) {
                     existingInstance = invokeType(
                         invokingClass, typeArg.getType(), TypeInstance.WildcardType.of(typeArg.getKind()),
-                        classTypeParams, methodTypeParams, invocationChain, Collections.emptyList());
+                        classTypeParams, methodTypeParams, invocationChain, Map.of());
                 }
 
                 if (existingInstance != null) {
@@ -1444,7 +1509,7 @@ public class Resolver {
             return typeParam.getClassBound() != null ?
                 invokeType(
                     invokingClass, typeParam.getClassBound(), TypeInstance.WildcardType.NONE, classTypeParams,
-                    methodTypeParams, invocationChain, Collections.emptyList()) :
+                    methodTypeParams, invocationChain, Map.of()) :
                 new TypeInstance(resolveClass(typeParam.getInterfaceBound()[0].jvmTypeName()));
         }
 
@@ -1466,7 +1531,7 @@ public class Resolver {
             return typeParam.getClassBound() != null ?
                 invokeType(
                     invokingClass, typeParam.getClassBound(), TypeInstance.WildcardType.NONE, classTypeParams,
-                    methodTypeParams, invocationChain, Collections.emptyList()) :
+                    methodTypeParams, invocationChain, Map.of()) :
                 new TypeInstance(resolveClass(typeParam.getInterfaceBound()[0].jvmTypeName()));
         }
 
