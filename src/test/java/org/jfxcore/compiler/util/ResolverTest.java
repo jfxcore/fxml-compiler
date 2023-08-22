@@ -64,6 +64,27 @@ public class ResolverTest extends TestBase {
         assertEquals("java.lang.Comparable[][][]", resolver.resolveClassAgainstImports("Comparable<Double>[][][]").getName());
     }
 
+    public static class ArrayTest {
+        public <T> Comparable<T>[] property1() { return null; }
+        public <T> Comparable<T>[][] property2() { return null; }
+        public <T> Comparable<T>[][][] property3() { return null; }
+    }
+
+    @Test
+    public void Resolve_Array_Return_Type() {
+        Resolver resolver = new Resolver(SourceInfo.none());
+        TypeInstance paneType = resolver.getTypeInstance(resolver.resolveClass(ArrayTest.class.getName()));
+
+        PropertyInfo propertyInfo = resolver.resolveProperty(paneType, false, "property1");
+        assertEquals("Comparable<Object>[]", propertyInfo.getType().toString());
+
+        propertyInfo = resolver.resolveProperty(paneType, false, "property2");
+        assertEquals("Comparable<Object>[][]", propertyInfo.getType().toString());
+
+        propertyInfo = resolver.resolveProperty(paneType, false, "property3");
+        assertEquals("Comparable<Object>[][][]", propertyInfo.getType().toString());
+    }
+
     public static class Foo {
         public static class Bar {
             public static class Baz {}
