@@ -17,10 +17,16 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.ArgumentsProvider;
 import org.junit.jupiter.params.provider.ArgumentsSource;
+import javafx.beans.property.ListProperty;
 import javafx.beans.property.ReadOnlyStringProperty;
 import javafx.beans.property.StringProperty;
 import javafx.beans.value.ObservableValue;
+import javafx.collections.ObservableList;
 import javafx.scene.Node;
+import javafx.scene.control.Button;
+import javafx.scene.control.TableView;
+import javafx.scene.layout.Pane;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Stream;
@@ -233,6 +239,70 @@ public class ResolverTest extends TestBase {
         assertEquals(ErrorCode.TYPE_ARGUMENT_OUT_OF_BOUND, ex.getDiagnostic().getCode());
     }
 
+    public static class StaticPropertyWithGenericNode {
+        public static <T extends Node> ObservableList<? super T> getList1(T node) { return null; }
+        public static <T extends Node> ObservableList<Comparable<? super T>> getList1b(T node) { return null;}
+        public static <T extends Node> ListProperty<? super T> list2Property(T node) { return null; }
+        public static <T extends Pane> ObservableList<? super T> getList3(T node) { return null; }
+        public static <T extends TableView<String>> ObservableList<? super T> getList4(T node) { return null; }
+    }
+
+    @Test
+    public void GetTypeInstance_Of_Static_Property_With_Generic_Node() {
+        Resolver resolver = new Resolver(SourceInfo.none());
+        TypeInstance paneType = resolver.getTypeInstance(resolver.resolveClass(Pane.class.getName()));
+        var names = new ArrayList<>(List.of(StaticPropertyWithGenericNode.class.getName().split("\\.")));
+        names.add("list1");
+        PropertyInfo propertyInfo = resolver.resolveProperty(paneType, true, names.toArray(String[]::new));
+        assertEquals("ObservableList<? super Pane>", propertyInfo.getType().toString());
+    }
+
+    @Test
+    public void GetTypeInstance_Of_Static_Property_With_Generic_Node_2() {
+        Resolver resolver = new Resolver(SourceInfo.none());
+        TypeInstance paneType = resolver.getTypeInstance(resolver.resolveClass(Pane.class.getName()));
+        var names = new ArrayList<>(List.of(StaticPropertyWithGenericNode.class.getName().split("\\.")));
+        names.add("list1b");
+        PropertyInfo propertyInfo = resolver.resolveProperty(paneType, true, names.toArray(String[]::new));
+        assertEquals("ObservableList<Comparable<? super Pane>>", propertyInfo.getType().toString());
+    }
+
+    @Test
+    public void GetTypeInstance_Of_Static_ListProperty_With_Generic_Node() {
+        Resolver resolver = new Resolver(SourceInfo.none());
+        TypeInstance paneType = resolver.getTypeInstance(resolver.resolveClass(Pane.class.getName()));
+        var names = new ArrayList<>(List.of(StaticPropertyWithGenericNode.class.getName().split("\\.")));
+        names.add("list2");
+        PropertyInfo propertyInfo = resolver.resolveProperty(paneType, true, names.toArray(String[]::new));
+        assertEquals("ObservableList<? super Pane>", propertyInfo.getType().toString());
+    }
+
+    @Test
+    public void GetTypeInstance_Of_Static_Property_With_Generic_Node_Out_Of_Bounds() {
+        Resolver resolver = new Resolver(SourceInfo.none());
+        TypeInstance buttonType = resolver.getTypeInstance(resolver.resolveClass(Button.class.getName()));
+        var names = new ArrayList<>(List.of(StaticPropertyWithGenericNode.class.getName().split("\\.")));
+        names.add("list3");
+
+        // TODO: PROPERTY_NOT_FOUND is not a good diagnostic when the generic argument is out of bounds
+        MarkupException ex = assertThrows(MarkupException.class,
+            () -> resolver.resolveProperty(buttonType, true, names.toArray(String[]::new)));
+        assertEquals(ErrorCode.PROPERTY_NOT_FOUND, ex.getDiagnostic().getCode());
+    }
+
+    @Test
+    public void GetTypeInstance_Of_Static_Property_With_Generic_Node_Out_Of_Bounds_For_TableView_Argument() {
+        Resolver resolver = new Resolver(SourceInfo.none());
+        TypeInstance tableViewType = resolver.getTypeInstance(
+            resolver.resolveClass(TableView.class.getName()), List.of(TypeInstance.DoubleType()));
+        var names = new ArrayList<>(List.of(StaticPropertyWithGenericNode.class.getName().split("\\.")));
+        names.add("list4");
+
+        MarkupException ex = assertThrows(MarkupException.class,
+            () -> resolver.resolveProperty(tableViewType, true, names.toArray(String[]::new)));
+        assertEquals(ErrorCode.TYPE_ARGUMENT_OUT_OF_BOUND, ex.getDiagnostic().getCode());
+    }
+
     public record PropertyTestRun(
         String propertyName,
         boolean readOnly,
@@ -387,7 +457,7 @@ public class ResolverTest extends TestBase {
     @ArgumentsSource(PropertyArgumentsProvider.class)
     public void Detect_Static_Property_Names_Test(PropertyTestRun testRun) {
         var resolver = new Resolver(SourceInfo.none());
-        var declaringClass = resolver.getTypeInstance(resolver.resolveClass(StaticPropertyHolder.class.getName()));
+        var declaringClass = resolver.getTypeInstance(resolver.resolveClass(Node.class.getName()));
         var property = resolver.resolveProperty(
             declaringClass, true, StaticPropertyHolder.class.getName(), testRun.propertyName);
 
@@ -399,7 +469,7 @@ public class ResolverTest extends TestBase {
     @ArgumentsSource(PropertyArgumentsProvider.class)
     public void Detect_Static_Property_Names_With_Same_Name_As_Local_Properties_Test(PropertyTestRun testRun) {
         var resolver = new Resolver(SourceInfo.none());
-        var declaringClass = resolver.getTypeInstance(resolver.resolveClass(MixedPropertyHolder.class.getName()));
+        var declaringClass = resolver.getTypeInstance(resolver.resolveClass(Node.class.getName()));
         var property = resolver.resolveProperty(
             declaringClass, true, MixedPropertyHolder.class.getName(), testRun.propertyName);
 
