@@ -680,7 +680,7 @@ public class Resolver {
      */
     public CtMethod tryResolveStaticGetter(
             CtClass declaringClass, CtClass receiverClass, String name, boolean verbatim) {
-        CacheKey key = new CacheKey("tryResolveStaticGetter", declaringClass, name);
+        CacheKey key = new CacheKey("tryResolveStaticGetter", declaringClass, name, verbatim);
         CacheEntry entry = getCache().get(key);
         if (entry.found() && cacheEnabled) {
             return (CtMethod)entry.value();
@@ -746,7 +746,7 @@ public class Resolver {
      * @return The method, or {@code null} if no getter can be found.
      */
     private GetterInfo tryResolveStaticPropertyGetter(CtClass declaringClass, CtClass receiverClass, String name) {
-        CacheKey key = new CacheKey("tryResolveStaticPropertyGetter", declaringClass, name);
+        CacheKey key = new CacheKey("tryResolveStaticPropertyGetter", declaringClass, receiverClass, name);
         CacheEntry entry = getCache().get(key);
         if (entry.found() && cacheEnabled) {
             return (GetterInfo)entry.value();
@@ -1051,7 +1051,7 @@ public class Resolver {
     public TypeInstance getTypeInstance(CtMethod method,
                                         List<TypeInstance> invocationChain,
                                         List<TypeInstance> providedArguments) {
-        CacheKey key = new CacheKey("getTypeInstance", method, invocationChain);
+        CacheKey key = new CacheKey("getTypeInstance", method, invocationChain, providedArguments);
         CacheEntry entry = getCache().get(key);
         if (entry.found() && cacheEnabled) {
             return (TypeInstance)entry.value();
