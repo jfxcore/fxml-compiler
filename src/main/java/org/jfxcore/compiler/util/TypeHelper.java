@@ -405,6 +405,21 @@ public class TypeHelper {
         }
     }
 
+    public static List<TypeInstance> getTypeArguments(TypeInstance type, CtClass targetType) {
+        if (equals(type.jvmType(), targetType)) {
+            return type.getArguments();
+        }
+
+        for (TypeInstance superType : type.getSuperTypes()) {
+            List<TypeInstance> arguments = getTypeArguments(superType, targetType);
+            if (!arguments.isEmpty()) {
+                return arguments;
+            }
+        }
+
+        return List.of();
+    }
+
     public static TypeInstance getTypeInstance(Node node) {
         if (!(node instanceof ValueNode)) {
             throw new RuntimeException("Expected " + ValueNode.class.getSimpleName());

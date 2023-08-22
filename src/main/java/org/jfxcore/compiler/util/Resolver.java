@@ -1554,24 +1554,6 @@ public class Resolver {
         return null;
     }
 
-    /**
-     * Given a property with a generic type declaration, this method returns the types of the generic arguments.
-     */
-    public List<TypeInstance> getPropertyTypeArguments(PropertyInfo propertyInfo) {
-        if (propertyInfo.getGetter() != null) {
-            return getTypeInstance(propertyInfo.getGetter(), List.of(propertyInfo.getDeclaringType())).getArguments();
-        }
-
-        if (propertyInfo.getPropertyGetter() != null) {
-            TypeInstance propertyType = getTypeInstance(
-                propertyInfo.getPropertyGetter(), List.of(propertyInfo.getDeclaringType()));
-
-            return findObservableArgument(propertyType).getArguments();
-        }
-
-        return Collections.emptyList();
-    }
-
     private CtMethod findMethod(CtClass type, Function<CtMethod, Boolean> consumer) {
         for (CtMethod method : type.getDeclaredMethods()) {
             if (!isSynthetic(method) && consumer.apply(method)) {
