@@ -519,12 +519,18 @@ public class ValueEmitterFactory {
                 continue;
             }
 
+            // We only consider NamedArg-based constructors for value coercion, so skip this
+            // constructor if we don't have a full set of named arguments.
+            List<NamedArgParam> namedArgs = getNamedArgParams(type, constructor, sourceInfo);
+            if (namedArgs.isEmpty()) {
+                continue;
+            }
+
             List<ValueEmitterNode> params = new ArrayList<>();
+            TypeInstance[] paramTypes = resolver.getParameterTypes(constructor, List.of(type));
 
             for (int i = 0; i < literals.length; ++i) {
-                ValueEmitterNode param = newLiteralValue(
-                    literals[i], resolver.getParameterTypes(constructor, List.of(type))[i], sourceInfo);
-
+                ValueEmitterNode param = newLiteralValue(literals[i], paramTypes[i], sourceInfo);
                 if (param != null) {
                     params.add(param);
                 } else {
@@ -569,7 +575,6 @@ public class ValueEmitterFactory {
             ObjectNode objectNode, List<DiagnosticInfo> diagnostics) {
         List<NamedArgsConstructor> namedArgsConstructors = new ArrayList<>();
         TypeInstance type = TypeHelper.getTypeInstance(objectNode);
-        Resolver resolver = new Resolver(objectNode.getSourceInfo());
 
         // Enumerate all constructors that have named arguments
         for (CtConstructor constructor : type.jvmType().getConstructors()) {
@@ -577,39 +582,8 @@ public class ValueEmitterFactory {
                 continue;
             }
 
-            List<NamedArgParam> namedArgs = new ArrayList<>();
-
-            ParameterAnnotationsAttribute attr = (ParameterAnnotationsAttribute)constructor
-                .getMethodInfo2().getAttribute(ParameterAnnotationsAttribute.visibleTag);
-
-            if (attr == null) {
-                continue;
-            }
-
-            TypeInstance[] constructorParamTypes = resolver.getParameterTypes(constructor, List.of(type));
-            Annotation[][] annotations = attr.getAnnotations();
-
-            for (int i = 0; i < annotations.length; ++i) {
-                Annotation namedArgAnnotation = null;
-                for (Annotation item : annotations[i]) {
-                    if (item.getTypeName().equals(Classes.NamedArgAnnotationName)) {
-                        namedArgAnnotation = item;
-                        break;
-                    }
-                }
-
-                if (namedArgAnnotation != null) {
-                    String value = TypeHelper.getAnnotationString(namedArgAnnotation, "value");
-                    String defaultValue = TypeHelper.getAnnotationString(namedArgAnnotation, "defaultValue");
-
-                    if (value != null) {
-                        TypeInstance argType = constructorParamTypes[i];
-                        namedArgs.add(new NamedArgParam(value, defaultValue, argType));
-                    }
-                }
-            }
-
-            if (!namedArgs.isEmpty() && namedArgs.size() == constructorParamTypes.length) {
+            List<NamedArgParam> namedArgs = getNamedArgParams(type, constructor, objectNode.getSourceInfo());
+            if (!namedArgs.isEmpty()) {
                 namedArgsConstructors.add(
                     new NamedArgsConstructor(constructor, namedArgs.toArray(new NamedArgParam[0])));
             }
@@ -649,6 +623,50 @@ public class ValueEmitterFactory {
         }
 
         return new NamedArgsConstructor[0];
+    }
+
+    private static List<NamedArgParam> getNamedArgParams(
+            TypeInstance type, CtConstructor constructor, SourceInfo sourceInfo) {
+        ParameterAnnotationsAttribute attr = (ParameterAnnotationsAttribute)constructor
+            .getMethodInfo2().getAttribute(ParameterAnnotationsAttribute.visibleTag);
+
+        if (attr == null) {
+            return List.of();
+        }
+
+        Resolver resolver = new Resolver(sourceInfo);
+        TypeInstance[] constructorParamTypes = resolver.getParameterTypes(constructor, List.of(type));
+        Annotation[][] annotations = attr.getAnnotations();
+
+        if (annotations.length != constructorParamTypes.length) {
+            return List.of();
+        }
+
+        List<NamedArgParam> namedArgs = new ArrayList<>();
+
+        for (int i = 0; i < annotations.length; ++i) {
+            Annotation namedArgAnnotation = null;
+            for (Annotation item : annotations[i]) {
+                if (item.getTypeName().equals(Classes.NamedArgAnnotationName)) {
+                    namedArgAnnotation = item;
+                    break;
+                }
+            }
+
+            if (namedArgAnnotation == null) {
+                return List.of();
+            }
+
+            String value = TypeHelper.getAnnotationString(namedArgAnnotation, "value");
+            String defaultValue = TypeHelper.getAnnotationString(namedArgAnnotation, "defaultValue");
+
+            if (value != null) {
+                TypeInstance argType = constructorParamTypes[i];
+                namedArgs.add(new NamedArgParam(value, defaultValue, argType));
+            }
+        }
+
+        return namedArgs;
     }
 
     private record NamedArgParam(String name, String defaultValue, TypeInstance type) {

@@ -75,6 +75,8 @@ public class FunctionBindingTest extends CompilerTestBase {
         public final Container1 c1 = new Container1(new Container2(new DecimalFormat("000")));
         public static record Container1(Container2 c2) {}
         public static record Container2(DecimalFormat fmt) {}
+
+        public final DecimalFormat fmt = new DecimalFormat("000");
     }
 
     @SuppressWarnings("unused")
@@ -285,16 +287,13 @@ public class FunctionBindingTest extends CompilerTestBase {
     @Test
     public void Bind_Once_To_Instance_Method_Of_LocalObject() {
         Pane root = compileAndRun("""
-            <?import javafx.scene.layout.*?>
             <?import javafx.scene.control.*?>
-            <?import java.text.*?>
-            <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <fx:define>
-                    <DecimalFormat fx:id="fmt">000</DecimalFormat>
                     <Double fx:id="val">7</Double>
                 </fx:define>
                 <Label text="{fx:once fmt.format(val)}"/>
-            </Pane>
+            </TestPane>
         """);
 
         Label label = (Label)root.getChildren().get(0);
@@ -569,15 +568,10 @@ public class FunctionBindingTest extends CompilerTestBase {
     @Test
     public void Bind_Unidirectional_To_Instance_Method_Of_LocalObject() {
         Pane root = compileAndRun("""
-            <?import javafx.scene.layout.*?>
             <?import javafx.scene.control.*?>
-            <?import java.text.*?>
-            <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
-                <fx:define>
-                    <DecimalFormat fx:id="fmt">000</DecimalFormat>
-                </fx:define>
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <Label text="{fx:bind fmt.format(self/prefWidth)}" prefWidth="7"/>
-            </Pane>
+            </TestPane>
         """);
 
         Label label = (Label)root.getChildren().get(0);
