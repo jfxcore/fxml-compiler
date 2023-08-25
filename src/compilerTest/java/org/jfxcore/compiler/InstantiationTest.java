@@ -7,6 +7,7 @@ import javafx.beans.NamedArg;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 import javafx.collections.ObservableList;
+import javafx.event.EventType;
 import javafx.geometry.Insets;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
@@ -482,6 +483,25 @@ public class InstantiationTest extends CompilerTestBase {
 
             var backgroundFill = (BackgroundFill)root.getProperties().get("bf");
             assertEquals(Color.RED, backgroundFill.getFill());
+        }
+
+        @SuppressWarnings("unused")
+        public static class NamedArgTestPane extends GridPane {
+            // EventType's parameterized constructor is not annotated with NamedArg
+            public NamedArgTestPane(@NamedArg("eventType") EventType<?> eventType) {}
+        }
+
+        @Test
+        public void Constructor_Without_NamedArgAnnotations_Is_Not_Eligible() {
+            MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+                <?import javafx.scene.layout.*?>
+                <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
+                    <NamedArgTestPane eventType="MY_EVENT_TYPE"/>
+                </GridPane>
+            """));
+
+            assertEquals(ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT, ex.getDiagnostic().getCode());
+            assertCodeHighlight("MY_EVENT_TYPE", ex);
         }
     }
 
