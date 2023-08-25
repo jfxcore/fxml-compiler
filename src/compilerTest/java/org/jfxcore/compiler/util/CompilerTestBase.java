@@ -8,6 +8,7 @@ import javassist.CtConstructor;
 import javassist.CtMethod;
 import javassist.NotFoundException;
 import javassist.expr.ExprEditor;
+import javassist.expr.FieldAccess;
 import javassist.expr.MethodCall;
 import javassist.expr.NewExpr;
 import org.junit.jupiter.api.BeforeAll;
@@ -134,6 +135,10 @@ public class CompilerTestBase {
         assertTrue(testNewExpr(root, predicate), "NewExpr assertion failed");
     }
 
+    public void assertFieldAccess(Object root, String className, String fieldName, String signature) {
+        assertTrue(testFieldAccess(root, className, fieldName, signature), "FieldAccess assertion failed");
+    }
+
     private synchronized boolean testMethodExpr(Object root, Predicate<List<CtMethod>> predicate) {
         try {
             if (classPool == null) {
@@ -185,6 +190,32 @@ public class CompilerTestBase {
                 });
 
             return predicate.test(constructorCalls);
+        } catch (Exception ex) {
+            throw new RuntimeException(ex);
+        }
+    }
+
+    private synchronized boolean testFieldAccess(Object root, String className, String fieldName, String signature) {
+        try {
+            if (classPool == null) {
+                classPool = new ClassPool();
+                classPool.appendSystemPath();
+                classPool.appendClassPath(root.getClass().getProtectionDomain().getCodeSource().getLocation().toExternalForm());
+            }
+
+            record FieldInfo(String className, String fieldName, String signature) {}
+            List<FieldInfo> fields = new ArrayList<>();
+
+            classPool
+                .get(root.getClass().getName())
+                .getDeclaredMethod("initializeComponent").instrument(new ExprEditor() {
+                    @Override
+                    public void edit(FieldAccess f) {
+                        fields.add(new FieldInfo(f.getClassName(), f.getFieldName(), f.getSignature()));
+                    }
+                });
+
+            return fields.contains(new FieldInfo(className, fieldName, signature));
         } catch (Exception ex) {
             throw new RuntimeException(ex);
         }

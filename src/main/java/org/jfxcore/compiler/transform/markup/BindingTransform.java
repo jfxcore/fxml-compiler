@@ -200,7 +200,7 @@ public class BindingTransform implements Transform {
         }
 
         return switch (bindingContextSelector) {
-            case DEFAULT -> throw new IllegalArgumentException();
+            case STATIC, DEFAULT -> throw new IllegalArgumentException();
 
             case SELF -> {
                 List<Node> parents = context.getParents().stream()

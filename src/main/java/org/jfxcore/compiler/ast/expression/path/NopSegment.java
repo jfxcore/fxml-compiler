@@ -13,10 +13,10 @@ import org.jfxcore.compiler.util.ExceptionHelper;
 import org.jfxcore.compiler.util.ObservableKind;
 import org.jfxcore.compiler.util.TypeInstance;
 
-public class ThisSegment extends Segment {
+public class NopSegment extends Segment {
 
-    public ThisSegment(TypeInstance valueType) {
-        super("<this>", "<this>", valueType, valueType, ObservableKind.NONE);
+    public NopSegment(TypeInstance valueType) {
+        super("<nop>", "<nop>", valueType, valueType, ObservableKind.NONE);
     }
 
     @Override
