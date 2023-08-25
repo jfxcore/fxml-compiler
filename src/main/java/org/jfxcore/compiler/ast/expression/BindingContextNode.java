@@ -4,13 +4,14 @@
 package org.jfxcore.compiler.ast.expression;
 
 import org.jfxcore.compiler.ast.AbstractNode;
-import org.jfxcore.compiler.util.TypeInstance;
-import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.ast.ResolvedTypeNode;
 import org.jfxcore.compiler.ast.Visitor;
+import org.jfxcore.compiler.ast.expression.path.NopSegment;
 import org.jfxcore.compiler.ast.expression.path.ParamSegment;
 import org.jfxcore.compiler.ast.expression.path.ParentSegment;
 import org.jfxcore.compiler.ast.expression.path.Segment;
+import org.jfxcore.compiler.diagnostic.SourceInfo;
+import org.jfxcore.compiler.util.TypeInstance;
 import java.util.Objects;
 
 public class BindingContextNode extends AbstractNode {
@@ -47,6 +48,7 @@ public class BindingContextNode extends AbstractNode {
 
     public Segment toSegment() {
         return switch (selector) {
+            case STATIC -> new NopSegment(type.getTypeInstance());
             case DEFAULT, SELF, PARENT -> new ParentSegment(type.getTypeInstance(), parentIndex);
             case TEMPLATED_ITEM -> new ParamSegment(type.getTypeInstance());
         };

@@ -1,8 +1,9 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2023, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.expression;
 
+import javassist.CtClass;
 import org.jfxcore.compiler.ast.AbstractNode;
 import org.jfxcore.compiler.ast.BindingMode;
 import org.jfxcore.compiler.ast.Visitor;
@@ -12,10 +13,12 @@ import org.jfxcore.compiler.ast.expression.util.SimplePathEmitterFactory;
 import org.jfxcore.compiler.ast.text.PathSegmentNode;
 import org.jfxcore.compiler.ast.text.TextNode;
 import org.jfxcore.compiler.ast.text.TextSegmentNode;
+import org.jfxcore.compiler.diagnostic.MarkupException;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
+import org.jfxcore.compiler.diagnostic.errors.BindingSourceErrors;
 import org.jfxcore.compiler.diagnostic.errors.ParserErrors;
+import org.jfxcore.compiler.util.Resolver;
 import org.jfxcore.compiler.util.TypeInstance;
-
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -83,22 +86,78 @@ public class PathExpressionNode extends AbstractNode implements ExpressionNode {
                 return resolvedObservablePath;
             }
 
-            return resolvedObservablePath = ResolvedPath.parse(
-                bindingContext.toSegment(),
-                segments.stream().limit(limit).toList(),
-                true,
-                getSourceInfo());
+            return resolvedObservablePath = resolvePathImpl(true, limit);
         }
 
         if (resolvedPath != null) {
             return resolvedPath;
         }
 
-        return resolvedPath = ResolvedPath.parse(
-            bindingContext.toSegment(),
-            segments.stream().limit(limit).toList(),
-            false,
-            getSourceInfo());
+        return resolvedPath = resolvePathImpl(false, limit);
+    }
+
+    private ResolvedPath resolvePathImpl(boolean preferObservable, int limit) {
+        try {
+            return ResolvedPath.parse(
+                bindingContext.toSegment(),
+                segments.stream().limit(limit).toList(),
+                preferObservable,
+                getSourceInfo());
+        } catch (MarkupException ex) {
+            // If we don't have a valid path expression, the only other possible interpretation would be
+            // that the path begins with the name of a (possibly fully qualified) class. Since class names
+            // are not resolved by a path expression, we check that only the default binding context
+            // selector is used.
+            BindingContextSelector selector = getBindingContext().getSelector();
+            if (selector != BindingContextSelector.DEFAULT && selector != BindingContextSelector.TEMPLATED_ITEM) {
+                throw BindingSourceErrors.bindingContextNotApplicable(getBindingContext().getSourceInfo());
+            }
+
+            Resolver resolver = new Resolver(SourceInfo.none());
+            StringBuilder classBuilder = new StringBuilder();
+            CtClass type = null;
+            int staticLimit = 0;
+
+            while (staticLimit < getSegments().size() - 1) {
+                PathSegmentNode segment = getSegments().get(staticLimit);
+
+                // If the path contains an observable selector, it can't be the name of a class.
+                if (segment.isObservableSelector()) {
+                    throw ex;
+                }
+
+                if (!classBuilder.isEmpty()) {
+                    classBuilder.append('.');
+                }
+
+                classBuilder.append(segment.getText());
+                type = resolver.tryResolveClassAgainstImports(classBuilder.toString());
+                if (type != null) {
+                    break;
+                }
+
+                ++staticLimit;
+            }
+
+            // The path doesn't start with the name of a class, so let's throw the original exception.
+            if (type == null) {
+                throw ex;
+            }
+
+            // Create a new path expression that uses a STATIC binding context.
+            var newPathExpression = new PathExpressionNode(
+                getOperator(),
+                new BindingContextNode(
+                    BindingContextSelector.STATIC,
+                    resolver.getTypeInstance(type),
+                    0,
+                    false,
+                    SourceInfo.none()),
+                getSegments().stream().skip(staticLimit + 1).toList(),
+                getSourceInfo());
+
+            return newPathExpression.resolvePath(false);
+        }
     }
 
     @Override

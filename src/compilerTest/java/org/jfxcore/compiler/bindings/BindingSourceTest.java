@@ -55,6 +55,30 @@ public class BindingSourceTest extends CompilerTestBase {
     }
 
     @Test
+    public void Bind_Once_To_Unqualified_Static_Constant() {
+        Pane root = compileAndRun("""
+            <?import javafx.scene.layout.*?>
+            <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
+                <Pane maxWidth="{fx:once Region.USE_PREF_SIZE}"/>
+            </Pane>
+        """);
+
+        assertFieldAccess(root, "javafx.scene.layout.Region", "USE_PREF_SIZE", "D");
+    }
+
+    @Test
+    public void Bind_Once_To_Qualified_Static_Constant() {
+        Pane root = compileAndRun("""
+            <?import javafx.scene.layout.*?>
+            <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
+                <Pane maxWidth="{fx:once javafx.scene.layout.Region.USE_PREF_SIZE}"/>
+            </Pane>
+        """);
+
+        assertFieldAccess(root, "javafx.scene.layout.Region", "USE_PREF_SIZE", "D");
+    }
+
+    @Test
     public void Bind_Unidirectional_To_Parent_Property_With_Indexed_Parent_Selector() {
         Pane root = compileAndRun("""
             <?import javafx.scene.layout.*?>
@@ -139,6 +163,30 @@ public class BindingSourceTest extends CompilerTestBase {
         Pane pane = (Pane)((Pane)root.getChildren().get(0)).getChildren().get(0);
         assertEquals(234, pane.getPrefWidth(), 0.001);
         assertEquals(123, pane.getPrefHeight(), 0.001);
+    }
+
+    @Test
+    public void Bind_Unidirectional_To_Unqualified_Static_Constant() {
+        Pane root = compileAndRun("""
+            <?import javafx.scene.layout.*?>
+            <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
+                <Pane maxWidth="{fx:bind Region.USE_PREF_SIZE}"/>
+            </Pane>
+        """);
+
+        assertFieldAccess(root, "javafx.scene.layout.Region", "USE_PREF_SIZE", "D");
+    }
+
+    @Test
+    public void Bind_Unidirectional_To_Qualified_Static_Constant() {
+        Pane root = compileAndRun("""
+            <?import javafx.scene.layout.*?>
+            <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
+                <Pane maxWidth="{fx:bind javafx.scene.layout.Region.USE_PREF_SIZE}"/>
+            </Pane>
+        """);
+
+        assertFieldAccess(root, "javafx.scene.layout.Region", "USE_PREF_SIZE", "D");
     }
 
     @Test
