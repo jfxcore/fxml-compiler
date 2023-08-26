@@ -57,7 +57,7 @@ public class ResolveTypeTransform implements Transform {
 
             //noinspection ConstantConditions
             return new ResolvedTypeNode(
-                intrinsic.getType(context, typeNode),
+                intrinsic.getType(typeNode),
                 typeNode.getName(),
                 typeNode.getMarkupName(),
                 true,

@@ -3,7 +3,7 @@
 
 package org.jfxcore.compiler;
 
-import javafx.scene.control.Button;
+import javafx.scene.Node;
 import javafx.scene.control.TableView;
 import org.jfxcore.compiler.diagnostic.ErrorCode;
 import org.jfxcore.compiler.diagnostic.MarkupException;
@@ -21,49 +21,38 @@ public class ConstantsTest extends CompilerTestBase {
 
     @Test
     public void Constant_Is_Referenced_With_FxConstant() {
-        Button button = compileAndRun("""
+        Node root = compileAndRun("""
             <?import javafx.scene.control.*?>
             <Button xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <minHeight><Double fx:constant="POSITIVE_INFINITY"/></minHeight>
             </Button>
         """);
 
-        assertTrue(Double.isInfinite(button.getMinHeight()));
+        assertFieldAccess(root, "java.lang.Double", "POSITIVE_INFINITY", "D");
     }
 
     @Test
-    public void Constant_Is_Referenced_With_InContext_FxConstant() {
-        Button button = compileAndRun("""
-            <?import javafx.scene.control.*?>
-            <Button xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                    minHeight="{fx:constant POSITIVE_INFINITY}"/>
-        """);
-
-        assertTrue(Double.isInfinite(button.getMinHeight()));
-    }
-
-    @Test
-    public void InContext_FxConstant_With_Invalid_Value() {
-        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
-            <?import javafx.scene.control.*?>
-            <Button xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                    minHeight="{fx:constant {fx:constant POSITIVE_INFINITY}}"/>
-        """));
-
-        assertEquals(ErrorCode.EXPECTED_IDENTIFIER, ex.getDiagnostic().getCode());
-        assertCodeHighlight("{fx:constant POSITIVE_INFINITY}", ex);
-    }
-
-    @Test
-    public void InContext_FxConstant_With_Empty_Value() {
+    public void FxConstant_In_Element_Notation_Is_Invalid() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.scene.control.*?>
             <Button xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                     minHeight="{fx:constant}"/>
         """));
 
-        assertEquals(ErrorCode.INVALID_EXPRESSION, ex.getDiagnostic().getCode());
+        assertEquals(ErrorCode.UNEXPECTED_INTRINSIC, ex.getDiagnostic().getCode());
         assertCodeHighlight("{fx:constant}", ex);
+    }
+
+    @Test
+    public void FxConstant_With_Invalid_Value_Fails() {
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <?import javafx.scene.control.*?>
+            <Button xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                    minHeight="{Double fx:constant={Double fx:constant=POSITIVE_INFINITY}}"/>
+        """));
+
+        assertEquals(ErrorCode.PROPERTY_MUST_CONTAIN_TEXT, ex.getDiagnostic().getCode());
+        assertCodeHighlight("{Double fx:constant=POSITIVE_INFINITY}", ex);
     }
 
     @Test
@@ -108,6 +97,7 @@ public class ConstantsTest extends CompilerTestBase {
             </TableView>
         """);
 
+        assertFieldAccess(tableView, "javafx.scene.control.TableView", "CONSTRAINED_RESIZE_POLICY", "Ljavafx/util/Callback;");
         assertSame(tableView.getColumnResizePolicy(), TableView.CONSTRAINED_RESIZE_POLICY);
     }
 

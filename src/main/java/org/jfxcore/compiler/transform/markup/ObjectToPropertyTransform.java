@@ -1,4 +1,4 @@
-// Copyright (c) 2022, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2023, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.transform.markup;
@@ -21,29 +21,21 @@ import org.jfxcore.compiler.util.TypeInstance;
 import java.util.Arrays;
 
 /**
- * Transforms objects to properties in two scenarios:
+ * FXML allows element values to refer to properties of the parent element:
+ *     <pre>{@code
+ *         <Button>
+ *             <text>Hello!</text>
+ *         </Button>
+ *     }</pre>
+ *
+ * In this example, {@code <text>} looks like the name of a class, but we want it to be
+ * interpreted as a property of the Button class. This transform converts all object nodes
+ * that can be interpreted as properties on the parent element to property nodes.
  * <p>
- * <ol>
- *     <li>FXML allows element values to refer to properties of the parent element:
- *         <pre>{@code
- *             <Button>
- *                 <text>Hello!</text>
- *             </Button>
- *         }</pre>
- *
- *         In this example, {@code <text>} looks like the name of a class, but we want it to be
- *         interpreted as a property of the Button class. This transform converts all object nodes
- *         that can be interpreted as properties on the parent element to property nodes.
- *         <p>
- *         Note that this transform only applies to unresolved elements.
- *         If {@code <text>} was the name of a resolvable class, then this transform does not replace the
- *         object node with a property node. In this situation, users will have to qualify the
- *         property name with the name of the class on which it is defined.
- *
- *     <li>In-context intrinsic elements like fx:value can only appear as a property value, and not
- *         as children of an object. Therefore, if we encounter an in-context intrinsic that is not
- *         the value of a PropertyNode, we need to convert it to a PropertyNode.
- * </ol>
+ * Note that this transform only applies to unresolved elements.
+ * If {@code <text>} was the name of a resolvable class, then this transform does not replace the
+ * object node with a property node. In this situation, users will have to qualify the
+ * property name with the name of the class on which it is defined.
  */
 public class ObjectToPropertyTransform implements Transform {
 
@@ -127,9 +119,7 @@ public class ObjectToPropertyTransform implements Transform {
 
     private Node tryConvertIntrinsicObjectToProperty(TransformContext context, ObjectNode objectNode) {
         Intrinsic intrinsic = Intrinsics.find(objectNode);
-        if (intrinsic == null
-                || intrinsic.getKind() != Intrinsic.Kind.ANY
-                || context.getParent() instanceof PropertyNode) {
+        if (intrinsic == null || context.getParent() instanceof PropertyNode) {
             return objectNode;
         }
 

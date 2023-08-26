@@ -1,4 +1,4 @@
-// Copyright (c) 2022, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2023, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.transform;
@@ -18,7 +18,6 @@ import org.jfxcore.compiler.transform.common.IntrinsicsTransform;
 import org.jfxcore.compiler.transform.common.ResolveTypeTransform;
 import org.jfxcore.compiler.transform.markup.AddTemplateIdFields;
 import org.jfxcore.compiler.transform.markup.BindingTransform;
-import org.jfxcore.compiler.transform.markup.ConstantIntrinsicTransform;
 import org.jfxcore.compiler.transform.markup.DefaultPropertyTransform;
 import org.jfxcore.compiler.transform.markup.DefineBlockTransform;
 import org.jfxcore.compiler.transform.markup.DocumentTransform;
@@ -34,7 +33,6 @@ import org.jfxcore.compiler.transform.markup.TopologyTransform;
 import org.jfxcore.compiler.transform.markup.TypeIntrinsicTransform;
 import org.jfxcore.compiler.transform.markup.UrlIntrinsicTransform;
 import org.jfxcore.compiler.transform.markup.ValidateTypeTransform;
-import org.jfxcore.compiler.transform.markup.ValueIntrinsicTransform;
 import java.util.Arrays;
 import java.util.List;
 
@@ -84,11 +82,9 @@ public class Transformer {
             new DocumentTransform(),
             new IdPropertyTransform(),
             new BindingTransform(),
-            new ConstantIntrinsicTransform(),
             new DefineBlockTransform(),
             new UrlIntrinsicTransform(),
             new NullIntrinsicTransform(),
-            new ValueIntrinsicTransform(),
             new TypeIntrinsicTransform(),
             new ObjectTransform(),
             new PropertyAssignmentTransform(),

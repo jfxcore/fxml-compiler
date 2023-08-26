@@ -4,13 +4,8 @@
 package org.jfxcore.compiler.ast.intrinsic;
 
 import javassist.CtClass;
-import org.jfxcore.compiler.ast.ObjectNode;
-import org.jfxcore.compiler.ast.PropertyNode;
 import org.jfxcore.compiler.ast.TypeNode;
-import org.jfxcore.compiler.transform.TransformContext;
-import org.jfxcore.compiler.util.PropertyInfo;
 import org.jfxcore.compiler.util.Resolver;
-import org.jfxcore.compiler.util.TypeHelper;
 import org.jfxcore.compiler.util.TypeInstance;
 import java.util.Arrays;
 import java.util.List;
@@ -19,7 +14,7 @@ import java.util.function.Supplier;
 public class Intrinsic {
 
     public enum Kind {
-        ANY, OBJECT, PROPERTY
+        OBJECT, PROPERTY
     }
 
     public enum Placement {
@@ -54,22 +49,11 @@ public class Intrinsic {
     }
 
     /**
-     * Gets the type of the intrinsic, which may depend on other nodes in the AST.
-     * For example, an in-context fx:value node depends on the property type to which it is assigned.
+     * Gets the type of the intrinsic.
      *
-     * @param context the {@code TransformContext}
      * @param typeNode the {@code TypeNode} in the AST that represents the intrinsic type
      */
-    public TypeInstance getType(TransformContext context, TypeNode typeNode) {
-        if (kind == Kind.ANY
-                && context.getParent(typeNode) instanceof ObjectNode objectNode
-                && context.getParent(objectNode) instanceof PropertyNode propertyNode
-                && context.getParent(propertyNode) instanceof ObjectNode parentNode) {
-            PropertyInfo propertyInfo = new Resolver(propertyNode.getSourceInfo())
-                .resolveProperty(TypeHelper.getTypeInstance(parentNode), false, propertyNode.getNames());
-            return propertyInfo.getType();
-        }
-
+    public TypeInstance getType(TypeNode typeNode) {
         if (cachedTypeInstance == null) {
             cachedTypeInstance = new Resolver(typeNode.getSourceInfo()).getTypeInstance(type.get());
         }

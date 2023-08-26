@@ -542,55 +542,14 @@ public class InstantiationTest extends CompilerTestBase {
         }
 
         @Test
-        public void Object_Is_Instantiated_With_InContext_ValueOf_Method() {
-            Button root = compileAndRun("""
-                <?import javafx.scene.control.*?>
-                <?import javafx.scene.paint.*?>
-                <Button xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                        textFill="{fx:value red}"/>
-            """);
-
-            assertMethodCall(root, ms -> ms.stream().anyMatch(m -> m.getName().equals("valueOf")));
-            assertEquals(javafx.scene.paint.Color.RED, root.getTextFill());
-        }
-
-        @Test
-        public void InContext_ValueOf_As_Child_Content_Fails() {
-            MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
-                <?import javafx.scene.layout.*?>
-                <?import javafx.scene.paint.*?>
-                <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
-                    <children>
-                        <fx:value>red</fx:value>
-                    </children>
-                </GridPane>
-            """));
-
-            assertEquals(ErrorCode.VALUEOF_METHOD_NOT_FOUND, ex.getDiagnostic().getCode());
-            assertCodeHighlight("<fx:value>red</fx:value>", ex);
-        }
-
-        @Test
-        public void InContext_FxValue_With_Invalid_Constant_Value() {
-            MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
-                <?import javafx.scene.control.*?>
-                <Button xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                        minHeight="{fx:value {fx:constant Double.POSITIVE_INFINITY}}"/>
-            """));
-
-            assertEquals(ErrorCode.INCOMPATIBLE_VALUE, ex.getDiagnostic().getCode());
-            assertCodeHighlight("{fx:constant Double.POSITIVE_INFINITY}", ex);
-        }
-
-        @Test
-        public void InContext_FxValue_With_Empty_Value() {
+        public void FxValue_Cannot_Be_Used_As_Element() {
             MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
                 <?import javafx.scene.control.*?>
                 <Button xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                         minHeight="{fx:value}"/>
             """));
 
-            assertEquals(ErrorCode.INVALID_EXPRESSION, ex.getDiagnostic().getCode());
+            assertEquals(ErrorCode.UNEXPECTED_INTRINSIC, ex.getDiagnostic().getCode());
             assertCodeHighlight("{fx:value}", ex);
         }
 
