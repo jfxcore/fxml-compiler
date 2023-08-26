@@ -431,15 +431,15 @@ public class FunctionBindingTest extends CompilerTestBase {
     }
 
     @Test
-    public void Bind_Once_With_FxValue_Param_Fails() {
+    public void Bind_Once_With_Unexpected_FxValue_Param_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.fxml.*?>
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                      id="{fx:once defaultMethod('foo-%s', {fx:value foo})}"/>
+                      id="{fx:once defaultMethod('foo-%s', {fx:value})}"/>
         """));
 
         assertEquals(ErrorCode.UNEXPECTED_INTRINSIC, ex.getDiagnostic().getCode());
-        assertCodeHighlight("{fx:value foo}", ex);
+        assertCodeHighlight("{fx:value}", ex);
     }
 
     @Test
@@ -447,22 +447,10 @@ public class FunctionBindingTest extends CompilerTestBase {
         TestPane root = compileAndRun("""
             <?import javafx.fxml.*?>
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                      id="{fx:once defaultMethod('foo-%s', {fx:constant Double.POSITIVE_INFINITY})}"/>
+                      id="{fx:once defaultMethod('foo-%s', {Double fx:constant=POSITIVE_INFINITY})}"/>
         """);
 
         assertEquals("foo-Infinity", root.getId());
-    }
-
-    @Test
-    public void Bind_Once_With_FxConstant_Param_Fails_With_Unqualified_Constant() {
-        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
-            <?import javafx.fxml.*?>
-            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                      id="{fx:once defaultMethod('foo-%s', {fx:constant POSITIVE_INFINITY})}"/>
-        """));
-
-        assertEquals(ErrorCode.MEMBER_NOT_FOUND, ex.getDiagnostic().getCode());
-        assertCodeHighlight("POSITIVE_INFINITY", ex);
     }
 
     @Test
@@ -812,7 +800,7 @@ public class FunctionBindingTest extends CompilerTestBase {
         TestPane root = compileAndRun("""
             <?import javafx.fxml.*?>
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                      id="{fx:bind defaultMethod('foo-%s', {fx:constant Double.POSITIVE_INFINITY})}"/>
+                      id="{fx:bind defaultMethod('foo-%s', {Double fx:constant=POSITIVE_INFINITY})}"/>
         """);
 
         assertEquals("foo-Infinity", root.getId());

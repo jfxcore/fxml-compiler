@@ -41,19 +41,7 @@ public class AccessibleTests extends CompilerTestBase {
     }
 
     @Test
-    public void NonPublic_Constant_With_Element_Usage_Is_Not_Accessible() {
-        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
-            <?import javafx.scene.layout.*?>
-            <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                      prefWidth="{fx:constant InaccessibleConstant.VALUE}"/>
-        """));
-
-        assertEquals(ErrorCode.MEMBER_NOT_ACCESSIBLE, ex.getDiagnostic().getCode());
-        assertCodeHighlight("InaccessibleConstant.VALUE", ex);
-    }
-
-    @Test
-    public void NonPublic_Constant_With_Attribute_Usage_Is_Not_Accessible() {
+    public void NonPublic_Constant_Is_Not_Accessible() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.scene.layout.*?>
             <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">

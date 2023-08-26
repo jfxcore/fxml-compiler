@@ -34,7 +34,7 @@ public class MarkupExtensionTest extends CompilerTestBase {
                 <fx:define>
                     <Background fx:id="a" fills="{BackgroundFill fill=#ff0000; radii={fx:null}; insets=1,2,3.5,.4}"/>
                     <Background fx:id="b" fills="{BackgroundFill fill=red; radii=EMPTY; insets=1,2,3.5,.4}"/>
-                    <Background fx:id="c" fills="{BackgroundFill fill=RED; radii={fx:constant CornerRadii.EMPTY}; insets=1,2,3.5,.4}"/>
+                    <Background fx:id="c" fills="{BackgroundFill fill=RED; radii={fx:once CornerRadii.EMPTY}; insets=1,2,3.5,.4}"/>
                 </fx:define>
             </GridPane>
         """);

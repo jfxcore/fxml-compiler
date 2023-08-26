@@ -1,4 +1,4 @@
-// Copyright (c) 2022, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2023, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.transform.common;
@@ -42,7 +42,7 @@ public class IntrinsicsTransform implements Transform {
     public Node transform(TransformContext context, Node node) {
         if (node.typeEquals(ObjectNode.class)) {
             if (((ObjectNode)node).getType().isIntrinsic()) {
-                return processIntrinsicObject((ObjectNode)node);
+                return processIntrinsicObject(context, (ObjectNode)node);
             }
 
             validateConflictingIntrinsics((ObjectNode)node);
@@ -79,13 +79,18 @@ public class IntrinsicsTransform implements Transform {
     /**
      * Ensures that an intrinsic in element notation is valid, and all of its properties are valid.
      */
-    private Node processIntrinsicObject(ObjectNode objectNode) {
+    private Node processIntrinsicObject(TransformContext context, ObjectNode objectNode) {
         Intrinsic intrinsic = Intrinsics.find(objectNode.getType().getName());
         if (intrinsic == null) {
             throw GeneralErrors.unknownIntrinsic(objectNode.getSourceInfo(), objectNode.getType().getMarkupName());
         }
 
         if (intrinsic.getKind() == Intrinsic.Kind.PROPERTY) {
+            if (!(context.getParent() instanceof ObjectNode)) {
+                throw GeneralErrors.unexpectedIntrinsic(
+                    objectNode.getSourceInfo(), objectNode.getType().getMarkupName());
+            }
+
             if (!objectNode.getProperties().isEmpty()) {
                 throw ParserErrors.unexpectedToken(objectNode.getProperties().get(0).getSourceInfo());
             }
