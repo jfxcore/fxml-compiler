@@ -168,7 +168,7 @@ dependencies {
     testImplementation(files("${gradle.includedBuild("jfx").projectDir}/build/sdk/lib/javafx.controls.jar"))
     testImplementation(files("${gradle.includedBuild("jfx").projectDir}/build/sdk/lib/javafx.fxml.jar"))
 
-    implementation("org.javassist:javassist:3.28.0-GA")
+    implementation("org.javassist:javassist:3.29.2-GA")
     implementation("org.jetbrains.kotlinx:kotlinx-metadata-jvm:0.4.1")
 
     compileOnly("org.jetbrains:annotations:13.0")
