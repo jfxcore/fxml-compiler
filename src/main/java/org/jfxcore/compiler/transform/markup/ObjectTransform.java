@@ -38,7 +38,6 @@ import org.jfxcore.compiler.util.TypeHelper;
 import org.jfxcore.compiler.util.TypeInstance;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.stream.Collectors;
@@ -191,7 +190,7 @@ public class ObjectTransform implements Transform {
         TypeInstance nodeType = TypeHelper.getTypeInstance(objectNode);
 
         if (!objectNode.getChildren().isEmpty()) {
-            throw ObjectInitializationErrors.valueOfCannotHaveContent(
+            throw ObjectInitializationErrors.objectCannotHaveContent(
                 propertyNode.getSourceInfo(), nodeType.jvmType(), propertyNode.getMarkupName());
         }
 
@@ -219,52 +218,23 @@ public class ObjectTransform implements Transform {
 
     private ValueNode createConstantNode(
             TransformContext context, ObjectNode objectNode, PropertyNode constantProperty) {
-        if (objectNode.getProperties().stream().anyMatch(
-                p -> !p.isIntrinsic(Intrinsics.ID) && !p.isIntrinsic(Intrinsics.CONSTANT))) {
-            throw ObjectInitializationErrors.constantCannotBeModified(constantProperty.getSourceInfo());
-        }
-
-        CtClass declaringType;
-        String[] segments = constantProperty.getTextValueNotEmpty(context).split("\\.");
         SourceInfo valueSourceInfo = constantProperty.getSingleValue(context).getSourceInfo();
-
-        if (segments.length == 1) {
-            declaringType = TypeHelper.getJvmType(objectNode);
-        } else if (segments.length == 2) {
-            declaringType = new Resolver(valueSourceInfo).resolveClassAgainstImports(segments[0]);
-        } else {
-            String className = Arrays.stream(segments)
-                .limit(segments.length - 1)
-                .collect(Collectors.joining("."));
-
-            declaringType = new Resolver(valueSourceInfo).resolveClass(className);
-        }
-
-        String fieldName = segments[segments.length - 1];
-        TypeInstance fieldType;
+        CtClass declaringType = (CtClass)objectNode.getNodeData(NodeDataKey.CONSTANT_DECLARING_TYPE);
+        String fieldName = constantProperty.getTextValueNotEmpty(context);
 
         try {
             CtField field = declaringType.getField(fieldName);
             AccessVerifier.verifyAccessible(field, context.getMarkupClass(), valueSourceInfo);
-            fieldType = new Resolver(valueSourceInfo).getTypeInstance(field, Collections.emptyList());
         } catch (NotFoundException ex) {
             throw SymbolResolutionErrors.memberNotFound(valueSourceInfo, declaringType, fieldName);
         }
 
-        ValueNode constantNode = new EmitClassConstantNode(
+        return new EmitClassConstantNode(
             findAndRemoveId(context, objectNode),
-            fieldType,
+            TypeHelper.getTypeInstance(objectNode),
             declaringType,
             fieldName,
             constantProperty.getSourceInfo());
-
-        TypeInstance objectType = TypeHelper.getTypeInstance(objectNode);
-
-        if (!objectType.isAssignableFrom(fieldType)) {
-            throw ObjectInitializationErrors.cannotAssignConstant(constantNode.getSourceInfo(), objectType, fieldType);
-        }
-
-        return constantNode;
     }
 
     private ValueNode createFactoryNode(

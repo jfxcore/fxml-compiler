@@ -535,7 +535,7 @@ public class InstantiationTest extends CompilerTestBase {
                 </Button>
             """));
 
-            assertEquals(ErrorCode.VALUEOF_CANNOT_HAVE_CONTENT, ex.getDiagnostic().getCode());
+            assertEquals(ErrorCode.OBJECT_CANNOT_HAVE_CONTENT, ex.getDiagnostic().getCode());
             assertCodeHighlight("""
                 fx:value="red"
             """.trim(), ex);

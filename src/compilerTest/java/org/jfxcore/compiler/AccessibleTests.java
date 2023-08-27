@@ -46,13 +46,13 @@ public class AccessibleTests extends CompilerTestBase {
             <?import javafx.scene.layout.*?>
             <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <prefWidth>
-                    <Double fx:constant="InaccessibleConstant.VALUE"/>
+                    <InaccessibleConstant fx:constant="VALUE"/>
                 </prefWidth>
             </GridPane>
         """));
 
         assertEquals(ErrorCode.MEMBER_NOT_ACCESSIBLE, ex.getDiagnostic().getCode());
-        assertCodeHighlight("InaccessibleConstant.VALUE", ex);
+        assertCodeHighlight("VALUE", ex);
     }
 
     @SuppressWarnings("unused")

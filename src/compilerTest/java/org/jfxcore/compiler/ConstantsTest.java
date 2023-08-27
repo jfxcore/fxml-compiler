@@ -86,38 +86,41 @@ public class ConstantsTest extends CompilerTestBase {
     }
 
     @Test
-    public void FxConstant_Resolves_Fully_Qualified_Name() {
-        TableView<?> tableView = compileAndRun("""
-            <?import javafx.scene.control.*?>
-            <?import javafx.util.Callback?>
-            <TableView xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
-                <columnResizePolicy>
-                    <Callback fx:constant="javafx.scene.control.TableView.CONSTRAINED_RESIZE_POLICY"/>
-                </columnResizePolicy>
-            </TableView>
-        """);
-
-        assertFieldAccess(tableView, "javafx.scene.control.TableView", "CONSTRAINED_RESIZE_POLICY", "Ljavafx/util/Callback;");
-        assertSame(tableView.getColumnResizePolicy(), TableView.CONSTRAINED_RESIZE_POLICY);
-    }
-
-    @Test
-    public void Constant_With_Incompatible_Generic_Arguments_Cannot_Be_Assigned() {
+    public void FxConstant_And_TypeArguments_Cannot_Be_Used_At_Same_Time() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.scene.control.*?>
             <?import javafx.util.Callback?>
             <TableView xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <columnResizePolicy>
-                    <Callback fx:typeArguments="java.lang.String,java.lang.Double"
-                              fx:constant="javafx.scene.control.TableView.CONSTRAINED_RESIZE_POLICY"/>
+                    <TableView fx:typeArguments="java.lang.String,java.lang.Double"
+                               fx:constant="CONSTRAINED_RESIZE_POLICY"/>
                 </columnResizePolicy>
             </TableView>
         """));
 
-        assertEquals(ErrorCode.CANNOT_ASSIGN_CONSTANT, ex.getDiagnostic().getCode());
+        assertEquals(ErrorCode.CONFLICTING_PROPERTIES, ex.getDiagnostic().getCode());
         assertCodeHighlight("""
-            fx:constant="javafx.scene.control.TableView.CONSTRAINED_RESIZE_POLICY"
+            fx:typeArguments="java.lang.String,java.lang.Double"
         """.trim(), ex);
+    }
+
+    @Test
+    public void FxConstant_Resolves_Constant_In_ElementType() {
+        TableView<?> tableView = compileAndRun("""
+            <?import javafx.scene.control.*?>
+            <TableView xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
+                <columnResizePolicy>
+                    <TableView fx:constant="CONSTRAINED_RESIZE_POLICY"/>
+                </columnResizePolicy>
+            </TableView>
+        """);
+
+        assertFieldAccess(
+            tableView,
+            "javafx.scene.control.TableView",
+            "CONSTRAINED_RESIZE_POLICY",
+            "Ljavafx/util/Callback;");
+        assertSame(tableView.getColumnResizePolicy(), TableView.CONSTRAINED_RESIZE_POLICY);
     }
 
 }

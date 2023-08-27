@@ -1,4 +1,4 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2023, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.diagnostic;
@@ -6,7 +6,7 @@ package org.jfxcore.compiler.diagnostic;
 /**
  * Identifies a location in a document.
  */
-public class Location {
+public final class Location implements Comparable<Location> {
 
     private final int line;
     private final int column;
@@ -52,8 +52,15 @@ public class Location {
     }
 
     @Override
+    public int compareTo(Location other) {
+        int l = Integer.compare(line, other.line);
+        if (l < 0) return -1;
+        if (l > 0) return 1;
+        return Integer.compare(column, other.column);
+    }
+
+    @Override
     public String toString() {
         return line + ":" + column;
     }
-
 }
