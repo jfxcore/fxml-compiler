@@ -7,7 +7,6 @@ import org.jetbrains.annotations.Nullable;
 import org.jfxcore.compiler.ast.Node;
 import org.jfxcore.compiler.util.CompilationContext;
 import org.jfxcore.compiler.util.CompilationSource;
-
 import java.util.Collection;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -22,7 +21,9 @@ public final class SourceInfo {
     }
 
     public static SourceInfo span(SourceInfo from, SourceInfo to) {
-        return new SourceInfo(from.start.getLine(), from.start.getColumn(), to.end.getLine(), to.end.getColumn());
+        Location start = from.start.compareTo(to.start) <= 0 ? from.start : to.start;
+        Location end = from.end.compareTo(to.end) >= 0 ? from.end : to.end;
+        return new SourceInfo(start, end);
     }
 
     public static SourceInfo span(Collection<? extends Node> nodes) {
@@ -95,12 +96,16 @@ public final class SourceInfo {
     }
 
     public SourceInfo(int line, int column, int endLine, int endColumn) {
-        start = new Location(line, column);
-        end = new Location(endLine, endColumn);
+        this(new Location(line, column), new Location(endLine, endColumn));
+    }
 
-        if (line >= 0 && CompilationContext.isCurrent()) {
+    private SourceInfo(Location start, Location end) {
+        this.start = start;
+        this.end = end;
+
+        if (start.getLine() >= 0 && CompilationContext.isCurrent()) {
             sourceLines = CompilationContext.getCurrent().getCompilationSource().getSourceLines(false);
-            lineText = sourceLines.length > 0 ? sourceLines[line] : null;
+            lineText = sourceLines.length > 0 ? sourceLines[start.getLine()] : null;
         } else {
             sourceLines = null;
             lineText = null;

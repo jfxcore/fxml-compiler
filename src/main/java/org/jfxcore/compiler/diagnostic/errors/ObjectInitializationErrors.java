@@ -9,7 +9,6 @@ import org.jfxcore.compiler.diagnostic.ErrorCode;
 import org.jfxcore.compiler.diagnostic.MarkupException;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.util.NameHelper;
-import org.jfxcore.compiler.util.TypeInstance;
 
 public class ObjectInitializationErrors {
 
@@ -31,25 +30,9 @@ public class ObjectInitializationErrors {
                 NameHelper.getJavaClassName(sourceInfo, type)));
     }
 
-    public static MarkupException valueOfCannotHaveContent(SourceInfo sourceInfo, CtClass type, String valuePropertyName) {
-        return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
-            ErrorCode.VALUEOF_CANNOT_HAVE_CONTENT, NameHelper.getJavaClassName(sourceInfo, type), valuePropertyName));
-    }
-
     public static MarkupException conflictingProperties(SourceInfo sourceInfo, String property1, String property2) {
         return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
             ErrorCode.CONFLICTING_PROPERTIES, property1, property2));
-    }
-
-    public static MarkupException cannotAssignConstant(
-            SourceInfo sourceInfo, TypeInstance targetType, TypeInstance assignType) {
-        return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
-            ErrorCode.CANNOT_ASSIGN_CONSTANT, targetType.getJavaName(), assignType.getJavaName()));
-    }
-
-    public static MarkupException constantCannotBeModified(SourceInfo sourceInfo) {
-        return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
-            ErrorCode.CONSTANT_CANNOT_BE_MODIFIED));
     }
 
     public static MarkupException cannotParameterizeType(SourceInfo sourceInfo, CtClass type) {
@@ -70,6 +53,12 @@ public class ObjectInitializationErrors {
     public static MarkupException objectCannotHaveContent(SourceInfo sourceInfo, CtClass type) {
         return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
             ErrorCode.OBJECT_CANNOT_HAVE_CONTENT, NameHelper.getJavaClassName(sourceInfo, type)));
+    }
+
+    public static MarkupException objectCannotHaveContent(SourceInfo sourceInfo, CtClass type, String intrinsicName) {
+        return new MarkupException(sourceInfo, Diagnostic.newDiagnosticVariant(
+            ErrorCode.OBJECT_CANNOT_HAVE_CONTENT, "intrinsic",
+            NameHelper.getJavaClassName(sourceInfo, type), intrinsicName));
     }
 
     public static MarkupException wildcardCannotBeInstantiated(SourceInfo sourceInfo) {

@@ -16,6 +16,7 @@ import org.jfxcore.compiler.ast.intrinsic.Intrinsics;
 import org.jfxcore.compiler.ast.text.TextNode;
 import org.jfxcore.compiler.diagnostic.ErrorCode;
 import org.jfxcore.compiler.diagnostic.MarkupException;
+import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.diagnostic.errors.ObjectInitializationErrors;
 import org.jfxcore.compiler.diagnostic.errors.PropertyAssignmentErrors;
 import org.jfxcore.compiler.parse.TypeFormatter;
@@ -87,6 +88,13 @@ public class ResolveTypeTransform implements Transform {
         PropertyNode typeArgsNode = objectNode.findIntrinsicProperty(Intrinsics.TYPE_ARGUMENTS);
 
         if (typeArgsNode != null) {
+            PropertyNode constantProperty = objectNode.findIntrinsicProperty(Intrinsics.CONSTANT);
+            if (constantProperty != null) {
+                throw ObjectInitializationErrors.conflictingProperties(
+                    SourceInfo.span(constantProperty.getSourceInfo(), typeArgsNode.getSourceInfo()),
+                    typeArgsNode.getMarkupName(), constantProperty.getMarkupName());
+            }
+
             if (objectTypeClass.getGenericSignature() == null) {
                 throw ObjectInitializationErrors.cannotParameterizeType(node.getSourceInfo(), objectTypeClass);
             }

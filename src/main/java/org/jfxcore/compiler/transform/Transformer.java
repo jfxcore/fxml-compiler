@@ -18,6 +18,7 @@ import org.jfxcore.compiler.transform.common.IntrinsicsTransform;
 import org.jfxcore.compiler.transform.common.ResolveTypeTransform;
 import org.jfxcore.compiler.transform.markup.AddTemplateIdFields;
 import org.jfxcore.compiler.transform.markup.BindingTransform;
+import org.jfxcore.compiler.transform.markup.ConstantTransform;
 import org.jfxcore.compiler.transform.markup.DefaultPropertyTransform;
 import org.jfxcore.compiler.transform.markup.DefineBlockTransform;
 import org.jfxcore.compiler.transform.markup.DocumentTransform;
@@ -73,6 +74,7 @@ public class Transformer {
             new IntrinsicsTransform(),
             new ResolveTypeTransform(false),
             new ObjectToPropertyTransform(),
+            new ConstantTransform(),
             new ValidateTypeTransform(),
             new DefaultPropertyTransform(),
             new TemplateContentTransform(),
