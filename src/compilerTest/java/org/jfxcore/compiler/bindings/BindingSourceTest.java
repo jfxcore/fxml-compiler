@@ -79,6 +79,21 @@ public class BindingSourceTest extends CompilerTestBase {
     }
 
     @Test
+    public void Bind_Once_With_Default_Property() {
+        Pane root = compileAndRun("""
+            <?import javafx.scene.layout.*?>
+            <?import javafx.scene.control.*?>
+            <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
+                <Button>
+                    <fx:once path="javafx.application.Application.STYLESHEET_CASPIAN"/>
+                </Button>
+            </Pane>
+        """);
+
+        assertEquals("CASPIAN", ((Button)root.getChildren().get(0)).getText());
+    }
+
+    @Test
     public void Bind_Unidirectional_To_Parent_Property_With_Indexed_Parent_Selector() {
         Pane root = compileAndRun("""
             <?import javafx.scene.layout.*?>
