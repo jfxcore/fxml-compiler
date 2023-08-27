@@ -41,10 +41,8 @@ public class ObjectToPropertyTransform implements Transform {
 
     @Override
     public Node transform(TransformContext context, Node node) {
-        if (node instanceof ObjectNode objectNode) {
-            return objectNode.getType().isIntrinsic() ?
-                tryConvertIntrinsicObjectToProperty(context, objectNode) :
-                tryConvertObjectToProperty(context, objectNode);
+        if (node instanceof ObjectNode objectNode && !objectNode.getType().isIntrinsic()) {
+            return tryConvertObjectToProperty(context, objectNode);
         }
 
         return node;
@@ -114,26 +112,6 @@ public class ObjectToPropertyTransform implements Transform {
             objectNode.getChildren(),
             false,
             propertyNames.length > 1,
-            objectNode.getSourceInfo());
-    }
-
-    private Node tryConvertIntrinsicObjectToProperty(TransformContext context, ObjectNode objectNode) {
-        Intrinsic intrinsic = Intrinsics.find(objectNode);
-        if (intrinsic == null || context.getParent() instanceof PropertyNode) {
-            return objectNode;
-        }
-
-        ObjectNode parentNode = context.getParent().as(ObjectNode.class);
-        if (parentNode == null || parentNode.getType().isIntrinsic()) {
-            return objectNode;
-        }
-
-        return new PropertyNode(
-            new String[] {objectNode.getType().getName()},
-            objectNode.getType().getMarkupName(),
-            objectNode.getChildren(),
-            true,
-            false,
             objectNode.getSourceInfo());
     }
 
