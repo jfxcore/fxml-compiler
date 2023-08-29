@@ -133,15 +133,17 @@ public class Compiler extends AbstractCompiler {
             return;
         }
 
-        Files.walk(directory, 1).forEach(f -> {
-            if (Files.isRegularFile(f)) {
-                try {
-                    Files.delete(f);
-                } catch (IOException e) {
-                    logger.error("Cannot delete file " + f);
+        try (var files = Files.walk(directory, 1)) {
+            files.forEach(f -> {
+                if (Files.isRegularFile(f)) {
+                    try {
+                        Files.delete(f);
+                    } catch (IOException e) {
+                        logger.error("Cannot delete file " + f);
+                    }
                 }
-            }
-        });
+            });
+        }
     }
 
     private void parseSingleFile(Path inputFile, DocumentNode document, Transformer transformer) {
