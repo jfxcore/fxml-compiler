@@ -54,7 +54,6 @@ public class Compiler extends AbstractCompiler {
     private final ClassPool classPool;
     private final Transformer transformer;
     private final Path generatedSourcesDir;
-    private final Map<Path, DocumentNode> documents = new HashMap<>();
     private final Map<Path, Compilation> compilations = new HashMap<>();
     private final Map<Path, DocumentNode> classDocuments = new HashMap<>();
     private final Map<String, List<ClassInfo>> generatedClasses = new HashMap<>();
@@ -96,9 +95,11 @@ public class Compiler extends AbstractCompiler {
             throw new IllegalArgumentException("The specified file was already added.");
         }
 
-        try {
+        CompilationContext context = new CompilationContext(new CompilationSource.FileSystem(sourceFile));
+
+        try (var ignored = new CompilationScope(context)) {
             DocumentNode document = new FxmlParser(sourceDir, sourceFile).parseDocument();
-            documents.put(sourceFile, document);
+            compilations.put(sourceFile, new Compilation(document, context));
             return generatedSourcesDir.resolve(FileUtil.getMarkupJavaFile(document));
         } catch (FxmlParseAbortException ex) {
             logger.info(String.format("File skipped: %s (%s)", sourceFile, ex.getMessage()));
@@ -125,13 +126,14 @@ public class Compiler extends AbstractCompiler {
 
         stage = Stage.COMPILE;
 
-        for (var entry : documents.entrySet()) {
+        for (var entry : compilations.entrySet()) {
             Path sourceFile = entry.getKey();
-            CompilationContext context = new CompilationContext(new CompilationSource.FileSystem(sourceFile));
+            DocumentNode document = entry.getValue().document();
+            CompilationContext context = entry.getValue().context();
 
             try (var ignored = new CompilationScope(context)) {
-                compilations.put(sourceFile, new Compilation(entry.getValue(), context));
-                parseSingleFile(sourceFile, entry.getValue(), transformer);
+                compilations.put(sourceFile, new Compilation(document, context));
+                parseSingleFile(sourceFile, document, transformer);
             } catch (MarkupException ex) {
                 ex.setSourceFile(sourceFile.toFile());
                 throw ex;
