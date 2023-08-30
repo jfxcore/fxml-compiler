@@ -36,15 +36,12 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 public class Compiler extends AbstractCompiler {
-
-    private static final String[] EXTENSIONS = new String[] {".fxml", ".fxmlx"};
 
     private enum Stage {
         PARSE,
@@ -54,57 +51,109 @@ public class Compiler extends AbstractCompiler {
     }
 
     private final Logger logger;
-    private final Set<File> classpath;
+    private final ClassPool classPool;
+    private final Transformer transformer;
+    private final Path generatedSourcesDir;
+    private final Map<Path, DocumentNode> documents = new HashMap<>();
     private final Map<Path, Compilation> compilations = new HashMap<>();
     private final Map<Path, DocumentNode> classDocuments = new HashMap<>();
     private final Map<String, List<ClassInfo>> generatedClasses = new HashMap<>();
     private Stage stage = Stage.PARSE;
 
-    public Compiler(Set<File> classpath, Logger logger) {
-        this.classpath = classpath;
+    public Compiler(Path generatedSourcesDir, Set<File> classpath, Logger logger) {
         this.logger = logger;
+        this.classPool = newClassPool(classpath);
+        this.transformer = Transformer.getCodeTransformer(classPool);
+        this.generatedSourcesDir = generatedSourcesDir.normalize();
     }
 
+    /**
+     * Adds an FXML markup file to the current compiler, and returns a path that points to
+     * the generated Java file that corresponds to the FXML markup file.
+     *
+     * @param sourceDir the base source directory (the root of the package namespace)
+     * @param sourceFile the FXML markup file
+     * @return a path that points to the generated Java file, or {@code null} if the
+     *         markup file will not be compiled
+     * @throws IOException if an I/O error occurs
+     * @throws MarkupException if a markup error occurs
+     */
     @SuppressWarnings("unused")
-    public void parseFiles(File sourceDir) throws IOException {
+    public Path addFile(Path sourceDir, Path sourceFile) throws IOException {
         if (stage != Stage.PARSE) {
-            throw new IllegalStateException("Cannot parse files in stage " + stage);
+            throw new IllegalStateException("Cannot add file in stage " + stage);
         }
 
-        Transformer transformer = Transformer.getCodeTransformer(newClassPool(classpath));
+        sourceFile = sourceFile.normalize();
 
-        for (Path sourceFile : FileUtil.enumerateFiles(sourceDir.toPath(), this::fileFilter)) {
-            CompilationContext context = new CompilationContext(new CompilationSource.FileSystem(sourceFile));
+        try {
+            sourceDir.normalize().relativize(sourceFile);
+        } catch (IllegalArgumentException ex) {
+            throw new IllegalArgumentException("The specified file is not in the source directory.");
+        }
 
-            try (var ignored = new CompilationScope(context)) {
-                DocumentNode document = new FxmlParser(sourceDir.toPath(), sourceFile).parseDocument();
-                compilations.put(sourceFile, new Compilation(document, context));
-                parseSingleFile(sourceFile, document, transformer);
-            } catch (FxmlParseAbortException ex) {
-                logger.info(String.format("File skipped: %s (%s)", sourceFile, ex.getMessage()));
-            } catch (MarkupException ex) {
-                ex.setSourceFile(sourceFile.toFile());
-                throw ex;
-            }
+        if (compilations.containsKey(sourceFile)) {
+            throw new IllegalArgumentException("The specified file was already added.");
+        }
+
+        try {
+            DocumentNode document = new FxmlParser(sourceDir, sourceFile).parseDocument();
+            documents.put(sourceFile, document);
+            return generatedSourcesDir.resolve(FileUtil.getMarkupJavaFile(document));
+        } catch (FxmlParseAbortException ex) {
+            logger.info(String.format("File skipped: %s (%s)", sourceFile, ex.getMessage()));
+            return null;
+        } catch (MarkupException ex) {
+            ex.setSourceFile(sourceFile.toFile());
+            throw ex;
         }
     }
 
+    /**
+     * Generates Java stub files for all FXML markup files that were added to this compiler.
+     * <p>
+     * This is the first step of compilation.
+     *
+     * @throws IOException if an I/O error occurs
+     * @throws MarkupException if a markup error occurs
+     */
     @SuppressWarnings("unused")
-    public void generateSources(File generatedSourcesDir) throws IOException {
+    public void processFiles() throws IOException {
         if (stage != Stage.PARSE) {
             throw new IllegalStateException("Cannot generate sources in stage " + stage);
         }
 
         stage = Stage.COMPILE;
 
+        for (var entry : documents.entrySet()) {
+            Path sourceFile = entry.getKey();
+            CompilationContext context = new CompilationContext(new CompilationSource.FileSystem(sourceFile));
+
+            try (var ignored = new CompilationScope(context)) {
+                compilations.put(sourceFile, new Compilation(entry.getValue(), context));
+                parseSingleFile(sourceFile, entry.getValue(), transformer);
+            } catch (MarkupException ex) {
+                ex.setSourceFile(sourceFile.toFile());
+                throw ex;
+            }
+        }
+
         for (var entry : generatedClasses.entrySet()) {
             String packageName = entry.getKey();
-            Path outputDir = generatedSourcesDir.toPath().resolve(packageName.replace(".", "/"));
+            Path outputDir = generatedSourcesDir.resolve(packageName.replace(".", "/"));
             deleteFiles(outputDir);
             writeClasses(outputDir, entry.getValue());
         }
     }
 
+    /**
+     * Compiles the content of the FXML markup files that were added to this compiler.
+     * <p>
+     * This is the second step of compilation.
+     *
+     * @throws IOException if an I/O error occurs
+     * @throws MarkupException if a markup error occurs
+     */
     @SuppressWarnings("unused")
     public void compileFiles() throws IOException {
         if (stage != Stage.COMPILE) {
@@ -116,16 +165,11 @@ public class Compiler extends AbstractCompiler {
 
         for (Path sourceFile : classDocuments.keySet()) {
             if (transformer == null) {
-                transformer = Transformer.getBytecodeTransformer(newClassPool(classpath));
+                transformer = Transformer.getBytecodeTransformer(classPool);
             }
 
             compileSingleFile(sourceFile, transformer);
         }
-    }
-
-    private boolean fileFilter(Path path) {
-        String file = path.toString().toLowerCase();
-        return Arrays.stream(EXTENSIONS).anyMatch(file::endsWith);
     }
 
     private void deleteFiles(Path directory) throws IOException {
