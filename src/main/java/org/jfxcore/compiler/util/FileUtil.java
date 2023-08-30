@@ -5,11 +5,15 @@ package org.jfxcore.compiler.util;
 
 import org.jfxcore.compiler.ast.DocumentNode;
 import org.jfxcore.compiler.ast.ObjectNode;
+import org.jfxcore.compiler.ast.PropertyNode;
 import org.jfxcore.compiler.ast.intrinsic.Intrinsics;
 import org.jfxcore.compiler.ast.text.TextNode;
+import org.jfxcore.compiler.diagnostic.errors.GeneralErrors;
 import org.jfxcore.compiler.diagnostic.errors.PropertyAssignmentErrors;
+import org.jfxcore.compiler.diagnostic.errors.SymbolResolutionErrors;
 import java.nio.file.Path;
 import java.util.Arrays;
+import java.util.stream.Collectors;
 
 public class FileUtil {
 
@@ -20,36 +24,46 @@ public class FileUtil {
         }
 
         var markupClassNameProperty = root.findIntrinsicProperty(Intrinsics.MARKUP_CLASS_NAME);
-        if (markupClassNameProperty == null) {
+        if (markupClassNameProperty != null) {
+            String className = getTextNotEmpty(root, markupClassNameProperty);
+            if (!NameHelper.isJavaIdentifier(className)) {
+                throw PropertyAssignmentErrors.cannotCoercePropertyValue(
+                    markupClassNameProperty.getSourceInfo(),
+                    markupClassNameProperty.getMarkupName(),
+                    className);
+            }
+
+            return getJavaFilePath(className);
+        }
+
+        var classNameProperty = root.findIntrinsicProperty(Intrinsics.CLASS);
+        if (classNameProperty != null) {
+            String[] parts = getTextNotEmpty(root, classNameProperty).split("\\.");
+            String packageName = Arrays.stream(parts).limit(parts.length - 1).collect(Collectors.joining("."));
+            String className = parts[parts.length - 1];
+
+            if (packageName.isEmpty()) {
+                throw SymbolResolutionErrors.unnamedPackageNotSupported(
+                    classNameProperty.getSourceInfo(), classNameProperty.getMarkupName());
+            }
+
+            String fileName = FileUtil.getFileNameWithoutExtension(document.getSourceFile().getFileName().toString());
+            if (!className.equals(fileName)) {
+                throw GeneralErrors.codeBehindClassNameMismatch(classNameProperty.getSourceInfo());
+            }
+
             Path file = document.getSourceFile();
-            String fileName = getFileNameWithoutExtension(file.getName(file.getNameCount() - 1).toString());
+            fileName = getFileNameWithoutExtension(file.getName(file.getNameCount() - 1).toString());
             String markupClassName = NameHelper.getDefaultMarkupClassName(fileName);
             return file.getParent().resolve(markupClassName + ".java");
         }
 
-        if (markupClassNameProperty.getValues().size() > 1 ||
-                !(markupClassNameProperty.getValues().get(0) instanceof TextNode)) {
-            throw PropertyAssignmentErrors.propertyMustContainText(
-                markupClassNameProperty.getSourceInfo(),
-                root.getType().getMarkupName(),
-                markupClassNameProperty.getMarkupName());
-        }
+        Path file = document.getSourceFile();
+        String fileName = getFileNameWithoutExtension(file.getName(file.getNameCount() - 1).toString());
+        return file.getParent().resolve(fileName + ".java");
+    }
 
-        String className = ((TextNode)markupClassNameProperty.getValues().get(0)).getText();
-        if (className.isBlank()) {
-            throw PropertyAssignmentErrors.propertyCannotBeEmpty(
-                markupClassNameProperty.getSourceInfo(),
-                root.getType().getMarkupName(),
-                markupClassNameProperty.getMarkupName());
-        }
-
-        if (!NameHelper.isJavaIdentifier(className)) {
-            throw PropertyAssignmentErrors.cannotCoercePropertyValue(
-                markupClassNameProperty.getSourceInfo(),
-                markupClassNameProperty.getMarkupName(),
-                className);
-        }
-
+    private static Path getJavaFilePath(String className) {
         String[] parts = className.split("\\.");
         if (parts.length > 1) {
             String first = parts[0];
@@ -59,6 +73,21 @@ public class FileUtil {
         }
 
         return Path.of(parts[0] + ".java");
+    }
+
+    private static String getTextNotEmpty(ObjectNode parent, PropertyNode node) {
+        if (node.getValues().size() > 1 || !(node.getValues().get(0) instanceof TextNode)) {
+            throw PropertyAssignmentErrors.propertyMustContainText(
+                node.getSourceInfo(), parent.getType().getMarkupName(), node.getMarkupName());
+        }
+
+        String text = ((TextNode)node.getValues().get(0)).getText();
+        if (text.isBlank()) {
+            throw PropertyAssignmentErrors.propertyCannotBeEmpty(
+                node.getSourceInfo(), parent.getType().getMarkupName(), node.getMarkupName());
+        }
+
+        return text;
     }
 
     public static String getFileNameWithoutExtension(String file) {

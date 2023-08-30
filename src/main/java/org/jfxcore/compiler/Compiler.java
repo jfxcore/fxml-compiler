@@ -51,18 +51,17 @@ public class Compiler extends AbstractCompiler {
     }
 
     private final Logger logger;
-    private final ClassPool classPool;
-    private final Transformer transformer;
+    private final Set<File> searchPath;
     private final Path generatedSourcesDir;
     private final Map<Path, Compilation> compilations = new HashMap<>();
     private final Map<Path, DocumentNode> classDocuments = new HashMap<>();
     private final Map<String, List<ClassInfo>> generatedClasses = new HashMap<>();
+    private ClassPool classPool;
     private Stage stage = Stage.PARSE;
 
-    public Compiler(Path generatedSourcesDir, Set<File> classpath, Logger logger) {
+    public Compiler(Path generatedSourcesDir, Set<File> searchPath, Logger logger) {
         this.logger = logger;
-        this.classPool = newClassPool(classpath);
-        this.transformer = Transformer.getCodeTransformer(classPool);
+        this.searchPath = searchPath;
         this.generatedSourcesDir = generatedSourcesDir.normalize();
     }
 
@@ -126,6 +125,13 @@ public class Compiler extends AbstractCompiler {
 
         stage = Stage.COMPILE;
 
+        if (compilations.isEmpty()) {
+            return;
+        }
+
+        classPool = newClassPool(searchPath);
+        var transformer = Transformer.getCodeTransformer(classPool);;
+
         for (var entry : compilations.entrySet()) {
             Path sourceFile = entry.getKey();
             DocumentNode document = entry.getValue().document();
@@ -163,14 +169,13 @@ public class Compiler extends AbstractCompiler {
         }
 
         stage = Stage.FINISHED;
-        Transformer transformer = null;
 
-        for (Path sourceFile : classDocuments.keySet()) {
-            if (transformer == null) {
-                transformer = Transformer.getBytecodeTransformer(classPool);
+        if (!classDocuments.isEmpty()) {
+            var transformer = Transformer.getBytecodeTransformer(classPool);
+
+            for (Path sourceFile : classDocuments.keySet()) {
+                compileSingleFile(sourceFile, transformer);
             }
-
-            compileSingleFile(sourceFile, transformer);
         }
     }
 
@@ -283,12 +288,12 @@ public class Compiler extends AbstractCompiler {
         }
     }
 
-    private ClassPool newClassPool(Set<File> classpath) {
+    private ClassPool newClassPool(Set<File> searchPath) {
         ClassPool classPool = new ClassPool(true);
 
-        for (File cp : classpath) {
+        for (File path : searchPath) {
             try {
-                classPool.appendClassPath(cp.getAbsolutePath());
+                classPool.appendClassPath(path.getAbsolutePath());
             } catch (NotFoundException ex) {
                 throw new RuntimeException("Search path dependency not found: " + ex.getMessage());
             }
