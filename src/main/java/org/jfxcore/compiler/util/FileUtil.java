@@ -17,6 +17,9 @@ import java.util.stream.Collectors;
 
 public class FileUtil {
 
+    /**
+     * Returns a path that points to the generated Java file that corresponds to the FXML document.
+     */
     public static Path getMarkupJavaFile(DocumentNode document) {
         var root = document.getRoot().as(ObjectNode.class);
         if (root == null) {
@@ -33,7 +36,7 @@ public class FileUtil {
                     className);
             }
 
-            return getJavaFilePath(className);
+            return document.getSourceFile().getParent().resolve(className + ".java");
         }
 
         var classNameProperty = root.findIntrinsicProperty(Intrinsics.CLASS);
@@ -47,7 +50,7 @@ public class FileUtil {
                     classNameProperty.getSourceInfo(), classNameProperty.getMarkupName());
             }
 
-            String fileName = FileUtil.getFileNameWithoutExtension(document.getSourceFile().getFileName().toString());
+            String fileName = getFileNameWithoutExtension(document.getSourceFile().getFileName().toString());
             if (!className.equals(fileName)) {
                 throw GeneralErrors.codeBehindClassNameMismatch(classNameProperty.getSourceInfo());
             }
@@ -61,18 +64,6 @@ public class FileUtil {
         Path file = document.getSourceFile();
         String fileName = getFileNameWithoutExtension(file.getName(file.getNameCount() - 1).toString());
         return file.getParent().resolve(fileName + ".java");
-    }
-
-    private static Path getJavaFilePath(String className) {
-        String[] parts = className.split("\\.");
-        if (parts.length > 1) {
-            String first = parts[0];
-            parts = Arrays.copyOfRange(parts, 1, parts.length - 1);
-            parts[parts.length - 1] = parts[parts.length - 1] + ".java";
-            return Path.of(first, parts);
-        }
-
-        return Path.of(parts[0] + ".java");
     }
 
     private static String getTextNotEmpty(ObjectNode parent, PropertyNode node) {
