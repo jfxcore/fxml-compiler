@@ -36,7 +36,7 @@ public class CompilationContext extends HashMap<Object, Object> {
         return current;
     }
 
-    static void setCurrent(CompilationContext context) {
+    static synchronized void setCurrent(CompilationContext context) {
         if (context != null) {
             if (current != null) {
                 throw new IllegalStateException();

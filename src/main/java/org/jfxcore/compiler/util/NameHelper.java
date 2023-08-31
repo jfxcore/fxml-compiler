@@ -18,6 +18,12 @@ import java.util.regex.Pattern;
 
 public class NameHelper {
 
+    private static final String DEFAULT_MARKUP_CLASS_NAME = "%sBase";
+
+    public static String getDefaultMarkupClassName(String className) {
+        return String.format(DEFAULT_MARKUP_CLASS_NAME, className);
+    }
+
     private static final class NameData {
         final Map<String, List<Object>> uniqueNames = new HashMap<>();
     }

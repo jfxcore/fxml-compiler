@@ -1,4 +1,4 @@
-// Copyright (c) 2022, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2023, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.transform.codebehind;
@@ -28,8 +28,6 @@ import java.util.stream.Collectors;
  * nodes except {@link AddCodeFieldNode}.
  */
 public class FlattenClassTransform implements Transform {
-
-    private static final String DEFAULT_MARKUP_CLASS_NAME = "%sMarkup";
 
     @Override
     public Node transform(TransformContext context, Node node) {
@@ -107,7 +105,7 @@ public class FlattenClassTransform implements Transform {
 
             markupClassName = markupClassNameNode.getTextValueNotEmpty(context);
         } else {
-            markupClassName = String.format(DEFAULT_MARKUP_CLASS_NAME, className);
+            markupClassName = NameHelper.getDefaultMarkupClassName(className);
         }
 
         return new ClassNode(

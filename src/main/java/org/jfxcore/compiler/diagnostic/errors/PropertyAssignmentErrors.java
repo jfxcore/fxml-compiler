@@ -54,13 +54,12 @@ public class PropertyAssignmentErrors {
             ErrorCode.CANNOT_COERCE_PROPERTY_VALUE, propertyName, value));
     }
 
-    public static MarkupException cannotCoercePropertyValue(
-        SourceInfo sourceInfo, String declaringType, String propertyName, String value) {
+    public static MarkupException propertyCannotBeEmpty(SourceInfo sourceInfo, CtClass declaringType, String propertyName) {
         return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
-            ErrorCode.CANNOT_COERCE_PROPERTY_VALUE, formatPropertyName(declaringType, propertyName), value));
+            ErrorCode.PROPERTY_CANNOT_BE_EMPTY, formatPropertyName(declaringType, propertyName)));
     }
 
-    public static MarkupException propertyCannotBeEmpty(SourceInfo sourceInfo, CtClass declaringType, String propertyName) {
+    public static MarkupException propertyCannotBeEmpty(SourceInfo sourceInfo, String declaringType, String propertyName) {
         return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
             ErrorCode.PROPERTY_CANNOT_BE_EMPTY, formatPropertyName(declaringType, propertyName)));
     }
