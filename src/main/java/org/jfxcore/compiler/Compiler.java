@@ -4,6 +4,7 @@
 package org.jfxcore.compiler;
 
 import javassist.CannotCompileException;
+import javassist.ClassPath;
 import javassist.ClassPool;
 import javassist.CtClass;
 import javassist.NotFoundException;
@@ -41,7 +42,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-public class Compiler extends AbstractCompiler {
+public class Compiler extends AbstractCompiler implements AutoCloseable {
 
     private enum Stage {
         PARSE,
@@ -52,6 +53,7 @@ public class Compiler extends AbstractCompiler {
 
     private final Logger logger;
     private final Set<File> searchPath;
+    private final List<ClassPath> classPaths;
     private final Path generatedSourcesDir;
     private final Map<Path, Compilation> compilations = new HashMap<>();
     private final Map<Path, DocumentNode> classDocuments = new HashMap<>();
@@ -59,10 +61,23 @@ public class Compiler extends AbstractCompiler {
     private ClassPool classPool;
     private Stage stage = Stage.PARSE;
 
+    static {
+        // If this flag is set to true, file handles for JAR files are sometimes not released.
+        ClassPool.cacheOpenedJarFile = false;
+    }
+
     public Compiler(Path generatedSourcesDir, Set<File> searchPath, Logger logger) {
         this.logger = logger;
         this.searchPath = searchPath;
         this.generatedSourcesDir = generatedSourcesDir.normalize();
+        this.classPaths = new ArrayList<>();
+    }
+
+    @Override
+    public void close() {
+        if (classPool != null) {
+            classPaths.forEach(classPool::removeClassPath);
+        }
     }
 
     /**
@@ -129,8 +144,9 @@ public class Compiler extends AbstractCompiler {
             return;
         }
 
-        classPool = newClassPool(searchPath);
-        var transformer = Transformer.getCodeTransformer(classPool);;
+        initClassPool(searchPath);
+
+        var transformer = Transformer.getCodeTransformer(classPool);
 
         for (var entry : compilations.entrySet()) {
             Path sourceFile = entry.getKey();
@@ -288,18 +304,16 @@ public class Compiler extends AbstractCompiler {
         }
     }
 
-    private ClassPool newClassPool(Set<File> searchPath) {
-        ClassPool classPool = new ClassPool(true);
+    private void initClassPool(Set<File> searchPath) {
+        classPool = new ClassPool(true);
 
         for (File path : searchPath) {
             try {
-                classPool.appendClassPath(path.getAbsolutePath());
+                classPaths.add(classPool.appendClassPath(path.getAbsolutePath()));
             } catch (NotFoundException ex) {
                 throw new RuntimeException("Search path dependency not found: " + ex.getMessage());
             }
         }
-
-        return classPool;
     }
 
     private record ClassInfo(ClassNode classNode, Path sourceFile, String sourceText) {}
