@@ -40,13 +40,14 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 public class Compiler extends AbstractCompiler implements AutoCloseable {
 
     private enum Stage {
-        PARSE,
-        GENERATE_SOURCES,
+        ADD_FILES,
+        PROCESS,
         COMPILE,
         FINISHED
     }
@@ -56,10 +57,9 @@ public class Compiler extends AbstractCompiler implements AutoCloseable {
     private final List<ClassPath> classPaths;
     private final Path generatedSourcesDir;
     private final Map<Path, Compilation> compilations = new HashMap<>();
-    private final Map<Path, DocumentNode> classDocuments = new HashMap<>();
     private final Map<String, List<ClassInfo>> generatedClasses = new HashMap<>();
     private ClassPool classPool;
-    private Stage stage = Stage.PARSE;
+    private Stage stage = Stage.ADD_FILES;
 
     static {
         // If this flag is set to true, file handles for JAR files are sometimes not released.
@@ -67,9 +67,9 @@ public class Compiler extends AbstractCompiler implements AutoCloseable {
     }
 
     public Compiler(Path generatedSourcesDir, Set<File> searchPath, Logger logger) {
-        this.logger = logger;
-        this.searchPath = searchPath;
-        this.generatedSourcesDir = generatedSourcesDir.normalize();
+        this.logger = Objects.requireNonNull(logger, "logger");
+        this.searchPath = Objects.requireNonNull(searchPath, "searchPath");
+        this.generatedSourcesDir = Objects.requireNonNull(generatedSourcesDir, "generatedSourcesDir").normalize();
         this.classPaths = new ArrayList<>();
     }
 
@@ -93,11 +93,12 @@ public class Compiler extends AbstractCompiler implements AutoCloseable {
      */
     @SuppressWarnings("unused")
     public Path addFile(Path sourceDir, Path sourceFile) throws IOException {
-        if (stage != Stage.PARSE) {
+        Objects.requireNonNull(sourceDir, "sourceDir");
+        sourceFile = Objects.requireNonNull(sourceFile, "sourceFile").normalize();
+
+        if (stage != Stage.ADD_FILES) {
             throw new IllegalStateException("Cannot add file in stage " + stage);
         }
-
-        sourceFile = sourceFile.normalize();
 
         try {
             sourceDir.normalize().relativize(sourceFile);
@@ -113,7 +114,7 @@ public class Compiler extends AbstractCompiler implements AutoCloseable {
 
         try (var ignored = new CompilationScope(context)) {
             DocumentNode document = new FxmlParser(sourceDir, sourceFile).parseDocument();
-            compilations.put(sourceFile, new Compilation(document, context));
+            compilations.put(sourceFile, new Compilation(document, null, context));
             return generatedSourcesDir.resolve(FileUtil.getMarkupJavaFile(document));
         } catch (FxmlParseAbortException ex) {
             logger.info(String.format("File skipped: %s (%s)", sourceFile, ex.getMessage()));
@@ -134,27 +135,26 @@ public class Compiler extends AbstractCompiler implements AutoCloseable {
      */
     @SuppressWarnings("unused")
     public void processFiles() throws IOException {
-        if (stage != Stage.PARSE) {
-            throw new IllegalStateException("Cannot generate sources in stage " + stage);
+        if (stage != Stage.ADD_FILES) {
+            throw new IllegalStateException("Cannot process files in stage " + stage);
         }
 
-        stage = Stage.COMPILE;
+        stage = Stage.PROCESS;
 
         if (compilations.isEmpty()) {
             return;
         }
 
-        initClassPool(searchPath);
+        ensureClassPool();
 
         var transformer = Transformer.getCodeTransformer(classPool);
 
-        for (var entry : compilations.entrySet()) {
+        for (var entry : Map.copyOf(compilations).entrySet()) {
             Path sourceFile = entry.getKey();
             DocumentNode document = entry.getValue().document();
             CompilationContext context = entry.getValue().context();
 
             try (var ignored = new CompilationScope(context)) {
-                compilations.put(sourceFile, new Compilation(document, context));
                 parseSingleFile(sourceFile, document, transformer);
             } catch (MarkupException ex) {
                 ex.setSourceFile(sourceFile.toFile());
@@ -170,29 +170,24 @@ public class Compiler extends AbstractCompiler implements AutoCloseable {
         }
     }
 
-    /**
-     * Compiles the content of the FXML markup files that were added to this compiler.
-     * <p>
-     * This is the second step of compilation.
-     *
-     * @throws IOException if an I/O error occurs
-     * @throws MarkupException if a markup error occurs
-     */
-    @SuppressWarnings("unused")
-    public void compileFiles() throws IOException {
-        if (stage != Stage.COMPILE) {
-            throw new IllegalStateException("Cannot compile in stage " + stage);
+    private void parseSingleFile(Path inputFile, DocumentNode document, Transformer transformer) {
+        logger.debug("Parsing " + inputFile);
+        StringBuilder stringBuilder = new StringBuilder();
+        JavaEmitContext context = new JavaEmitContext(stringBuilder);
+
+        try {
+            document = (DocumentNode)transformer.transform(document, null, null);
+            context.emit(document);
+        } catch (MarkupException ex) {
+            ex.setSourceFile(inputFile.toFile());
+            throw ex;
         }
 
-        stage = Stage.FINISHED;
-
-        if (!classDocuments.isEmpty()) {
-            var transformer = Transformer.getBytecodeTransformer(classPool);
-
-            for (Path sourceFile : classDocuments.keySet()) {
-                compileSingleFile(sourceFile, transformer);
-            }
-        }
+        ClassNode classNode = ((ClassNode)document.getRoot());
+        String packageName = classNode.getPackageName();
+        generatedClasses.putIfAbsent(packageName, new ArrayList<>());
+        generatedClasses.get(packageName).add(new ClassInfo(classNode, inputFile, stringBuilder.toString()));
+        compilations.computeIfPresent(inputFile, (path, comp) -> comp.withRootClass(classNode));
     }
 
     private void deleteFiles(Path directory) throws IOException {
@@ -211,26 +206,6 @@ public class Compiler extends AbstractCompiler implements AutoCloseable {
                 }
             });
         }
-    }
-
-    private void parseSingleFile(Path inputFile, DocumentNode document, Transformer transformer) {
-        logger.debug("Parsing " + inputFile);
-        StringBuilder stringBuilder = new StringBuilder();
-        JavaEmitContext context = new JavaEmitContext(stringBuilder);
-
-        try {
-            document = (DocumentNode)transformer.transform(document, null, null);
-            context.emit(document);
-        } catch (MarkupException ex) {
-            ex.setSourceFile(inputFile.toFile());
-            throw ex;
-        }
-
-        classDocuments.put(inputFile, document);
-        ClassNode classNode = ((ClassNode)document.getRoot());
-        String packageName = classNode.getPackageName();
-        generatedClasses.putIfAbsent(packageName, new ArrayList<>());
-        generatedClasses.get(packageName).add(new ClassInfo(classNode, inputFile, stringBuilder.toString()));
     }
 
     private void writeClasses(Path outputDir, List<ClassInfo> classes) throws IOException {
@@ -252,12 +227,39 @@ public class Compiler extends AbstractCompiler implements AutoCloseable {
         }
     }
 
-    private void compileSingleFile(Path inputFile, Transformer transformer) throws IOException {
-        logger.debug("Compiling " + inputFile);
-        Compilation compilation = compilations.get(inputFile);
+    /**
+     * Compiles the content of the FXML markup files that were added to this compiler.
+     * <p>
+     * This is the second step of compilation.
+     *
+     * @throws IOException if an I/O error occurs
+     * @throws MarkupException if a markup error occurs
+     */
+    @SuppressWarnings("unused")
+    public void compileFiles() throws IOException {
+        if (stage != Stage.PROCESS) {
+            throw new IllegalStateException("Cannot compile files in stage " + stage);
+        }
+
+        stage = Stage.FINISHED;
+
+        if (compilations.isEmpty()) {
+            return;
+        }
+
+        var transformer = Transformer.getBytecodeTransformer(classPool);
+
+        for (var entry : compilations.entrySet()) {
+            compileSingleFile(entry.getKey(), entry.getValue(), transformer);
+        }
+    }
+
+    private void compileSingleFile(Path sourceFile, Compilation compilation, Transformer transformer)
+            throws IOException {
+        logger.debug("Compiling " + sourceFile);
 
         try (var ignored = new CompilationScope(compilation.context())) {
-            ClassNode classNode = (ClassNode)classDocuments.get(inputFile).getRoot();
+            ClassNode classNode = compilation.rootClass();
             boolean hasCodeBehind = classNode.hasCodeBehind();
             String packageName = classNode.getPackageName();
             String codeBehindClassName = packageName + "." + classNode.getClassName();
@@ -276,10 +278,10 @@ public class Compiler extends AbstractCompiler implements AutoCloseable {
             Bytecode bytecode = new Bytecode(markupClass, 1);
 
             EmitInitializeRootNode rootNode = (EmitInitializeRootNode)transformer.transform(
-                compilations.get(inputFile).document(), codeBehindClass, markupClass);
+                compilation.document(), codeBehindClass, markupClass);
 
             BytecodeEmitContext emitContext = new BytecodeEmitContext(
-                codeBehindClass, markupClass, rootNode, compilations.get(inputFile).document().getImports(), bytecode);
+                codeBehindClass, markupClass, rootNode, compilation.document().getImports(), bytecode);
 
             emitContext.emitRootNode();
 
@@ -293,18 +295,22 @@ public class Compiler extends AbstractCompiler implements AutoCloseable {
 
             flushModifiedClasses(compilation.context());
         } catch (MarkupException ex) {
-            ex.setSourceFile(inputFile.toFile());
+            ex.setSourceFile(sourceFile.toFile());
             throw ex;
         } catch (BadBytecode | URISyntaxException | CannotCompileException ex) {
             throw ExceptionHelper.unchecked(ex);
         } catch (NotFoundException ex) {
             MarkupException m = SymbolResolutionErrors.classNotFound(SourceInfo.none(), ex.getMessage());
-            m.setSourceFile(inputFile.toFile());
+            m.setSourceFile(sourceFile.toFile());
             throw m;
         }
     }
 
-    private void initClassPool(Set<File> searchPath) {
+    private void ensureClassPool() {
+        if (classPool != null) {
+            return;
+        }
+
         classPool = new ClassPool(true);
 
         for (File path : searchPath) {
@@ -317,6 +323,10 @@ public class Compiler extends AbstractCompiler implements AutoCloseable {
     }
 
     private record ClassInfo(ClassNode classNode, Path sourceFile, String sourceText) {}
-    private record Compilation(DocumentNode document, CompilationContext context) {}
+    private record Compilation(DocumentNode document, ClassNode rootClass, CompilationContext context) {
+        Compilation withRootClass(ClassNode rootClass) {
+            return new Compilation(document, rootClass, context);
+        }
+    }
 
 }
