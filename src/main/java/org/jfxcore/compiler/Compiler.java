@@ -47,7 +47,6 @@ public class Compiler extends AbstractCompiler implements AutoCloseable {
 
     private enum Stage {
         ADD_FILES,
-        PROCESS,
         COMPILE,
         FINISHED
     }
@@ -139,7 +138,7 @@ public class Compiler extends AbstractCompiler implements AutoCloseable {
             throw new IllegalStateException("Cannot process files in stage " + stage);
         }
 
-        stage = Stage.PROCESS;
+        stage = Stage.COMPILE;
 
         if (compilations.isEmpty()) {
             return;
@@ -237,7 +236,7 @@ public class Compiler extends AbstractCompiler implements AutoCloseable {
      */
     @SuppressWarnings("unused")
     public void compileFiles() throws IOException {
-        if (stage != Stage.PROCESS) {
+        if (stage != Stage.COMPILE) {
             throw new IllegalStateException("Cannot compile files in stage " + stage);
         }
 
