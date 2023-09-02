@@ -175,7 +175,7 @@ public class Compiler extends AbstractCompiler implements AutoCloseable {
     }
 
     private void parseSingleFile(Path inputFile, DocumentNode document, Transformer transformer) {
-        logger.fine("Parsing FXML markup file " + inputFile);
+        logger.debug("Parsing FXML markup file " + inputFile);
         StringBuilder stringBuilder = new StringBuilder();
         JavaEmitContext context = new JavaEmitContext(stringBuilder);
 
@@ -221,7 +221,7 @@ public class Compiler extends AbstractCompiler implements AutoCloseable {
                 classInfo.classNode().getMarkupClassName() + ".java" :
                 classInfo.classNode().getClassName() + ".java");
 
-            logger.fine("Generating FXML code file " + outputFile);
+            logger.debug("Generating FXML code file " + outputFile);
 
             Files.writeString(
                 outputFile,
@@ -267,7 +267,7 @@ public class Compiler extends AbstractCompiler implements AutoCloseable {
             String codeBehindClassName = packageName + "." + classNode.getClassName();
             String simpleMarkupClassName = hasCodeBehind ? classNode.getMarkupClassName() : classNode.getClassName();
             String markupClassName = packageName + "." + simpleMarkupClassName;
-            logger.fine(String.format("Compiling FXML class '%s'", markupClassName));
+            logger.debug(String.format("Compiling FXML class '%s'", markupClassName));
 
             URL classUrl = transformer.getClassPool().find(markupClassName);
             if (classUrl == null) {
