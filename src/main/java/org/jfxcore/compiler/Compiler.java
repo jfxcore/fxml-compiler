@@ -17,6 +17,7 @@ import org.jfxcore.compiler.ast.emit.BytecodeEmitContext;
 import org.jfxcore.compiler.ast.emit.EmitInitializeRootNode;
 import org.jfxcore.compiler.diagnostic.MarkupException;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
+import org.jfxcore.compiler.diagnostic.errors.GeneralErrors;
 import org.jfxcore.compiler.diagnostic.errors.SymbolResolutionErrors;
 import org.jfxcore.compiler.parse.FxmlParseAbortException;
 import org.jfxcore.compiler.parse.FxmlParser;
@@ -26,7 +27,6 @@ import org.jfxcore.compiler.util.Bytecode;
 import org.jfxcore.compiler.util.CompilationContext;
 import org.jfxcore.compiler.util.CompilationScope;
 import org.jfxcore.compiler.util.CompilationSource;
-import org.jfxcore.compiler.util.ExceptionHelper;
 import org.jfxcore.compiler.util.FileUtil;
 import java.io.File;
 import java.io.IOException;
@@ -271,7 +271,7 @@ public class Compiler extends AbstractCompiler implements AutoCloseable {
 
             URL classUrl = transformer.getClassPool().find(markupClassName);
             if (classUrl == null) {
-                throw new RuntimeException(String.format("%s cannot be found on the classpath", markupClassName));
+                throw GeneralErrors.internalError(String.format("%s cannot be found", markupClassName));
             }
 
             CtClass codeBehindClass = transformer.getClassPool().get(codeBehindClassName);
@@ -289,6 +289,10 @@ public class Compiler extends AbstractCompiler implements AutoCloseable {
             emitContext.emitRootNode();
 
             MethodInfo methodInfo = markupClass.getClassFile().getMethod("initializeComponent");
+            if (methodInfo == null) {
+                throw GeneralErrors.internalError("Invalid markup class file");
+            }
+
             methodInfo.setCodeAttribute(bytecode.toCodeAttribute());
             methodInfo.rebuildStackMap(markupClass.getClassPool());
 
@@ -301,7 +305,9 @@ public class Compiler extends AbstractCompiler implements AutoCloseable {
             ex.setSourceFile(sourceFile.toFile());
             throw ex;
         } catch (BadBytecode | URISyntaxException | CannotCompileException ex) {
-            throw ExceptionHelper.unchecked(ex);
+            MarkupException m = GeneralErrors.internalError(ex.getMessage());
+            m.setSourceFile(sourceFile.toFile());
+            throw m;
         } catch (NotFoundException ex) {
             MarkupException m = SymbolResolutionErrors.classNotFound(SourceInfo.none(), ex.getMessage());
             m.setSourceFile(sourceFile.toFile());
