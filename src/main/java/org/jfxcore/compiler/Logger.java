@@ -5,7 +5,7 @@ package org.jfxcore.compiler;
 
 public interface Logger {
 
-    void debug(String message);
+    void fine(String message);
     void info(String message);
     void warning(String message);
     void error(String message);

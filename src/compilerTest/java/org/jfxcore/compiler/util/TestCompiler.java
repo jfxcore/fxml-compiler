@@ -68,7 +68,7 @@ public class TestCompiler extends AbstractCompiler {
 
         CompilationContext context = new CompilationContext(new CompilationSource.InMemory(source)) {
             final Logger logger = new Logger() {
-                @Override public void debug(String message) {}
+                @Override public void fine(String message) {}
                 @Override public void info(String message) {}
                 @Override public void warning(String message) {}
                 @Override public void error(String message) {}
