@@ -109,7 +109,12 @@ public class Compiler extends AbstractCompiler implements AutoCloseable {
             throw new IllegalArgumentException("The specified file was already added.");
         }
 
-        CompilationContext context = new CompilationContext(new CompilationSource.FileSystem(sourceFile));
+        CompilationContext context = new CompilationContext(new CompilationSource.FileSystem(sourceFile)) {
+            @Override
+            public Logger getLogger() {
+                return logger;
+            }
+        };
 
         try (var ignored = new CompilationScope(context)) {
             DocumentNode document = new FxmlParser(sourceDir, sourceFile).parseDocument();
@@ -170,7 +175,7 @@ public class Compiler extends AbstractCompiler implements AutoCloseable {
     }
 
     private void parseSingleFile(Path inputFile, DocumentNode document, Transformer transformer) {
-        logger.debug("Parsing " + inputFile);
+        logger.fine("Parsing FXML markup file " + inputFile);
         StringBuilder stringBuilder = new StringBuilder();
         JavaEmitContext context = new JavaEmitContext(stringBuilder);
 
@@ -216,7 +221,7 @@ public class Compiler extends AbstractCompiler implements AutoCloseable {
                 classInfo.classNode().getMarkupClassName() + ".java" :
                 classInfo.classNode().getClassName() + ".java");
 
-            logger.debug("Generating " + outputFile);
+            logger.fine("Generating FXML code file " + outputFile);
 
             Files.writeString(
                 outputFile,
@@ -255,8 +260,6 @@ public class Compiler extends AbstractCompiler implements AutoCloseable {
 
     private void compileSingleFile(Path sourceFile, Compilation compilation, Transformer transformer)
             throws IOException {
-        logger.debug("Compiling " + sourceFile);
-
         try (var ignored = new CompilationScope(compilation.context())) {
             ClassNode classNode = compilation.rootClass();
             boolean hasCodeBehind = classNode.hasCodeBehind();
@@ -264,8 +267,9 @@ public class Compiler extends AbstractCompiler implements AutoCloseable {
             String codeBehindClassName = packageName + "." + classNode.getClassName();
             String simpleMarkupClassName = hasCodeBehind ? classNode.getMarkupClassName() : classNode.getClassName();
             String markupClassName = packageName + "." + simpleMarkupClassName;
-            URL classUrl = transformer.getClassPool().find(markupClassName);
+            logger.fine(String.format("Compiling FXML class '%s'", markupClassName));
 
+            URL classUrl = transformer.getClassPool().find(markupClassName);
             if (classUrl == null) {
                 throw new RuntimeException(String.format("%s cannot be found on the classpath", markupClassName));
             }
