@@ -1,4 +1,4 @@
-// Copyright (c) 2022, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2023, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.util;
@@ -6,6 +6,7 @@ package org.jfxcore.compiler.util;
 import javassist.ClassPool;
 import javassist.CtClass;
 import javassist.bytecode.MethodInfo;
+import org.jfxcore.compiler.Logger;
 import org.jfxcore.compiler.ast.DocumentNode;
 import org.jfxcore.compiler.ast.codebehind.ClassNode;
 import org.jfxcore.compiler.ast.codebehind.JavaEmitContext;
@@ -65,7 +66,19 @@ public class TestCompiler extends AbstractCompiler {
         Path fxmlTestSourcePath = Path.of("").toAbsolutePath()
             .resolve("src/compilerTest/java/org/jfxcore/compiler/classes/" + fileName + ".fxml");
 
-        CompilationContext context = new CompilationContext(new CompilationSource.InMemory(source));
+        CompilationContext context = new CompilationContext(new CompilationSource.InMemory(source)) {
+            final Logger logger = new Logger() {
+                @Override public void fine(String message) {}
+                @Override public void info(String message) {}
+                @Override public void warning(String message) {}
+                @Override public void error(String message) {}
+            };
+
+            @Override
+            public Logger getLogger() {
+                return logger;
+            }
+        };
 
         try (CompilationScope ignored = new CompilationScope(context)) {
             document = new FxmlParser(sourceBaseDir, fxmlTestSourcePath, source).parseDocument();

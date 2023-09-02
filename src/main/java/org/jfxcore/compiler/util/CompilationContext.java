@@ -1,16 +1,17 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2023, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.util;
 
 import javassist.ClassPool;
 import javassist.CtClass;
+import org.jfxcore.compiler.Logger;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class CompilationContext extends HashMap<Object, Object> {
+public abstract class CompilationContext extends HashMap<Object, Object> {
 
     private static CompilationContext current;
 
@@ -47,6 +48,8 @@ public class CompilationContext extends HashMap<Object, Object> {
             current = null;
         }
     }
+
+    public abstract Logger getLogger();
 
     public CompilationSource getCompilationSource() {
         if (compilationSource == null) {
