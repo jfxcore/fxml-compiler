@@ -5,6 +5,7 @@ package org.jfxcore.compiler.diagnostic;
 
 public enum ErrorCode {
 
+    INTERNAL_ERROR, // must be first
     UNSUPPORTED,
 
     // Parser errors
