@@ -46,8 +46,6 @@ import java.util.Set;
 
 public class Compiler extends AbstractCompiler implements AutoCloseable {
 
-    private static final String GENERATOR_NAME = String.format("%s:%s", VersionInfo.getGroup(), VersionInfo.getName());
-
     private enum Stage {
         ADD_FILES,
         COMPILE,
@@ -292,7 +290,7 @@ public class Compiler extends AbstractCompiler implements AutoCloseable {
             CtClass codeBehindClass = transformer.getClassPool().get(codeBehindClassName);
             CtClass markupClass = transformer.getClassPool().get(markupClassName);
 
-            if (markupClass.getAttribute(GENERATOR_NAME) != null) {
+            if (markupClass.getAttribute(FileUtil.GENERATOR_NAME) != null) {
                 throw GeneralErrors.internalError(String.format(
                     "FXML class '%s' has already been compiled, it cannot be compiled again", markupClassName));
             }
@@ -317,7 +315,7 @@ public class Compiler extends AbstractCompiler implements AutoCloseable {
             // Add the generator attribute, which is used to detect if a class file was
             // compiled by this compiler.
             markupClass.getClassFile().addAttribute(new AttributeInfo(
-                markupClass.getClassFile().getConstPool(), GENERATOR_NAME, new byte[0]));
+                markupClass.getClassFile().getConstPool(), FileUtil.GENERATOR_NAME, new byte[0]));
 
             methodInfo.setCodeAttribute(bytecode.toCodeAttribute());
             methodInfo.rebuildStackMap(markupClass.getClassPool());

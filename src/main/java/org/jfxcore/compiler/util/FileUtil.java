@@ -25,11 +25,9 @@ import static javassist.bytecode.ConstPool.*;
 
 public class FileUtil {
 
-    public static final String GENERATOR_ATTRIBUTE =
-        String.format("%s:%s", VersionInfo.getGroup(), VersionInfo.getName());
+    public static final String GENERATOR_NAME = String.format("%s:%s", VersionInfo.getGroup(), VersionInfo.getName());
 
-    private static final byte[] GENERATOR_ATTRIBUTE_BYTES =
-        GENERATOR_ATTRIBUTE.getBytes(StandardCharsets.UTF_8);
+    private static final byte[] GENERATOR_NAME_BYTES = GENERATOR_NAME.getBytes(StandardCharsets.UTF_8);
 
     public static boolean hasGeneratorAttribute(Path file) throws IOException {
         try (var stream = new DataInputStream(new BufferedInputStream(new FileInputStream(file.toFile())))) {
@@ -135,12 +133,12 @@ public class FileUtil {
                             throw new IOException("Unexpected end of file");
                         }
 
-                        if (GENERATOR_ATTRIBUTE_BYTES.length != length) {
+                        if (GENERATOR_NAME_BYTES.length != length) {
                             yield 0;
                         }
 
                         for (int b = 0; b < length; ++b) {
-                            if (buffer[b] != GENERATOR_ATTRIBUTE_BYTES[b]) {
+                            if (buffer[b] != GENERATOR_NAME_BYTES[b]) {
                                 yield 0;
                             }
                         }
