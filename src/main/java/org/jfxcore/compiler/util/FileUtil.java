@@ -3,6 +3,7 @@
 
 package org.jfxcore.compiler.util;
 
+import org.jfxcore.compiler.VersionInfo;
 import org.jfxcore.compiler.ast.DocumentNode;
 import org.jfxcore.compiler.ast.ObjectNode;
 import org.jfxcore.compiler.ast.PropertyNode;
@@ -11,11 +12,158 @@ import org.jfxcore.compiler.ast.text.TextNode;
 import org.jfxcore.compiler.diagnostic.errors.GeneralErrors;
 import org.jfxcore.compiler.diagnostic.errors.PropertyAssignmentErrors;
 import org.jfxcore.compiler.diagnostic.errors.SymbolResolutionErrors;
+import java.io.BufferedInputStream;
+import java.io.DataInputStream;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.stream.Collectors;
 
+import static javassist.bytecode.ConstPool.*;
+
 public class FileUtil {
+
+    public static final String GENERATOR_ATTRIBUTE =
+        String.format("%s:%s", VersionInfo.getGroup(), VersionInfo.getName());
+
+    private static final byte[] GENERATOR_ATTRIBUTE_BYTES =
+        GENERATOR_ATTRIBUTE.getBytes(StandardCharsets.UTF_8);
+
+    public static boolean hasGeneratorAttribute(Path file) throws IOException {
+        try (var stream = new DataInputStream(new BufferedInputStream(new FileInputStream(file.toFile())))) {
+            return hasGeneratorAttributeImpl(stream);
+        }
+    }
+
+    private static boolean hasGeneratorAttributeImpl(DataInputStream stream) throws IOException {
+        int magic = stream.readInt();
+        if (magic != 0xcafebabe) {
+            return false;
+        }
+
+        int minorVersion = stream.readShort();
+        int majorVersion = stream.readShort();
+        int generatorAttributeNameIndex = findGeneratorAttributeNameIndex(stream, majorVersion, minorVersion);
+        if (generatorAttributeNameIndex < 0) {
+            return false;
+        }
+
+        stream.readShort(); // access_flags
+        stream.readShort(); // this_class
+        stream.readShort(); // super_class
+
+        for (int i = 0, interfacesCount = stream.readShort(); i < interfacesCount; ++i) {
+            stream.readShort();
+        }
+
+        for (int i = 0, fieldsCount = stream.readShort(); i < fieldsCount; ++i) {
+            skipFieldOrMethodInfo(stream);
+        }
+
+        for (int i = 0, methodsCount = stream.readShort(); i < methodsCount; ++i) {
+            skipFieldOrMethodInfo(stream);
+        }
+
+        for (int i = 0, attributesCount = stream.readShort(); i < attributesCount; ++i) {
+            if (stream.readShort() == generatorAttributeNameIndex) {
+                return true;
+            }
+
+            for (int j = 0, attributeLength = stream.readInt(); j < attributeLength; ++j) {
+                stream.readByte();
+            }
+        }
+
+        return false;
+    }
+
+    private static void skipFieldOrMethodInfo(DataInputStream stream) throws IOException {
+        stream.readShort(); // access_flags
+        stream.readShort(); // name_index
+        stream.readShort(); // descriptor_index
+        int attributesCount = stream.readShort();
+
+        for (int i = 0; i < attributesCount; ++i) {
+            stream.readShort(); // attribute_name_index
+
+            for (int j = 0, attributeLength = stream.readInt(); j < attributeLength; ++j) {
+                stream.readByte();
+            }
+        }
+    }
+
+    private static int findGeneratorAttributeNameIndex(
+            DataInputStream stream, int majorVersion, int minorVersion) throws IOException {
+        int constantPoolCount = stream.readUnsignedShort();
+        if (constantPoolCount == 0) {
+            return -1;
+        }
+
+        byte[] buffer = null;
+        int foundIndex = -1;
+
+        for (int i = 1; i < constantPoolCount; ++i) {
+            int bytes = switch (stream.readUnsignedByte()) {
+                case CONST_Class -> 2;
+                case CONST_Fieldref, CONST_Methodref, CONST_InterfaceMethodref -> 4;
+                case CONST_String -> 2;
+                case CONST_Integer, CONST_Float -> 4;
+                case CONST_Long, CONST_Double -> {
+                    ++i; // long and double constants take up two entries in the constant pool
+                    yield 8;
+                }
+                case CONST_NameAndType -> 4;
+                case CONST_MethodHandle -> 3;
+                case CONST_MethodType -> 2;
+                case CONST_InvokeDynamic -> 4;
+                case CONST_Utf8 -> {
+                    int length = stream.readUnsignedShort();
+                    if (foundIndex >= 0) {
+                        for (int b = 0; b < length; ++b) {
+                            if (stream.read() < 0) {
+                                throw new IOException("Unexpected end of file");
+                            }
+                        }
+                    } else {
+                        if (buffer == null || buffer.length < length) {
+                            buffer = new byte[length];
+                        }
+
+                        if (stream.read(buffer, 0, length) != length) {
+                            throw new IOException("Unexpected end of file");
+                        }
+
+                        if (GENERATOR_ATTRIBUTE_BYTES.length != length) {
+                            yield 0;
+                        }
+
+                        for (int b = 0; b < length; ++b) {
+                            if (buffer[b] != GENERATOR_ATTRIBUTE_BYTES[b]) {
+                                yield 0;
+                            }
+                        }
+
+                        foundIndex = i;
+                    }
+
+                    yield 0;
+                }
+
+                default -> throw new IOException(
+                    "Unsupported class file version " + majorVersion + "." + minorVersion);
+            };
+
+            for (int b = 0; b < bytes; ++b) {
+                if (stream.read() < 0) {
+                    throw new IOException("Unexpected end of file");
+                }
+            }
+        }
+
+        return foundIndex;
+    }
 
     /**
      * Returns a path that points to the generated Java file that corresponds to the FXML document.
