@@ -8,6 +8,7 @@ import javassist.ClassPath;
 import javassist.ClassPool;
 import javassist.CtClass;
 import javassist.NotFoundException;
+import javassist.bytecode.AttributeInfo;
 import javassist.bytecode.BadBytecode;
 import javassist.bytecode.MethodInfo;
 import org.jfxcore.compiler.ast.DocumentNode;
@@ -77,6 +78,18 @@ public class Compiler extends AbstractCompiler implements AutoCloseable {
         if (classPool != null) {
             classPaths.forEach(classPool::removeClassPath);
         }
+    }
+
+    /**
+     * Returns whether the specified class file was compiled by this compiler.
+     *
+     * @param classFile the FXML class file
+     * @return {@code true} if the class file was compiled by this compiler, {@code false} otherwise
+     * @throws IOException if a I/O error occurs
+     */
+    @SuppressWarnings("unused")
+    public boolean isCompiledFile(Path classFile) throws IOException {
+        return FileUtil.hasGeneratorAttribute(classFile);
     }
 
     /**
@@ -276,6 +289,12 @@ public class Compiler extends AbstractCompiler implements AutoCloseable {
 
             CtClass codeBehindClass = transformer.getClassPool().get(codeBehindClassName);
             CtClass markupClass = transformer.getClassPool().get(markupClassName);
+
+            if (markupClass.getAttribute(FileUtil.GENERATOR_NAME) != null) {
+                throw GeneralErrors.internalError(String.format(
+                    "FXML class '%s' has already been compiled, it cannot be compiled again", markupClassName));
+            }
+
             markupClass.defrost();
 
             Bytecode bytecode = new Bytecode(markupClass, 1);
@@ -292,6 +311,11 @@ public class Compiler extends AbstractCompiler implements AutoCloseable {
             if (methodInfo == null) {
                 throw GeneralErrors.internalError("Invalid markup class file");
             }
+
+            // Add the generator attribute, which is used to detect if a class file was
+            // compiled by this compiler.
+            markupClass.getClassFile().addAttribute(new AttributeInfo(
+                markupClass.getClassFile().getConstPool(), FileUtil.GENERATOR_NAME, new byte[0]));
 
             methodInfo.setCodeAttribute(bytecode.toCodeAttribute());
             methodInfo.rebuildStackMap(markupClass.getClassPool());
