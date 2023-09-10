@@ -26,6 +26,7 @@ import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.TableView;
 import javafx.scene.layout.Pane;
+import javafx.util.Pair;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -266,6 +267,7 @@ public class ResolverTest extends TestBase {
         public static <T extends Node> ListProperty<? super T> list2Property(T node) { return null; }
         public static <T extends Pane> ObservableList<? super T> getList3(T node) { return null; }
         public static <T extends TableView<String>> ObservableList<? super T> getList4(T node) { return null; }
+        public static <T> ObservableList<Pair<? super T, ?>> getList5(T node) { return null; }
     }
 
     @Test
@@ -322,6 +324,17 @@ public class ResolverTest extends TestBase {
         MarkupException ex = assertThrows(MarkupException.class,
             () -> resolver.resolveProperty(tableViewType, true, names.toArray(String[]::new)));
         assertEquals(ErrorCode.TYPE_ARGUMENT_OUT_OF_BOUND, ex.getDiagnostic().getCode());
+    }
+
+    @Test
+    public void GetTypeInstance_Of_Static_Property_With_Wildcard_Argument() {
+        Resolver resolver = new Resolver(SourceInfo.none());
+        TypeInstance buttonType = resolver.getTypeInstance(resolver.resolveClass(Button.class.getName()));
+        var names = new ArrayList<>(List.of(StaticPropertyWithGenericNode.class.getName().split("\\.")));
+        names.add("list5");
+
+        PropertyInfo propertyInfo = resolver.resolveProperty(buttonType, true, names.toArray(String[]::new));
+        assertEquals("ObservableList<Pair<? super Button,?>>", propertyInfo.getType().toString());
     }
 
     public record PropertyTestRun(

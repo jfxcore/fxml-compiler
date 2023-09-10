@@ -1356,9 +1356,19 @@ public class Resolver {
                     arguments = new ArrayList<>();
 
                     for (SignatureAttribute.TypeArgument typeArg : classType.getTypeArguments()) {
-                        TypeInstance typeInst = invokeType(
-                            invokingClass, typeArg.getType(), TypeInstance.WildcardType.of(typeArg.getKind()),
-                            classTypeParams, methodTypeParams, invocationChain, providedArguments);
+                        TypeInstance typeInst;
+
+                        if (typeArg.isWildcard() && typeArg.getType() == null) {
+                            typeInst = new TypeInstance(
+                                Classes.ObjectType(),
+                                TypeInstance.ObjectType().getArguments(),
+                                TypeInstance.ObjectType().getSuperTypes(),
+                                TypeInstance.WildcardType.ANY);
+                        } else {
+                            typeInst = invokeType(
+                                invokingClass, typeArg.getType(), TypeInstance.WildcardType.of(typeArg.getKind()),
+                                classTypeParams, methodTypeParams, invocationChain, providedArguments);
+                        }
 
                         arguments.add(Objects.requireNonNull(typeInst));
                     }
@@ -1423,8 +1433,6 @@ public class Resolver {
 
         throw new IllegalArgumentException();
     }
-
-
 
     private List<TypeInstance> invokeTypeArguments(
             CtClass invokingClass,
