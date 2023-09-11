@@ -6,6 +6,7 @@ package org.jfxcore.compiler.bindings;
 import javafx.beans.NamedArg;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty;
+import javafx.scene.Node;
 import javafx.scene.control.Label;
 import javafx.scene.layout.Pane;
 import javafx.scene.shape.Rectangle;
@@ -117,7 +118,7 @@ public class ControlBindingTest extends CompilerTestBase {
     @SuppressWarnings("unused")
     public static class NodeUnderInitialization extends Pane {
         public NodeUnderInitialization(@NamedArg("arg1") double param) { test.set(param); }
-        public NodeUnderInitialization(@NamedArg("arg2") NodeUnderInitialization param) {}
+        public NodeUnderInitialization(@NamedArg("arg2") Node param) { getChildren().add(param); }
 
         private final DoubleProperty test = new SimpleDoubleProperty(this, "test");
         public DoubleProperty testProperty() { return test; }
@@ -187,6 +188,23 @@ public class ControlBindingTest extends CompilerTestBase {
 
         assertEquals(ErrorCode.CANNOT_REFERENCE_NODE_UNDER_INITIALIZATION, ex.getDiagnostic().getCode());
         assertCodeHighlight("{fx:once parent[1]/test}", ex);
+    }
+
+    @Test
+    public void Bind_Property_Once_To_Parent_Node_Under_Initialization_Fails() {
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <?import javafx.scene.layout.*?>
+            <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
+                <NodeUnderInitialization>
+                    <arg2>
+                        <Pane prefWidth="{fx:once parent[0]/test}"/>
+                    </arg2>
+                </NodeUnderInitialization>
+            </Pane>
+        """));
+
+        assertEquals(ErrorCode.CANNOT_REFERENCE_NODE_UNDER_INITIALIZATION, ex.getDiagnostic().getCode());
+        assertCodeHighlight("prefWidth=\"{fx:once parent[0]/test}\"", ex);
     }
 
     @Test

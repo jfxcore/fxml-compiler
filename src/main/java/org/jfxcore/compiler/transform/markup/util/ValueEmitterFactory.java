@@ -279,7 +279,11 @@ public class ValueEmitterFactory {
      */
     public static EmitObjectNode newObjectWithNamedParams(
             TransformContext context, ObjectNode objectNode, List<DiagnosticInfo> diagnostics) {
-        int parentsUnderInitializationCount = getParentsUnderInitializationCount(context, objectNode);
+        // Include the current object in the under-initialization count, since the count is
+        // relative to the current object's arguments.
+        int parentsUnderInitializationCount = getParentsUnderInitializationCount(context) +
+            (objectNode.getNodeData(NodeDataKey.CONSTRUCTOR_ARGUMENT) == Boolean.TRUE ? 1 : 0);
+
         TypeInstance type = TypeHelper.getTypeInstance(objectNode);
         NamedArgsConstructor[] namedArgsConstructors = findNamedArgsConstructors(objectNode, diagnostics);
         List<DiagnosticInfo> constructorDiagnostics = new ArrayList<>();
@@ -347,8 +351,9 @@ public class ValueEmitterFactory {
                                 if (bindingDistance == 0) {
                                     constructorDiagnostics.add(
                                         new DiagnosticInfo(
-                                            Diagnostic.newDiagnostic(
+                                            Diagnostic.newDiagnosticVariant(
                                                 ErrorCode.CANNOT_REFERENCE_NODE_UNDER_INITIALIZATION,
+                                                "argument",
                                                 methodSignature,
                                                 propertyNode.getName()),
                                             propertyNode.getValues().get(0).getSourceInfo()));
@@ -399,7 +404,7 @@ public class ValueEmitterFactory {
         return null;
     }
 
-    private static int getParentsUnderInitializationCount(TransformContext context, ObjectNode objectNode) {
+    public static int getParentsUnderInitializationCount(TransformContext context) {
         int depth = 0;
         var it = context.getParents().listIterator(context.getParents().size());
 
@@ -408,10 +413,6 @@ public class ValueEmitterFactory {
                 break;
             }
 
-            ++depth;
-        }
-
-        if (objectNode.getNodeData(NodeDataKey.CONSTRUCTOR_ARGUMENT) == Boolean.TRUE) {
             ++depth;
         }
 
