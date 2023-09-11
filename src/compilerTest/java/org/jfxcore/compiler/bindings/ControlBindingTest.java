@@ -12,6 +12,7 @@ import javafx.scene.shape.Rectangle;
 import org.jfxcore.compiler.diagnostic.ErrorCode;
 import org.jfxcore.compiler.diagnostic.MarkupException;
 import org.jfxcore.compiler.util.CompilerTestBase;
+import org.jfxcore.compiler.util.Reflection;
 import org.jfxcore.compiler.util.TestExtension;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -115,9 +116,11 @@ public class ControlBindingTest extends CompilerTestBase {
 
     @SuppressWarnings("unused")
     public static class NodeUnderInitialization extends Pane {
-        public NodeUnderInitialization(@NamedArg("arg1") double param) {}
+        public NodeUnderInitialization(@NamedArg("arg1") double param) { test.set(param); }
         public NodeUnderInitialization(@NamedArg("arg2") NodeUnderInitialization param) {}
-        public DoubleProperty testProperty() { return null; }
+
+        private final DoubleProperty test = new SimpleDoubleProperty(this, "test");
+        public DoubleProperty testProperty() { return test; }
 
         public static double function(double value) { return value; }
     }
@@ -184,6 +187,25 @@ public class ControlBindingTest extends CompilerTestBase {
 
         assertEquals(ErrorCode.CANNOT_REFERENCE_NODE_UNDER_INITIALIZATION, ex.getDiagnostic().getCode());
         assertCodeHighlight("{fx:once parent[1]/test}", ex);
+    }
+
+    @Test
+    public void Bind_Unidirectional_To_Parent_Works_When_GrandParent_Is_Under_Initialization() {
+        Pane root = compileAndRun("""
+            <?import javafx.scene.layout.*?>
+            <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
+                <NodeUnderInitialization>
+                    <arg2>
+                        <NodeUnderInitialization arg1="123">
+                            <Pane fx:id="testNode" prefWidth="{fx:bind parent[0]/test}"/>
+                        </NodeUnderInitialization>
+                    </arg2>
+                </NodeUnderInitialization>
+            </Pane>
+        """);
+
+        assertMethodCall(root, methods -> methods.stream().anyMatch(method -> method.getName().equals("bind")));
+        assertEquals(123.0, Reflection.<Pane>getFieldValue(root, "testNode").getPrefWidth(), 0.001);
     }
 
     @Test

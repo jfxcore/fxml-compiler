@@ -3,41 +3,36 @@
 
 package org.jfxcore.compiler.ast.emit;
 
-import javassist.CtClass;
 import org.jfxcore.compiler.ast.AbstractNode;
 import org.jfxcore.compiler.ast.ResolvedTypeNode;
 import org.jfxcore.compiler.ast.Visitor;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.generate.RuntimeContextGenerator;
 import org.jfxcore.compiler.util.TypeInstance;
-import java.util.Objects;
 
 import static org.jfxcore.compiler.util.Classes.*;
-import static org.jfxcore.compiler.util.Descriptors.*;
 
-public class EmitGetParentNode
+public class EmitGetRootNode
         extends AbstractNode
         implements ValueEmitterNode, NullableInfo, ParentStackInfo {
 
-    private final int parentIndex;
-    private int parentIndexAdjustment;
     private ResolvedTypeNode type;
 
-    public EmitGetParentNode(TypeInstance type, int parentIndex, SourceInfo sourceInfo) {
+    public EmitGetRootNode(TypeInstance type, SourceInfo sourceInfo) {
         super(sourceInfo);
         this.type = new ResolvedTypeNode(checkNotNull(type), sourceInfo);
-        this.parentIndex = parentIndex;
     }
 
     @Override
     public void emit(BytecodeEmitContext context) {
         context.getOutput()
             .aload(context.getRuntimeContextLocal())
-            .iconst(parentIndex - parentIndexAdjustment)
-            .invokevirtual(
+            .getfield(
                 context.getRuntimeContextClass(),
-                RuntimeContextGenerator.PEEK_PARENT_METHOD,
-                function(ObjectType(), CtClass.intType))
+                RuntimeContextGenerator.PARENTS_FIELD,
+                RuntimeContextGenerator.getParentArrayType())
+            .iconst(0)
+            .ext_arrayload(ObjectType())
             .checkcast(type.getJvmType());
     }
 
@@ -62,26 +57,22 @@ public class EmitGetParentNode
         return type;
     }
 
-    public void setParentIndexAdjustment(int value) {
-        parentIndexAdjustment = value;
-    }
-
     @Override
-    public EmitGetParentNode deepClone() {
-        return new EmitGetParentNode(type.getTypeInstance(), parentIndex, getSourceInfo());
+    public EmitGetRootNode deepClone() {
+        return new EmitGetRootNode(type.getTypeInstance(), getSourceInfo());
     }
 
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-        EmitGetParentNode that = (EmitGetParentNode)o;
-        return parentIndex == that.parentIndex && type.equals(that.type);
+        EmitGetRootNode that = (EmitGetRootNode)o;
+        return type.equals(that.type);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(parentIndex, type);
+        return type.hashCode();
     }
 
 }

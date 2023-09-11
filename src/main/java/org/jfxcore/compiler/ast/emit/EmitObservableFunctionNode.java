@@ -154,9 +154,7 @@ public class EmitObservableFunctionNode
         var sourceInfo = function.getSourceInfo();
 
         if (!AccessVerifier.isNestedAccessible(behavior, invocationContext, sourceInfo)) {
-            if (receiver.size() == 1
-                    && receiver.get(0) instanceof EmitGetParentNode emitGetParent
-                    && emitGetParent.getType().getTypeInstance().equals(invocationContext)) {
+            if (receiver.size() == 1 && equalsInvocationContext(receiver.get(0))) {
                 function = new Callable(receiver, emitBridgeMethod(context, behavior), sourceInfo);
             } else {
                 AccessVerifier.verifyNestedAccessible(behavior, invocationContext, sourceInfo);
@@ -164,6 +162,18 @@ public class EmitObservableFunctionNode
         }
 
         return function;
+    }
+
+    private boolean equalsInvocationContext(ValueEmitterNode node) {
+        if (node instanceof EmitGetParentNode getParentNode) {
+            return getParentNode.getType().getTypeInstance().equals(invocationContext);
+        }
+
+        if (node instanceof EmitGetRootNode getRootNode) {
+            return getRootNode.getType().getTypeInstance().equals(invocationContext);
+        }
+
+        return false;
     }
 
     private CtMethod emitBridgeMethod(BytecodeEmitContext context, CtBehavior behavior) {

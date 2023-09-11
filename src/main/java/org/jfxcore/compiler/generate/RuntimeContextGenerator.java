@@ -23,6 +23,7 @@ public class RuntimeContextGenerator extends ClassGenerator {
 
     public static final String PUSH_PARENT_METHOD = "push";
     public static final String POP_PARENT_METHOD = "pop";
+    public static final String PEEK_PARENT_METHOD = "peek";
     public static final String GET_RESOURCE_METHOD = "getResource";
 
     public static final String PARENTS_FIELD = "parents";
@@ -36,6 +37,7 @@ public class RuntimeContextGenerator extends ClassGenerator {
     private CtMethod getParentsMethod;
     private CtMethod pushParentMethod;
     private CtMethod popParentMethod;
+    private CtMethod peekParentMethod;
     private CtMethod getResourceMethod;
 
     public static CtClass getParentArrayType() {
@@ -101,6 +103,10 @@ public class RuntimeContextGenerator extends ClassGenerator {
         popParentMethod.setModifiers(Modifier.FINAL);
         generatedClass.addMethod(popParentMethod);
 
+        peekParentMethod = new CtMethod(Classes.ObjectType(), PEEK_PARENT_METHOD, new CtClass[] { CtClass.intType }, generatedClass);
+        peekParentMethod.setModifiers(Modifier.FINAL);
+        generatedClass.addMethod(peekParentMethod);
+
         if (resourceSupport) {
             getResourceMethod = new CtMethod(Classes.URLType(), GET_RESOURCE_METHOD, new CtClass[] {Classes.StringType()}, generatedClass);
             getResourceMethod.setModifiers(Modifier.FINAL);
@@ -117,6 +123,7 @@ public class RuntimeContextGenerator extends ClassGenerator {
         emitGetParentsMethod(context);
         emitPushParentMethod(context);
         emitPopParentMethod(context);
+        emitPeekParentMethod(context);
 
         if (getResourceMethod != null) {
             emitGetResourceMethod(context);
@@ -206,6 +213,25 @@ public class RuntimeContextGenerator extends ClassGenerator {
 
         popParentMethod.getMethodInfo().setCodeAttribute(code.toCodeAttribute());
         popParentMethod.getMethodInfo().rebuildStackMap(popParentMethod.getDeclaringClass().getClassPool());
+    }
+
+    private void emitPeekParentMethod(BytecodeEmitContext parentContext) throws Exception {
+        BytecodeEmitContext context = new BytecodeEmitContext(parentContext, generatedClass, 2, -1);
+        Bytecode code = context.getOutput();
+
+        code.aload(0)
+            .getfield(generatedClass, PARENTS_FIELD, parentArrayType)
+            .aload(0)
+            .getfield(generatedClass, INDEX_FIELD, CtClass.intType)
+            .iload(1)
+            .isub()
+            .iconst(1)
+            .isub()
+            .ext_arrayload(Classes.ObjectType())
+            .areturn();
+
+        peekParentMethod.getMethodInfo().setCodeAttribute(code.toCodeAttribute());
+        peekParentMethod.getMethodInfo().rebuildStackMap(peekParentMethod.getDeclaringClass().getClassPool());
     }
 
     @SuppressWarnings("CodeBlock2Expr")
