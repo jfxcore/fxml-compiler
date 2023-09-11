@@ -10,6 +10,8 @@ import javassist.CtMethod;
 import javassist.Modifier;
 import javassist.bytecode.MethodInfo;
 import org.jetbrains.annotations.Nullable;
+import org.jfxcore.compiler.ast.NodeDataKey;
+import org.jfxcore.compiler.ast.ObjectNode;
 import org.jfxcore.compiler.ast.ValueNode;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.ast.Node;
@@ -72,6 +74,12 @@ public class EmitObjectNode extends ReferenceableNode {
         }
 
         public EmitObjectNode create() {
+            for (ValueNode argument : arguments) {
+                if (argument instanceof ObjectNode objectNode) {
+                    objectNode.setNodeData(NodeDataKey.CONSTRUCTOR_ARGUMENT, true);
+                }
+            }
+
             return new EmitObjectNode(
                 fieldName,
                 type,

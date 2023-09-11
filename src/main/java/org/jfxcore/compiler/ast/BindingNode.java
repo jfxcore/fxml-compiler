@@ -35,20 +35,31 @@ public class BindingNode extends AbstractNode {
         return mode;
     }
 
-    public boolean isBindToSelf() {
-        return bindsToSelf(expression);
+    /**
+     * Gets the smallest binding distance within the binding expression,
+     * where bind to self == 0, bind to first parent == 1, etc.
+     */
+    public int getBindingDistance() {
+        return getBindingDistance(expression);
     }
 
-    private boolean bindsToSelf(Node expression) {
+    private int getBindingDistance(Node expression) {
         if (expression instanceof PathExpressionNode pathExpression) {
-            return pathExpression.getBindingContext().isSelf();
-        } else if (expression instanceof FunctionExpressionNode functionExpression) {
-            return functionExpression.getArguments().stream().anyMatch(this::bindsToSelf)
-                || bindsToSelf(functionExpression.getPath())
-                || bindsToSelf(functionExpression.getInversePath());
-        } else {
-            return false;
+            return pathExpression.getBindingContext().getBindingDistance();
         }
+
+        if (expression instanceof FunctionExpressionNode functionExpression) {
+            int min = getBindingDistance(functionExpression.getPath());
+            min = Math.min(min, getBindingDistance(functionExpression.getInversePath()));
+
+            for (var argument : functionExpression.getArguments()) {
+                min = Math.min(min, getBindingDistance(argument));
+            }
+
+            return min;
+        }
+
+        return 0;
     }
 
     @Override

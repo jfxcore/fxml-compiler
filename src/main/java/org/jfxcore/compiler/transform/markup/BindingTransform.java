@@ -181,7 +181,7 @@ public class BindingTransform implements Transform {
                 TypeInstance type = TypeHelper.getTypeInstance(parents.get(i));
                 if (type.subtypeOf(context.getBindingContextClass())) {
                     return new BindingContextNode(
-                        BindingContextSelector.DEFAULT, type, i, i == parents.size() - 1, pathNode.getSourceInfo());
+                        BindingContextSelector.DEFAULT, type, i, parents.size() - i - 1, pathNode.getSourceInfo());
                 }
             }
 
@@ -211,11 +211,15 @@ public class BindingTransform implements Transform {
                     bindingContextSelector,
                     TypeHelper.getTypeInstance(parents.get(parents.size() - 1)),
                     parents.size() - 1,
-                    true,
+                    0,
                     contextSelectorNode.getSourceInfo());
             }
 
             case PARENT -> {
+                List<Node> parents = context.getParents().stream()
+                    .filter(node -> node instanceof ObjectNode)
+                    .toList();
+
                 Integer level = null;
                 CtClass searchType = null;
 
@@ -228,13 +232,13 @@ public class BindingTransform implements Transform {
                     searchType = resolver.resolveClassAgainstImports(contextSelectorNode.getSearchType().getText());
                 }
 
-                ParentInfo parentInfo = findParent(context, searchType, level, contextSelectorNode.getSourceInfo());
+                ParentInfo parentInfo = findParent(parents, searchType, level, contextSelectorNode.getSourceInfo());
 
                 yield new BindingContextNode(
                     bindingContextSelector,
                     parentInfo.type(),
                     parentInfo.parentStackIndex(),
-                    false,
+                    parents.size() - parentInfo.parentStackIndex() - 1,
                     contextSelectorNode.getSourceInfo());
             }
 
@@ -245,7 +249,7 @@ public class BindingTransform implements Transform {
                         BindingContextSelector.TEMPLATED_ITEM,
                         templateContentNode.getItemType(),
                         0,
-                        false,
+                        0,
                         contextSelectorNode.getSourceInfo());
                 }
 
@@ -273,16 +277,12 @@ public class BindingTransform implements Transform {
     private record ParentInfo(TypeInstance type, int parentStackIndex) {}
 
     private ParentInfo findParent(
-            TransformContext context,
+            List<Node> parents,
             @Nullable CtClass searchType,
             @Nullable Integer level,
             SourceInfo sourceInfo) {
         int parentIndex = -1;
         TypeInstance parentType = null;
-
-        List<Node> parents = context.getParents().stream()
-            .filter(node -> node instanceof ObjectNode)
-            .toList();
 
         if (level != null && (level < 0 || level > parents.size() - 2)) {
             throw BindingSourceErrors.parentIndexOutOfBounds(sourceInfo);

@@ -115,7 +115,8 @@ public class ControlBindingTest extends CompilerTestBase {
 
     @SuppressWarnings("unused")
     public static class NodeUnderInitialization extends Pane {
-        public NodeUnderInitialization(@NamedArg("arg") double param) {}
+        public NodeUnderInitialization(@NamedArg("arg1") double param) {}
+        public NodeUnderInitialization(@NamedArg("arg2") NodeUnderInitialization param) {}
         public DoubleProperty testProperty() { return null; }
 
         public static double function(double value) { return value; }
@@ -126,7 +127,7 @@ public class ControlBindingTest extends CompilerTestBase {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.scene.layout.*?>
             <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
-                <NodeUnderInitialization arg="{fx:once self/test}"/>
+                <NodeUnderInitialization arg1="{fx:once self/test}"/>
             </Pane>
         """));
 
@@ -139,12 +140,50 @@ public class ControlBindingTest extends CompilerTestBase {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.scene.layout.*?>
             <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
-                <NodeUnderInitialization arg="{fx:once NodeUnderInitialization.function(self/test)}"/>
+                <NodeUnderInitialization arg1="{fx:once NodeUnderInitialization.function(self/test)}"/>
             </Pane>
         """));
 
         assertEquals(ErrorCode.CANNOT_REFERENCE_NODE_UNDER_INITIALIZATION, ex.getDiagnostic().getCode());
         assertCodeHighlight("{fx:once NodeUnderInitialization.function(self/test)}", ex);
+    }
+
+    @Test
+    public void Bind_Once_To_Parent_Node_Under_Initialization_Fails() {
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <?import javafx.scene.layout.*?>
+            <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
+                <NodeUnderInitialization>
+                    <arg2>
+                        <NodeUnderInitialization arg1="{fx:once parent[0]/test}"/>
+                    </arg2>
+                </NodeUnderInitialization>
+            </Pane>
+        """));
+
+        assertEquals(ErrorCode.CANNOT_REFERENCE_NODE_UNDER_INITIALIZATION, ex.getDiagnostic().getCode());
+        assertCodeHighlight("{fx:once parent[0]/test}", ex);
+    }
+
+    @Test
+    public void Bind_Once_To_Nested_Parent_Node_Under_Initialization_Fails() {
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <?import javafx.scene.layout.*?>
+            <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
+                <NodeUnderInitialization>
+                    <arg2>
+                        <NodeUnderInitialization>
+                            <arg2>
+                                <NodeUnderInitialization arg1="{fx:once parent[1]/test}"/>
+                            </arg2>
+                        </NodeUnderInitialization>
+                    </arg2>
+                </NodeUnderInitialization>
+            </Pane>
+        """));
+
+        assertEquals(ErrorCode.CANNOT_REFERENCE_NODE_UNDER_INITIALIZATION, ex.getDiagnostic().getCode());
+        assertCodeHighlight("{fx:once parent[1]/test}", ex);
     }
 
     @Test
