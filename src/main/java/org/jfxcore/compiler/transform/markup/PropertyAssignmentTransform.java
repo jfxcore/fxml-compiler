@@ -147,7 +147,7 @@ public class PropertyAssignmentTransform implements Transform {
             Node child = propertyNode.getValues().get(0);
 
             if (child instanceof BindingNode bindingNode) {
-                return BindingEmitterFactory.createBindingEmitter(propertyNode, bindingNode, propertyInfo);
+                return BindingEmitterFactory.createBindingEmitter(context, propertyNode, bindingNode, propertyInfo);
             }
 
             if (child instanceof ValueNode valueNode) {

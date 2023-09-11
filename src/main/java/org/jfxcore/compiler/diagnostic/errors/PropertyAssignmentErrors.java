@@ -5,12 +5,16 @@ package org.jfxcore.compiler.diagnostic.errors;
 
 import javassist.CtClass;
 import org.jfxcore.compiler.ast.BindingMode;
+import org.jfxcore.compiler.ast.Node;
+import org.jfxcore.compiler.ast.emit.EmitObjectNode;
 import org.jfxcore.compiler.diagnostic.Diagnostic;
 import org.jfxcore.compiler.diagnostic.ErrorCode;
 import org.jfxcore.compiler.diagnostic.MarkupException;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
+import org.jfxcore.compiler.transform.TransformContext;
 import org.jfxcore.compiler.util.NameHelper;
 import org.jfxcore.compiler.util.PropertyInfo;
+import org.jfxcore.compiler.util.TypeHelper;
 import org.jfxcore.compiler.util.TypeInstance;
 import java.util.ArrayList;
 import java.util.List;
@@ -82,6 +86,16 @@ public class PropertyAssignmentErrors {
     public static MarkupException propertyMustBeSpecified(SourceInfo sourceInfo, String declaringType, String propertyName) {
         return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
             ErrorCode.PROPERTY_MUST_BE_SPECIFIED, formatPropertyName(declaringType, propertyName)));
+    }
+
+    public static MarkupException cannotReferenceNodeUnderInitialization(
+            TransformContext context, PropertyInfo propertyInfo, int bindingDistance, SourceInfo sourceInfo) {
+        List<Node> parents = context.getParents().stream().filter(node -> node instanceof EmitObjectNode).toList();
+        Node referencedParent = parents.get(parents.size() - bindingDistance - 1);
+
+        return new MarkupException(sourceInfo, Diagnostic.newDiagnosticVariant(
+            ErrorCode.CANNOT_REFERENCE_NODE_UNDER_INITIALIZATION, "property",
+            formatPropertyName(propertyInfo), TypeHelper.getTypeInstance(referencedParent).getJavaName()));
     }
 
     public static MarkupException duplicateProperty(SourceInfo sourceInfo, String declaringType, String propertyName) {

@@ -21,6 +21,7 @@ import org.jfxcore.compiler.diagnostic.MarkupException;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.diagnostic.errors.BindingSourceErrors;
 import org.jfxcore.compiler.diagnostic.errors.PropertyAssignmentErrors;
+import org.jfxcore.compiler.transform.TransformContext;
 import org.jfxcore.compiler.util.PropertyInfo;
 import org.jfxcore.compiler.util.Resolver;
 import org.jfxcore.compiler.util.TypeHelper;
@@ -31,8 +32,8 @@ import static org.jfxcore.compiler.util.Classes.*;
 public class BindingEmitterFactory {
 
     public static EmitterNode createBindingEmitter(
-            PropertyNode propertyNode, BindingNode bindingNode, PropertyInfo propertyInfo) {
-        checkPreconditions(propertyNode, propertyInfo, bindingNode.getMode());
+            TransformContext context, PropertyNode propertyNode, BindingNode bindingNode, PropertyInfo propertyInfo) {
+        checkPreconditions(context, propertyNode, propertyInfo, bindingNode);
 
         if (bindingNode.getMode().isObservable()) {
             return createPropertyBindingEmitter(bindingNode, propertyInfo);
@@ -179,7 +180,14 @@ public class BindingEmitterFactory {
     }
 
     private static void checkPreconditions(
-            PropertyNode propertyNode, PropertyInfo propertyInfo, BindingMode bindingMode) {
+            TransformContext context, PropertyNode propertyNode, PropertyInfo propertyInfo, BindingNode bindingNode) {
+        int count = ValueEmitterFactory.getParentsUnderInitializationCount(context);
+        if (count > 0 && bindingNode.getBindingDistance() <= count) {
+            throw PropertyAssignmentErrors.cannotReferenceNodeUnderInitialization(
+                context, propertyInfo, bindingNode.getBindingDistance(), propertyNode.getSourceInfo());
+        }
+
+        BindingMode bindingMode = bindingNode.getMode();
         if (bindingMode.isObservable()) {
             if (bindingMode.isContent()) {
                 if (!propertyInfo.isContentBindable(bindingMode)) {
