@@ -181,7 +181,7 @@ public class BindingTransform implements Transform {
                 TypeInstance type = TypeHelper.getTypeInstance(parents.get(i));
                 if (type.subtypeOf(context.getBindingContextClass())) {
                     return new BindingContextNode(
-                        BindingContextSelector.DEFAULT, type, i, parents.size() - i - 1, pathNode.getSourceInfo());
+                        BindingContextSelector.DEFAULT, type, parents.size() - i - 1, pathNode.getSourceInfo());
                 }
             }
 
@@ -210,7 +210,6 @@ public class BindingTransform implements Transform {
                 yield new BindingContextNode(
                     bindingContextSelector,
                     TypeHelper.getTypeInstance(parents.get(parents.size() - 1)),
-                    parents.size() - 1,
                     0,
                     contextSelectorNode.getSourceInfo());
             }
@@ -237,7 +236,6 @@ public class BindingTransform implements Transform {
                 yield new BindingContextNode(
                     bindingContextSelector,
                     parentInfo.type(),
-                    parentInfo.parentStackIndex(),
                     parents.size() - parentInfo.parentStackIndex() - 1,
                     contextSelectorNode.getSourceInfo());
             }
@@ -248,7 +246,6 @@ public class BindingTransform implements Transform {
                     yield new BindingContextNode(
                         BindingContextSelector.TEMPLATED_ITEM,
                         templateContentNode.getItemType(),
-                        0,
                         0,
                         contextSelectorNode.getSourceInfo());
                 }

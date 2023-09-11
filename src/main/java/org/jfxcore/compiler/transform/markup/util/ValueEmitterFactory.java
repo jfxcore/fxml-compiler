@@ -18,8 +18,10 @@ import org.jfxcore.compiler.ast.NodeDataKey;
 import org.jfxcore.compiler.ast.ObjectNode;
 import org.jfxcore.compiler.ast.PropertyNode;
 import org.jfxcore.compiler.ast.ValueNode;
+import org.jfxcore.compiler.ast.Visitor;
 import org.jfxcore.compiler.ast.emit.EmitArrayNode;
 import org.jfxcore.compiler.ast.emit.EmitClassConstantNode;
+import org.jfxcore.compiler.ast.emit.EmitGetParentNode;
 import org.jfxcore.compiler.ast.emit.EmitLiteralNode;
 import org.jfxcore.compiler.ast.emit.EmitObjectNode;
 import org.jfxcore.compiler.ast.emit.ValueEmitterNode;
@@ -434,6 +436,7 @@ public class ValueEmitterFactory {
                     return new AcceptArgumentResult(null, ErrorCode.CANNOT_REFERENCE_NODE_UNDER_INITIALIZATION);
                 } else {
                     value = bindingNode.toEmitter(invokingType).getValue();
+                    adjustParentIndex(value, parentsUnderInitializationCount + 1);
                 }
             } else {
                 throw GeneralErrors.expressionNotApplicable(sourceInfo, true);
@@ -463,6 +466,19 @@ public class ValueEmitterFactory {
         }
 
         return new AcceptArgumentResult(null, ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT);
+    }
+
+    private static void adjustParentIndex(ValueNode node, int adjustment) {
+        node.accept(new Visitor() {
+            @Override
+            protected Node onVisited(Node node) {
+                if (node instanceof EmitGetParentNode getParentNode) {
+                    getParentNode.setParentIndexAdjustment(adjustment);
+                }
+
+                return node;
+            }
+        });
     }
 
     private static EmitObjectNode createObjectNode(
