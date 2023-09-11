@@ -110,6 +110,10 @@ public class ObjectTransform implements Transform {
             }
 
             emitObjectNode.getChildren().addAll(adders);
+
+            if (objectNode.getNodeData(NodeDataKey.CONSTRUCTOR_ARGUMENT) == Boolean.TRUE) {
+                emitObjectNode.setNodeData(NodeDataKey.CONSTRUCTOR_ARGUMENT, true);
+            }
         }
 
         if (objectNode.getChildren().size() > 0) {
@@ -148,7 +152,7 @@ public class ObjectTransform implements Transform {
         MarkupException namedArgsException = null;
 
         try {
-            newObjectNode = ValueEmitterFactory.newObjectWithNamedParams(node, diagnostics);
+            newObjectNode = ValueEmitterFactory.newObjectWithNamedParams(context, node, diagnostics);
             if (newObjectNode != null) {
                 return newObjectNode;
             }

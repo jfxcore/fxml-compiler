@@ -151,7 +151,7 @@ public class PathExpressionNode extends AbstractNode implements ExpressionNode {
                     BindingContextSelector.STATIC,
                     resolver.getTypeInstance(type),
                     0,
-                    false,
+                    Integer.MAX_VALUE - 1,
                     SourceInfo.none()),
                 getSegments().stream().skip(staticLimit + 1).toList(),
                 getSourceInfo());

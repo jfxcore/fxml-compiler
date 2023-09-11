@@ -14,6 +14,7 @@ import javassist.bytecode.annotation.Annotation;
 import org.jfxcore.compiler.ast.BindingMode;
 import org.jfxcore.compiler.ast.BindingNode;
 import org.jfxcore.compiler.ast.Node;
+import org.jfxcore.compiler.ast.NodeDataKey;
 import org.jfxcore.compiler.ast.ObjectNode;
 import org.jfxcore.compiler.ast.PropertyNode;
 import org.jfxcore.compiler.ast.ValueNode;
@@ -33,6 +34,7 @@ import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.diagnostic.errors.GeneralErrors;
 import org.jfxcore.compiler.diagnostic.errors.PropertyAssignmentErrors;
 import org.jfxcore.compiler.diagnostic.errors.SymbolResolutionErrors;
+import org.jfxcore.compiler.transform.TransformContext;
 import org.jfxcore.compiler.util.Classes;
 import org.jfxcore.compiler.util.Descriptors;
 import org.jfxcore.compiler.util.NameHelper;
@@ -273,7 +275,9 @@ public class ValueEmitterFactory {
      *
      * @return {@link EmitObjectNode} if successful; <code>null</code> otherwise.
      */
-    public static EmitObjectNode newObjectWithNamedParams(ObjectNode objectNode, List<DiagnosticInfo> diagnostics) {
+    public static EmitObjectNode newObjectWithNamedParams(
+            TransformContext context, ObjectNode objectNode, List<DiagnosticInfo> diagnostics) {
+        int parentsUnderInitializationCount = getParentsUnderInitializationCount(context, objectNode);
         TypeInstance type = TypeHelper.getTypeInstance(objectNode);
         NamedArgsConstructor[] namedArgsConstructors = findNamedArgsConstructors(objectNode, diagnostics);
         List<DiagnosticInfo> constructorDiagnostics = new ArrayList<>();
@@ -314,7 +318,8 @@ public class ValueEmitterFactory {
                 // corresponding formal parameter of the current constructor.
                 if (propertyNode != null && propertyNode.getValues().size() == 1) {
                     AcceptArgumentResult result = acceptArgument(
-                        propertyNode.getValues().get(0), constructorParam.type(), type, vararg);
+                        propertyNode.getValues().get(0), constructorParam.type(), type, vararg,
+                        parentsUnderInitializationCount);
 
                     if (result.errorCode() != null) {
                         var namedArgs = namedArgsConstructor.namedArgs();
@@ -334,14 +339,32 @@ public class ValueEmitterFactory {
                                             TypeHelper.getTypeInstance(propertyNode.getValues().get(0)).getJavaName()),
                                         propertyNode.getValues().get(0).getSourceInfo()));
 
-                            case CANNOT_REFERENCE_NODE_UNDER_INITIALIZATION ->
-                                constructorDiagnostics.add(
-                                    new DiagnosticInfo(
-                                        Diagnostic.newDiagnostic(
-                                            ErrorCode.CANNOT_REFERENCE_NODE_UNDER_INITIALIZATION,
-                                            methodSignature,
-                                            propertyNode.getName()),
-                                        propertyNode.getValues().get(0).getSourceInfo()));
+                            case CANNOT_REFERENCE_NODE_UNDER_INITIALIZATION -> {
+                                BindingNode bindingNode = (BindingNode)propertyNode.getValues().get(0);
+                                int bindingDistance = bindingNode.getBindingDistance();
+                                if (bindingDistance == 0) {
+                                    constructorDiagnostics.add(
+                                        new DiagnosticInfo(
+                                            Diagnostic.newDiagnostic(
+                                                ErrorCode.CANNOT_REFERENCE_NODE_UNDER_INITIALIZATION,
+                                                methodSignature,
+                                                propertyNode.getName()),
+                                            propertyNode.getValues().get(0).getSourceInfo()));
+                                } else {
+                                    List<Node> parents = context.getParents();
+                                    Node referencedParent = parents.get(parents.size() - bindingDistance);
+
+                                    constructorDiagnostics.add(
+                                        new DiagnosticInfo(
+                                            Diagnostic.newDiagnosticVariant(
+                                                ErrorCode.CANNOT_REFERENCE_NODE_UNDER_INITIALIZATION,
+                                                "parent",
+                                                methodSignature,
+                                                propertyNode.getName(),
+                                                TypeHelper.getTypeInstance(referencedParent).getJavaName()),
+                                            propertyNode.getValues().get(0).getSourceInfo()));
+                                }
+                            }
 
                             default -> throw new AssertionError(result.errorCode().toString());
                         }
@@ -374,6 +397,25 @@ public class ValueEmitterFactory {
         return null;
     }
 
+    private static int getParentsUnderInitializationCount(TransformContext context, ObjectNode objectNode) {
+        int depth = 0;
+        var it = context.getParents().listIterator(context.getParents().size());
+
+        while (it.hasPrevious()) {
+            if (it.previous().getNodeData(NodeDataKey.CONSTRUCTOR_ARGUMENT) != Boolean.TRUE) {
+                break;
+            }
+
+            ++depth;
+        }
+
+        if (objectNode.getNodeData(NodeDataKey.CONSTRUCTOR_ARGUMENT) == Boolean.TRUE) {
+            ++depth;
+        }
+
+        return depth;
+    }
+
     private record AcceptArgumentResult(ValueNode value, ErrorCode errorCode) {}
 
     /**
@@ -381,13 +423,14 @@ public class ValueEmitterFactory {
      * a new node that will emit the input argument.
      */
     private static AcceptArgumentResult acceptArgument(
-            Node argumentNode, TypeInstance targetType, TypeInstance invokingType, boolean vararg) {
+            Node argumentNode, TypeInstance targetType, TypeInstance invokingType,
+            boolean vararg, int parentsUnderInitializationCount) {
         SourceInfo sourceInfo = argumentNode.getSourceInfo();
         ValueNode value = null;
 
         if (argumentNode instanceof BindingNode bindingNode) {
             if (bindingNode.getMode() == BindingMode.ONCE) {
-                if (bindingNode.isBindToSelf()) {
+                if (bindingNode.getBindingDistance() <= parentsUnderInitializationCount) {
                     return new AcceptArgumentResult(null, ErrorCode.CANNOT_REFERENCE_NODE_UNDER_INITIALIZATION);
                 } else {
                     value = bindingNode.toEmitter(invokingType).getValue();
