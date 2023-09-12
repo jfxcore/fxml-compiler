@@ -221,60 +221,6 @@ public class Resolver {
         }
     }
 
-    /**
-     * If the behavior is a method, returns the return type.
-     * If the behavior is a constructor, returns the declaring type.
-     */
-    public TypeInstance getReturnType(CtBehavior behavior) {
-        return getReturnType(behavior, Collections.emptyList());
-    }
-
-    /**
-     * If the behavior is a method, returns the return type.
-     * If the behavior is a constructor, returns the declaring type.
-     */
-    public TypeInstance getReturnType(CtBehavior behavior, List<TypeInstance> invocationChain) {
-        try {
-            CacheKey key = new CacheKey("getReturnType", behavior);
-            CacheEntry entry = getCache().get(key);
-            if (entry.found() && cacheEnabled) {
-                return (TypeInstance)entry.value();
-            }
-
-            TypeInstance result;
-            SignatureAttribute.MethodSignature methodSignature = getGenericMethodSignature(behavior);
-
-            if (methodSignature == null) {
-                if (behavior instanceof CtConstructor) {
-                    result = getTypeInstance(behavior.getDeclaringClass());
-                } else {
-                    result = getTypeInstance(((CtMethod)behavior).getReturnType());
-                }
-            } else {
-                if (behavior instanceof CtConstructor) {
-                    result = getTypeInstance(behavior.getDeclaringClass());
-                } else {
-                    result = Objects.requireNonNullElse(
-                        invokeType(
-                            behavior.getDeclaringClass(),
-                            methodSignature.getReturnType(),
-                            TypeInstance.WildcardType.NONE,
-                            new SignatureAttribute.TypeParameter[0],
-                            methodSignature.getTypeParameters(),
-                            invocationChain,
-                            Map.of()),
-                        TypeInstance.ObjectType());
-                }
-            }
-
-            return getCache().put(key, result);
-        } catch (NotFoundException ex) {
-            throw SymbolResolutionErrors.classNotFound(sourceInfo, ex.getMessage());
-        } catch (BadBytecode ex) {
-            throw ExceptionHelper.unchecked(ex);
-        }
-    }
-
     public PropertyInfo resolveProperty(TypeInstance declaringClass, boolean allowQualifiedName, String... names) {
         PropertyInfo propertyInfo = tryResolveProperty(declaringClass, allowQualifiedName, names);
         if (propertyInfo == null) {
@@ -1044,18 +990,24 @@ public class Resolver {
         }
     }
 
-    public TypeInstance getTypeInstance(CtMethod method, List<TypeInstance> invocationChain) {
+    public TypeInstance getTypeInstance(CtBehavior method, List<TypeInstance> invocationChain) {
         return getTypeInstance(method, invocationChain, List.of());
     }
 
-    public TypeInstance getTypeInstance(CtMethod method,
+    public TypeInstance getTypeInstance(CtBehavior behavior,
                                         List<TypeInstance> invocationChain,
                                         List<TypeInstance> providedArguments) {
-        CacheKey key = new CacheKey("getTypeInstance", method, invocationChain, providedArguments);
+        CacheKey key = new CacheKey("getTypeInstance", behavior, invocationChain, providedArguments);
         CacheEntry entry = getCache().get(key);
         if (entry.found() && cacheEnabled) {
             return (TypeInstance)entry.value();
         }
+
+        if (behavior instanceof CtConstructor constructor) {
+            return getTypeInstance(constructor.getDeclaringClass(), providedArguments);
+        }
+
+        CtMethod method = (CtMethod)behavior;
 
         try {
             SignatureAttribute.MethodSignature methodSignature = getGenericMethodSignature(method);
@@ -1495,6 +1447,13 @@ public class Resolver {
                     invokingClass, typeVarArg.getName(), classTypeParams, methodTypeParams, invocationChain);
 
                 if (typeParam != null) {
+                    var wildcard = TypeInstance.WildcardType.of(typeArg.getKind());
+                    if (wildcard != TypeInstance.WildcardType.NONE) {
+                        typeParam = new TypeInstance(
+                            typeParam.jvmType(), typeParam.getDimensions(), typeParam.getArguments(),
+                            typeParam.getSuperTypes(), wildcard);
+                    }
+
                     arguments.add(typeParam);
                 }
             }

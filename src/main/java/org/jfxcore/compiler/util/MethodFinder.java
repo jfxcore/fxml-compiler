@@ -167,7 +167,7 @@ public class MethodFinder {
             }
 
             if (context.returnType() != null) {
-                TypeInstance returnType = resolver.getReturnType(method);
+                TypeInstance returnType = resolver.getTypeInstance(method, List.of(invokingType));
                 if (!context.returnType().isAssignableFrom(returnType)) {
                     if (diagnostics != null) {
                         diagnostics.add(new DiagnosticInfo(

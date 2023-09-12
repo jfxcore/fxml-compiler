@@ -3,6 +3,7 @@
 
 package org.jfxcore.compiler.util;
 
+import javassist.CtClass;
 import javassist.CtConstructor;
 import javassist.CtMethod;
 import org.jfxcore.compiler.TestBase;
@@ -190,12 +191,14 @@ public class ResolverTest extends TestBase {
 
     public static String nonGenericReturnType() { return null; }
     public static ObservableValue<Comparable<String>> genericReturnType() { return null; }
+    public static ObservableValue<Comparable<? super String>> genericReturnTypeWithLowerBound() { return null; }
+    public static ObservableValue<Comparable<? extends String>> genericReturnTypeWithUpperBound() { return null; }
 
     @Test
     public void GetReturnType_Of_NonGeneric_Method() throws Exception {
         Resolver resolver = new Resolver(SourceInfo.none());
         CtMethod method = resolver.resolveClass(ResolverTest.class.getName()).getDeclaredMethod("nonGenericReturnType");
-        TypeInstance returnType = resolver.getReturnType(method);
+        TypeInstance returnType = resolver.getTypeInstance(method, List.of());
 
         assertEquals("String", returnType.toString());
     }
@@ -204,11 +207,30 @@ public class ResolverTest extends TestBase {
     public void GetReturnType_Of_Generic_Method() throws Exception {
         Resolver resolver = new Resolver(SourceInfo.none());
         CtMethod method = resolver.resolveClass(ResolverTest.class.getName()).getDeclaredMethod("genericReturnType");
-        TypeInstance returnType = resolver.getReturnType(method);
+        TypeInstance returnType = resolver.getTypeInstance(method, List.of());
 
         assertEquals("ObservableValue<Comparable<String>>", returnType.toString());
     }
 
+    @Test
+    public void GetReturnType_Of_Generic_Method_With_Lower_Bound() throws Exception {
+        Resolver resolver = new Resolver(SourceInfo.none());
+        CtMethod method = resolver.resolveClass(
+            ResolverTest.class.getName()).getDeclaredMethod("genericReturnTypeWithLowerBound");
+        TypeInstance returnType = resolver.getTypeInstance(method, List.of());
+
+        assertEquals("ObservableValue<Comparable<? super String>>", returnType.toString());
+    }
+
+    @Test
+    public void GetReturnType_Of_Generic_Method_With_Upper_Bound() throws Exception {
+        Resolver resolver = new Resolver(SourceInfo.none());
+        CtMethod method = resolver.resolveClass(
+            ResolverTest.class.getName()).getDeclaredMethod("genericReturnTypeWithUpperBound");
+        TypeInstance returnType = resolver.getTypeInstance(method, List.of());
+
+        assertEquals("ObservableValue<Comparable<? extends String>>", returnType.toString());
+    }
 
     public static class ReturnTypeTestClass {
         public ReturnTypeTestClass() {}
@@ -216,13 +238,15 @@ public class ResolverTest extends TestBase {
 
     public static class GenericReturnTypeTestClass<T extends String> {
         public GenericReturnTypeTestClass() {}
+        public ObservableValue<? super T> methodWithLowerBound() { return null; }
+        public ObservableValue<? extends T> methodWithUpperBound() { return null; }
     }
 
     @Test
     public void GetReturnType_Of_NonGeneric_Constructor() {
         Resolver resolver = new Resolver(SourceInfo.none());
         CtConstructor method = resolver.resolveClass(ReturnTypeTestClass.class.getName()).getDeclaredConstructors()[0];
-        TypeInstance returnType = resolver.getReturnType(method);
+        TypeInstance returnType = resolver.getTypeInstance(method, List.of());
 
         assertEquals("ResolverTest$ReturnTypeTestClass", returnType.toString());
     }
@@ -231,9 +255,31 @@ public class ResolverTest extends TestBase {
     public void GetReturnType_Of_Generic_Constructor() {
         Resolver resolver = new Resolver(SourceInfo.none());
         CtConstructor ctor = resolver.resolveClass(GenericReturnTypeTestClass.class.getName()).getConstructors()[0];
-        TypeInstance returnType = resolver.getReturnType(ctor);
+        TypeInstance returnType = resolver.getTypeInstance(ctor, List.of());
 
         assertEquals("ResolverTest$GenericReturnTypeTestClass", returnType.toString());
+    }
+
+    @Test
+    public void GetReturnType_Of_Generic_Method_With_Lower_Bound_Of_Type_Parameter() throws Exception {
+        Resolver resolver = new Resolver(SourceInfo.none());
+        CtClass clazz = resolver.resolveClass(GenericReturnTypeTestClass.class.getName());
+        CtMethod method = clazz.getDeclaredMethod("methodWithLowerBound");
+        TypeInstance classTypeInst = resolver.getTypeInstance(clazz, List.of(TypeInstance.StringType()));
+        TypeInstance returnType = resolver.getTypeInstance(method, List.of(classTypeInst));
+
+        assertEquals("ObservableValue<? super String>", returnType.toString());
+    }
+
+    @Test
+    public void GetReturnType_Of_Generic_Method_With_Upper_Bound_Of_Type_Parameter() throws Exception {
+        Resolver resolver = new Resolver(SourceInfo.none());
+        CtClass clazz = resolver.resolveClass(GenericReturnTypeTestClass.class.getName());
+        CtMethod method = clazz.getDeclaredMethod("methodWithUpperBound");
+        TypeInstance classTypeInst = resolver.getTypeInstance(clazz, List.of(TypeInstance.StringType()));
+        TypeInstance returnType = resolver.getTypeInstance(method, List.of(classTypeInst));
+
+        assertEquals("ObservableValue<? extends String>", returnType.toString());
     }
 
     public static class GenericClass<T> {}
