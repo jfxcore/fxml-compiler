@@ -291,7 +291,7 @@ public class PropertyAssignmentTransform implements Transform {
 
             if (error) {
                 throw GeneralErrors.cannotAddItemIncompatibleType(
-                    child.getSourceInfo(), propertyInfo, TypeHelper.getJvmType(child), itemType.jvmType());
+                    child.getSourceInfo(), propertyInfo, TypeHelper.getTypeInstance(child), itemType);
             }
         }
 
