@@ -80,7 +80,7 @@ abstract class AbstractFunctionEmitterFactory {
         Resolver resolver = new Resolver(functionExpression.getSourceInfo());
         boolean isVarArgs = Modifier.isVarArgs(function.getBehavior().getModifiers());
         TypeInstance[] paramTypes = resolver.getParameterTypes(function.getBehavior(), List.of(invokingType));
-        TypeInstance returnType = resolver.getReturnType(function.getBehavior(), List.of(invokingType));
+        TypeInstance returnType = resolver.getTypeInstance(function.getBehavior(), List.of(invokingType));
         List<EmitMethodArgumentNode> argumentValues = new ArrayList<>();
         boolean observableFunction = false;
 
@@ -154,9 +154,7 @@ abstract class AbstractFunctionEmitterFactory {
             }
         }
 
-        TypeInstance valueType = function.getBehavior() instanceof CtConstructor ?
-            resolver.getTypeInstance(function.getBehavior().getDeclaringClass()) :
-            resolver.getReturnType(function.getBehavior(), List.of(invokingType));
+        TypeInstance valueType = resolver.getTypeInstance(function.getBehavior(), List.of(invokingType));
 
         var result = new InvocationInfo(
             observableFunction, valueType, function, inverseFunction, argumentValues);
@@ -386,7 +384,7 @@ abstract class AbstractFunctionEmitterFactory {
                 pathExpression.getSourceInfo());
 
             if (constructor != null) {
-                if (returnType != null && !resolver.getReturnType(
+                if (returnType != null && !resolver.getTypeInstance(
                         constructor, List.of(invokingType)).subtypeOf(returnType)) {
                     throw GeneralErrors.incompatibleReturnValue(
                         pathExpression.getSourceInfo(), constructor, returnType);
@@ -411,16 +409,8 @@ abstract class AbstractFunctionEmitterFactory {
     }
 
     private TypeInstance getArgumentType(Node argument, boolean preferObservable) {
-        var resolver = new Resolver(argument.getSourceInfo());
-
         if (argument instanceof FunctionExpressionNode funcExpressionArg) {
-            InvocationInfo invocationInfo = createInvocation(funcExpressionArg, false, true);
-
-            if (invocationInfo.function().getBehavior() instanceof CtConstructor) {
-                return resolver.getTypeInstance(invocationInfo.function().getBehavior().getDeclaringClass());
-            } else {
-                return resolver.getReturnType(invocationInfo.function().getBehavior());
-            }
+            return createInvocation(funcExpressionArg, false, true).type();
         } else if (argument instanceof PathExpressionNode pathExpressionArg) {
             Operator operator = pathExpressionArg.getOperator();
 

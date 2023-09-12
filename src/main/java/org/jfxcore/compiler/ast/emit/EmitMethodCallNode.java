@@ -1,4 +1,4 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2023, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.emit;
@@ -36,7 +36,7 @@ public class EmitMethodCallNode extends AbstractNode implements ValueEmitterNode
         }
 
         this.method = checkNotNull(method);
-        this.type = new ResolvedTypeNode(new Resolver(SourceInfo.none()).getReturnType(method), sourceInfo);
+        this.type = new ResolvedTypeNode(new Resolver(SourceInfo.none()).getTypeInstance(method, List.of()), sourceInfo);
         this.arguments = new ArrayList<>(checkNotNull(arguments));
         this.methodReceiver = new ArrayList<>(checkNotNull(methodReceiver));
     }
