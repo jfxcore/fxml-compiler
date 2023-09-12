@@ -335,15 +335,19 @@ public class ValueEmitterFactory {
                             namedArgsConstructor.constructor(), argTypes, argNames);
 
                         switch (result.errorCode()) {
-                            case CANNOT_ASSIGN_FUNCTION_ARGUMENT ->
+                            case CANNOT_ASSIGN_FUNCTION_ARGUMENT -> {
+                                var errorType = propertyNode.getValues().get(0) instanceof ValueNode valueNode ?
+                                    TypeHelper.getTypeInstance(valueNode) : result.errorType();
+
                                 constructorDiagnostics.add(
                                     new DiagnosticInfo(
                                         Diagnostic.newDiagnosticVariant(
                                             ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT, "named",
                                             methodSignature,
                                             propertyNode.getName(),
-                                            TypeHelper.getTypeInstance(propertyNode.getValues().get(0)).getJavaName()),
+                                            errorType != null ? errorType.getJavaName() : "<error-type>"),
                                         propertyNode.getValues().get(0).getSourceInfo()));
+                            }
 
                             case CANNOT_REFERENCE_NODE_UNDER_INITIALIZATION -> {
                                 BindingNode bindingNode = (BindingNode)propertyNode.getValues().get(0);
@@ -419,7 +423,15 @@ public class ValueEmitterFactory {
         return depth;
     }
 
-    private record AcceptArgumentResult(ValueNode value, ErrorCode errorCode) {}
+    private record AcceptArgumentResult(ValueNode value, TypeInstance errorType, ErrorCode errorCode) {
+        static AcceptArgumentResult value(ValueNode value) {
+            return new AcceptArgumentResult(value, null, null);
+        }
+
+        static AcceptArgumentResult error(TypeInstance errorType, ErrorCode errorCode) {
+            return new AcceptArgumentResult(null, errorType, errorCode);
+        }
+    }
 
     /**
      * Determines whether the input argument is acceptable for the target type and returns
@@ -434,7 +446,7 @@ public class ValueEmitterFactory {
         if (argumentNode instanceof BindingNode bindingNode) {
             if (bindingNode.getMode() == BindingMode.ONCE) {
                 if (bindingNode.getBindingDistance() <= parentsUnderInitializationCount) {
-                    return new AcceptArgumentResult(null, ErrorCode.CANNOT_REFERENCE_NODE_UNDER_INITIALIZATION);
+                    return AcceptArgumentResult.error(null, ErrorCode.CANNOT_REFERENCE_NODE_UNDER_INITIALIZATION);
                 } else {
                     value = bindingNode.toEmitter(invokingType).getValue();
                     adjustParentIndex(value, parentsUnderInitializationCount + 1);
@@ -445,28 +457,29 @@ public class ValueEmitterFactory {
         } else if (argumentNode instanceof TextNode textNode) {
             value = newObjectByCoercion(targetType, textNode);
             if (value != null) {
-                return new AcceptArgumentResult(value, null);
+                return AcceptArgumentResult.value(value);
             }
 
             value = newLiteralValue(textNode.getText(), List.of(targetType), targetType, sourceInfo);
             if (value != null) {
-                return new AcceptArgumentResult(value, null);
+                return AcceptArgumentResult.value(value);
             }
         } else if (argumentNode instanceof ValueNode valueNode) {
             value = valueNode;
         }
 
         if (value == null) {
-            return new AcceptArgumentResult(null, ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT);
+            return AcceptArgumentResult.error(null, ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT);
         }
 
-        var valueType = TypeHelper.getTypeInstance(value);
-        if (targetType.isAssignableFrom(valueType) ||
-                vararg && targetType.getComponentType().isAssignableFrom(valueType)) {
-            return new AcceptArgumentResult(value, null);
+        TypeInstance valueType = TypeHelper.getTypeInstance(value);
+
+        if (!targetType.isAssignableFrom(valueType) &&
+                !(vararg && targetType.getComponentType().isAssignableFrom(valueType))) {
+            return AcceptArgumentResult.error(valueType, ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT);
         }
 
-        return new AcceptArgumentResult(null, ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT);
+        return AcceptArgumentResult.value(value);
     }
 
     private static void adjustParentIndex(ValueNode node, int adjustment) {
