@@ -68,21 +68,17 @@ public class GeneralErrors {
     }
 
     public static MarkupException cannotAddItemIncompatibleType(
-            SourceInfo sourceInfo, PropertyInfo propertyInfo, CtClass addType, CtClass requiredType) {
+            SourceInfo sourceInfo, PropertyInfo propertyInfo, TypeInstance addType, TypeInstance requiredType) {
         return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
             ErrorCode.CANNOT_ADD_ITEM_INCOMPATIBLE_TYPE,
-            formatPropertyName(propertyInfo),
-            NameHelper.getJavaClassName(sourceInfo, addType),
-            NameHelper.getJavaClassName(sourceInfo, requiredType)));
+            formatPropertyName(propertyInfo), addType.getJavaName(), requiredType.getJavaName()));
     }
 
     public static MarkupException cannotAddItemIncompatibleType(
-            SourceInfo sourceInfo, CtClass collectionType, CtClass addType, CtClass requiredType) {
+            SourceInfo sourceInfo, TypeInstance collectionType, TypeInstance addType, TypeInstance requiredType) {
         return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
             ErrorCode.CANNOT_ADD_ITEM_INCOMPATIBLE_TYPE,
-            NameHelper.getJavaClassName(sourceInfo, collectionType),
-            NameHelper.getJavaClassName(sourceInfo, addType),
-            NameHelper.getJavaClassName(sourceInfo, requiredType)));
+            collectionType.getJavaName(), addType.getJavaName(), requiredType.getJavaName()));
     }
 
     public static MarkupException cannotAddItemIncompatibleValue(

@@ -42,9 +42,9 @@ public class AdderFactory {
                 if (value == null) {
                     throw GeneralErrors.cannotAddItemIncompatibleType(
                         child.getSourceInfo(),
-                        TypeHelper.getJvmType(collection),
-                        TypeHelper.getJvmType(child),
-                        itemType.jvmType());
+                        TypeHelper.getTypeInstance(collection),
+                        TypeHelper.getTypeInstance(child),
+                        itemType);
                 }
 
                 return List.of(new EmitCollectionAdderNode(value));
@@ -63,9 +63,9 @@ public class AdderFactory {
                 if (value == null) {
                     throw GeneralErrors.cannotAddItemIncompatibleType(
                         child.getSourceInfo(),
-                        TypeHelper.getJvmType(collection),
-                        TypeHelper.getJvmType(child),
-                        itemType.jvmType());
+                        TypeHelper.getTypeInstance(collection),
+                        TypeHelper.getTypeInstance(child),
+                        itemType);
                 }
 
                 adders.add(new EmitCollectionAdderNode(value));
@@ -77,7 +77,10 @@ public class AdderFactory {
                 child.getSourceInfo(), TypeHelper.getJvmType(collection), child.getSourceInfo().getText());
         } else if (!TypeHelper.getTypeInstance(child).subtypeOf(itemType)) {
             throw GeneralErrors.cannotAddItemIncompatibleType(
-                child.getSourceInfo(), TypeHelper.getJvmType(collection), TypeHelper.getJvmType(child), itemType.jvmType());
+                child.getSourceInfo(),
+                TypeHelper.getTypeInstance(collection),
+                TypeHelper.getTypeInstance(child),
+                itemType);
         }
 
         return List.of(new EmitCollectionAdderNode(child));
@@ -99,7 +102,7 @@ public class AdderFactory {
 
         if (!TypeHelper.getTypeInstance(child).subtypeOf(itemType)) {
             throw GeneralErrors.cannotAddItemIncompatibleType(
-                child.getSourceInfo(), TypeHelper.getJvmType(map), TypeHelper.getJvmType(child), itemType.jvmType());
+                child.getSourceInfo(), TypeHelper.getTypeInstance(map), TypeHelper.getTypeInstance(child), itemType);
         }
 
         if (!keyType.equals(Classes.StringType()) && !keyType.equals(Classes.ObjectType())) {
