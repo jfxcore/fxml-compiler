@@ -205,6 +205,20 @@ public class BindingSourceTest extends CompilerTestBase {
     }
 
     @Test
+    public void Bind_To_NotFound_Parent_Member_Fails() {
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <?import javafx.scene.control.*?>
+            <?import org.jfxcore.compiler.bindings.BindingPathTest.TestPane?>
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
+                <Label prefWidth="{fx:once parent/notfound}"/>
+            </TestPane>
+        """));
+
+        assertEquals(ErrorCode.MEMBER_NOT_FOUND, ex.getDiagnostic().getCode());
+        assertCodeHighlight("notfound", ex);
+    }
+
+    @Test
     public void Bind_To_Invalid_Parent_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.scene.control.*?>
