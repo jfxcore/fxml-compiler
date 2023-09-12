@@ -148,10 +148,32 @@ public class ObjectTransform implements Transform {
             return newObjectNode;
         }
 
+        newObjectNode = ValueEmitterFactory.newObjectByCoercion(node);
+        if (newObjectNode != null) {
+            return newObjectNode;
+        }
+
+        // Check whether all properties specified in FXML for the node are JavaFX properties on the declared
+        // class. If this is the case, and we have a default constructor, we can create the object using the
+        // default constructor and later set all properties in PropertyAssignmentTransform.
+        boolean allPropertiesMatch = node.getProperties().stream().allMatch(propertyNode ->
+            new Resolver(propertyNode.getSourceInfo()).tryResolveProperty(
+                TypeHelper.getTypeInstance(node), false, propertyNode.getNames()) != null);
+
+        if (allPropertiesMatch) {
+            newObjectNode = ValueEmitterFactory.newDefaultObject(node);
+            if (newObjectNode != null) {
+                return newObjectNode;
+            }
+        }
+
         List<DiagnosticInfo> diagnostics = new ArrayList<>();
         MarkupException namedArgsException = null;
 
         try {
+            // If we either don't have a default constructor, or we can't set all properties (because some
+            // of the properties are actually named arguments instead of JavaFX properties), we need to
+            // see whether we can create the object using named arguments.
             newObjectNode = ValueEmitterFactory.newObjectWithNamedParams(context, node, diagnostics);
             if (newObjectNode != null) {
                 return newObjectNode;
@@ -165,11 +187,6 @@ public class ObjectTransform implements Transform {
             } else {
                 throw ex;
             }
-        }
-
-        newObjectNode = ValueEmitterFactory.newObjectByCoercion(node);
-        if (newObjectNode != null) {
-            return newObjectNode;
         }
 
         newObjectNode = ValueEmitterFactory.newDefaultObject(node);

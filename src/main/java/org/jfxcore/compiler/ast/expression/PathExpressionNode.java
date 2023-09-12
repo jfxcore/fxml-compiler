@@ -15,7 +15,6 @@ import org.jfxcore.compiler.ast.text.TextNode;
 import org.jfxcore.compiler.ast.text.TextSegmentNode;
 import org.jfxcore.compiler.diagnostic.MarkupException;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
-import org.jfxcore.compiler.diagnostic.errors.BindingSourceErrors;
 import org.jfxcore.compiler.diagnostic.errors.ParserErrors;
 import org.jfxcore.compiler.util.Resolver;
 import org.jfxcore.compiler.util.TypeInstance;
@@ -105,14 +104,7 @@ public class PathExpressionNode extends AbstractNode implements ExpressionNode {
                 getSourceInfo());
         } catch (MarkupException ex) {
             // If we don't have a valid path expression, the only other possible interpretation would be
-            // that the path begins with the name of a (possibly fully qualified) class. Since class names
-            // are not resolved by a path expression, we check that only the default binding context
-            // selector is used.
-            BindingContextSelector selector = getBindingContext().getSelector();
-            if (selector != BindingContextSelector.DEFAULT && selector != BindingContextSelector.TEMPLATED_ITEM) {
-                throw BindingSourceErrors.bindingContextNotApplicable(getBindingContext().getSourceInfo());
-            }
-
+            // that the path begins with the name of a (possibly fully qualified) class.
             Resolver resolver = new Resolver(SourceInfo.none());
             StringBuilder classBuilder = new StringBuilder();
             CtClass type = null;

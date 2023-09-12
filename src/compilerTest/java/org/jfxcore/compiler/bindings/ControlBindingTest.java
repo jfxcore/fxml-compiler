@@ -5,19 +5,23 @@ package org.jfxcore.compiler.bindings;
 
 import javafx.beans.NamedArg;
 import javafx.beans.property.DoubleProperty;
+import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleDoubleProperty;
+import javafx.beans.property.SimpleObjectProperty;
 import javafx.scene.Node;
 import javafx.scene.control.Label;
 import javafx.scene.layout.Pane;
 import javafx.scene.shape.Rectangle;
 import org.jfxcore.compiler.diagnostic.ErrorCode;
 import org.jfxcore.compiler.diagnostic.MarkupException;
+import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.util.CompilerTestBase;
 import org.jfxcore.compiler.util.Reflection;
 import org.jfxcore.compiler.util.TestExtension;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
+import static org.jfxcore.compiler.util.ExceptionHelper.*;
 import static org.jfxcore.compiler.util.MoreAssertions.*;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -224,6 +228,34 @@ public class ControlBindingTest extends CompilerTestBase {
 
         assertMethodCall(root, methods -> methods.stream().anyMatch(method -> method.getName().equals("bind")));
         assertEquals(123.0, Reflection.<Pane>getFieldValue(root, "testNode").getPrefWidth(), 0.001);
+    }
+
+    @SuppressWarnings("unused")
+    public static class NodeUnderInitializationWithAlternativeProperty extends Pane {
+        public NodeUnderInitializationWithAlternativeProperty() {}
+        public NodeUnderInitializationWithAlternativeProperty(@NamedArg("content") Node content) {}
+
+        private final ObjectProperty<Node> content = new SimpleObjectProperty<>(this, "content");
+        public ObjectProperty<Node> contentProperty() { return content; }
+    }
+
+    @Test
+    public void Bind_Once_To_Parent_Works_When_Alternative_Property_Is_Available() {
+        Pane root = compileAndRun("""
+            <?import javafx.scene.layout.*?>
+            <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
+                <NodeUnderInitializationWithAlternativeProperty>
+                    <content>
+                        <Pane prefWidth="{fx:bind parent[0]/prefHeight}"/>
+                    </content>
+                </NodeUnderInitializationWithAlternativeProperty>
+            </Pane>
+        """);
+
+        assertMethodCall(root, methods -> methods.stream().anyMatch(m -> m.getName().equals("prefWidthProperty")));
+        assertMethodCall(root, methods -> methods.stream().anyMatch(m -> m.getName().equals("prefHeightProperty")));
+        assertNewExpr(root, ctors -> ctors.stream()
+            .anyMatch(c -> c.getLongName().equals(NodeUnderInitializationWithAlternativeProperty.class.getName() + "()")));
     }
 
     @Test
