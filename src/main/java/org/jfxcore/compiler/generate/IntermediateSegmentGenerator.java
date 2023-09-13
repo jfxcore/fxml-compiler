@@ -58,12 +58,12 @@ public class IntermediateSegmentGenerator extends SegmentGeneratorBase {
 
     @Override
     public void emitFields(BytecodeEmitContext context) throws Exception {
-        CtField field = new CtField(groups[segment + 1].getCompiledClass(), mangle(NEXT_FIELD), generatedClass);
+        CtField field = new CtField(groups[segment + 1].getCompiledClass(), NEXT_FIELD, generatedClass);
         field.setModifiers(Modifier.FINAL);
         generatedClass.addField(field);
 
         observableType = groups[segment].getFirstPathSegment().getTypeInstance().jvmType();
-        field = new CtField(observableType, mangle(OBSERVABLE_FIELD), generatedClass);
+        field = new CtField(observableType, OBSERVABLE_FIELD, generatedClass);
         field.setModifiers(Modifier.PRIVATE);
         generatedClass.addField(field);
     }
@@ -105,7 +105,7 @@ public class IntermediateSegmentGenerator extends SegmentGeneratorBase {
             .anew(nextClass)
             .dup()
             .invokespecial(nextClass, MethodInfo.nameInit, constructor())
-            .putfield(constructor.getDeclaringClass(), mangle(NEXT_FIELD), nextClass)
+            .putfield(constructor.getDeclaringClass(), NEXT_FIELD, nextClass)
             .vreturn();
 
         constructor.getMethodInfo().setCodeAttribute(code.toCodeAttribute());
@@ -120,12 +120,12 @@ public class IntermediateSegmentGenerator extends SegmentGeneratorBase {
         // if (this.observable != null)
         L0 = code
             .aload(0)
-            .getfield(declaringClass, mangle(OBSERVABLE_FIELD), observableType)
+            .getfield(declaringClass, OBSERVABLE_FIELD, observableType)
             .ifnull();
 
         // this.observable.removeListener(this);
         code.aload(0)
-            .getfield(declaringClass, mangle(OBSERVABLE_FIELD), observableType)
+            .getfield(declaringClass, OBSERVABLE_FIELD, observableType)
             .aload(0)
             .invokeinterface(
                 ObservableValueType(),
@@ -136,7 +136,7 @@ public class IntermediateSegmentGenerator extends SegmentGeneratorBase {
         L0.resume()
             .aload(0)
             .aload(1)
-            .putfield(declaringClass, mangle(OBSERVABLE_FIELD), observableType);
+            .putfield(declaringClass, OBSERVABLE_FIELD, observableType);
 
         // if ($1 != null)
         L1 = code
@@ -208,7 +208,7 @@ public class IntermediateSegmentGenerator extends SegmentGeneratorBase {
         }
 
         code.aload(0)
-            .getfield(generatedClass, mangle(NEXT_FIELD), resolver.resolveClass(nextClassName))
+            .getfield(generatedClass, NEXT_FIELD, resolver.resolveClass(nextClassName))
             .aload(3)
             .checkcast(nextObservableType.getName())
             .invokevirtual(nextClassName, UPDATE_METHOD, function(CtClass.voidType, nextObservableType))

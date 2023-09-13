@@ -28,7 +28,6 @@ abstract class SegmentGeneratorBase extends ClassGenerator {
     public static final String UPDATE_METHOD = "update";
 
     private final SourceInfo sourceInfo;
-    private final List<String> fieldNames = new ArrayList<>();
 
     final FoldedGroup[] groups;
     final int segment;
@@ -37,16 +36,6 @@ abstract class SegmentGeneratorBase extends ClassGenerator {
         this.sourceInfo = sourceInfo;
         this.groups = groups;
         this.segment = segment;
-    }
-
-    protected String mangle(String name) {
-        int idx = fieldNames.indexOf(name);
-        if (idx >= 0) {
-            return "$" + idx;
-        }
-
-        fieldNames.add(name);
-        return "$" + (fieldNames.size() - 1);
     }
 
     protected void emitInvariants(CtClass valueType, Segment[] path, Bytecode code) {

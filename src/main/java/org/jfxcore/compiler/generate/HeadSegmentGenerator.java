@@ -41,7 +41,7 @@ public class HeadSegmentGenerator extends PropertySegmentGeneratorBase {
 
     @Override
     public void emitFields(BytecodeEmitContext context) throws Exception {
-        CtField field = new CtField(groups[segment + 1].getCompiledClass(), mangle(NEXT_FIELD), generatedClass);
+        CtField field = new CtField(groups[segment + 1].getCompiledClass(), NEXT_FIELD, generatedClass);
         field.setModifiers(Modifier.FINAL);
         generatedClass.addField(field);
     }
@@ -191,7 +191,7 @@ public class HeadSegmentGenerator extends PropertySegmentGeneratorBase {
         code.aload(0);
 
         for (int i = 0; i < groups.length - 1; ++i) {
-            code.getfield(groups[i].getCompiledClass(), mangle(NEXT_FIELD), groups[i + 1].getCompiledClass());
+            code.getfield(groups[i].getCompiledClass(), NEXT_FIELD, groups[i + 1].getCompiledClass());
         }
 
         fixup.accept(code);
@@ -211,7 +211,7 @@ public class HeadSegmentGenerator extends PropertySegmentGeneratorBase {
             .anew(nextClassName)
             .dup()
             .invokespecial(nextClassName, MethodInfo.nameInit, constructor())
-            .putfield(resolver.resolveClass(className), mangle(NEXT_FIELD), resolver.resolveClass(nextClassName));
+            .putfield(resolver.resolveClass(className), NEXT_FIELD, resolver.resolveClass(nextClassName));
 
         // $1.addListener(this);
         code.aload(1)
@@ -265,7 +265,7 @@ public class HeadSegmentGenerator extends PropertySegmentGeneratorBase {
         }
 
         code.aload(0)
-            .getfield(generatedClass, mangle(NEXT_FIELD), resolver.resolveClass(nextClassName))
+            .getfield(generatedClass, NEXT_FIELD, resolver.resolveClass(nextClassName))
             .aload(3)
             .invokevirtual(nextClassName, UPDATE_METHOD, function(CtClass.voidType, nextObservableType))
             .vreturn();
