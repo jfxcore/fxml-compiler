@@ -68,13 +68,13 @@ public class TailSegmentGenerator extends PropertySegmentGeneratorBase {
 
     @Override
     public void emitFields(BytecodeEmitContext context) throws Exception {
-        CtField invalidationLister = new CtField(Classes.InvalidationListenerType(), mangle(INVALIDATION_LISTENER_FIELD), generatedClass);
+        CtField invalidationLister = new CtField(Classes.InvalidationListenerType(), INVALIDATION_LISTENER_FIELD, generatedClass);
         invalidationLister.setModifiers(Modifier.PRIVATE);
 
-        CtField changeListener = new CtField(Classes.ChangeListenerType(), mangle(CHANGE_LISTENER_FIELD), generatedClass);
+        CtField changeListener = new CtField(Classes.ChangeListenerType(), CHANGE_LISTENER_FIELD, generatedClass);
         changeListener.setModifiers(Modifier.PRIVATE);
 
-        CtField observable = new CtField(observableClass, mangle(OBSERVABLE_FIELD), generatedClass);
+        CtField observable = new CtField(observableClass, OBSERVABLE_FIELD, generatedClass);
         observable.setModifiers(Modifier.PRIVATE);
 
         generatedClass.addField(invalidationLister);
@@ -82,16 +82,16 @@ public class TailSegmentGenerator extends PropertySegmentGeneratorBase {
         generatedClass.addField(observable);
 
         if (hasInvariants = groups[segment].getPath().length > 1) {
-            CtField field = new CtField(CtClass.intType, mangle(FLAGS_FIELD), generatedClass);
+            CtField field = new CtField(CtClass.intType, FLAGS_FIELD, generatedClass);
             field.setModifiers(Modifier.PRIVATE);
             generatedClass.addField(field);
 
-            field = new CtField(boxedValueClass, mangle(VALUE_FIELD), generatedClass);
+            field = new CtField(boxedValueClass, VALUE_FIELD, generatedClass);
             field.setModifiers(Modifier.PRIVATE);
             generatedClass.addField(field);
 
             if (valueClass.isPrimitive()) {
-                field = new CtField(valueClass, mangle(PRIMITIVE_VALUE_FIELD), generatedClass);
+                field = new CtField(valueClass, PRIMITIVE_VALUE_FIELD, generatedClass);
                 field.setModifiers(Modifier.PRIVATE);
                 generatedClass.addField(field);
             }
@@ -183,7 +183,7 @@ public class TailSegmentGenerator extends PropertySegmentGeneratorBase {
                 .invokespecial(Classes.ObjectType(), MethodInfo.nameInit, Descriptors.constructor())
                 .aload(0)
                 .aload(1)
-                .putfield(constructor.getDeclaringClass(), mangle(OBSERVABLE_FIELD), observableClass);
+                .putfield(constructor.getDeclaringClass(), OBSERVABLE_FIELD, observableClass);
         } else {
             // $1.addListener(this);
             code.aload(0)
@@ -201,7 +201,7 @@ public class TailSegmentGenerator extends PropertySegmentGeneratorBase {
             .aload(0)
             .invokeinterface(Classes.ObservableValueType(), "getValue", Descriptors.function(Classes.ObjectType()))
             .checkcast(boxedValueClass.getName())
-            .putfield(generatedClass, mangle(VALUE_FIELD), boxedValueClass)
+            .putfield(generatedClass, VALUE_FIELD, boxedValueClass)
             .vreturn();
 
         constructor.getMethodInfo().setCodeAttribute(code.toCodeAttribute());
@@ -214,7 +214,7 @@ public class TailSegmentGenerator extends PropertySegmentGeneratorBase {
 
         if (hasInvariants) {
             code.aload(0)
-                .getfield(declaringClass, mangle(FLAGS_FIELD), CtClass.intType)
+                .getfield(declaringClass, FLAGS_FIELD, CtClass.intType)
                 .ifeq(
                     // if (this.flags == 0)
                     () -> {
@@ -240,28 +240,28 @@ public class TailSegmentGenerator extends PropertySegmentGeneratorBase {
                     () -> {
                         if (valueClass.isPrimitive()) {
                             code.aload(0)
-                                .getfield(declaringClass, mangle(FLAGS_FIELD), CtClass.intType)
+                                .getfield(declaringClass, FLAGS_FIELD, CtClass.intType)
                                 .iconst(2)
                                 .if_icmpeq(() -> code
                                     .aload(0)
                                     .aload(0)
-                                    .getfield(declaringClass, mangle(PRIMITIVE_VALUE_FIELD), valueClass)
+                                    .getfield(declaringClass, PRIMITIVE_VALUE_FIELD, valueClass)
                                     .ext_box(valueClass)
-                                    .putfield(declaringClass, mangle(VALUE_FIELD), boxedValueClass)
+                                    .putfield(declaringClass, VALUE_FIELD, boxedValueClass)
                                     .aload(0)
                                     .iconst(1)
-                                    .putfield(declaringClass, mangle(FLAGS_FIELD), CtClass.intType));
+                                    .putfield(declaringClass, FLAGS_FIELD, CtClass.intType));
                         }
                     });
 
             // return this.value
             code.aload(0)
-                .getfield(declaringClass, mangle(VALUE_FIELD), boxedValueClass)
+                .getfield(declaringClass, VALUE_FIELD, boxedValueClass)
                 .areturn();
         } else {
             // return this.observable != null ? this.observable.getValue() : null
             code.aload(0)
-                .getfield(declaringClass, mangle(OBSERVABLE_FIELD), observableClass)
+                .getfield(declaringClass, OBSERVABLE_FIELD, observableClass)
                 .dup()
                 .ifnull(
                     () -> code.pop().aconst_null(),
@@ -287,12 +287,12 @@ public class TailSegmentGenerator extends PropertySegmentGeneratorBase {
             // if (this.observable != null)
             Label L0 = code
                 .aload(0)
-                .getfield(method.getDeclaringClass(), mangle(OBSERVABLE_FIELD), observableClass)
+                .getfield(method.getDeclaringClass(), OBSERVABLE_FIELD, observableClass)
                 .ifnull();
 
             // observable.setValue($1)
             code.aload(0)
-                .getfield(method.getDeclaringClass(), mangle(OBSERVABLE_FIELD), observableClass)
+                .getfield(method.getDeclaringClass(), OBSERVABLE_FIELD, observableClass)
                 .aload(1)
                 .invokeinterface(
                     Classes.WritableValueType(),
@@ -314,7 +314,7 @@ public class TailSegmentGenerator extends PropertySegmentGeneratorBase {
         if (hasInvariants) {
             // if (this.valid == 0)
             code.aload(0)
-                .getfield(method.getDeclaringClass(), mangle(FLAGS_FIELD), CtClass.intType)
+                .getfield(method.getDeclaringClass(), FLAGS_FIELD, CtClass.intType)
                 .ifeq(() -> code
                     // validate(false)
                     .aload(0)
@@ -324,12 +324,12 @@ public class TailSegmentGenerator extends PropertySegmentGeneratorBase {
                         VALIDATE_METHOD,
                         Descriptors.function(CtClass.voidType, CtClass.booleanType)))
                 .aload(0)
-                .getfield(method.getDeclaringClass(), mangle(PRIMITIVE_VALUE_FIELD), valueClass)
+                .getfield(method.getDeclaringClass(), PRIMITIVE_VALUE_FIELD, valueClass)
                 .ext_return(method.getReturnType());
         } else {
             // return this.observable != null ? this.observable.getValue() : null
             code.aload(0)
-                .getfield(method.getDeclaringClass(), mangle(OBSERVABLE_FIELD), observableClass)
+                .getfield(method.getDeclaringClass(), OBSERVABLE_FIELD, observableClass)
                 .dup()
                 .ifnull(
                     () -> code.pop().ext_defaultconst(valueClass),
@@ -364,12 +364,12 @@ public class TailSegmentGenerator extends PropertySegmentGeneratorBase {
             // if (this.observable != null)
             Label L0 = code
                 .aload(0)
-                .getfield(method.getDeclaringClass(), mangle(OBSERVABLE_FIELD), observableClass)
+                .getfield(method.getDeclaringClass(), OBSERVABLE_FIELD, observableClass)
                 .ifnull();
 
             // this.observable.set($1)
             code.aload(0)
-                .getfield(method.getDeclaringClass(), mangle(OBSERVABLE_FIELD), observableClass)
+                .getfield(method.getDeclaringClass(), OBSERVABLE_FIELD, observableClass)
                 .ext_load(valueClass, 1)
                 .invokeinterface(
                     resolver.getObservableClass(observableClass, false),
@@ -404,11 +404,11 @@ public class TailSegmentGenerator extends PropertySegmentGeneratorBase {
         if (hasInvariants) {
             code.aload(0)
                 .iconst(0)
-                .putfield(method.getDeclaringClass(), mangle(FLAGS_FIELD), CtClass.intType);
+                .putfield(method.getDeclaringClass(), FLAGS_FIELD, CtClass.intType);
         }
 
         code.aload(0)
-            .getfield(method.getDeclaringClass(), mangle(INVALIDATION_LISTENER_FIELD), Classes.InvalidationListenerType())
+            .getfield(method.getDeclaringClass(), INVALIDATION_LISTENER_FIELD, Classes.InvalidationListenerType())
             .aload(0)
             .invokeinterface(
                 Classes.InvalidationListenerType(),
@@ -423,7 +423,7 @@ public class TailSegmentGenerator extends PropertySegmentGeneratorBase {
     private void emitAddListenerMethod(CtMethod method, boolean changeListenerIsTrue) throws Exception {
         Bytecode code = new Bytecode(method.getDeclaringClass(), 2);
         CtClass declaringClass = method.getDeclaringClass();
-        String fieldName = mangle(changeListenerIsTrue ? CHANGE_LISTENER_FIELD : INVALIDATION_LISTENER_FIELD);
+        String fieldName = changeListenerIsTrue ? CHANGE_LISTENER_FIELD : INVALIDATION_LISTENER_FIELD;
         CtClass listenerType = changeListenerIsTrue ? Classes.ChangeListenerType() : Classes.InvalidationListenerType();
 
         // if (this.listener != null)
@@ -440,7 +440,7 @@ public class TailSegmentGenerator extends PropertySegmentGeneratorBase {
                 () -> {
                     // if (this.observable != null)
                     code.aload(0)
-                        .getfield(declaringClass, mangle(OBSERVABLE_FIELD), observableClass)
+                        .getfield(declaringClass, OBSERVABLE_FIELD, observableClass)
                         .dup()
                         .ifnonnull(() -> code
                             // observable.addListener($1)
@@ -486,7 +486,7 @@ public class TailSegmentGenerator extends PropertySegmentGeneratorBase {
     private void emitRemoveListenerMethod(CtMethod method, boolean changeListenerIsTrue) throws Exception {
         Bytecode code = new Bytecode(method.getDeclaringClass(), 2);
         CtClass declaringClass = method.getDeclaringClass();
-        String fieldName = mangle(changeListenerIsTrue ? CHANGE_LISTENER_FIELD : INVALIDATION_LISTENER_FIELD);
+        String fieldName = changeListenerIsTrue ? CHANGE_LISTENER_FIELD : INVALIDATION_LISTENER_FIELD;
         CtClass listenerType = changeListenerIsTrue ? Classes.ChangeListenerType() : Classes.InvalidationListenerType();
 
         // if (listener != null...
@@ -502,11 +502,11 @@ public class TailSegmentGenerator extends PropertySegmentGeneratorBase {
                 .ifne(() -> code
                     // if (observable != null)
                     .aload(0)
-                    .getfield(declaringClass, mangle(OBSERVABLE_FIELD), observableClass)
+                    .getfield(declaringClass, OBSERVABLE_FIELD, observableClass)
                     .ifnonnull(() -> code
                         // observable.removeListener(this)
                         .aload(0)
-                        .getfield(declaringClass, mangle(OBSERVABLE_FIELD), observableClass)
+                        .getfield(declaringClass, OBSERVABLE_FIELD, observableClass)
                         .aload(0)
                         .invokeinterface(
                             changeListenerIsTrue ? Classes.ObservableValueType() : Classes.ObservableType(),
@@ -530,15 +530,15 @@ public class TailSegmentGenerator extends PropertySegmentGeneratorBase {
 
         // if (this.observable != null)
         code.aload(0)
-            .getfield(declaringClass, mangle(OBSERVABLE_FIELD), observableClass)
+            .getfield(declaringClass, OBSERVABLE_FIELD, observableClass)
             .ifnonnull(() -> code
                 // if (this.invalidationListener != null)
                 .aload(0)
-                .getfield(declaringClass, mangle(INVALIDATION_LISTENER_FIELD), Classes.InvalidationListenerType())
+                .getfield(declaringClass, INVALIDATION_LISTENER_FIELD, Classes.InvalidationListenerType())
                 .ifnonnull(() -> code
                     // this.observable.removeListener((InvalidationListener)this)
                     .aload(0)
-                    .getfield(declaringClass, mangle(OBSERVABLE_FIELD), observableClass)
+                    .getfield(declaringClass, OBSERVABLE_FIELD, observableClass)
                     .aload(0)
                     .invokeinterface(
                         Classes.ObservableValueType(),
@@ -547,11 +547,11 @@ public class TailSegmentGenerator extends PropertySegmentGeneratorBase {
 
                 // if (this.changeListener != null)
                 .aload(0)
-                .getfield(declaringClass, mangle(CHANGE_LISTENER_FIELD), Classes.ChangeListenerType())
+                .getfield(declaringClass, CHANGE_LISTENER_FIELD, Classes.ChangeListenerType())
                 .ifnonnull(() -> code
                     // this.observable.removeListener((ChangeListener)this)
                     .aload(0)
-                    .getfield(declaringClass, mangle(OBSERVABLE_FIELD), observableClass)
+                    .getfield(declaringClass, OBSERVABLE_FIELD, observableClass)
                     .aload(0)
                     .invokeinterface(
                         Classes.ObservableValueType(),
@@ -563,7 +563,7 @@ public class TailSegmentGenerator extends PropertySegmentGeneratorBase {
             .ifnonnull(() -> code
                 // if (this.invalidationListener != null)
                 .aload(0)
-                .getfield(declaringClass, mangle(INVALIDATION_LISTENER_FIELD), Classes.InvalidationListenerType())
+                .getfield(declaringClass, INVALIDATION_LISTENER_FIELD, Classes.InvalidationListenerType())
                 .ifnonnull(() -> code
                     // this.observable.addListener((InvalidationListener)this)
                     .aload(1)
@@ -575,7 +575,7 @@ public class TailSegmentGenerator extends PropertySegmentGeneratorBase {
 
                 // if (this.changeListener != null)
                 .aload(0)
-                .getfield(declaringClass, mangle(CHANGE_LISTENER_FIELD), Classes.ChangeListenerType())
+                .getfield(declaringClass, CHANGE_LISTENER_FIELD, Classes.ChangeListenerType())
                 .ifnonnull(() -> code
                     // this.observable.addListener((ChangeListener)this)
                     .aload(1)
@@ -588,11 +588,11 @@ public class TailSegmentGenerator extends PropertySegmentGeneratorBase {
         // this.observable = $1
         code.aload(0)
             .aload(1)
-            .putfield(declaringClass, mangle(OBSERVABLE_FIELD), observableClass);
+            .putfield(declaringClass, OBSERVABLE_FIELD, observableClass);
 
         // if (this.invalidationListener != null)
         code.aload(0)
-            .getfield(declaringClass, mangle(INVALIDATION_LISTENER_FIELD), Classes.InvalidationListenerType())
+            .getfield(declaringClass, INVALIDATION_LISTENER_FIELD, Classes.InvalidationListenerType())
             .ifnonnull(() -> code
                 // this.invalidated(null)
                 .aload(0)
@@ -604,7 +604,7 @@ public class TailSegmentGenerator extends PropertySegmentGeneratorBase {
 
         // if (this.changeListener != null)
         code.aload(0)
-            .getfield(declaringClass, mangle(CHANGE_LISTENER_FIELD), Classes.ChangeListenerType())
+            .getfield(declaringClass, CHANGE_LISTENER_FIELD, Classes.ChangeListenerType())
             .ifnonnull(() -> code
                 // this.changed(null, null, $1 != null ? $1.getValue() : null)
                 .aload(0)
@@ -637,22 +637,22 @@ public class TailSegmentGenerator extends PropertySegmentGeneratorBase {
             if (valueClass.isPrimitive()) {
                 // if (flags == 2)
                 code.aload(0)
-                    .getfield(generatedClass, mangle(FLAGS_FIELD), CtClass.booleanType)
+                    .getfield(generatedClass, FLAGS_FIELD, CtClass.booleanType)
                     .iconst(2)
                     .if_icmpeq(
                         () ->
                             // oldValue = this.pvalue
                             code.aload(0)
-                                .getfield(generatedClass, mangle(PRIMITIVE_VALUE_FIELD), valueClass)
+                                .getfield(generatedClass, PRIMITIVE_VALUE_FIELD, valueClass)
                                 .ext_box(valueClass),
                         () ->
                             // oldValue = this.value
                             code.aload(0)
-                                .getfield(generatedClass, mangle(VALUE_FIELD), boxedValueClass))
+                                .getfield(generatedClass, VALUE_FIELD, boxedValueClass))
                     .ext_store(boxedValueClass, oldValue);
             } else {
                 code.aload(0)
-                    .getfield(generatedClass, mangle(VALUE_FIELD), valueClass)
+                    .getfield(generatedClass, VALUE_FIELD, valueClass)
                     .ext_store(valueClass, oldValue);
             }
 
@@ -669,11 +669,11 @@ public class TailSegmentGenerator extends PropertySegmentGeneratorBase {
 
             // this.changeListener.changed(this, oldValue, newValue)
             code.aload(0)
-                .getfield(generatedClass, mangle(CHANGE_LISTENER_FIELD), Classes.ChangeListenerType())
+                .getfield(generatedClass, CHANGE_LISTENER_FIELD, Classes.ChangeListenerType())
                 .aload(0)
                 .aload(oldValue)
                 .aload(0)
-                .getfield(generatedClass, mangle(VALUE_FIELD), boxedValueClass)
+                .getfield(generatedClass, VALUE_FIELD, boxedValueClass)
                 .invokeinterface(
                     Classes.ChangeListenerType(),
                     "changed",
@@ -684,7 +684,7 @@ public class TailSegmentGenerator extends PropertySegmentGeneratorBase {
         } else {
             // this.changeListener.changed(this, $2, $3)
             code.aload(0)
-                .getfield(generatedClass, mangle(CHANGE_LISTENER_FIELD), Classes.ChangeListenerType())
+                .getfield(generatedClass, CHANGE_LISTENER_FIELD, Classes.ChangeListenerType())
                 .aload(0)
                 .aload(2)
                 .aload(3)
@@ -706,7 +706,7 @@ public class TailSegmentGenerator extends PropertySegmentGeneratorBase {
 
         // if (this.observable != null)
         code.aload(0)
-            .getfield(declaringClass, mangle(OBSERVABLE_FIELD), observableClass)
+            .getfield(declaringClass, OBSERVABLE_FIELD, observableClass)
             .dup()
             .ifnull(
                 () -> code
@@ -730,7 +730,7 @@ public class TailSegmentGenerator extends PropertySegmentGeneratorBase {
             // this.pvalue = $localIndex
             code.aload(0)
                 .ext_load(valueClass, localIndex)
-                .putfield(declaringClass, mangle(PRIMITIVE_VALUE_FIELD), valueClass);
+                .putfield(declaringClass, PRIMITIVE_VALUE_FIELD, valueClass);
 
             // if (boxValue)
             code.iload(1)
@@ -740,24 +740,24 @@ public class TailSegmentGenerator extends PropertySegmentGeneratorBase {
                         .aload(0)
                         .ext_load(valueClass, localIndex)
                         .ext_box(valueClass)
-                        .putfield(declaringClass, mangle(VALUE_FIELD), boxedValueClass)
+                        .putfield(declaringClass, VALUE_FIELD, boxedValueClass)
                         .aload(0)
                         .iconst(1) // 1 = valid, boxed
-                        .putfield(declaringClass, mangle(FLAGS_FIELD), CtClass.intType),
+                        .putfield(declaringClass, FLAGS_FIELD, CtClass.intType),
                     () -> code
                         .aload(0)
                         .iconst(2) // 2 = valid, unboxed
-                        .putfield(declaringClass, mangle(FLAGS_FIELD), CtClass.intType));
+                        .putfield(declaringClass, FLAGS_FIELD, CtClass.intType));
         } else {
             // this.value = $localIndex
             code.aload(0)
                 .aload(localIndex)
                 .checkcast(boxedValueClass)
-                .putfield(declaringClass, mangle(VALUE_FIELD), boxedValueClass);
+                .putfield(declaringClass, VALUE_FIELD, boxedValueClass);
 
             code.aload(0)
                 .iconst(1) // 1 = valid, boxed
-                .putfield(declaringClass, mangle(FLAGS_FIELD), CtClass.intType);
+                .putfield(declaringClass, FLAGS_FIELD, CtClass.intType);
         }
 
         code.vreturn();
