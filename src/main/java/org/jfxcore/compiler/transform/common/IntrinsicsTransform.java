@@ -16,6 +16,7 @@ import org.jfxcore.compiler.diagnostic.errors.SymbolResolutionErrors;
 import org.jfxcore.compiler.transform.Transform;
 import org.jfxcore.compiler.transform.TransformContext;
 import org.jfxcore.compiler.util.NameHelper;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -35,8 +36,9 @@ import java.util.Set;
  */
 public class IntrinsicsTransform implements Transform {
 
-    private static final Set<Intrinsic> CONFLICTING_INTRINSICS = Set.of(
-        Intrinsics.VALUE, Intrinsics.CONSTANT, Intrinsics.FACTORY);
+    private static final List<Set<Intrinsic>> CONFLICTING_INTRINSICS = List.of(
+            Set.of(Intrinsics.VALUE, Intrinsics.CONSTANT, Intrinsics.FACTORY),
+            Set.of(Intrinsics.TYPE_ARGUMENTS, Intrinsics.CONSTANT));
 
     @Override
     public Node transform(TransformContext context, Node node) {
@@ -59,19 +61,21 @@ public class IntrinsicsTransform implements Transform {
      * Ensures that conflicting intrinsics cannot be used at the same time.
      */
     private void validateConflictingIntrinsics(ObjectNode objectNode) {
-        PropertyNode existingIntrinsic = null;
+        for (Set<Intrinsic> conflictSet : CONFLICTING_INTRINSICS) {
+            PropertyNode existingIntrinsic = null;
 
-        for (PropertyNode propertyNode : objectNode.getProperties()) {
-            Intrinsic intrinsic = propertyNode.isIntrinsic() ? Intrinsics.find(propertyNode.getName()) : null;
-            if (intrinsic == null || !CONFLICTING_INTRINSICS.contains(intrinsic)) {
-                continue;
-            }
+            for (PropertyNode propertyNode : objectNode.getProperties()) {
+                Intrinsic intrinsic = propertyNode.isIntrinsic() ? Intrinsics.find(propertyNode.getName()) : null;
+                if (intrinsic == null || !conflictSet.contains(intrinsic)) {
+                    continue;
+                }
 
-            if (existingIntrinsic == null) {
-                existingIntrinsic = propertyNode;
-            } else {
-                throw ObjectInitializationErrors.conflictingProperties(
-                    propertyNode.getSourceInfo(), propertyNode.getMarkupName(), existingIntrinsic.getMarkupName());
+                if (existingIntrinsic == null) {
+                    existingIntrinsic = propertyNode;
+                } else {
+                    throw ObjectInitializationErrors.conflictingProperties(
+                        propertyNode.getSourceInfo(), propertyNode.getMarkupName(), existingIntrinsic.getMarkupName());
+                }
             }
         }
     }
