@@ -88,13 +88,6 @@ public class ResolveTypeTransform implements Transform {
         PropertyNode typeArgsNode = objectNode.findIntrinsicProperty(Intrinsics.TYPE_ARGUMENTS);
 
         if (typeArgsNode != null) {
-            PropertyNode constantProperty = objectNode.findIntrinsicProperty(Intrinsics.CONSTANT);
-            if (constantProperty != null) {
-                throw ObjectInitializationErrors.conflictingProperties(
-                    SourceInfo.span(constantProperty.getSourceInfo(), typeArgsNode.getSourceInfo()),
-                    typeArgsNode.getMarkupName(), constantProperty.getMarkupName());
-            }
-
             if (objectTypeClass.getGenericSignature() == null) {
                 throw ObjectInitializationErrors.cannotParameterizeType(node.getSourceInfo(), objectTypeClass);
             }

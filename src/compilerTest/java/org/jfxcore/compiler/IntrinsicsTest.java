@@ -107,4 +107,18 @@ public class IntrinsicsTest extends CompilerTestBase {
         assertEquals(String.class, ctor.getParameters()[0].getType());
     }
 
+    @Test
+    public void TypeArguments_And_Constant_Cannot_Be_Used_At_Same_Time() {
+        MarkupException ex = assertThrows(MarkupException.class, () -> compile("""
+            <?import javafx.scene.layout.*?>
+            <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
+                <GridPane fx:constant="FOO" fx:typeArguments="bar"/>
+            </GridPane>
+        """));
+
+        assertEquals(ErrorCode.CONFLICTING_PROPERTIES, ex.getDiagnostic().getCode());
+        assertCodeHighlight("fx:typeArguments=\"bar\"", ex);
+    }
+
+
 }
