@@ -383,6 +383,40 @@ public class ResolverTest extends TestBase {
         assertEquals("ObservableList<Pair<? super Button,?>>", propertyInfo.getType().toString());
     }
 
+    public static class PropertyInGenericClass<T> {
+        public static <T extends Node> ObservableList<? super T> getList1(T node) {
+            return null;
+        }
+
+        public <U extends Node> ObservableList<? super U> getList2(T node) {
+            return null;
+        }
+    }
+
+    @Test
+    public void GetTypeInstance_Of_Static_Property_In_Generic_Class() {
+        Resolver resolver = new Resolver(SourceInfo.none());
+        TypeInstance buttonType = resolver.getTypeInstance(resolver.resolveClass(Button.class.getName()));
+        var names = new ArrayList<>(List.of(PropertyInGenericClass.class.getName().split("\\.")));
+        names.add("list1");
+
+        PropertyInfo propertyInfo = resolver.resolveProperty(buttonType, true, names.toArray(String[]::new));
+        assertEquals("ObservableList<? super Button>", propertyInfo.getType().toString());
+    }
+
+    @Test
+    public void GetTypeInstance_Of_Not_A_Static_Property_In_Generic_Class_Fails() {
+        Resolver resolver = new Resolver(SourceInfo.none());
+        TypeInstance buttonType = resolver.getTypeInstance(resolver.resolveClass(Button.class.getName()));
+        var names = new ArrayList<>(List.of(PropertyInGenericClass.class.getName().split("\\.")));
+        names.add("list2");
+
+        MarkupException ex = assertThrows(MarkupException.class,
+            () -> resolver.resolveProperty(buttonType, true, names.toArray(String[]::new)));
+
+        assertEquals(ErrorCode.PROPERTY_NOT_FOUND, ex.getDiagnostic().getCode());
+    }
+
     public record PropertyTestRun(
         String propertyName,
         boolean readOnly,
