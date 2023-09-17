@@ -641,8 +641,8 @@ public class Resolver {
             try {
                 if (Modifier.isPublic(modifiers)
                         && Modifier.isStatic(modifiers)
-                        && verbatim ? m.getName().equals(name) :
-                            (m.getName().equals(getterName1) || m.getName().equals(getterName2))
+                        && (verbatim ? m.getName().equals(name) :
+                            (m.getName().equals(getterName1) || m.getName().equals(getterName2)))
                         && m.getParameterTypes().length == 1
                         && receiverClass.subtypeOf(m.getParameterTypes()[0])
                         && !TypeHelper.equals(m.getReturnType(), CtClass.voidType)
@@ -1028,7 +1028,9 @@ public class Resolver {
                     methodSignature.getTypeParameters(),
                     invocationChain,
                     associateProvidedArguments(
-                        method.getDeclaringClass(), providedArguments, classTypeParams,
+                        method.getDeclaringClass(),
+                        providedArguments,
+                        Modifier.isStatic(method.getModifiers()) ? new SignatureAttribute.TypeParameter[0] : classTypeParams,
                         methodSignature.getTypeParameters()));
             }
 
