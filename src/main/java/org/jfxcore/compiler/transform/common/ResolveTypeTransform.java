@@ -16,7 +16,6 @@ import org.jfxcore.compiler.ast.intrinsic.Intrinsics;
 import org.jfxcore.compiler.ast.text.TextNode;
 import org.jfxcore.compiler.diagnostic.ErrorCode;
 import org.jfxcore.compiler.diagnostic.MarkupException;
-import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.diagnostic.errors.ObjectInitializationErrors;
 import org.jfxcore.compiler.diagnostic.errors.PropertyAssignmentErrors;
 import org.jfxcore.compiler.parse.TypeFormatter;
@@ -141,7 +140,7 @@ public class ResolveTypeTransform implements Transform {
 
         CtClass bindingContextType = context.getBindingContextClass();
         if (bindingContextType != null && parentIsDocument) {
-            type = new TypeInstance(bindingContextType, Collections.emptyList(), List.of(type));
+            type = TypeInstance.of(bindingContextType).withSuperTypes(List.of(type));
         }
 
         return new ResolvedTypeNode(

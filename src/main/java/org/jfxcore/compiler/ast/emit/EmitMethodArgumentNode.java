@@ -42,10 +42,11 @@ public class EmitMethodArgumentNode extends AbstractNode implements ValueEmitter
             TypeInstance componentType,
             List<EmitMethodArgumentNode> children,
             SourceInfo sourceInfo) {
-        CtClass arrayType = new Resolver(sourceInfo).resolveClass(componentType.jvmType().getName() + "[]");
         return new EmitMethodArgumentNode(
             new ResolvedTypeNode(
-                new TypeInstance(arrayType, 1, componentType.getArguments(), componentType.getSuperTypes()),
+                TypeInstance.of(new Resolver(sourceInfo).resolveClass(componentType.jvmType().getName() + "[]"))
+                    .withArguments(componentType.getArguments())
+                    .withSuperTypes(componentType.getSuperTypes()),
                 sourceInfo),
             children.stream()
                 .flatMap(n -> n.children.stream())

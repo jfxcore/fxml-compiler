@@ -189,6 +189,60 @@ public class ResolverTest extends TestBase {
         assertEquals("Comparable<?>", paramTypes[3].toString());
     }
 
+    public static class GenericConstructorWithRawUsage<T extends String> {
+        public GenericConstructorWithRawUsage(T first, Comparable<T> second) {}
+
+        @SafeVarargs
+        public GenericConstructorWithRawUsage(T first, Comparable<T>... second) {}
+
+        @SafeVarargs
+        public GenericConstructorWithRawUsage(boolean first, T second, Comparable<? super T>... third) {}
+    }
+
+    @Test
+    public void GetParameterTypes_Of_Generic_Constructor_With_RawUsage() {
+        Resolver resolver = new Resolver(SourceInfo.none());
+        CtClass clazz = resolver.resolveClass(GenericConstructorWithRawUsage.class.getName());
+        CtConstructor ctor = clazz.getDeclaredConstructors()[0];
+        TypeInstance[] paramTypes = resolver.getParameterTypes(ctor, List.of(TypeInstance.of(clazz)));
+
+        assertEquals(2, paramTypes.length);
+        assertFalse(paramTypes[0].isRaw());
+        assertEquals("java.lang.String", paramTypes[0].getJavaName());
+        assertTrue(paramTypes[1].isRaw());
+        assertEquals("java.lang.Comparable", paramTypes[1].getJavaName());
+    }
+
+    @Test
+    public void GetParameterTypes_Of_Generic_Varargs_Constructor_With_RawUsage() {
+        Resolver resolver = new Resolver(SourceInfo.none());
+        CtClass clazz = resolver.resolveClass(GenericConstructorWithRawUsage.class.getName());
+        CtConstructor ctor = clazz.getDeclaredConstructors()[1];
+        TypeInstance[] paramTypes = resolver.getParameterTypes(ctor, List.of(TypeInstance.of(clazz)));
+
+        assertEquals(2, paramTypes.length);
+        assertFalse(paramTypes[0].isRaw());
+        assertEquals("java.lang.String", paramTypes[0].getJavaName());
+        assertTrue(paramTypes[1].isRaw());
+        assertEquals("java.lang.Comparable[]", paramTypes[1].getJavaName());
+    }
+
+    @Test
+    public void GetParameterTypes_Of_LowerBound_Generic_Varargs_Constructor_With_RawUsage() {
+        Resolver resolver = new Resolver(SourceInfo.none());
+        CtClass clazz = resolver.resolveClass(GenericConstructorWithRawUsage.class.getName());
+        CtConstructor ctor = clazz.getDeclaredConstructors()[2];
+        TypeInstance[] paramTypes = resolver.getParameterTypes(ctor, List.of(TypeInstance.of(clazz)));
+
+        assertEquals(3, paramTypes.length);
+        assertFalse(paramTypes[0].isRaw());
+        assertEquals("boolean", paramTypes[0].getJavaName());
+        assertFalse(paramTypes[1].isRaw());
+        assertEquals("java.lang.String", paramTypes[1].getJavaName());
+        assertTrue(paramTypes[2].isRaw());
+        assertEquals("java.lang.Comparable[]", paramTypes[2].getJavaName());
+    }
+
     public static String nonGenericReturnType() { return null; }
     public static ObservableValue<Comparable<String>> genericReturnType() { return null; }
     public static ObservableValue<Comparable<? super String>> genericReturnTypeWithLowerBound() { return null; }
