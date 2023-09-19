@@ -5,7 +5,6 @@ package org.jfxcore.compiler.util;
 
 import javassist.CtClass;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -19,6 +18,20 @@ import static org.jfxcore.compiler.util.ExceptionHelper.*;
  * Represents the instantiation tree of a type, in which all generic arguments are replaced with concrete types.
  */
 public class TypeInstance {
+
+    private static class ErasedTypeInstance extends TypeInstance {
+        ErasedTypeInstance(TypeInstance source) {
+            super(source.jvmType(), source.getArguments(), source.getSuperTypes(), source.getWildcardType());
+        }
+
+        ErasedTypeInstance(CtClass type,
+                           int dimensions,
+                           List<TypeInstance> arguments,
+                           List<TypeInstance> superTypes,
+                           WildcardType wildcard) {
+            super(type, dimensions, arguments, superTypes, wildcard);
+        }
+    }
 
     public static TypeInstance booleanType() { return resolveTypeInstance(CtClass.booleanType); }
     public static TypeInstance charType() { return resolveTypeInstance(CtClass.charType); }
@@ -77,107 +90,29 @@ public class TypeInstance {
         LOOSE
     }
 
-    public static TypeInstance erased(TypeInstance erasure) {
-        return new TypeInstance(
-                erasure.jvmType(),
-                erasure.getDimensions(),
-                Collections.emptyList(),
-                erasure.getSuperTypes(),
-                WildcardType.NONE) {
-            @Override
-            public boolean isRaw() {
-                return true;
-            }
-
-            @Override
-            public String toString() {
-                return "<erased>" + jvmType().getSimpleName();
-            }
-        };
-    }
-
     private final CtClass type;
     private final List<TypeInstance> arguments;
     private final List<TypeInstance> superTypes;
     private final int dimensions;
     private final WildcardType wildcard;
 
-    public TypeInstance(CtClass type) {
-        this(type, WildcardType.NONE);
+    public static TypeInstance of(CtClass type) {
+        return resolveTypeInstance(type);
     }
 
-    public TypeInstance(CtClass type, WildcardType wildcard) {
-        int dimensions = 0;
-        while (type.isArray()) {
-            type = unchecked(SourceInfo.none(), type::getComponentType);
-            ++dimensions;
-        }
-
-        this.dimensions = dimensions;
-        this.type = type;
-        this.arguments = Collections.emptyList();
-        this.superTypes = Collections.emptyList();
-        this.wildcard = wildcard;
+    static TypeInstance ofErased(TypeInstance type) {
+        return new ErasedTypeInstance(type);
     }
 
-    public TypeInstance(CtClass type, List<TypeInstance> arguments) {
-        this(type, arguments, WildcardType.NONE);
-    }
-
-    public TypeInstance(CtClass type, List<TypeInstance> arguments, WildcardType wildcard) {
-        checkArguments(type, arguments);
-
+    TypeInstance(CtClass type,
+                 List<TypeInstance> arguments,
+                 List<TypeInstance> superTypes,
+                 WildcardType wildcard) {
         int dimensions = 0;
         CtClass t = type;
         while (t.isArray()) {
             t = unchecked(SourceInfo.none(), t::getComponentType);
             ++dimensions;
-        }
-
-        this.dimensions = dimensions;
-        this.type = type;
-        this.arguments = arguments;
-        this.superTypes = Collections.emptyList();
-        this.wildcard = wildcard;
-    }
-
-    public TypeInstance(CtClass type, List<TypeInstance> arguments, List<TypeInstance> superTypes) {
-        this(type, arguments, superTypes, WildcardType.NONE);
-    }
-
-    public TypeInstance(CtClass type, List<TypeInstance> arguments, List<TypeInstance> superTypes, WildcardType wildcard) {
-        checkArguments(type, arguments);
-
-        int dimensions = 0;
-        CtClass t = type;
-        while (t.isArray()) {
-            t = unchecked(SourceInfo.none(), t::getComponentType);
-            ++dimensions;
-        }
-
-        this.dimensions = dimensions;
-        this.type = type;
-        this.arguments = arguments;
-        this.superTypes = superTypes;
-        this.wildcard = wildcard;
-    }
-
-    public TypeInstance(CtClass type, int dimensions, List<TypeInstance> arguments, List<TypeInstance> superTypes) {
-        this(type, dimensions, arguments, superTypes, WildcardType.NONE);
-    }
-
-    public TypeInstance(CtClass type, int dimensions, List<TypeInstance> arguments, List<TypeInstance> superTypes, WildcardType wildcard) {
-        checkArguments(type, arguments);
-
-        int d = 0;
-        CtClass t = type;
-        while (t.isArray()) {
-            t = unchecked(SourceInfo.none(), t::getComponentType);
-            ++d;
-        }
-
-        if (dimensions != d) {
-            throw new IllegalArgumentException("dimensions");
         }
 
         this.type = type;
@@ -187,14 +122,56 @@ public class TypeInstance {
         this.wildcard = wildcard;
     }
 
-    private static void checkArguments(CtClass type, List<TypeInstance> arguments) {
-        if ((type.isPrimitive() || TypeHelper.isPrimitiveBox(type)) && arguments.size() > 0) {
-            throw new IllegalArgumentException("Primitive cannot be parameterized.");
-        }
+    private TypeInstance(CtClass type,
+                         int dimensions,
+                         List<TypeInstance> arguments,
+                         List<TypeInstance> superTypes,
+                         WildcardType wildcard) {
+        this.type = type;
+        this.dimensions = dimensions;
+        this.arguments = arguments;
+        this.superTypes = superTypes;
+        this.wildcard = wildcard;
+    }
+
+    public TypeInstance withType(CtClass type) {
+        return this instanceof ErasedTypeInstance ?
+            new ErasedTypeInstance(type, dimensions, arguments, superTypes, wildcard) :
+            new TypeInstance(type, dimensions, arguments, superTypes, wildcard);
+    }
+
+    public TypeInstance withDimensions(int dimensions) {
+        return this instanceof ErasedTypeInstance ?
+            new ErasedTypeInstance(type, dimensions, arguments, superTypes, wildcard) :
+            new TypeInstance(type, dimensions, arguments, superTypes, wildcard);
+    }
+
+    public TypeInstance withArguments(List<TypeInstance> arguments) {
+        return this instanceof ErasedTypeInstance ?
+            new ErasedTypeInstance(type, dimensions, arguments, superTypes, wildcard) :
+            new TypeInstance(type, dimensions, arguments, superTypes, wildcard);
+    }
+
+    public TypeInstance withSuperTypes(List<TypeInstance> superTypes) {
+        return this instanceof ErasedTypeInstance ?
+            new ErasedTypeInstance(type, dimensions, arguments, superTypes, wildcard) :
+            new TypeInstance(type, dimensions, arguments, superTypes, wildcard);
+    }
+
+    public TypeInstance withWildcard(WildcardType wildcard) {
+        return this instanceof ErasedTypeInstance ?
+            new ErasedTypeInstance(type, dimensions, arguments, superTypes, wildcard) :
+            new TypeInstance(type, dimensions, arguments, superTypes, wildcard);
     }
 
     public boolean isRaw() {
-        return arguments.stream().anyMatch(TypeInstance::isRaw);
+        for (int i = 0, max = arguments.size(); i < max; ++i) {
+            if (arguments.get(i) instanceof ErasedTypeInstance) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public boolean isArray() {

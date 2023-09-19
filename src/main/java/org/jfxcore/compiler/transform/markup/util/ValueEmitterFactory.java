@@ -219,13 +219,13 @@ public class ValueEmitterFactory {
                 if (colorField != null) {
                     return new EmitClassConstantNode(
                         id,
-                        new TypeInstance(Classes.ColorType()),
+                        TypeInstance.of(Classes.ColorType()),
                         Classes.ColorType(),
                         colorField.getName(),
                         sourceInfo);
                 } else {
                     return EmitObjectNode
-                        .valueOf(new TypeInstance(Classes.ColorType()), sourceInfo)
+                        .valueOf(TypeInstance.of(Classes.ColorType()), sourceInfo)
                         .textValue(value)
                         .create();
                 }

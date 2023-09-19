@@ -205,7 +205,7 @@ public class Resolver {
                             behavior.getDeclaringClass(),
                             methodSignature.getParameterTypes()[i],
                             TypeInstance.WildcardType.NONE,
-                            classSignature != null ? classSignature.getParameters() : new SignatureAttribute.TypeParameter[0],
+                            classSignature != null ? classSignature.getParameters() : EMPTY_TYPE_PARAMS,
                             methodSignature.getTypeParameters(),
                             invocationChain,
                             Map.of()),
@@ -946,7 +946,7 @@ public class Resolver {
             }
 
             Map<String, TypeInstance> providedArguments = associateProvidedArguments(
-                clazz, arguments, classSignature.getParameters(), new SignatureAttribute.TypeParameter[0]);
+                clazz, arguments, classSignature.getParameters(), EMPTY_TYPE_PARAMS);
 
             return getCache().put(key, invokeType(clazz.getDeclaringClass(), clazz, providedArguments));
         } catch (NotFoundException ex) {
@@ -971,7 +971,7 @@ public class Resolver {
 
             SignatureAttribute.ClassSignature classSignature = getGenericClassSignature(field.getDeclaringClass());
             SignatureAttribute.TypeParameter[] classTypeParams = classSignature != null ?
-                classSignature.getParameters() : new SignatureAttribute.TypeParameter[0];
+                classSignature.getParameters() : EMPTY_TYPE_PARAMS;
 
             TypeInstance typeInstance = invokeType(
                 field.getDeclaringClass(),
@@ -1018,7 +1018,7 @@ public class Resolver {
                 typeInstance = invokeType(method.getDeclaringClass(), method.getReturnType(), Map.of());
             } else {
                 SignatureAttribute.TypeParameter[] classTypeParams =
-                    classSignature != null ? classSignature.getParameters() : new SignatureAttribute.TypeParameter[0];
+                    classSignature != null ? classSignature.getParameters() : EMPTY_TYPE_PARAMS;
 
                 typeInstance = invokeType(
                     method.getDeclaringClass(),
@@ -1030,7 +1030,7 @@ public class Resolver {
                     associateProvidedArguments(
                         method.getDeclaringClass(),
                         providedArguments,
-                        Modifier.isStatic(method.getModifiers()) ? new SignatureAttribute.TypeParameter[0] : classTypeParams,
+                        Modifier.isStatic(method.getModifiers()) ? EMPTY_TYPE_PARAMS : classTypeParams,
                         methodSignature.getTypeParameters()));
             }
 
@@ -1195,11 +1195,10 @@ public class Resolver {
         SignatureAttribute.ClassSignature classSignature = getGenericClassSignature(invokedClass);
         List<TypeInstance> arguments = new ArrayList<>();
         List<TypeInstance> superTypes = new ArrayList<>();
-        TypeInstance invokedTypeInstance = new TypeInstance(invokedClass, arguments, superTypes);
+        TypeInstance invokedTypeInstance = new TypeInstance(
+            invokedClass, arguments, superTypes, TypeInstance.WildcardType.NONE);
 
         if (classSignature != null) {
-            SignatureAttribute.TypeParameter[] empty = new SignatureAttribute.TypeParameter[0];
-
             if (providedArguments.size() > 0 && providedArguments.size() != classSignature.getParameters().length) {
                 throw GeneralErrors.numTypeArgumentsMismatch(
                     sourceInfo, invokedClass, classSignature.getParameters().length, providedArguments.size());
@@ -1207,26 +1206,27 @@ public class Resolver {
 
             for (int i = 0; i < classSignature.getParameters().length; ++i) {
                 SignatureAttribute.TypeParameter typeParam = classSignature.getParameters()[i];
-                TypeInstance bound = null;
-
-                if (typeParam.getClassBound() != null) {
-                    bound = invokeType(
-                        invokingClass, typeParam.getClassBound(), TypeInstance.WildcardType.NONE,
-                        empty, empty, Collections.emptyList(), providedArguments);
-                } else if (typeParam.getInterfaceBound().length > 0) {
-                    bound = invokeType(
-                        invokingClass, typeParam.getInterfaceBound()[0], TypeInstance.WildcardType.NONE,
-                        empty, empty, Collections.emptyList(), providedArguments);
-                }
-
-                if (bound == null) {
-                    bound = TypeInstance.ObjectType();
-                }
 
                 if (providedArguments.size() > 0) {
                     arguments.add(providedArguments.get(typeParam.getName()));
                 } else {
-                    arguments.add(TypeInstance.erased(bound));
+                    TypeInstance bound = null;
+
+                    if (typeParam.getClassBound() != null) {
+                        bound = invokeType(
+                            invokingClass, typeParam.getClassBound(), TypeInstance.WildcardType.NONE,
+                            EMPTY_TYPE_PARAMS, EMPTY_TYPE_PARAMS, Collections.emptyList(), providedArguments);
+                    } else if (typeParam.getInterfaceBound().length > 0) {
+                        bound = invokeType(
+                            invokingClass, typeParam.getInterfaceBound()[0], TypeInstance.WildcardType.NONE,
+                            EMPTY_TYPE_PARAMS, EMPTY_TYPE_PARAMS, Collections.emptyList(), providedArguments);
+                    }
+
+                    if (bound != null) {
+                        arguments.add(TypeInstance.ofErased(bound));
+                    } else {
+                        arguments.add(TypeInstance.ofErased(TypeInstance.ObjectType()));
+                    }
                 }
             }
 
@@ -1235,7 +1235,7 @@ public class Resolver {
                 classSignature.getSuperClass(),
                 TypeInstance.WildcardType.NONE,
                 classSignature.getParameters(),
-                empty,
+                EMPTY_TYPE_PARAMS,
                 List.of(invokedTypeInstance),
                 Map.of());
 
@@ -1249,7 +1249,7 @@ public class Resolver {
                     intfType,
                     TypeInstance.WildcardType.NONE,
                     classSignature.getParameters(),
-                    empty,
+                    EMPTY_TYPE_PARAMS,
                     List.of(invokedTypeInstance),
                     Map.of());
 
@@ -1280,19 +1280,20 @@ public class Resolver {
             Map<String, TypeInstance> providedArguments)
                 throws NotFoundException, BadBytecode {
         if (invokedType instanceof SignatureAttribute.BaseType baseType) {
-            return new TypeInstance(baseType.getCtlass(), wildcard);
+            return new TypeInstance(baseType.getCtlass(), List.of(), List.of(), wildcard);
         }
 
         if (invokedType instanceof SignatureAttribute.ArrayType arrayType) {
             SignatureAttribute.Type componentType = arrayType.getComponentType();
             int dimension = arrayType.getDimension();
-            TypeInstance typeInst = Objects.requireNonNull(invokeType(
+            TypeInstance typeInst = invokeType(
                 invokingClass, componentType, TypeInstance.WildcardType.NONE, classTypeParams,
-                methodTypeParams, invocationChain, providedArguments));
+                methodTypeParams, invocationChain, providedArguments);
 
-            return new TypeInstance(
-                resolveClass(typeInst.jvmType().getName() + "[]".repeat(dimension)),
-                dimension, typeInst.getArguments(), typeInst.getSuperTypes(), wildcard);
+            return typeInst
+                .withType(resolveClass(typeInst.jvmType().getName() + "[]".repeat(dimension)))
+                .withDimensions(dimension)
+                .withWildcard(wildcard);
         }
 
         if (invokedType instanceof SignatureAttribute.ClassType classType) {
@@ -1333,12 +1334,11 @@ public class Resolver {
                 extendedInvocationChain.addAll(invocationChain);
                 extendedInvocationChain.add(typeInstance);
 
-                SignatureAttribute.TypeParameter[] empty = new SignatureAttribute.TypeParameter[0];
                 SignatureAttribute.TypeParameter[] typeParams = classSignature.getParameters();
 
                 TypeInstance superType = invokeType(
-                    clazz, classSignature.getSuperClass(), TypeInstance.WildcardType.NONE, typeParams, empty,
-                    extendedInvocationChain, Map.of());
+                    clazz, classSignature.getSuperClass(), TypeInstance.WildcardType.NONE, typeParams,
+                    EMPTY_TYPE_PARAMS, extendedInvocationChain, Map.of());
 
                 if (superType != null) {
                     typeInstance.getSuperTypes().add(superType);
@@ -1346,8 +1346,8 @@ public class Resolver {
 
                 for (SignatureAttribute.ClassType intfClass : classSignature.getInterfaces()) {
                     superType = invokeType(
-                        clazz, intfClass, TypeInstance.WildcardType.NONE, typeParams, empty,
-                        extendedInvocationChain, Map.of());
+                        clazz, intfClass, TypeInstance.WildcardType.NONE, typeParams,
+                        EMPTY_TYPE_PARAMS, extendedInvocationChain, Map.of());
 
                     if (superType != null) {
                         typeInstance.getSuperTypes().add(superType);
@@ -1376,9 +1376,7 @@ public class Resolver {
                     return result;
                 }
 
-                return new TypeInstance(
-                    result.jvmType(), result.getDimensions(), result.getArguments(),
-                    result.getSuperTypes(), wildcard);
+                return result.withWildcard(wildcard);
             }
 
             return findTypeParameter(
@@ -1407,12 +1405,9 @@ public class Resolver {
             }
 
             if (typeArg.getType() == null) {
-                TypeInstance objectInst = getTypeInstance(Classes.ObjectsType());
-                TypeInstance wildcardInst = new TypeInstance(
-                    objectInst.jvmType(), objectInst.getArguments(), objectInst.getSuperTypes(),
-                    TypeInstance.WildcardType.of(typeArg.getKind()));
-
-                arguments.add(wildcardInst);
+                arguments.add(
+                    getTypeInstance(Classes.ObjectsType())
+                        .withWildcard(TypeInstance.WildcardType.of(typeArg.getKind())));
             }
 
             if (typeArg.getType() instanceof SignatureAttribute.ClassType classTypeArg) {
@@ -1451,9 +1446,7 @@ public class Resolver {
                 if (typeParam != null) {
                     var wildcard = TypeInstance.WildcardType.of(typeArg.getKind());
                     if (wildcard != TypeInstance.WildcardType.NONE) {
-                        typeParam = new TypeInstance(
-                            typeParam.jvmType(), typeParam.getDimensions(), typeParam.getArguments(),
-                            typeParam.getSuperTypes(), wildcard);
+                        typeParam = typeParam.withWildcard(wildcard);
                     }
 
                     arguments.add(typeParam);
@@ -1480,7 +1473,9 @@ public class Resolver {
                 invokeType(
                     invokingClass, typeParam.getClassBound(), TypeInstance.WildcardType.NONE, classTypeParams,
                     methodTypeParams, invocationChain, Map.of()) :
-                new TypeInstance(resolveClass(typeParam.getInterfaceBound()[0].jvmTypeName()));
+                new TypeInstance(
+                    resolveClass(typeParam.getInterfaceBound()[0].jvmTypeName()),
+                    List.of(), List.of(), TypeInstance.WildcardType.NONE);
         }
 
         for (int i = 0; i < classTypeParams.length; ++i) {
@@ -1502,7 +1497,9 @@ public class Resolver {
                 invokeType(
                     invokingClass, typeParam.getClassBound(), TypeInstance.WildcardType.NONE, classTypeParams,
                     methodTypeParams, invocationChain, Map.of()) :
-                new TypeInstance(resolveClass(typeParam.getInterfaceBound()[0].jvmTypeName()));
+                new TypeInstance(
+                    resolveClass(typeParam.getInterfaceBound()[0].jvmTypeName()),
+                    List.of(), List.of(), TypeInstance.WildcardType.NONE);
         }
 
         return null;
@@ -1558,6 +1555,9 @@ public class Resolver {
         return (method.getModifiers() & AccessFlag.SYNTHETIC) != 0
             || method.getMethodInfo2().getAttribute(SyntheticAttribute.tag) != null;
     }
+
+    private static final SignatureAttribute.TypeParameter[] EMPTY_TYPE_PARAMS =
+            new SignatureAttribute.TypeParameter[0];
 
     private static final Object NULL_ENTRY = new Object() {
         @Override

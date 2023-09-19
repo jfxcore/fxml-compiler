@@ -66,8 +66,7 @@ public class TypeParser {
                 objectInst = resolver.getTypeInstance(Classes.ObjectsType());
             }
 
-            return new TypeInstance(
-                objectInst.jvmType(), objectInst.getArguments(), objectInst.getSuperTypes(), wildcardType);
+            return objectInst.withWildcard(wildcardType);
         }
 
         String typeName = tokenizer.removeQualifiedIdentifier(false).getValue();

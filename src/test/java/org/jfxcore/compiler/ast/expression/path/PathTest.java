@@ -1,4 +1,4 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2023, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.expression.path;
@@ -52,7 +52,7 @@ public class PathTest extends TestBase {
     public void Path_Of_Generic_Fields_Is_Resolved_Correctly() {
         Resolver resolver = new Resolver(SourceInfo.none());
         var segments = segments("barField", "bazField", "quxField");
-        Segment firstSegment = new ParentSegment(new TypeInstance(resolver.resolveClass(Foo1.class.getName())), -1);
+        Segment firstSegment = new ParentSegment(TypeInstance.of(resolver.resolveClass(Foo1.class.getName())), -1);
         ResolvedPath path = ResolvedPath.parse(firstSegment, segments, true, SourceInfo.none());
 
         assertEquals("PathTest$Foo1", path.get(0).getTypeInstance().toString());
@@ -65,7 +65,7 @@ public class PathTest extends TestBase {
     public void Path_Of_Generic_Getters_Is_Resolved_Correctly() {
         Resolver resolver = new Resolver(SourceInfo.none());
         var segments = segments("barGetter", "bazGetter", "quxGetter");
-        Segment firstSegment = new ParentSegment(new TypeInstance(resolver.resolveClass(Foo1.class.getName())), -1);
+        Segment firstSegment = new ParentSegment(TypeInstance.of(resolver.resolveClass(Foo1.class.getName())), -1);
         ResolvedPath path = ResolvedPath.parse(firstSegment, segments, true, SourceInfo.none());
 
         assertEquals("PathTest$Foo1", path.get(0).getTypeInstance().toString());
@@ -78,7 +78,7 @@ public class PathTest extends TestBase {
     public void Path_Of_Generic_PropertyGetters_Is_Resolved_Correctly() {
         Resolver resolver = new Resolver(SourceInfo.none());
         var segments = segments("barProperty", "bazProperty", "quxProperty");
-        Segment firstSegment = new ParentSegment(new TypeInstance(resolver.resolveClass(Foo1.class.getName())), -1);
+        Segment firstSegment = new ParentSegment(TypeInstance.of(resolver.resolveClass(Foo1.class.getName())), -1);
         ResolvedPath path = ResolvedPath.parse(firstSegment, segments, true, SourceInfo.none());
 
         assertEquals("PathTest$Foo1", path.get(0).getValueTypeInstance().toString());
@@ -96,16 +96,16 @@ public class PathTest extends TestBase {
     }
 
     @Test
-    public void RawTypeUse_Hides_ClassBound_In_ClassSignature() {
+    public void RawTypeUse_Of_ClassBound_In_ClassSignature() {
         Resolver resolver = new Resolver(SourceInfo.none());
-        Segment firstSegment = new ParentSegment(new TypeInstance(resolver.resolveClass(ClassBoundInClassSignature.class.getName())), -1);
+        Segment firstSegment = new ParentSegment(TypeInstance.of(resolver.resolveClass(ClassBoundInClassSignature.class.getName())), -1);
 
         ResolvedPath getterPath = ResolvedPath.parse(firstSegment, segments("testGetter_Property"), true, SourceInfo.none());
         ResolvedPath fieldPath = ResolvedPath.parse(firstSegment, segments("testField_Property"), true, SourceInfo.none());
         assertEquals("PathTest$ClassBoundInClassSignature", getterPath.get(0).getTypeInstance().toString());
-        assertEquals("Object", getterPath.get(1).getValueTypeInstance().toString());
+        assertEquals("String", getterPath.get(1).getValueTypeInstance().toString());
         assertEquals("PathTest$ClassBoundInClassSignature", fieldPath.get(0).getTypeInstance().toString());
-        assertEquals("Object", fieldPath.get(1).getValueTypeInstance().toString());
+        assertEquals("String", fieldPath.get(1).getValueTypeInstance().toString());
 
         getterPath = ResolvedPath.parse(firstSegment, segments("testGetter_NonProperty"), true, SourceInfo.none());
         fieldPath = ResolvedPath.parse(firstSegment, segments("testField_NonProperty"), true, SourceInfo.none());
@@ -124,18 +124,18 @@ public class PathTest extends TestBase {
     }
 
     @Test
-    public void RawTypeUsage_Hides_InterfaceBound_In_ClassSignature() {
+    public void RawTypeUse_Of_InterfaceBound_In_ClassSignature() {
         Resolver resolver = new Resolver(SourceInfo.none());
-        Segment firstSegment = new ParentSegment(new TypeInstance(resolver.resolveClass(InterfaceBoundInClassSignature.class.getName())), -1);
+        Segment firstSegment = new ParentSegment(TypeInstance.of(resolver.resolveClass(InterfaceBoundInClassSignature.class.getName())), -1);
 
         ResolvedPath getterPath = ResolvedPath.parse(firstSegment, segments("testGetter_Property"), true, SourceInfo.none());
         ResolvedPath fieldPath = ResolvedPath.parse(firstSegment, segments("testField_Property"), true, SourceInfo.none());
         assertEquals("PathTest$InterfaceBoundInClassSignature", getterPath.get(0).getTypeInstance().toString());
         assertEquals("Property", getterPath.get(1).getTypeInstance().toString());
-        assertEquals("Object", getterPath.get(1).getValueTypeInstance().toString());
+        assertEquals("AutoCloseable", getterPath.get(1).getValueTypeInstance().toString());
         assertEquals("PathTest$InterfaceBoundInClassSignature", fieldPath.get(0).getTypeInstance().toString());
         assertEquals("Property", fieldPath.get(1).getTypeInstance().toString());
-        assertEquals("Object", fieldPath.get(1).getValueTypeInstance().toString());
+        assertEquals("AutoCloseable", fieldPath.get(1).getValueTypeInstance().toString());
 
         getterPath = ResolvedPath.parse(firstSegment, segments("testGetter_NonProperty"), true, SourceInfo.none());
         fieldPath = ResolvedPath.parse(firstSegment, segments("testField_NonProperty"), true, SourceInfo.none());
@@ -153,7 +153,7 @@ public class PathTest extends TestBase {
     @Test
     public void ClassBound_Is_Identified_In_MethodSignature() {
         Resolver resolver = new Resolver(SourceInfo.none());
-        Segment firstSegment = new ParentSegment(new TypeInstance(resolver.resolveClass(ClassBoundInMethodSignature.class.getName())), -1);
+        Segment firstSegment = new ParentSegment(TypeInstance.of(resolver.resolveClass(ClassBoundInMethodSignature.class.getName())), -1);
 
         ResolvedPath path = ResolvedPath.parse(firstSegment, segments("testGetter_Property"), true, SourceInfo.none());
         assertEquals("PathTest$ClassBoundInMethodSignature", path.get(0).getTypeInstance().toString());
@@ -173,7 +173,7 @@ public class PathTest extends TestBase {
     @Test
     public void InterfaceBound_Is_Identified_In_MethodSignature() {
         Resolver resolver = new Resolver(SourceInfo.none());
-        Segment firstSegment = new ParentSegment(new TypeInstance(resolver.resolveClass(InterfaceBoundInMethodSignature.class.getName())), -1);
+        Segment firstSegment = new ParentSegment(TypeInstance.of(resolver.resolveClass(InterfaceBoundInMethodSignature.class.getName())), -1);
 
         ResolvedPath path = ResolvedPath.parse(firstSegment, segments("testGetter_Property"), true, SourceInfo.none());
         assertEquals("PathTest$InterfaceBoundInMethodSignature", path.get(0).getTypeInstance().toString());
@@ -195,7 +195,7 @@ public class PathTest extends TestBase {
     @Test
     public void Inherited_Generic_Types_Are_Invoked_With_TypeArgument() {
         Resolver resolver = new Resolver(SourceInfo.none());
-        Segment firstSegment = new ParentSegment(new TypeInstance(resolver.resolveClass(TypeInvocationTest1.class.getName())), -1);
+        Segment firstSegment = new ParentSegment(TypeInstance.of(resolver.resolveClass(TypeInvocationTest1.class.getName())), -1);
 
         ResolvedPath path = ResolvedPath.parse(firstSegment, segments("testProp_Property"), true, SourceInfo.none());
         assertEquals("PathTest$TypeInvocationTest1", path.get(0).getTypeInstance().toString());
@@ -216,7 +216,7 @@ public class PathTest extends TestBase {
     @Test
     public void Type_Contained_In_Derived_Property_Is_Identified_Correctly() {
         Resolver resolver = new Resolver(SourceInfo.none());
-        Segment firstSegment = new ParentSegment(new TypeInstance(resolver.resolveClass(DerivedPropertyTypeTestClass.class.getName())), -1);
+        Segment firstSegment = new ParentSegment(TypeInstance.of(resolver.resolveClass(DerivedPropertyTypeTestClass.class.getName())), -1);
 
         ResolvedPath path = ResolvedPath.parse(firstSegment, segments("testProp_Getter"), true, SourceInfo.none());
         assertEquals("PathTest$DerivedPropertyTypeTestClass", path.get(0).getTypeInstance().toString());
@@ -245,7 +245,7 @@ public class PathTest extends TestBase {
     @Test
     public void Recurring_Generic_Type_Is_Resolved() {
         Resolver resolver = new Resolver(SourceInfo.none());
-        Segment firstSegment = new ParentSegment(new TypeInstance(resolver.resolveClass(RecurringTestClass.class.getName())), -1);
+        Segment firstSegment = new ParentSegment(TypeInstance.of(resolver.resolveClass(RecurringTestClass.class.getName())), -1);
         ResolvedPath path = ResolvedPath.parse(firstSegment, segments("testProp"), true, SourceInfo.none());
 
         assertEquals("PathTest$RecurringTestClass", path.get(0).getTypeInstance().toString());
@@ -263,7 +263,7 @@ public class PathTest extends TestBase {
     @Test
     public void Generic_Lists_With_Equal_Arguments_Are_Compatible() {
         Resolver resolver = new Resolver(SourceInfo.none());
-        Segment firstSegment = new ParentSegment(new TypeInstance(resolver.resolveClass(GenericListTestClass.class.getName())), -1);
+        Segment firstSegment = new ParentSegment(TypeInstance.of(resolver.resolveClass(GenericListTestClass.class.getName())), -1);
         ResolvedPath target = ResolvedPath.parse(firstSegment, segments("target"), true, SourceInfo.none());
         ResolvedPath source = ResolvedPath.parse(firstSegment, segments("source1"), true, SourceInfo.none());
 
@@ -273,7 +273,7 @@ public class PathTest extends TestBase {
     @Test
     public void Generic_Lists_With_Unequal_Arguments_Are_Incompatible() {
         Resolver resolver = new Resolver(SourceInfo.none());
-        Segment firstSegment = new ParentSegment(new TypeInstance(resolver.resolveClass(GenericListTestClass.class.getName())), -1);
+        Segment firstSegment = new ParentSegment(TypeInstance.of(resolver.resolveClass(GenericListTestClass.class.getName())), -1);
         ResolvedPath target = ResolvedPath.parse(firstSegment, segments("target"), true, SourceInfo.none());
         ResolvedPath source = ResolvedPath.parse(firstSegment, segments("source2"), true, SourceInfo.none());
 
@@ -292,7 +292,7 @@ public class PathTest extends TestBase {
     @Test
     public void Resolver_Detects_Narrowed_Return_Type() {
         Resolver resolver = new Resolver(SourceInfo.none());
-        Segment firstSegment = new ParentSegment(new TypeInstance(resolver.resolveClass(OverrideMethodDerived.class.getName())), -1);
+        Segment firstSegment = new ParentSegment(TypeInstance.of(resolver.resolveClass(OverrideMethodDerived.class.getName())), -1);
         ResolvedPath target = ResolvedPath.parse(firstSegment, segments("value"), true, SourceInfo.none());
 
         assertEquals("java.lang.String", target.getTypeInstance().jvmType().getName());
@@ -332,7 +332,7 @@ public class PathTest extends TestBase {
     public void Path_Before_Static_Segment_Is_Eliminated() {
         Resolver resolver = new Resolver(SourceInfo.none());
         var segments = segments("b", "c", "d");
-        Segment firstSegment = new ParentSegment(new TypeInstance(resolver.resolveClass(StaticTestA.class.getName())), -1);
+        Segment firstSegment = new ParentSegment(TypeInstance.of(resolver.resolveClass(StaticTestA.class.getName())), -1);
         ResolvedPath path = ResolvedPath.parse(firstSegment, segments, true, SourceInfo.none());
 
         assertEquals(2, path.size());
