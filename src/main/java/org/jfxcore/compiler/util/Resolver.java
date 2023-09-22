@@ -1163,8 +1163,11 @@ public class Resolver {
         Map<String, TypeInstance> result = new HashMap<>();
 
         for (int i = 0; i < typeParams.length; ++i) {
-            checkProvidedArgument(providedArguments.get(i), typeParams[i], classTypeParams, methodTypeParams);
             result.put(typeParams[i].getName(), providedArguments.get(i));
+        }
+
+        for (int i = 0; i < typeParams.length; ++i) {
+            checkProvidedArgument(providedArguments.get(i), typeParams[i], classTypeParams, methodTypeParams, result);
         }
 
         return result;
@@ -1174,15 +1177,16 @@ public class Resolver {
             TypeInstance argumentType,
             SignatureAttribute.TypeParameter requiredType,
             SignatureAttribute.TypeParameter[] classTypeParams,
-            SignatureAttribute.TypeParameter[] methodTypeParams)
+            SignatureAttribute.TypeParameter[] methodTypeParams,
+            Map<String, TypeInstance> providedArguments)
                 throws NotFoundException, BadBytecode {
         TypeInstance bound = requiredType.getClassBound() != null ?
             invokeType(
                 null, requiredType.getClassBound(), TypeInstance.WildcardType.NONE,
-                classTypeParams, methodTypeParams, List.of(), Map.of()) :
+                classTypeParams, methodTypeParams, List.of(), providedArguments) :
             invokeType(
                 null, requiredType.getInterfaceBound()[0], TypeInstance.WildcardType.NONE,
-                classTypeParams, methodTypeParams, List.of(), Map.of());
+                classTypeParams, methodTypeParams, List.of(), providedArguments);
 
         if (bound != null && !bound.isAssignableFrom(argumentType)) {
             throw GeneralErrors.typeArgumentOutOfBound(sourceInfo, argumentType, bound);

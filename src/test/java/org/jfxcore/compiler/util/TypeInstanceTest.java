@@ -618,6 +618,32 @@ public class TypeInstanceTest extends TestBase {
         assertEquals("TypeInstanceTest$Type4<Double,String>", typeInstance.getSuperTypes().get(0).toString());
     }
 
+    public static class Type13<T extends Type1<R>, R> {}
+
+    public static class Type14 extends Type1<Boolean> {}
+
+    @Test
+    public void Parameterize_Generic_Type_With_Upper_Bound() {
+        Resolver resolver = new Resolver(SourceInfo.none());
+        TypeInstance arg0 = resolver.getTypeInstance(resolver.resolveClass(Type14.class.getName()));
+        TypeInstance arg1 = resolver.getTypeInstance(resolver.resolveClass(Boolean.class.getName()));
+        TypeInstance typeInstance = resolver.getTypeInstance(
+            resolver.resolveClass(Type13.class.getName()), List.of(arg0, arg1));
+
+        assertEquals("TypeInstanceTest$Type13<TypeInstanceTest$Type14,Boolean>", typeInstance.toString());
+    }
+
+    @Test
+    public void Parameterize_Generic_Type_With_Upper_Bound_Out_Of_Bound() {
+        Resolver resolver = new Resolver(SourceInfo.none());
+        TypeInstance arg0 = resolver.getTypeInstance(resolver.resolveClass(Type14.class.getName()));
+        TypeInstance arg1 = resolver.getTypeInstance(resolver.resolveClass(Integer.class.getName()));
+        MarkupException ex = assertThrows(MarkupException.class, () -> resolver.getTypeInstance(
+            resolver.resolveClass(Type13.class.getName()), List.of(arg0, arg1)));
+
+        assertEquals(ErrorCode.TYPE_ARGUMENT_OUT_OF_BOUND, ex.getDiagnostic().getCode());
+    }
+
     @Test
     public void IsAssignableFrom_CompatibleGenericTypes() {
         TypeInstance t0 = new TypeParser("java.lang.Comparable<java.lang.String>").parse().get(0);
