@@ -715,6 +715,7 @@ public class TypeInstanceTest extends TestBase {
         assertEquals("java.lang.Object", t0.getJavaName());
         assertEquals("java.lang.Double[]", t1.getJavaName());
         assertTrue(t0.isAssignableFrom(t1));
+        assertFalse(t1.isAssignableFrom(t0));
     }
 
     @Test
@@ -724,6 +725,7 @@ public class TypeInstanceTest extends TestBase {
         assertEquals("java.lang.Object", t0.getJavaName());
         assertEquals("java.lang.Double[][][]", t1.getJavaName());
         assertTrue(t0.isAssignableFrom(t1));
+        assertFalse(t1.isAssignableFrom(t0));
     }
 
     @Test
@@ -733,6 +735,7 @@ public class TypeInstanceTest extends TestBase {
         assertEquals("java.lang.Object", t0.getJavaName());
         assertEquals("double[]", t1.getJavaName());
         assertTrue(t0.isAssignableFrom(t1));
+        assertFalse(t1.isAssignableFrom(t0));
     }
 
     @Test
@@ -742,6 +745,7 @@ public class TypeInstanceTest extends TestBase {
         assertEquals("java.lang.Object", t0.getJavaName());
         assertEquals("double[][][]", t1.getJavaName());
         assertTrue(t0.isAssignableFrom(t1));
+        assertFalse(t1.isAssignableFrom(t0));
     }
 
     @Test
@@ -751,6 +755,7 @@ public class TypeInstanceTest extends TestBase {
         assertEquals("java.lang.Object[]", t0.getJavaName());
         assertEquals("java.lang.Double[]", t1.getJavaName());
         assertTrue(t0.isAssignableFrom(t1));
+        assertFalse(t1.isAssignableFrom(t0));
     }
 
     @Test
@@ -760,6 +765,7 @@ public class TypeInstanceTest extends TestBase {
         assertEquals("java.lang.Object[][][]", t0.getJavaName());
         assertEquals("java.lang.Double[][][]", t1.getJavaName());
         assertTrue(t0.isAssignableFrom(t1));
+        assertFalse(t1.isAssignableFrom(t0));
     }
 
     @Test
@@ -819,6 +825,23 @@ public class TypeInstanceTest extends TestBase {
         assertTrue(t0.isAssignableFrom(t1));
     }
 
+    public static class Type15<T, P> {}
+    public static class Type16<T, R> extends Type15<String, T> {}
+
+    @Test
+    public void IsAssignableFrom_Supertype_With_Equal_Number_Of_Type_Arguments() {
+        Resolver resolver = new Resolver(SourceInfo.none());
+        TypeInstance t16 = resolver.getTypeInstance(
+            resolver.resolveClass(Type16.class.getName()),
+            List.of(TypeInstance.BooleanType(), TypeInstance.DoubleType()));
+        TypeInstance t15 = resolver.getTypeInstance(
+            resolver.resolveClass(Type15.class.getName()),
+            List.of(TypeInstance.StringType().withWildcard(TypeInstance.WildcardType.LOWER),
+                    TypeInstance.BooleanType().withWildcard(TypeInstance.WildcardType.LOWER)));
+
+        assertTrue(t15.isAssignableFrom(t16));
+    }
+
     @Test
     public void Scalar_Not_SubtypeOf_Array() {
         Resolver resolver = new Resolver(SourceInfo.none());
@@ -872,6 +895,20 @@ public class TypeInstanceTest extends TestBase {
 
         assertTrue(rawType.isRaw());
         assertTrue(stringType.isAssignableFrom(rawType.getArguments().get(0)));
+    }
+
+    @Test
+    public void Types_With_Different_Bounds_Are_Not_Equal() {
+        var resolver = new Resolver(SourceInfo.none());
+        var inst1 = resolver.getTypeInstance(
+            resolver.resolveClass(Comparable.class.getName()), List.of(TypeInstance.DoubleType()));
+        var inst2 = resolver.getTypeInstance(
+            resolver.resolveClass(Comparable.class.getName()),
+            List.of(TypeInstance.DoubleType().withWildcard(TypeInstance.WildcardType.LOWER)));
+
+        assertNotEquals(inst1, inst2);
+        assertTrue(inst2.isAssignableFrom(inst1));
+        assertFalse(inst1.isAssignableFrom(inst2));
     }
 
 }
