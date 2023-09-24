@@ -95,6 +95,7 @@ public class TypeInstance {
     private final List<TypeInstance> superTypes;
     private final int dimensions;
     private final WildcardType wildcard;
+    private TypeInstance componentType;
 
     public static TypeInstance of(CtClass type) {
         return resolveTypeInstance(type);
@@ -219,15 +220,19 @@ public class TypeInstance {
             return this;
         }
 
-        CtClass componentType = unchecked(SourceInfo.none(), type::getComponentType);
+        if (componentType != null) {
+            return componentType;
+        }
+
+        CtClass type = unchecked(SourceInfo.none(), this.type::getComponentType);
         int dimensions = 0;
-        CtClass t = componentType;
+        CtClass t = type;
         while (t.isArray()) {
             t = unchecked(SourceInfo.none(), t::getComponentType);
             ++dimensions;
         }
 
-        return new TypeInstance(componentType, dimensions, arguments, superTypes, wildcard);
+        return componentType = new TypeInstance(type, dimensions, arguments, superTypes, wildcard);
     }
 
     /**
@@ -331,16 +336,6 @@ public class TypeInstance {
             return dimensions == 0 || equals(Classes.ObjectType());
         }
 
-        if (arguments.size() > 0 && arguments.size() != from.arguments.size()) {
-            for (TypeInstance fromSuperType : from.superTypes) {
-                if (isAssignableFrom(fromSuperType)) {
-                    return true;
-                }
-            }
-
-            return false;
-        }
-
         if (!unchecked(SourceInfo.none(), () -> from.type.subtypeOf(type))) {
             return false;
         }
@@ -349,23 +344,39 @@ public class TypeInstance {
             return true;
         }
 
-        for (int i = 0; i < arguments.size(); ++i) {
-            WildcardType wildcard = arguments.get(i).wildcard;
-
-            if (wildcard == WildcardType.LOWER && !arguments.get(i).subtypeOf(from.arguments.get(i))) {
+        if (TypeHelper.equals(type, from.type)) {
+            if (arguments.size() != from.arguments.size()) {
                 return false;
             }
 
-            if (wildcard == WildcardType.UPPER && !from.arguments.get(i).subtypeOf(arguments.get(i))) {
-                return false;
+            for (int i = 0; i < arguments.size(); ++i) {
+                WildcardType wildcard = arguments.get(i).wildcard;
+
+                if (wildcard == WildcardType.LOWER && !arguments.get(i).subtypeOf(from.arguments.get(i))) {
+                    return false;
+                }
+
+                if (wildcard == WildcardType.UPPER && !from.arguments.get(i).subtypeOf(arguments.get(i))) {
+                    return false;
+                }
+
+                if (wildcard == WildcardType.NONE && !arguments.get(i).equals(from.arguments.get(i))) {
+                    return false;
+                }
             }
 
-            if (wildcard == WildcardType.NONE && !arguments.get(i).equals(from.arguments.get(i))) {
-                return false;
+            return true;
+        } else if (isArray() && from.isArray()) {
+            return getComponentType().isAssignableFrom(from.getComponentType(), context);
+        }
+
+        for (TypeInstance fromSuperType : from.superTypes) {
+            if (isAssignableFrom(fromSuperType)) {
+                return true;
             }
         }
 
-        return true;
+        return false;
     }
 
     public boolean subtypeOf(TypeInstance other) {
@@ -417,7 +428,9 @@ public class TypeInstance {
 
         set.add(this);
 
-        if (!TypeHelper.equals(type, other.type) || arguments.size() != other.arguments.size()) {
+        if (!TypeHelper.equals(type, other.type)
+                || arguments.size() != other.arguments.size()
+                || wildcard != other.wildcard) {
             return false;
         }
 
