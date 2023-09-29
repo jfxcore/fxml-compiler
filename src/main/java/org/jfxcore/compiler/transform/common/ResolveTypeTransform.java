@@ -100,7 +100,17 @@ public class ResolveTypeTransform implements Transform {
             }
 
             typeArgsNode.remove();
-            TypeInstance objectType = resolver.getTypeInstance(objectTypeClass);
+            TypeInstance objectType;
+
+            try {
+                objectType = resolver.getTypeInstance(objectTypeClass);
+            } catch (MarkupException ex) {
+                if (ex.getDiagnostic().getCode() != ErrorCode.CLASS_NOT_FOUND) {
+                    throw ex;
+                }
+
+                return typeNode;
+            }
 
             try {
                 switch (typeArgsNode.getValues().size()) {
@@ -135,7 +145,15 @@ public class ResolveTypeTransform implements Transform {
                 type = objectType;
             }
         } else {
-            type = resolver.getTypeInstance(objectTypeClass, Collections.emptyList());
+            try {
+                type = resolver.getTypeInstance(objectTypeClass, Collections.emptyList());
+            } catch (MarkupException ex) {
+                if (ex.getDiagnostic().getCode() != ErrorCode.CLASS_NOT_FOUND) {
+                    throw ex;
+                }
+
+                return typeNode;
+            }
         }
 
         CtClass bindingContextType = context.getBindingContextClass();
