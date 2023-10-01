@@ -122,12 +122,7 @@ public class Compiler extends AbstractCompiler implements AutoCloseable {
             throw new IllegalArgumentException("The specified file was already added.");
         }
 
-        CompilationContext context = new CompilationContext(new CompilationSource.FileSystem(sourceFile)) {
-            @Override
-            public Logger getLogger() {
-                return logger;
-            }
-        };
+        CompilationContext context = new CompilationContext(new CompilationSource.FileSystem(sourceFile));
 
         try (var ignored = new CompilationScope(context)) {
             DocumentNode document = new FxmlParser(sourceDir, sourceFile).parseDocument();
