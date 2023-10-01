@@ -4,7 +4,6 @@
 package org.jfxcore.compiler;
 
 import javassist.CannotCompileException;
-import javassist.ClassPath;
 import javassist.ClassPool;
 import javassist.CtClass;
 import javassist.NotFoundException;
@@ -44,7 +43,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
-public class Compiler extends AbstractCompiler implements AutoCloseable {
+public class Compiler extends AbstractCompiler {
 
     private enum Stage {
         ADD_FILES,
@@ -54,11 +53,9 @@ public class Compiler extends AbstractCompiler implements AutoCloseable {
 
     private final Logger logger;
     private final Set<File> searchPath;
-    private final List<ClassPath> classPaths;
     private final Path generatedSourcesDir;
     private final Map<Path, Compilation> compilations = new HashMap<>();
     private final Map<String, List<ClassInfo>> generatedClasses = new HashMap<>();
-    private ClassPool classPool;
     private Stage stage = Stage.ADD_FILES;
 
     static {
@@ -70,14 +67,6 @@ public class Compiler extends AbstractCompiler implements AutoCloseable {
         this.logger = Objects.requireNonNull(logger, "logger");
         this.searchPath = Objects.requireNonNull(searchPath, "searchPath");
         this.generatedSourcesDir = Objects.requireNonNull(generatedSourcesDir, "generatedSourcesDir").normalize();
-        this.classPaths = new ArrayList<>();
-    }
-
-    @Override
-    public void close() {
-        if (classPool != null) {
-            classPaths.forEach(classPool::removeClassPath);
-        }
     }
 
     /**
@@ -157,9 +146,7 @@ public class Compiler extends AbstractCompiler implements AutoCloseable {
             return;
         }
 
-        ensureClassPool();
-
-        var transformer = Transformer.getCodeTransformer(classPool);
+        var transformer = Transformer.getCodeTransformer(newClassPool());
 
         for (var entry : Map.copyOf(compilations).entrySet()) {
             Path sourceFile = entry.getKey();
@@ -259,7 +246,7 @@ public class Compiler extends AbstractCompiler implements AutoCloseable {
             return;
         }
 
-        var transformer = Transformer.getBytecodeTransformer(classPool);
+        var transformer = Transformer.getBytecodeTransformer(newClassPool());
 
         for (var entry : compilations.entrySet()) {
             compileSingleFile(entry.getKey(), entry.getValue(), transformer);
@@ -334,20 +321,18 @@ public class Compiler extends AbstractCompiler implements AutoCloseable {
         }
     }
 
-    private void ensureClassPool() {
-        if (classPool != null) {
-            return;
-        }
-
-        classPool = new ClassPool(true);
+    private ClassPool newClassPool() {
+        var classPool = new ClassPool(true);
 
         for (File path : searchPath) {
             try {
-                classPaths.add(classPool.appendClassPath(path.getAbsolutePath()));
+                classPool.appendClassPath(path.getAbsolutePath());
             } catch (NotFoundException ex) {
                 throw new RuntimeException("Search path dependency not found: " + ex.getMessage());
             }
         }
+
+        return classPool;
     }
 
     private record ClassInfo(ClassNode classNode, Path sourceFile, String sourceText) {}
