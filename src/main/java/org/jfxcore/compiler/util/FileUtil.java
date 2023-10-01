@@ -3,7 +3,6 @@
 
 package org.jfxcore.compiler.util;
 
-import org.jfxcore.compiler.VersionInfo;
 import org.jfxcore.compiler.ast.DocumentNode;
 import org.jfxcore.compiler.ast.ObjectNode;
 import org.jfxcore.compiler.ast.PropertyNode;
@@ -25,7 +24,7 @@ import static javassist.bytecode.ConstPool.*;
 
 public class FileUtil {
 
-    public static final String GENERATOR_NAME = String.format("%s:%s", VersionInfo.getGroup(), VersionInfo.getName());
+    public static final String GENERATOR_NAME = "org.jfxcore.fxml";
 
     private static final byte[] GENERATOR_NAME_BYTES = GENERATOR_NAME.getBytes(StandardCharsets.UTF_8);
 
