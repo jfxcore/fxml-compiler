@@ -3,6 +3,7 @@
 
 package org.jfxcore.compiler.util;
 
+import javassist.CtClass;
 import javassist.CtMethod;
 import org.jfxcore.compiler.diagnostic.ErrorCode;
 import org.jfxcore.compiler.diagnostic.MarkupException;
@@ -909,6 +910,21 @@ public class TypeInstanceTest extends TestBase {
         assertNotEquals(inst1, inst2);
         assertTrue(inst2.isAssignableFrom(inst1));
         assertFalse(inst1.isAssignableFrom(inst2));
+    }
+
+    @Test
+    public void WithDimensions_Returns_Correct_ArrayType() throws Exception {
+        TypeInstance type = new TypeParser("java.lang.String").parse().get(0);
+
+        CtClass jvmType = type.withDimensions(1).jvmType();
+        assertTrue(jvmType.isArray());
+        assertEquals("java.lang.String[]", jvmType.getName());
+        assertEquals("java.lang.String", jvmType.getComponentType().getName());
+
+        jvmType = type.withDimensions(2).jvmType();
+        assertTrue(jvmType.isArray());
+        assertEquals("java.lang.String[][]", jvmType.getName());
+        assertEquals("java.lang.String[]", jvmType.getComponentType().getName());
     }
 
 }

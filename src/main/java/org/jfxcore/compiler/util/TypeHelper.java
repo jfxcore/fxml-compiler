@@ -446,6 +446,18 @@ public class TypeHelper {
         return ((ResolvedTypeNode)typeNode).getJvmType();
     }
 
+    public static int getDimensions(CtClass type) {
+        String name = type.getName();
+
+        for (int i = name.length() - 2, d = 0; i > 1; i -= 2, ++d) {
+            if (name.charAt(i) != '[' || name.charAt(i + 1) != ']') {
+                return d;
+            }
+        }
+
+        return 0;
+    }
+
     public static int getSlots(CtClass type) {
         return type == CtClass.longType || type == CtClass.doubleType ? 2 : 1;
     }
