@@ -1294,10 +1294,7 @@ public class Resolver {
                 invokingClass, componentType, TypeInstance.WildcardType.NONE, classTypeParams,
                 methodTypeParams, invocationChain, providedArguments);
 
-            return typeInst
-                .withType(resolveClass(typeInst.jvmType().getName() + "[]".repeat(dimension)))
-                .withDimensions(dimension)
-                .withWildcard(wildcard);
+            return typeInst.withDimensions(dimension).withWildcard(wildcard);
         }
 
         if (invokedType instanceof SignatureAttribute.ClassType classType) {

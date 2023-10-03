@@ -109,15 +109,8 @@ public class TypeInstance {
                  List<TypeInstance> arguments,
                  List<TypeInstance> superTypes,
                  WildcardType wildcard) {
-        int dimensions = 0;
-        CtClass t = type;
-        while (t.isArray()) {
-            t = unchecked(SourceInfo.none(), t::getComponentType);
-            ++dimensions;
-        }
-
         this.type = type;
-        this.dimensions = dimensions;
+        this.dimensions = TypeHelper.getDimensions(type);
         this.arguments = arguments;
         this.superTypes = superTypes;
         this.wildcard = wildcard;
@@ -135,31 +128,24 @@ public class TypeInstance {
         this.wildcard = wildcard;
     }
 
-    public TypeInstance withType(CtClass type) {
-        return this instanceof ErasedTypeInstance ?
-            new ErasedTypeInstance(type, dimensions, arguments, superTypes, wildcard) :
-            new TypeInstance(type, dimensions, arguments, superTypes, wildcard);
-    }
-
     public TypeInstance withDimensions(int dimensions) {
-        return this instanceof ErasedTypeInstance ?
-            new ErasedTypeInstance(type, dimensions, arguments, superTypes, wildcard) :
-            new TypeInstance(type, dimensions, arguments, superTypes, wildcard);
-    }
+        if (this.dimensions == dimensions) {
+            return this;
+        }
 
-    public TypeInstance withArguments(List<TypeInstance> arguments) {
-        return this instanceof ErasedTypeInstance ?
-            new ErasedTypeInstance(type, dimensions, arguments, superTypes, wildcard) :
-            new TypeInstance(type, dimensions, arguments, superTypes, wildcard);
-    }
+        CtClass type = new Resolver(SourceInfo.none())
+            .resolveClass(this.type.getName() + "[]".repeat(dimensions));
 
-    public TypeInstance withSuperTypes(List<TypeInstance> superTypes) {
         return this instanceof ErasedTypeInstance ?
             new ErasedTypeInstance(type, dimensions, arguments, superTypes, wildcard) :
             new TypeInstance(type, dimensions, arguments, superTypes, wildcard);
     }
 
     public TypeInstance withWildcard(WildcardType wildcard) {
+        if (this.wildcard == wildcard) {
+            return this;
+        }
+
         return this instanceof ErasedTypeInstance ?
             new ErasedTypeInstance(type, dimensions, arguments, superTypes, wildcard) :
             new TypeInstance(type, dimensions, arguments, superTypes, wildcard);
@@ -224,15 +210,8 @@ public class TypeInstance {
             return componentType;
         }
 
-        CtClass type = unchecked(SourceInfo.none(), this.type::getComponentType);
-        int dimensions = 0;
-        CtClass t = type;
-        while (t.isArray()) {
-            t = unchecked(SourceInfo.none(), t::getComponentType);
-            ++dimensions;
-        }
-
-        return componentType = new TypeInstance(type, dimensions, arguments, superTypes, wildcard);
+        return componentType = new TypeInstance(
+            unchecked(SourceInfo.none(), this.type::getComponentType), arguments, superTypes, wildcard);
     }
 
     /**

@@ -158,7 +158,7 @@ public class ResolveTypeTransform implements Transform {
 
         CtClass bindingContextType = context.getBindingContextClass();
         if (bindingContextType != null && parentIsDocument) {
-            type = TypeInstance.of(bindingContextType).withSuperTypes(List.of(type));
+            type = TypeInstance.of(bindingContextType);
         }
 
         return new ResolvedTypeNode(

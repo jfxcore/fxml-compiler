@@ -9,7 +9,6 @@ import org.jfxcore.compiler.ast.AbstractNode;
 import org.jfxcore.compiler.ast.ResolvedTypeNode;
 import org.jfxcore.compiler.ast.Visitor;
 import org.jfxcore.compiler.util.Bytecode;
-import org.jfxcore.compiler.util.Resolver;
 import org.jfxcore.compiler.util.TypeHelper;
 import org.jfxcore.compiler.util.TypeInstance;
 import java.util.ArrayList;
@@ -43,11 +42,7 @@ public class EmitMethodArgumentNode extends AbstractNode implements ValueEmitter
             List<EmitMethodArgumentNode> children,
             SourceInfo sourceInfo) {
         return new EmitMethodArgumentNode(
-            new ResolvedTypeNode(
-                TypeInstance.of(new Resolver(sourceInfo).resolveClass(componentType.jvmType().getName() + "[]"))
-                    .withArguments(componentType.getArguments())
-                    .withSuperTypes(componentType.getSuperTypes()),
-                sourceInfo),
+            new ResolvedTypeNode(componentType.withDimensions(componentType.getDimensions() + 1), sourceInfo),
             children.stream()
                 .flatMap(n -> n.children.stream())
                 .collect(Collectors.toCollection(ArrayList::new)),
