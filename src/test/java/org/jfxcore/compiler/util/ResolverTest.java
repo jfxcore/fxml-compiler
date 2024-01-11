@@ -489,7 +489,9 @@ public class ResolverTest extends TestBase {
                 Arguments.of(new PropertyTestRun("prop4", false, false, false, true, true)),
                 Arguments.of(new PropertyTestRun("prop5", false, true, true, false, false)),
                 Arguments.of(new PropertyTestRun("prop6", false, true, true, true, false)),
-                Arguments.of(new PropertyTestRun("prop7", false, true, true, true, true))
+                Arguments.of(new PropertyTestRun("prop7", false, true, true, true, true)),
+                Arguments.of(new PropertyTestRun("prop8", true, true, true, false, false)),
+                Arguments.of(new PropertyTestRun("prop9", false, true, true, false, false))
             );
         }
     }
@@ -520,6 +522,12 @@ public class ResolverTest extends TestBase {
         public String getProp7() { return null; }
         public void setProp7(String value) {}
         public StringProperty prop7Property() { return null; }
+
+        // read-only, observable, but looks like a regular getter
+        public ReadOnlyStringProperty getProp8() { return null; }
+
+        // writable, observable, but looks like a regular getter
+        public StringProperty getProp9() { return null; }
     }
 
     public static class StaticPropertyHolder {
@@ -548,6 +556,12 @@ public class ResolverTest extends TestBase {
         public static String getProp7(Node node) { return null; }
         public static void setProp7(Node node, String value) {}
         public static StringProperty prop7Property(Node node) { return null; }
+
+        // read-only, observable, but looks like a regular getter
+        public static ReadOnlyStringProperty getProp8(Node node) { return null; }
+
+        // writable, observable, but looks like a regular getter
+        public static StringProperty getProp9(Node node) { return null; }
     }
 
     public static class MixedPropertyHolder extends PropertyHolder {
@@ -576,6 +590,12 @@ public class ResolverTest extends TestBase {
         public static String getProp7(Node node) { return null; }
         public static void setProp7(Node node, String value) {}
         public static StringProperty prop7Property(Node node) { return null; }
+
+        // read-only, observable, but looks like a regular getter
+        public static ReadOnlyStringProperty getProp8(Node node) { return null; }
+
+        // writable, observable, but looks like a regular getter
+        public static StringProperty getProp9(Node node) { return null; }
     }
 
     private void assertPropertyInfo(PropertyTestRun testRun, PropertyInfo property) {

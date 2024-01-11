@@ -264,7 +264,7 @@ public class Resolver {
             return getCache().put(key, null);
         }
 
-        GetterInfo propertyGetter = tryResolvePropertyGetter(declaringClass.jvmType(), propertyName);
+        GetterInfo propertyGetter = tryResolvePropertyGetter(declaringClass.jvmType(), null, propertyName);
         TypeInstance typeInstance = null;
         TypeInstance observableTypeInstance = null;
 
@@ -318,7 +318,7 @@ public class Resolver {
                                                       String propertyName) {
         try {
             CtMethod getter = tryResolveStaticGetter(declaringType.jvmType(), receiverType.jvmType(), propertyName, false);
-            GetterInfo propertyGetter = tryResolveStaticPropertyGetter(declaringType.jvmType(), receiverType.jvmType(), propertyName);
+            GetterInfo propertyGetter = tryResolvePropertyGetter(declaringType.jvmType(), receiverType.jvmType(), propertyName);
             TypeInstance observableType = null;
 
             if (propertyGetter != null) {
@@ -666,48 +666,28 @@ public class Resolver {
      *
      * @return The method, or {@code null} if no getter can be found.
      */
-    private GetterInfo tryResolvePropertyGetter(CtClass declaringClass, String name) {
-        CacheKey key = new CacheKey("tryResolvePropertyGetter", declaringClass, name);
+    private GetterInfo tryResolvePropertyGetter(
+            CtClass declaringClass, @Nullable CtClass receiverClass, String name) {
+        CacheKey key = new CacheKey("tryResolvePropertyGetter", declaringClass, receiverClass, name);
         CacheEntry entry = getCache().get(key);
         if (entry.found() && cacheEnabled) {
             return (GetterInfo)entry.value();
         }
 
-        GetterInfo getter;
-        CtMethod method = resolvePropertyGetterImpl(declaringClass, null, name);
-        if (method == null) {
-            method = resolvePropertyGetterImpl(declaringClass, null, NameHelper.getPropertyGetterName(name));
-            getter = method != null ? new GetterInfo(method, false) : null;
-        } else {
-            getter = new GetterInfo(method, true);
-        }
+        List<String> potentialNames = List.of(
+            name,
+            NameHelper.getPropertyGetterName(name),
+            NameHelper.getGetterName(name, false),
+            NameHelper.getGetterName(name, true)
+        );
 
-        getCache().put(key, getter);
-        return getter;
-    }
+        CtMethod method = potentialNames.stream()
+            .map(n -> resolvePropertyGetterImpl(declaringClass, receiverClass, n))
+            .filter(Objects::nonNull)
+            .findFirst()
+            .orElse(null);
 
-    /**
-     * Returns a static property getter method for the specified property.
-     *
-     * @return The method, or {@code null} if no getter can be found.
-     */
-    private GetterInfo tryResolveStaticPropertyGetter(CtClass declaringClass, CtClass receiverClass, String name) {
-        CacheKey key = new CacheKey("tryResolveStaticPropertyGetter", declaringClass, receiverClass, name);
-        CacheEntry entry = getCache().get(key);
-        if (entry.found() && cacheEnabled) {
-            return (GetterInfo)entry.value();
-        }
-
-        GetterInfo getter;
-        CtMethod method = resolvePropertyGetterImpl(declaringClass, receiverClass, name);
-        if (method == null) {
-            method = resolvePropertyGetterImpl(
-                declaringClass, Classes.NodeType(), NameHelper.getPropertyGetterName(name));
-            getter = method != null ? new GetterInfo(method, false) : null;
-        } else {
-            getter = new GetterInfo(method, true);
-        }
-
+        GetterInfo getter = method != null ? new GetterInfo(method, method.getName().equals(name)) : null;
         getCache().put(key, getter);
         return getter;
     }
