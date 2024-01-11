@@ -139,12 +139,8 @@ public class BindingEmitterFactory {
 
             TypeInstance sourceType = TypeHelper.getTypeInstance(value);
 
-            if (bindingMode.isUnidirectional() && !targetType.isAssignableFrom(sourceType)) {
+            if (!targetType.isAssignableFrom(sourceType)) {
                 throw BindingSourceErrors.cannotConvertSourceType(
-                    bindingNode.getSourceInfo(), result.getValueType().getJavaName(), targetType.getJavaName());
-            }
-            else if (bindingMode.isBidirectional() && !targetType.equals(sourceType)) {
-                throw BindingSourceErrors.sourceTypeMismatch(
                     bindingNode.getSourceInfo(), result.getValueType().getJavaName(), targetType.getJavaName());
             }
         } else if (bindingMode.isBidirectional()) {
