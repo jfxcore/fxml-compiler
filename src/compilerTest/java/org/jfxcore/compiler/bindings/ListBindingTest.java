@@ -62,6 +62,9 @@ public class ListBindingTest extends CompilerTestBase {
         public final ListProperty<String> listProp = new SimpleListProperty<>(this, "listProp", FXCollections.observableArrayList());
         public ListProperty<String> listPropProperty() { return listProp; }
 
+        private final ListProperty<String> listPropertyWithJavaGetterNameImpl = new SimpleListProperty<>(list2);
+        public ListProperty<String> getListPropertyWithJavaGetterName() { return listPropertyWithJavaGetterNameImpl; }
+
         public final ObjectProperty<ObservableList<String>> objectProp = new SimpleObjectProperty<>(this, "objectProp");
         public ObjectProperty<ObservableList<String>> objectPropProperty() { return objectProp; }
 
@@ -748,6 +751,32 @@ public class ListBindingTest extends CompilerTestBase {
         assertNewExpr(root, OBSERVABLE_VALUE_WRAPPER);
         assertNotNewExpr(root, "Constant", LIST_WRAPPER);
         assertMethodCall(root, ADD_REFERENCE_METHOD);
+    }
+
+    @Test
+    public void Bidirectional_Binding_To_ListProperty_With_Java_Getter_Name() {
+        ListTestPane root = compileAndRun("""
+            <ListTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                          listProp="{fx:bindBidirectional listPropertyWithJavaGetterName}"/>
+        """);
+
+        assertFalse(root.listProp.isBound());
+        assertFalse(root.listPropertyWithJavaGetterNameImpl.isBound());
+        assertEquals(root.listProp, root.listPropertyWithJavaGetterNameImpl);
+        assertEquals(List.of("foo", "bar", "baz"), root.listProp);
+    }
+
+    @Test
+    public void Bidirectional_ContentBinding_To_ListProperty_With_Java_Getter_Name() {
+        ListTestPane root = compileAndRun("""
+            <ListTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                          listProp="{fx:bindContentBidirectional listPropertyWithJavaGetterName}"/>
+        """);
+
+        assertFalse(root.listProp.isBound());
+        assertFalse(root.listPropertyWithJavaGetterNameImpl.isBound());
+        assertEquals(root.listProp, root.listPropertyWithJavaGetterNameImpl);
+        assertEquals(List.of("foo", "bar", "baz"), root.listProp);
     }
 
     @SuppressWarnings("unchecked")
