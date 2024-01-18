@@ -1,4 +1,4 @@
-// Copyright (c) 2022, 2023, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2024, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.transform.markup.util;
@@ -93,8 +93,7 @@ public class BindingEmitterFactory {
         }
 
         if (propertyInfo.isStatic()) {
-            return new EmitStaticPropertySetterNode(
-                propertyInfo.getDeclaringType(), propertyInfo.getSetter(), value, sourceInfo);
+            return new EmitStaticPropertySetterNode(propertyInfo.getDeclaringType(), propertyInfo, value, sourceInfo);
         }
 
         return new EmitPropertySetterNode(propertyInfo, value, bindingMode.isContent(), sourceInfo);

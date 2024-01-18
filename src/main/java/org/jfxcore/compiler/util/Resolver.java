@@ -1,4 +1,4 @@
-// Copyright (c) 2022, 2023, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2024, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.util;
@@ -362,7 +362,8 @@ public class Resolver {
 
             CtMethod setter = null;
             if (propertyType != null && getter != null) {
-                setter = tryResolveStaticSetter(declaringType.jvmType(), propertyName, propertyType.jvmType());
+                setter = tryResolveStaticSetter(
+                    declaringType.jvmType(), receiverType.jvmType(), propertyName, propertyType.jvmType());
             }
 
             if (propertyGetter == null && getter == null) {
@@ -585,8 +586,9 @@ public class Resolver {
      *
      * @return The method, or {@code null} if no setter can be found.
      */
-    public CtMethod tryResolveStaticSetter(CtClass type, String name, @Nullable CtClass paramType) {
-        CacheKey key = new CacheKey("tryResolveStaticSetter", type, name, paramType);
+    public CtMethod tryResolveStaticSetter(
+            CtClass declaringClass, CtClass receiverClass, String name, @Nullable CtClass paramType) {
+        CacheKey key = new CacheKey("tryResolveStaticSetter", declaringClass, receiverClass, name, paramType);
         CacheEntry entry = getCache().get(key);
         if (entry.found() && cacheEnabled) {
             return (CtMethod)entry.value();
@@ -594,12 +596,12 @@ public class Resolver {
 
         String setterName = NameHelper.getSetterName(name);
 
-        CtMethod method = findMethod(type, m -> {
+        CtMethod method = findMethod(declaringClass, m -> {
             try {
                 if (Modifier.isPublic(m.getModifiers())
                         && m.getName().equals(setterName)
                         && m.getParameterTypes().length == 2
-                        && m.getParameterTypes()[0].subtypeOf(Classes.NodeType())
+                        && receiverClass.subtypeOf(m.getParameterTypes()[0])
                         && TypeHelper.equals(m.getReturnType(), CtClass.voidType)
                         && (paramType == null || TypeHelper.equals(m.getParameterTypes()[1], paramType))
                         && !isSynthetic(m)) {
