@@ -1,4 +1,4 @@
-// Copyright (c) 2022, 2023, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2024, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.util;
@@ -663,6 +663,62 @@ public class ResolverTest extends TestBase {
 
         assertTrue(property.isStatic());
         assertPropertyInfo(testRun, property);
+    }
+
+    public static class ContextualPropertyHolder {
+        public static String getProp1(Object node) { return null; }
+        public static void setProp1(Node node, String value) {}
+
+        public static String getProp2(Object node) { return null; }
+        public static StringProperty prop2Property(Node node) { return null; }
+    }
+
+    @Test
+    public void Detect_Contextual_Setter() {
+        var resolver = new Resolver(SourceInfo.none());
+        var declaringClass = resolver.getTypeInstance(resolver.resolveClass(Object.class.getName()));
+        var property = resolver.resolveProperty(
+            declaringClass, true, ContextualPropertyHolder.class.getName(), "prop1");
+        assertTrue(property.isStatic());
+        assertTrue(property.isReadOnly());
+        assertFalse(property.isObservable());
+        assertNull(property.getPropertyGetter());
+        assertNotNull(property.getGetter());
+        assertNull(property.getSetter());
+
+        declaringClass = resolver.getTypeInstance(resolver.resolveClass(Node.class.getName()));
+        property = resolver.resolveProperty(
+            declaringClass, true, ContextualPropertyHolder.class.getName(), "prop1");
+        assertTrue(property.isStatic());
+        assertFalse(property.isReadOnly());
+        assertFalse(property.isObservable());
+        assertNull(property.getPropertyGetter());
+        assertNotNull(property.getGetter());
+        assertNotNull(property.getSetter());
+    }
+
+    @Test
+    public void Detect_Contextual_ObservableProperty() {
+        var resolver = new Resolver(SourceInfo.none());
+        var declaringClass = resolver.getTypeInstance(resolver.resolveClass(Object.class.getName()));
+        var property = resolver.resolveProperty(
+            declaringClass, true, ContextualPropertyHolder.class.getName(), "prop2");
+        assertTrue(property.isStatic());
+        assertTrue(property.isReadOnly());
+        assertFalse(property.isObservable());
+        assertNull(property.getPropertyGetter());
+        assertNotNull(property.getGetter());
+        assertNull(property.getSetter());
+
+        declaringClass = resolver.getTypeInstance(resolver.resolveClass(Node.class.getName()));
+        property = resolver.resolveProperty(
+            declaringClass, true, ContextualPropertyHolder.class.getName(), "prop2");
+        assertTrue(property.isStatic());
+        assertFalse(property.isReadOnly());
+        assertTrue(property.isObservable());
+        assertNotNull(property.getPropertyGetter());
+        assertNotNull(property.getGetter());
+        assertNull(property.getSetter());
     }
 
 }

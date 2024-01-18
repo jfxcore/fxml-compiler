@@ -1,4 +1,4 @@
-// Copyright (c) 2022, 2023, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2024, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler;
@@ -104,6 +104,64 @@ public class PropertyAssignmentTest {
             assertCodeHighlight("""
                 <minHeight><Double fx:constant="NEGATIVE_INFINITY"/>5.0</minHeight>
             """.trim(), ex);
+        }
+
+        @SuppressWarnings("unused")
+        public static class StaticProperties {
+            public static String getProp1(Object node) { return null; }
+            public static void setProp1(GridPane node, String value) {}
+
+            private static final StringProperty prop2 = new SimpleStringProperty();
+            public static String getProp2(Object node) { return prop2.get(); }
+            public static StringProperty prop2Property(GridPane node) { return prop2; }
+        }
+
+        @Test
+        public void Contextual_ReadOnly_Static_Property_Cannot_Be_Assigned() {
+            MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+                <?import javafx.scene.control.*?>
+                <Button xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                        StaticProperties.prop1="foo"/>
+            """));
+
+            assertEquals(ErrorCode.CANNOT_MODIFY_READONLY_PROPERTY, ex.getDiagnostic().getCode());
+            assertCodeHighlight("StaticProperties.prop1=\"foo\"", ex);
+        }
+
+        @Test
+        public void Contextual_ReadOnly_Static_Property_Can_Be_Assigned() {
+            var root = compileAndRun("""
+                <?import javafx.scene.layout.*?>
+                <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                          StaticProperties.prop1="foo"/>
+            """);
+
+            assertMethodCall(root, methods -> methods.stream().anyMatch(m -> m.getName().equals("setProp1")));
+        }
+
+        @Test
+        public void Contextual_ReadOnly_Observable_Static_Property_Cannot_Be_Assigned() {
+            MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+                <?import javafx.scene.control.*?>
+                <Button xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                        StaticProperties.prop2="foo"/>
+            """));
+
+            assertEquals(ErrorCode.CANNOT_MODIFY_READONLY_PROPERTY, ex.getDiagnostic().getCode());
+            assertCodeHighlight("StaticProperties.prop2=\"foo\"", ex);
+        }
+
+        @Test
+        public void Contextual_ReadOnly_Observable_Static_Property_Can_Be_Assigned() {
+            var root = compileAndRun("""
+                <?import javafx.scene.layout.*?>
+                <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                          StaticProperties.prop2="foo"/>
+            """);
+
+            assertMethodCall(root, methods ->
+                methods.stream().noneMatch(m -> m.getName().equals("setProp2"))
+                && methods.stream().anyMatch(m -> m.getName().equals("setValue")));
         }
     }
 
