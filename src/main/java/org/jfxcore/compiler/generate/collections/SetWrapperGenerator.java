@@ -1,4 +1,4 @@
-// Copyright (c) 2023, JFXcore. All rights reserved.
+// Copyright (c) 2023, 2024, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.generate.collections;
@@ -60,7 +60,7 @@ public class SetWrapperGenerator extends ClassGenerator {
 
     @Override
     public List<Generator> getSubGenerators() {
-        return List.of(new SetSourceAdapterChangeGenerator(), new ReferenceTrackerGenerator());
+        return List.of(new SetSourceAdapterChangeGenerator());
     }
 
     @Override
@@ -233,10 +233,12 @@ public class SetWrapperGenerator extends ClassGenerator {
         Bytecode code = ctx.getOutput();
         CtClass adapterChangeType = context.getNestedClasses().find(SetSourceAdapterChangeGenerator.CLASS_NAME);
 
-        code.aload(0)
-            .getfield(generatedClass, ROOT_REF, context.getMarkupClass())
-            .invokevirtual(context.getMarkupClass(), ReferenceTrackerGenerator.CLEAR_STALE_REFERENCES_METHOD,
-                           function(voidType));
+        if (context.isGeneratorActive(ReferenceTrackerGenerator.class)) {
+            code.aload(0)
+                .getfield(generatedClass, ROOT_REF, context.getMarkupClass())
+                .invokevirtual(context.getMarkupClass(), ReferenceTrackerGenerator.CLEAR_STALE_REFERENCES_METHOD,
+                               function(voidType));
+        }
 
         code.aload(0)
             .getfield(generatedClass, INVALIDATION_LISTENER_FIELD, InvalidationListenerType())

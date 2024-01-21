@@ -1,4 +1,4 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2024, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.util;
@@ -86,6 +86,34 @@ public class MoreAssertions {
         }
 
         fail("Expected: " + expected + ", actual: <none>");
+    }
+
+    public static void assertMethodExists(Object object, String... methodNames) {
+        for (var methodName : methodNames) {
+            assertTrue(methodExists(object, methodName), "Method expected: " + methodName);
+        }
+    }
+
+    public static void assertNotMethodExists(Object object, String... methodNames) {
+        for (var methodName : methodNames) {
+            assertFalse(methodExists(object, methodName), "Method not expected: " + methodName);
+        }
+    }
+
+    private static boolean methodExists(Object object, String methodName) {
+        Class<?> clazz = object.getClass();
+
+        do {
+            for (var method : clazz.getDeclaredMethods()) {
+                if (method.getName().equals(methodName)) {
+                    return true;
+                }
+            }
+
+            clazz = clazz.getSuperclass();
+        } while (clazz != null);
+
+        return false;
     }
 
 }

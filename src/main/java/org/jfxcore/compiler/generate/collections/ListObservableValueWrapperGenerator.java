@@ -1,4 +1,4 @@
-// Copyright (c) 2023, JFXcore. All rights reserved.
+// Copyright (c) 2023, 2024, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.generate.collections;
@@ -62,8 +62,7 @@ public class ListObservableValueWrapperGenerator extends ClassGenerator {
     public List<Generator> getSubGenerators() {
         return List.of(
             new ListAddRemoveChangeGenerator(),
-            new ListSourceAdapterChangeGenerator(),
-            new ReferenceTrackerGenerator());
+            new ListSourceAdapterChangeGenerator());
     }
 
     @Override
@@ -289,11 +288,13 @@ public class ListObservableValueWrapperGenerator extends ClassGenerator {
         Local safeSizeLocal = code.acquireLocal(false);
         Local safeOldValueLocal = code.acquireLocal(false);
 
-        // markupRef.clearStaleReferences();
-        code.aload(0)
-            .getfield(generatedClass, ROOT_REF, context.getMarkupClass())
-            .invokevirtual(context.getMarkupClass(), ReferenceTrackerGenerator.CLEAR_STALE_REFERENCES_METHOD,
-                           function(voidType));
+        if (context.isGeneratorActive(ReferenceTrackerGenerator.class)) {
+            // markupRef.clearStaleReferences();
+            code.aload(0)
+                .getfield(generatedClass, ROOT_REF, context.getMarkupClass())
+                .invokevirtual(context.getMarkupClass(), ReferenceTrackerGenerator.CLEAR_STALE_REFERENCES_METHOD,
+                               function(voidType));
+        }
 
         // this.valid = false;
         code.aload(0)

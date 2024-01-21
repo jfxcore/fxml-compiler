@@ -1,4 +1,4 @@
-// Copyright (c) 2021, 2023, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2024, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.bindings;
@@ -29,6 +29,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
+import static org.jfxcore.compiler.util.MoreAssertions.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 @SuppressWarnings({"HttpUrlsUsage", "DuplicatedCode"})
@@ -99,12 +100,14 @@ public class ListBindingTest extends CompilerTestBase {
     private static String LIST_WRAPPER;
     private static String OBSERVABLE_VALUE_WRAPPER;
     private static String ADD_REFERENCE_METHOD;
+    private static String CLEAR_STALE_REFERENCES_METHOD;
 
     @BeforeAll
     public static void beforeAll() {
         LIST_WRAPPER = ListWrapperGenerator.CLASS_NAME;
         OBSERVABLE_VALUE_WRAPPER = ListObservableValueWrapperGenerator.CLASS_NAME;
         ADD_REFERENCE_METHOD = NameHelper.getMangledMethodName("addReference");
+        CLEAR_STALE_REFERENCES_METHOD = NameHelper.getMangledMethodName("clearStaleReferences");
     }
 
     @Test
@@ -115,6 +118,7 @@ public class ListBindingTest extends CompilerTestBase {
         """);
 
         assertNotNewExpr(root, LIST_WRAPPER, OBSERVABLE_VALUE_WRAPPER);
+        assertNotMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
         assertEquals(3, root.listProp.size());
 
         boolean[] flag = new boolean[1];
@@ -137,6 +141,7 @@ public class ListBindingTest extends CompilerTestBase {
         """);
 
         assertNotNewExpr(root, LIST_WRAPPER, OBSERVABLE_VALUE_WRAPPER);
+        assertNotMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
         assertEquals(3, root.listProp.size());
         boolean[] flag1 = new boolean[1];
         root.listProp.addListener((ListChangeListener<String>)c -> flag1[0] = true);
@@ -160,6 +165,7 @@ public class ListBindingTest extends CompilerTestBase {
         """);
 
         assertNotNewExpr(root, LIST_WRAPPER, OBSERVABLE_VALUE_WRAPPER);
+        assertNotMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
         assertEquals(3, root.listProp.size());
         boolean[] flag1 = new boolean[1];
         root.listProp.addListener((ListChangeListener<String>)c -> flag1[0] = true);
@@ -188,6 +194,7 @@ public class ListBindingTest extends CompilerTestBase {
         """);
 
         assertNotNewExpr(root, LIST_WRAPPER, OBSERVABLE_VALUE_WRAPPER);
+        assertNotMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
         assertEquals(3, root.listProp.size());
         boolean[] flag1 = new boolean[1];
         root.listProp.addListener((ListChangeListener<String>)c -> flag1[0] = true);
@@ -216,6 +223,7 @@ public class ListBindingTest extends CompilerTestBase {
         """);
 
         assertNotNewExpr(root, LIST_WRAPPER, OBSERVABLE_VALUE_WRAPPER);
+        assertNotMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
         assertEquals(3, root.listProp.size());
         root.list1.clear(); // Change the source list
         assertEquals(3, root.listProp.size()); // Target list is unchanged
@@ -229,6 +237,7 @@ public class ListBindingTest extends CompilerTestBase {
         """);
 
         assertNotNewExpr(root, LIST_WRAPPER, OBSERVABLE_VALUE_WRAPPER);
+        assertNotMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
         assertEquals(3, root.listProp.size());
         root.indirect.get().list1.clear(); // Change the source list
         assertEquals(3, root.listProp.size()); // Target list is unchanged
@@ -242,6 +251,7 @@ public class ListBindingTest extends CompilerTestBase {
         """);
 
         assertNotNewExpr(root, LIST_WRAPPER, OBSERVABLE_VALUE_WRAPPER);
+        assertNotMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
         assertEquals(3, root.listProp.size());
         root.list1.clear(); // Change the source list
         assertEquals(3, root.listProp.size()); // Target list is unchanged
@@ -255,6 +265,7 @@ public class ListBindingTest extends CompilerTestBase {
         """);
 
         assertNotNewExpr(root, LIST_WRAPPER, OBSERVABLE_VALUE_WRAPPER);
+        assertNotMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
         assertEquals(3, root.listProp.size());
         root.indirect.get().list1.clear(); // Change the source list
         assertEquals(3, root.listProp.size()); // Target list is unchanged
@@ -268,6 +279,7 @@ public class ListBindingTest extends CompilerTestBase {
         """);
 
         assertNotNewExpr(root, LIST_WRAPPER, OBSERVABLE_VALUE_WRAPPER);
+        assertNotMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
         assertEquals(3, root.listProp.size());
         root.indirect.get().list1.clear(); // Change the source list
         assertEquals(3, root.listProp.size()); // Target list is unchanged
@@ -281,6 +293,7 @@ public class ListBindingTest extends CompilerTestBase {
         """);
 
         assertNotNewExpr(root, LIST_WRAPPER, OBSERVABLE_VALUE_WRAPPER);
+        assertNotMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
         assertEquals(3, root.listProp.size());
         root.indirect.get().list1.clear(); // Change the source list
         assertEquals(3, root.listProp.size()); // Target list is unchanged
@@ -294,6 +307,7 @@ public class ListBindingTest extends CompilerTestBase {
         """);
 
         assertNotNewExpr(root, LIST_WRAPPER, OBSERVABLE_VALUE_WRAPPER);
+        assertNotMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
         assertEquals(3, root.listProp.size());
         root.indirect.get().list1.clear(); // Change the source list
         assertEquals(3, root.listProp.size()); // Target list is unchanged
@@ -307,6 +321,7 @@ public class ListBindingTest extends CompilerTestBase {
         """);
 
         assertNotNewExpr(root, LIST_WRAPPER, OBSERVABLE_VALUE_WRAPPER);
+        assertNotMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
         assertEquals(3, root.listProp.size());
         root.indirect.get().list1.clear(); // Change the source list
         assertEquals(3, root.listProp.size()); // Target list is unchanged
@@ -347,6 +362,7 @@ public class ListBindingTest extends CompilerTestBase {
         assertNewExpr(root, LIST_WRAPPER);
         assertNotNewExpr(root, "Constant");
         assertNotMethodCall(root, ADD_REFERENCE_METHOD);
+        assertNotMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
         assertEquals(3, root.listProp.size());
 
         boolean[] flag = new boolean[1];
@@ -375,6 +391,7 @@ public class ListBindingTest extends CompilerTestBase {
         assertNewExpr(root, OBSERVABLE_VALUE_WRAPPER);
         assertNotNewExpr(root, LIST_WRAPPER, "Constant");
         assertNotMethodCall(root, ADD_REFERENCE_METHOD);
+        assertNotMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
         assertEquals(3, root.listProp.size());
 
         boolean[] flag = new boolean[1];
@@ -433,6 +450,7 @@ public class ListBindingTest extends CompilerTestBase {
         assertNewExpr(root, "ObjectConstant");
         assertNotNewExpr(root, OBSERVABLE_VALUE_WRAPPER, LIST_WRAPPER);
         assertNotMethodCall(root, ADD_REFERENCE_METHOD);
+        assertNotMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
 
         assertEquals(3, root.listProp.size());
         boolean[] flag1 = new boolean[1];
@@ -462,6 +480,7 @@ public class ListBindingTest extends CompilerTestBase {
 
         assertNotNewExpr(root, "Constant", OBSERVABLE_VALUE_WRAPPER, LIST_WRAPPER);
         assertNotMethodCall(root, ADD_REFERENCE_METHOD);
+        assertNotMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
 
         assertEquals(3, root.listProp.size());
         boolean[] flag1 = new boolean[1];
@@ -485,6 +504,7 @@ public class ListBindingTest extends CompilerTestBase {
         assertNewExpr(root, OBSERVABLE_VALUE_WRAPPER);
         assertNotNewExpr(root, "Constant", LIST_WRAPPER);
         assertNotMethodCall(root, ADD_REFERENCE_METHOD);
+        assertNotMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
 
         assertEquals(3, root.listProp.size());
         boolean[] flag = new boolean[1];
@@ -527,6 +547,7 @@ public class ListBindingTest extends CompilerTestBase {
         assertNewExpr(root, OBSERVABLE_VALUE_WRAPPER);
         assertNotNewExpr(root, "Constant", LIST_WRAPPER);
         assertMethodCall(root, ADD_REFERENCE_METHOD);
+        assertMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
     }
 
     /*
@@ -542,6 +563,7 @@ public class ListBindingTest extends CompilerTestBase {
 
         assertNotNewExpr(root, "Constant", OBSERVABLE_VALUE_WRAPPER, LIST_WRAPPER);
         assertNotMethodCall(root, ADD_REFERENCE_METHOD);
+        assertNotMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
 
         assertEquals(3, root.listProp.size());
         boolean[] flag1 = new boolean[1];
@@ -577,6 +599,7 @@ public class ListBindingTest extends CompilerTestBase {
         assertNewExpr(root, OBSERVABLE_VALUE_WRAPPER);
         assertNotNewExpr(root, "Constant", LIST_WRAPPER);
         assertMethodCall(root, ADD_REFERENCE_METHOD);
+        assertMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
 
         assertEquals(3, root.listProp.size());
         boolean[] flag1 = new boolean[1];
@@ -652,6 +675,7 @@ public class ListBindingTest extends CompilerTestBase {
 
         assertNotNewExpr(root, "Constant", OBSERVABLE_VALUE_WRAPPER, LIST_WRAPPER);
         assertNotMethodCall(root, ADD_REFERENCE_METHOD);
+        assertNotMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
 
         assertEquals(3, root.listProp.size());
         boolean[] flag1 = new boolean[1];
@@ -701,6 +725,7 @@ public class ListBindingTest extends CompilerTestBase {
         """);
 
         assertNotNewExpr(root, OBSERVABLE_VALUE_WRAPPER, LIST_WRAPPER, "Constant");
+        assertNotMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
     }
 
     /*
@@ -717,6 +742,7 @@ public class ListBindingTest extends CompilerTestBase {
         assertNewExpr(root, OBSERVABLE_VALUE_WRAPPER);
         assertNotNewExpr(root, LIST_WRAPPER, "Constant");
         assertMethodCall(root, ADD_REFERENCE_METHOD);
+        assertMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
 
         gc(); // verify that the generated wrapper is not prematurely collected
         root.list4.set(FXCollections.observableArrayList("123"));
@@ -751,6 +777,7 @@ public class ListBindingTest extends CompilerTestBase {
         assertNewExpr(root, OBSERVABLE_VALUE_WRAPPER);
         assertNotNewExpr(root, "Constant", LIST_WRAPPER);
         assertMethodCall(root, ADD_REFERENCE_METHOD);
+        assertMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
     }
 
     @Test
