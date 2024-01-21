@@ -1,4 +1,4 @@
-// Copyright (c) 2021, 2023, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2024, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.emit;
@@ -36,6 +36,7 @@ public class BytecodeEmitContext extends EmitContext<Bytecode> {
     private CtClass bindingContextClass;
     private CtClass runtimeContextClass;
     private int runtimeContextLocal;
+    private List<GeneratorEntry> activeGenerators;
 
     public BytecodeEmitContext(
             CtClass codeBehindClass,
@@ -177,47 +178,16 @@ public class BytecodeEmitContext extends EmitContext<Bytecode> {
         return nestedClasses;
     }
 
+    public boolean isGeneratorActive(Class<? extends Generator> generatorClass) {
+        return getActiveGenerators().stream().anyMatch(entry -> generatorClass.isInstance(entry.generator));
+    }
+
     public void emitRootNode() {
         if (rootNode == null) {
             throw new UnsupportedOperationException();
         }
 
-        List<GeneratorEntry> generators = new ArrayList<>();
-
-        Visitor.visit(rootNode, new Visitor() {
-            final ArrayStack<Node> parents = new ArrayStack<>();
-
-            @Override
-            public Node onVisited(Node node) {
-                if (node instanceof GeneratorEmitterNode generatorEmitterNode) {
-                    List<? extends Generator> list = generatorEmitterNode.emitGenerators(BytecodeEmitContext.this);
-                    if (list != null && !list.isEmpty()) {
-                        generators.addAll(
-                            list.stream()
-                                .map(g -> new GeneratorEntry(node, new ArrayList<>(parents), g))
-                                .collect(Collectors.toList()));
-                    }
-                }
-
-                return node;
-            }
-
-            @Override
-            protected void push(Node node) {
-                parents.push(node);
-            }
-
-            @Override
-            protected void pop() {
-                parents.pop();
-            }
-        });
-
-        List<GeneratorEntry> activeGenerators = new ArrayList<>();
-
-        for (GeneratorEntry entry : generators) {
-            activeGenerators.addAll(findActiveGenerators(this, entry));
-        }
+        List<GeneratorEntry> activeGenerators = getActiveGenerators();
 
         for (GeneratorEntry entry : activeGenerators) {
             if (entry.generator instanceof ClassGenerator classGenerator) {
@@ -245,21 +215,6 @@ public class BytecodeEmitContext extends EmitContext<Bytecode> {
         } else {
             emit(rootNode);
         }
-    }
-
-    private List<GeneratorEntry> findActiveGenerators(BytecodeEmitContext context, GeneratorEntry entry) {
-        if (entry.generator.consume(context)) {
-            List<GeneratorEntry> result = new ArrayList<>();
-            for (Generator subGenerator : entry.generator.getSubGenerators()) {
-                GeneratorEntry newEntry = new GeneratorEntry(entry.node, entry.parents, subGenerator);
-                result.addAll(findActiveGenerators(context, newEntry));
-            }
-
-            result.add(entry);
-            return result;
-        }
-
-        return Collections.emptyList();
     }
 
     public void emit(Node node) {
@@ -296,6 +251,70 @@ public class BytecodeEmitContext extends EmitContext<Bytecode> {
             this.parents = parents;
             this.generator = generator;
         }
+    }
+
+    private List<GeneratorEntry> getActiveGenerators() {
+        if (activeGenerators == null) {
+            activeGenerators = getActiveGeneratorsImpl();
+        }
+
+        return activeGenerators;
+    }
+
+    private List<GeneratorEntry> getActiveGeneratorsImpl() {
+        List<GeneratorEntry> generators = new ArrayList<>();
+
+        Visitor.visit(rootNode, new Visitor() {
+            final ArrayStack<Node> parents = new ArrayStack<>();
+
+            @Override
+            public Node onVisited(Node node) {
+                if (node instanceof GeneratorEmitterNode generatorEmitterNode) {
+                    List<? extends Generator> list = generatorEmitterNode.emitGenerators(BytecodeEmitContext.this);
+                    if (list != null && !list.isEmpty()) {
+                        generators.addAll(
+                            list.stream()
+                                .map(g -> new GeneratorEntry(node, new ArrayList<>(parents), g))
+                                .collect(Collectors.toList()));
+                    }
+                }
+
+                return node;
+            }
+
+            @Override
+            protected void push(Node node) {
+                parents.push(node);
+            }
+
+            @Override
+            protected void pop() {
+                parents.pop();
+            }
+        });
+
+        List<GeneratorEntry> activeGenerators = new ArrayList<>();
+
+        for (GeneratorEntry entry : generators) {
+            activeGenerators.addAll(getActiveSubGeneratorsImpl(this, entry));
+        }
+
+        return activeGenerators;
+    }
+
+    private List<GeneratorEntry> getActiveSubGeneratorsImpl(BytecodeEmitContext context, GeneratorEntry entry) {
+        if (entry.generator.consume(context)) {
+            List<GeneratorEntry> result = new ArrayList<>();
+            for (Generator subGenerator : entry.generator.getSubGenerators()) {
+                GeneratorEntry newEntry = new GeneratorEntry(entry.node, entry.parents, subGenerator);
+                result.addAll(getActiveSubGeneratorsImpl(context, newEntry));
+            }
+
+            result.add(entry);
+            return result;
+        }
+
+        return Collections.emptyList();
     }
 
     public interface ClassSet extends Set<CtClass> {

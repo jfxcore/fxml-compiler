@@ -1,4 +1,4 @@
-// Copyright (c) 2023, JFXcore. All rights reserved.
+// Copyright (c) 2023, 2024, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.generate.collections;
@@ -63,8 +63,7 @@ public class SetObservableValueWrapperGenerator extends ClassGenerator {
     public List<Generator> getSubGenerators() {
         return List.of(
             new SetAddRemoveChangeGenerator(),
-            new SetSourceAdapterChangeGenerator(),
-            new ReferenceTrackerGenerator());
+            new SetSourceAdapterChangeGenerator());
     }
 
     @Override
@@ -267,11 +266,13 @@ public class SetObservableValueWrapperGenerator extends ClassGenerator {
         Local addRemoveChangeLocal = code.acquireLocal(false);
         CtClass addRemoveChangeType = context.getNestedClasses().find(SetAddRemoveChangeGenerator.CLASS_NAME);
 
-        // markupRef.clearStaleReferences();
-        code.aload(0)
-            .getfield(generatedClass, ROOT_REF, context.getMarkupClass())
-            .invokevirtual(context.getMarkupClass(), ReferenceTrackerGenerator.CLEAR_STALE_REFERENCES_METHOD,
-                           function(voidType));
+        if (context.isGeneratorActive(ReferenceTrackerGenerator.class)) {
+            // markupRef.clearStaleReferences();
+            code.aload(0)
+                .getfield(generatedClass, ROOT_REF, context.getMarkupClass())
+                .invokevirtual(context.getMarkupClass(), ReferenceTrackerGenerator.CLEAR_STALE_REFERENCES_METHOD,
+                               function(voidType));
+        }
 
         // this.valid = false;
         code.aload(0)

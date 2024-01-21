@@ -1,4 +1,4 @@
-// Copyright (c) 2023, JFXcore. All rights reserved.
+// Copyright (c) 2023, 2024, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.generate;
@@ -24,7 +24,7 @@ import static org.jfxcore.compiler.util.Descriptors.*;
 public class ReferenceTrackerGenerator implements Generator {
 
     public static final String CLEAR_STALE_REFERENCES_METHOD = NameHelper.getMangledMethodName("clearStaleReferences");
-    private static final String ADD_REFERENCE_METHOD = NameHelper.getMangledMethodName("addReference");
+    public static final String ADD_REFERENCE_METHOD = NameHelper.getMangledMethodName("addReference");
 
     private static final String REFERENCES_FIELD = NameHelper.getMangledFieldName("references");
     private static final String REFERENCE_QUEUE_FIELD = NameHelper.getMangledFieldName("referenceQueue");

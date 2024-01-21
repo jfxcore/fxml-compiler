@@ -1,4 +1,4 @@
-// Copyright (c) 2021, 2023, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2024, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.emit;
@@ -6,16 +6,19 @@ package org.jfxcore.compiler.ast.emit;
 import javassist.CtClass;
 import org.jfxcore.compiler.ast.AbstractNode;
 import org.jfxcore.compiler.ast.BindingMode;
+import org.jfxcore.compiler.ast.GeneratorEmitterNode;
 import org.jfxcore.compiler.ast.NodeDataKey;
 import org.jfxcore.compiler.ast.ValueNode;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.ast.Visitor;
 import org.jfxcore.compiler.diagnostic.errors.GeneralErrors;
+import org.jfxcore.compiler.generate.Generator;
+import org.jfxcore.compiler.generate.ReferenceTrackerGenerator;
 import org.jfxcore.compiler.util.Bytecode;
 import org.jfxcore.compiler.util.Local;
-import org.jfxcore.compiler.util.NameHelper;
 import org.jfxcore.compiler.util.PropertyInfo;
 import org.jfxcore.compiler.util.TypeInstance;
+import java.util.List;
 import java.util.Objects;
 
 import static javassist.CtClass.*;
@@ -26,7 +29,7 @@ import static org.jfxcore.compiler.util.Descriptors.*;
  * Emits code to establish a binding between the value that is currently on top of the
  * operand stack and the provided child value.
  */
-public class EmitPropertyBindingNode extends AbstractNode implements EmitterNode {
+public class EmitPropertyBindingNode extends AbstractNode implements EmitterNode, GeneratorEmitterNode {
 
     private final PropertyInfo propertyInfo;
     private final BindingMode bindingMode;
@@ -42,6 +45,12 @@ public class EmitPropertyBindingNode extends AbstractNode implements EmitterNode
 
     public boolean isBidirectional() {
         return bindingMode.isBidirectional();
+    }
+
+    @Override
+    public List<? extends Generator> emitGenerators(BytecodeEmitContext context) {
+        return child instanceof EmitCollectionWrapperNode && bindingMode.isContent() ?
+            List.of(new ReferenceTrackerGenerator()) : List.of();
     }
 
     @Override
@@ -98,8 +107,6 @@ public class EmitPropertyBindingNode extends AbstractNode implements EmitterNode
                 .aload(local);
 
             emitBindContent(context, false);
-
-
         } else {
             code.dup()
                 .ext_invoke(checkNotNull(propertyInfo.getPropertyGetter()))
@@ -124,7 +131,6 @@ public class EmitPropertyBindingNode extends AbstractNode implements EmitterNode
             CtClass collectionPropertyType,
             boolean bidirectional) {
         if (propertyInfo.getType().subtypeOf(collectionType)) {
-            String methodName = bidirectional ? "bindContentBidirectional" : "bindContent";
             TypeInstance observableType = propertyInfo.getObservableType();
             Bytecode code = context.getOutput();
 
@@ -137,12 +143,13 @@ public class EmitPropertyBindingNode extends AbstractNode implements EmitterNode
                 .aload(sourceLocal);
 
             if (observableType != null && observableType.subtypeOf(collectionPropertyType)) {
+                String methodName = bidirectional ? "bindContentBidirectional" : "bindContent";
                 code.invokevirtual(collectionPropertyType, methodName, function(voidType, observableCollectionType));
             } else if (bidirectional) {
-                code.invokestatic(BindingsType(), methodName,
+                code.invokestatic(BindingsType(), "bindContentBidirectional",
                                   function(voidType, observableCollectionType, observableCollectionType));
             } else {
-                code.invokestatic(BindingsType(), methodName,
+                code.invokestatic(BindingsType(), "bindContent",
                                   function(voidType, collectionType, observableCollectionType));
             }
 
@@ -164,7 +171,7 @@ public class EmitPropertyBindingNode extends AbstractNode implements EmitterNode
             .aload(0)
             .aload(targetLocal)
             .aload(sourceLocal)
-            .invokevirtual(context.getMarkupClass(), NameHelper.getMangledMethodName("addReference"),
+            .invokevirtual(context.getMarkupClass(), ReferenceTrackerGenerator.ADD_REFERENCE_METHOD,
                            function(voidType, ObjectType(), ObjectType()));
 
     }

@@ -1,4 +1,4 @@
-// Copyright (c) 2023, JFXcore. All rights reserved.
+// Copyright (c) 2023, 2024, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.bindings;
@@ -29,6 +29,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static org.jfxcore.compiler.util.MoreAssertions.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 @SuppressWarnings({"HttpUrlsUsage", "DuplicatedCode"})
@@ -95,12 +96,14 @@ public class MapBindingTest extends CompilerTestBase {
     private static String MAP_WRAPPER;
     private static String OBSERVABLE_VALUE_WRAPPER;
     private static String ADD_REFERENCE_METHOD;
+    private static String CLEAR_STALE_REFERENCES_METHOD;
 
     @BeforeAll
     public static void beforeAll() {
         MAP_WRAPPER = MapWrapperGenerator.CLASS_NAME;
         OBSERVABLE_VALUE_WRAPPER = MapObservableValueWrapperGenerator.CLASS_NAME;
         ADD_REFERENCE_METHOD = NameHelper.getMangledMethodName("addReference");
+        CLEAR_STALE_REFERENCES_METHOD = NameHelper.getMangledMethodName("clearStaleReferences");
     }
 
     @Test
@@ -111,6 +114,7 @@ public class MapBindingTest extends CompilerTestBase {
         """);
 
         assertNotNewExpr(root, MAP_WRAPPER, OBSERVABLE_VALUE_WRAPPER);
+        assertNotMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
         assertEquals(3, root.mapProp.size());
 
         boolean[] flag = new boolean[1];
@@ -133,6 +137,7 @@ public class MapBindingTest extends CompilerTestBase {
         """);
 
         assertNotNewExpr(root, MAP_WRAPPER, OBSERVABLE_VALUE_WRAPPER);
+        assertNotMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
         assertEquals(3, root.mapProp.size());
 
         boolean[] flag1 = new boolean[1];
@@ -157,6 +162,7 @@ public class MapBindingTest extends CompilerTestBase {
         """);
 
         assertNotNewExpr(root, MAP_WRAPPER, OBSERVABLE_VALUE_WRAPPER);
+        assertNotMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
         assertEquals(3, root.mapProp.size());
 
         boolean[] flag1 = new boolean[1];
@@ -185,6 +191,8 @@ public class MapBindingTest extends CompilerTestBase {
                          mapProp="{fx:once map4}" objectProp="{fx:once map4}"/>
         """);
 
+        assertNotNewExpr(root, MAP_WRAPPER, OBSERVABLE_VALUE_WRAPPER);
+        assertNotMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
         assertEquals(3, root.mapProp.size());
         boolean[] flag1 = new boolean[1];
         root.mapProp.addListener((MapChangeListener<Integer, String>)c -> flag1[0] = true);
@@ -213,6 +221,7 @@ public class MapBindingTest extends CompilerTestBase {
         """);
 
         assertNotNewExpr(root, MAP_WRAPPER, OBSERVABLE_VALUE_WRAPPER);
+        assertNotMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
         assertEquals(3, root.mapProp.size());
         root.map1.clear(); // Change the source map
         assertEquals(3, root.mapProp.size()); // Target map is unchanged
@@ -226,6 +235,7 @@ public class MapBindingTest extends CompilerTestBase {
         """);
 
         assertNotNewExpr(root, MAP_WRAPPER, OBSERVABLE_VALUE_WRAPPER);
+        assertNotMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
         assertEquals(3, root.mapProp.size());
         root.indirect.get().map1.clear(); // Change the source map
         assertEquals(3, root.mapProp.size()); // Target map is unchanged
@@ -239,6 +249,7 @@ public class MapBindingTest extends CompilerTestBase {
         """);
 
         assertNotNewExpr(root, MAP_WRAPPER, OBSERVABLE_VALUE_WRAPPER);
+        assertNotMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
         assertEquals(3, root.mapProp.size());
         root.map1.clear(); // Change the source map
         assertEquals(3, root.mapProp.size()); // Target map is unchanged
@@ -252,6 +263,7 @@ public class MapBindingTest extends CompilerTestBase {
         """);
 
         assertNotNewExpr(root, MAP_WRAPPER, OBSERVABLE_VALUE_WRAPPER);
+        assertNotMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
         assertEquals(3, root.mapProp.size());
         root.indirect.get().map1.clear(); // Change the source map
         assertEquals(3, root.mapProp.size()); // Target map is unchanged
@@ -265,6 +277,7 @@ public class MapBindingTest extends CompilerTestBase {
         """);
 
         assertNotNewExpr(root, MAP_WRAPPER, OBSERVABLE_VALUE_WRAPPER);
+        assertNotMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
         assertEquals(3, root.mapProp.size());
         root.indirect.get().map1.clear(); // Change the source map
         assertEquals(3, root.mapProp.size()); // Target map is unchanged
@@ -278,6 +291,7 @@ public class MapBindingTest extends CompilerTestBase {
         """);
 
         assertNotNewExpr(root, MAP_WRAPPER, OBSERVABLE_VALUE_WRAPPER);
+        assertNotMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
         assertEquals(3, root.mapProp.size());
         root.indirect.get().map1.clear(); // Change the source map
         assertEquals(3, root.mapProp.size()); // Target map is unchanged
@@ -291,6 +305,7 @@ public class MapBindingTest extends CompilerTestBase {
         """);
 
         assertNotNewExpr(root, MAP_WRAPPER, OBSERVABLE_VALUE_WRAPPER);
+        assertNotMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
         assertEquals(3, root.mapProp.size());
         root.indirect.get().map1.clear(); // Change the source map
         assertEquals(3, root.mapProp.size()); // Target map is unchanged
@@ -304,6 +319,7 @@ public class MapBindingTest extends CompilerTestBase {
         """);
 
         assertNotNewExpr(root, MAP_WRAPPER, OBSERVABLE_VALUE_WRAPPER);
+        assertNotMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
         assertEquals(3, root.mapProp.size());
         root.indirect.get().map1.clear(); // Change the source map
         assertEquals(3, root.mapProp.size()); // Target map is unchanged
@@ -344,6 +360,7 @@ public class MapBindingTest extends CompilerTestBase {
         assertNewExpr(root, MAP_WRAPPER);
         assertNotNewExpr(root, "Constant");
         assertNotMethodCall(root, ADD_REFERENCE_METHOD);
+        assertNotMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
         assertEquals(3, root.mapProp.size());
 
         boolean[] flag = new boolean[1];
@@ -372,6 +389,7 @@ public class MapBindingTest extends CompilerTestBase {
         assertNewExpr(root, OBSERVABLE_VALUE_WRAPPER);
         assertNotNewExpr(root, MAP_WRAPPER, "Constant");
         assertNotMethodCall(root, ADD_REFERENCE_METHOD);
+        assertNotMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
         assertEquals(3, root.mapProp.size());
 
         boolean[] flag = new boolean[1];
@@ -430,6 +448,7 @@ public class MapBindingTest extends CompilerTestBase {
         assertNewExpr(root, "ObjectConstant");
         assertNotNewExpr(root, OBSERVABLE_VALUE_WRAPPER, MAP_WRAPPER);
         assertNotMethodCall(root, ADD_REFERENCE_METHOD);
+        assertNotMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
 
         assertEquals(3, root.mapProp.size());
         boolean[] flag1 = new boolean[1];
@@ -459,6 +478,7 @@ public class MapBindingTest extends CompilerTestBase {
 
         assertNotNewExpr(root, "Constant", OBSERVABLE_VALUE_WRAPPER, MAP_WRAPPER);
         assertNotMethodCall(root, ADD_REFERENCE_METHOD);
+        assertNotMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
 
         assertEquals(3, root.mapProp.size());
         boolean[] flag1 = new boolean[1];
@@ -482,6 +502,7 @@ public class MapBindingTest extends CompilerTestBase {
         assertNewExpr(root, OBSERVABLE_VALUE_WRAPPER);
         assertNotNewExpr(root, "Constant", MAP_WRAPPER);
         assertNotMethodCall(root, ADD_REFERENCE_METHOD);
+        assertNotMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
 
         assertEquals(3, root.mapProp.size());
         boolean[] flag = new boolean[1];
@@ -524,6 +545,7 @@ public class MapBindingTest extends CompilerTestBase {
         assertNewExpr(root, OBSERVABLE_VALUE_WRAPPER);
         assertNotNewExpr(root, "Constant", MAP_WRAPPER);
         assertMethodCall(root, ADD_REFERENCE_METHOD);
+        assertMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
     }
 
     /*
@@ -539,6 +561,7 @@ public class MapBindingTest extends CompilerTestBase {
 
         assertNotNewExpr(root, "Constant", OBSERVABLE_VALUE_WRAPPER, MAP_WRAPPER);
         assertNotMethodCall(root, ADD_REFERENCE_METHOD);
+        assertNotMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
 
         assertEquals(3, root.mapProp.size());
         boolean[] flag1 = new boolean[1];
@@ -574,6 +597,7 @@ public class MapBindingTest extends CompilerTestBase {
         assertNewExpr(root, OBSERVABLE_VALUE_WRAPPER);
         assertNotNewExpr(root, "Constant", MAP_WRAPPER);
         assertMethodCall(root, ADD_REFERENCE_METHOD);
+        assertMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
 
         assertEquals(3, root.mapProp.size());
         boolean[] flag1 = new boolean[1];
@@ -649,6 +673,7 @@ public class MapBindingTest extends CompilerTestBase {
 
         assertNotNewExpr(root, "Constant", OBSERVABLE_VALUE_WRAPPER, MAP_WRAPPER);
         assertNotMethodCall(root, ADD_REFERENCE_METHOD);
+        assertNotMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
 
         assertEquals(3, root.mapProp.size());
         boolean[] flag1 = new boolean[1];
@@ -698,6 +723,7 @@ public class MapBindingTest extends CompilerTestBase {
         """);
 
         assertNotNewExpr(root, OBSERVABLE_VALUE_WRAPPER, MAP_WRAPPER, "Constant");
+        assertNotMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
         assertEquals(root.map4.get(), root.mapProp);
     }
 
@@ -715,6 +741,7 @@ public class MapBindingTest extends CompilerTestBase {
         assertNewExpr(root, OBSERVABLE_VALUE_WRAPPER);
         assertNotNewExpr(root, MAP_WRAPPER, "Constant");
         assertMethodCall(root, ADD_REFERENCE_METHOD);
+        assertMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
 
         gc(); // verify that the generated wrapper is not prematurely collected
         root.map4.set(FXCollections.observableMap(Map.of(0, "123")));
@@ -749,6 +776,7 @@ public class MapBindingTest extends CompilerTestBase {
         assertNewExpr(root, OBSERVABLE_VALUE_WRAPPER);
         assertNotNewExpr(root, "Constant", MAP_WRAPPER);
         assertMethodCall(root, ADD_REFERENCE_METHOD);
+        assertMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
     }
 
     @SuppressWarnings("unchecked")

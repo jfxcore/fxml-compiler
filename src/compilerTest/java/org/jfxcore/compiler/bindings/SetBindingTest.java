@@ -1,4 +1,4 @@
-// Copyright (c) 2023, JFXcore. All rights reserved.
+// Copyright (c) 2023, 2024, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.bindings;
@@ -30,6 +30,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import static org.jfxcore.compiler.util.MoreAssertions.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 @SuppressWarnings({"HttpUrlsUsage", "DuplicatedCode"})
@@ -97,12 +98,14 @@ public class SetBindingTest extends CompilerTestBase {
     private static String SET_WRAPPER;
     private static String OBSERVABLE_VALUE_WRAPPER;
     private static String ADD_REFERENCE_METHOD;
+    private static String CLEAR_STALE_REFERENCES_METHOD;
 
     @BeforeAll
     public static void beforeAll() {
         SET_WRAPPER = SetWrapperGenerator.CLASS_NAME;
         OBSERVABLE_VALUE_WRAPPER = SetObservableValueWrapperGenerator.CLASS_NAME;
         ADD_REFERENCE_METHOD = NameHelper.getMangledMethodName("addReference");
+        CLEAR_STALE_REFERENCES_METHOD = NameHelper.getMangledMethodName("clearStaleReferences");
     }
 
     @Test
@@ -113,6 +116,7 @@ public class SetBindingTest extends CompilerTestBase {
         """);
 
         assertNotNewExpr(root, SET_WRAPPER, OBSERVABLE_VALUE_WRAPPER);
+        assertNotMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
         assertEquals(3, root.setProp.size());
 
         boolean[] flag = new boolean[1];
@@ -135,6 +139,7 @@ public class SetBindingTest extends CompilerTestBase {
         """);
 
         assertNotNewExpr(root, SET_WRAPPER, OBSERVABLE_VALUE_WRAPPER);
+        assertNotMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
         assertEquals(3, root.setProp.size());
 
         boolean[] flag1 = new boolean[1];
@@ -159,6 +164,7 @@ public class SetBindingTest extends CompilerTestBase {
         """);
 
         assertNotNewExpr(root, SET_WRAPPER, OBSERVABLE_VALUE_WRAPPER);
+        assertNotMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
         assertEquals(3, root.setProp.size());
 
         boolean[] flag1 = new boolean[1];
@@ -187,6 +193,8 @@ public class SetBindingTest extends CompilerTestBase {
                          setProp="{fx:once set4}" objectProp="{fx:once set4}"/>
         """);
 
+        assertNotNewExpr(root, SET_WRAPPER, OBSERVABLE_VALUE_WRAPPER);
+        assertNotMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
         assertEquals(3, root.setProp.size());
         boolean[] flag1 = new boolean[1];
         root.setProp.addListener((SetChangeListener<String>)c -> flag1[0] = true);
@@ -215,6 +223,7 @@ public class SetBindingTest extends CompilerTestBase {
         """);
 
         assertNotNewExpr(root, SET_WRAPPER, OBSERVABLE_VALUE_WRAPPER);
+        assertNotMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
         assertEquals(3, root.setProp.size());
         root.set1.clear(); // Change the source set
         assertEquals(3, root.setProp.size()); // Target set is unchanged
@@ -228,6 +237,7 @@ public class SetBindingTest extends CompilerTestBase {
         """);
 
         assertNotNewExpr(root, SET_WRAPPER, OBSERVABLE_VALUE_WRAPPER);
+        assertNotMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
         assertEquals(3, root.setProp.size());
         root.indirect.get().set1.clear(); // Change the source set
         assertEquals(3, root.setProp.size()); // Target set is unchanged
@@ -241,6 +251,7 @@ public class SetBindingTest extends CompilerTestBase {
         """);
 
         assertNotNewExpr(root, SET_WRAPPER, OBSERVABLE_VALUE_WRAPPER);
+        assertNotMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
         assertEquals(3, root.setProp.size());
         root.set1.clear(); // Change the source set
         assertEquals(3, root.setProp.size()); // Target set is unchanged
@@ -254,6 +265,7 @@ public class SetBindingTest extends CompilerTestBase {
         """);
 
         assertNotNewExpr(root, SET_WRAPPER, OBSERVABLE_VALUE_WRAPPER);
+        assertNotMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
         assertEquals(3, root.setProp.size());
         root.indirect.get().set1.clear(); // Change the source set
         assertEquals(3, root.setProp.size()); // Target set is unchanged
@@ -267,6 +279,7 @@ public class SetBindingTest extends CompilerTestBase {
         """);
 
         assertNotNewExpr(root, SET_WRAPPER, OBSERVABLE_VALUE_WRAPPER);
+        assertNotMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
         assertEquals(3, root.setProp.size());
         root.indirect.get().set1.clear(); // Change the source set
         assertEquals(3, root.setProp.size()); // Target set is unchanged
@@ -280,6 +293,7 @@ public class SetBindingTest extends CompilerTestBase {
         """);
 
         assertNotNewExpr(root, SET_WRAPPER, OBSERVABLE_VALUE_WRAPPER);
+        assertNotMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
         assertEquals(3, root.setProp.size());
         root.indirect.get().set1.clear(); // Change the source set
         assertEquals(3, root.setProp.size()); // Target set is unchanged
@@ -293,6 +307,7 @@ public class SetBindingTest extends CompilerTestBase {
         """);
 
         assertNotNewExpr(root, SET_WRAPPER, OBSERVABLE_VALUE_WRAPPER);
+        assertNotMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
         assertEquals(3, root.setProp.size());
         root.indirect.get().set1.clear(); // Change the source set
         assertEquals(3, root.setProp.size()); // Target set is unchanged
@@ -306,6 +321,7 @@ public class SetBindingTest extends CompilerTestBase {
         """);
 
         assertNotNewExpr(root, SET_WRAPPER, OBSERVABLE_VALUE_WRAPPER);
+        assertNotMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
         assertEquals(3, root.setProp.size());
         root.indirect.get().set1.clear(); // Change the source set
         assertEquals(3, root.setProp.size()); // Target set is unchanged
@@ -346,6 +362,7 @@ public class SetBindingTest extends CompilerTestBase {
         assertNewExpr(root, SET_WRAPPER);
         assertNotNewExpr(root, "Constant");
         assertNotMethodCall(root, ADD_REFERENCE_METHOD);
+        assertNotMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
         assertEquals(3, root.setProp.size());
 
         boolean[] flag = new boolean[1];
@@ -374,6 +391,7 @@ public class SetBindingTest extends CompilerTestBase {
         assertNewExpr(root, OBSERVABLE_VALUE_WRAPPER);
         assertNotNewExpr(root, SET_WRAPPER, "Constant");
         assertNotMethodCall(root, ADD_REFERENCE_METHOD);
+        assertNotMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
         assertEquals(3, root.setProp.size());
 
         boolean[] flag = new boolean[1];
@@ -432,6 +450,7 @@ public class SetBindingTest extends CompilerTestBase {
         assertNewExpr(root, "ObjectConstant");
         assertNotNewExpr(root, OBSERVABLE_VALUE_WRAPPER, SET_WRAPPER);
         assertNotMethodCall(root, ADD_REFERENCE_METHOD);
+        assertNotMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
 
         assertEquals(3, root.setProp.size());
         boolean[] flag1 = new boolean[1];
@@ -461,6 +480,7 @@ public class SetBindingTest extends CompilerTestBase {
 
         assertNotNewExpr(root, "Constant", OBSERVABLE_VALUE_WRAPPER, SET_WRAPPER);
         assertNotMethodCall(root, ADD_REFERENCE_METHOD);
+        assertNotMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
 
         assertEquals(3, root.setProp.size());
         boolean[] flag1 = new boolean[1];
@@ -484,6 +504,7 @@ public class SetBindingTest extends CompilerTestBase {
         assertNewExpr(root, OBSERVABLE_VALUE_WRAPPER);
         assertNotNewExpr(root, "Constant", SET_WRAPPER);
         assertNotMethodCall(root, ADD_REFERENCE_METHOD);
+        assertNotMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
 
         assertEquals(3, root.setProp.size());
         boolean[] flag = new boolean[1];
@@ -526,6 +547,7 @@ public class SetBindingTest extends CompilerTestBase {
         assertNewExpr(root, OBSERVABLE_VALUE_WRAPPER);
         assertNotNewExpr(root, "Constant", SET_WRAPPER);
         assertMethodCall(root, ADD_REFERENCE_METHOD);
+        assertMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
     }
 
     /*
@@ -541,6 +563,7 @@ public class SetBindingTest extends CompilerTestBase {
 
         assertNotNewExpr(root, "Constant", OBSERVABLE_VALUE_WRAPPER, SET_WRAPPER);
         assertNotMethodCall(root, ADD_REFERENCE_METHOD);
+        assertNotMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
 
         assertEquals(3, root.setProp.size());
         boolean[] flag1 = new boolean[1];
@@ -576,6 +599,7 @@ public class SetBindingTest extends CompilerTestBase {
         assertNewExpr(root, OBSERVABLE_VALUE_WRAPPER);
         assertNotNewExpr(root, "Constant", SET_WRAPPER);
         assertMethodCall(root, ADD_REFERENCE_METHOD);
+        assertMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
 
         assertEquals(3, root.setProp.size());
         boolean[] flag1 = new boolean[1];
@@ -651,6 +675,7 @@ public class SetBindingTest extends CompilerTestBase {
 
         assertNotNewExpr(root, "Constant", OBSERVABLE_VALUE_WRAPPER, SET_WRAPPER);
         assertNotMethodCall(root, ADD_REFERENCE_METHOD);
+        assertNotMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
 
         assertEquals(3, root.setProp.size());
         boolean[] flag1 = new boolean[1];
@@ -700,6 +725,7 @@ public class SetBindingTest extends CompilerTestBase {
         """);
 
         assertNotNewExpr(root, OBSERVABLE_VALUE_WRAPPER, SET_WRAPPER, "Constant");
+        assertNotMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
         assertEquals(root.set4.get(), root.setProp);
     }
 
@@ -717,6 +743,7 @@ public class SetBindingTest extends CompilerTestBase {
         assertNewExpr(root, OBSERVABLE_VALUE_WRAPPER);
         assertNotNewExpr(root, SET_WRAPPER, "Constant");
         assertMethodCall(root, ADD_REFERENCE_METHOD);
+        assertMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
 
         gc(); // verify that the generated wrapper is not prematurely collected
         root.set4.set(FXCollections.observableSet("123"));
@@ -751,6 +778,7 @@ public class SetBindingTest extends CompilerTestBase {
         assertNewExpr(root, OBSERVABLE_VALUE_WRAPPER);
         assertNotNewExpr(root, "Constant", SET_WRAPPER);
         assertMethodCall(root, ADD_REFERENCE_METHOD);
+        assertMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
     }
 
     @SuppressWarnings("unchecked")
