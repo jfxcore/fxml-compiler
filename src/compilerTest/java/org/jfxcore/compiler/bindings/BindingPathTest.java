@@ -1,4 +1,4 @@
-// Copyright (c) 2021, 2023, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2024, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.bindings;
@@ -334,6 +334,17 @@ public class BindingPathTest extends CompilerTestBase {
     }
 
     @Test
+    public void Bind_Once_To_Instance_Member_In_Static_Context_Fails() {
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                      id="{fx:once Double.toString}"/>
+        """));
+
+        assertEquals(ErrorCode.INSTANCE_MEMBER_REFERENCED_FROM_STATIC_CONTEXT, ex.getDiagnostic().getCode());
+        assertCodeHighlight("Double.toString", ex);
+    }
+
+    @Test
     public void Bind_Unidirectional_To_Interface_Method() {
         TestPane root = compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
@@ -498,6 +509,17 @@ public class BindingPathTest extends CompilerTestBase {
         assertCodeHighlight("""
             GridPane.margin="{fx:bind context.margin}"
         """.trim(), ex);
+    }
+
+    @Test
+    public void Bind_Unidirectional_To_Instance_Member_In_Static_Context_Fails() {
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                      id="{fx:bind Double.toString}"/>
+        """));
+
+        assertEquals(ErrorCode.INSTANCE_MEMBER_REFERENCED_FROM_STATIC_CONTEXT, ex.getDiagnostic().getCode());
+        assertCodeHighlight("Double.toString", ex);
     }
 
     @Test

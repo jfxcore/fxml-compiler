@@ -1,4 +1,4 @@
-// Copyright (c) 2022, 2023, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2024, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.expression.path;
@@ -52,9 +52,19 @@ public class ResolvedPath {
     private final SourceInfo sourceInfo;
     private final List<Segment> segments;
 
-    public static ResolvedPath parse(
-            Segment firstSegment, List<PathSegmentNode> path, boolean preferObservable, SourceInfo sourceInfo) {
-        return new ResolvedPath(firstSegment, path, preferObservable, sourceInfo);
+    public static ResolvedPath parse(Segment firstSegment,
+                                     List<PathSegmentNode> path,
+                                     boolean preferObservable,
+                                     SourceInfo sourceInfo) {
+        return new ResolvedPath(firstSegment, path, false, preferObservable, sourceInfo);
+    }
+
+    public static ResolvedPath parse(Segment firstSegment,
+                                     List<PathSegmentNode> path,
+                                     boolean staticContext,
+                                     boolean preferObservable,
+                                     SourceInfo sourceInfo) {
+        return new ResolvedPath(firstSegment, path, staticContext, preferObservable, sourceInfo);
     }
 
     private ResolvedPath(List<Segment> segments, SourceInfo sourceInfo) {
@@ -62,7 +72,11 @@ public class ResolvedPath {
         this.segments = segments;
     }
 
-    private ResolvedPath(Segment firstSegment, List<PathSegmentNode> path, boolean preferObservable, SourceInfo sourceInfo) {
+    private ResolvedPath(Segment firstSegment,
+                         List<PathSegmentNode> path,
+                         boolean staticContext,
+                         boolean preferObservable,
+                         SourceInfo sourceInfo) {
         this.sourceInfo = sourceInfo;
         this.segments = new ArrayList<>(path.size() + 1);
         this.segments.add(firstSegment);
@@ -89,11 +103,11 @@ public class ResolvedPath {
         CtClass currentHostType = segments.get(0).getValueTypeInstance().jvmType();
 
         for (PathSegmentNode segment : path) {
-            Segment source = getValueSource(resolver, segment, currentHostType, preferObservable, false);
+            Segment source = getValueSource(resolver, segment, currentHostType, staticContext, preferObservable, false);
 
             if (source == null) {
                 if (segment.isObservableSelector() && getValueSource(
-                        resolver, segment, currentHostType, preferObservable, true) != null) {
+                        resolver, segment, currentHostType, staticContext, preferObservable, true) != null) {
                     throw SymbolResolutionErrors.invalidInvariantReference(
                         segment.getSourceInfo(), currentHostType, segment.getText());
                 } else {
@@ -122,6 +136,7 @@ public class ResolvedPath {
 
             segments.add(source);
             currentHostType = source.getValueTypeInstance().jvmType();
+            staticContext = false;
         }
 
         optimizePath();
@@ -260,6 +275,7 @@ public class ResolvedPath {
             Resolver resolver,
             PathSegmentNode segment,
             CtClass declaringClass,
+            boolean staticContext,
             boolean preferObservable,
             boolean suppressObservableSelector) {
         ResolveSegmentMethod[] methods = new ResolveSegmentMethod[] {
@@ -302,25 +318,26 @@ public class ResolvedPath {
         for (ResolveSegmentMethod method : methods) {
             segments.tryAdd(
                 method.resolve(
-                    resolver, propertyName, declaringClass, receiverClass, attachedProperty, selectObservable),
+                    resolver, propertyName, declaringClass, receiverClass, staticContext,
+                    attachedProperty, selectObservable),
                 0, preferObservable, selectObservable);
 
             segments.tryAdd(
                 method.resolve(
                     resolver, String.format("%sProperty", propertyName), declaringClass, receiverClass,
-                    attachedProperty, selectObservable),
+                    staticContext, attachedProperty, selectObservable),
                 1, preferObservable, selectObservable);
 
             segments.tryAdd(
                 method.resolve(
                     resolver, String.format("get%s", propertyNameUpper), declaringClass, receiverClass,
-                    attachedProperty, selectObservable),
+                    staticContext, attachedProperty, selectObservable),
                 2, false, selectObservable);
 
             segments.tryAdd(
                 method.resolve(
                     resolver, String.format("is%s", propertyNameUpper), declaringClass, receiverClass,
-                    attachedProperty, selectObservable),
+                    staticContext, attachedProperty, selectObservable),
                 3, false, selectObservable);
         }
 
@@ -361,6 +378,7 @@ public class ResolvedPath {
             String propertyName,
             CtClass declaringClass,
             CtClass receiverClass,
+            boolean staticContext,
             boolean attachedProperty,
             boolean selectObservable) {
         if (attachedProperty) {
@@ -409,6 +427,7 @@ public class ResolvedPath {
             String propertyName,
             CtClass declaringClass,
             CtClass receiverClass,
+            boolean staticContext,
             boolean attachedProperty,
             boolean selectObservable) {
         CtMethod getter = attachedProperty ?
@@ -417,6 +436,10 @@ public class ResolvedPath {
 
         if (getter == null) {
             return null;
+        }
+
+        if (!attachedProperty && staticContext && !Modifier.isStatic(getter.getModifiers())) {
+            throw SymbolResolutionErrors.instanceMemberReferencedFromStaticContext(sourceInfo, getter);
         }
 
         List<TypeInstance> invocationChain = segments.stream().map(segment -> {
@@ -460,6 +483,7 @@ public class ResolvedPath {
             String propertyName,
             CtClass declaringClass,
             CtClass receiverClass,
+            boolean staticContext,
             boolean attachedProperty,
             boolean selectObservable) {
         if (attachedProperty) {
@@ -489,6 +513,10 @@ public class ResolvedPath {
         ObservableKind observableKind = ObservableKind.get(fieldType);
         if (selectObservable && observableKind == ObservableKind.NONE) {
             return null;
+        }
+
+        if (staticContext && !Modifier.isStatic(delegateInfo.getter.getModifiers())) {
+            throw SymbolResolutionErrors.instanceMemberReferencedFromStaticContext(sourceInfo, delegateInfo.getter);
         }
 
         if (!delegateInfo.publicSetter) {
@@ -632,6 +660,7 @@ public class ResolvedPath {
             String propertyName,
             CtClass declaringClass,
             CtClass receiverClass,
+            boolean staticContext,
             boolean attachedProperty,
             boolean selectObservable);
     }
