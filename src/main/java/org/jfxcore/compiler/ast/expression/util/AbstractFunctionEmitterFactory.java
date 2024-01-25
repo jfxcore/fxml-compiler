@@ -1,4 +1,4 @@
-// Copyright (c) 2022, 2023, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2024, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.expression.util;
@@ -281,26 +281,37 @@ abstract class AbstractFunctionEmitterFactory {
             @Nullable TypeInstance returnType,
             Collection<Node> arguments,
             boolean preferObservable) {
+        return findFunction(pathExpression, returnType, arguments, preferObservable, true);
+    }
+
+    private Callable findFunction(
+            PathExpressionNode pathExpression,
+            @Nullable TypeInstance returnType,
+            Collection<Node> arguments,
+            boolean preferObservable,
+            boolean maybeInstanceMethod) {
         String methodName;
         CtClass declaringClass;
         ResolvedPath resolvedPath = null;
-        boolean maybeInstanceMethod;
         boolean isConstructor = false;
 
         if (pathExpression.getSegments().size() > 1) {
-            maybeInstanceMethod = false;
-
             // If we assume that the path points to a method, we limit path resolution to all but the
             // last segment of the path (since method names are not part of the resolvable path).
             int limit = pathExpression.getSegments().size() - 1;
             methodName = pathExpression.getSegments().get(limit).getText();
-            String className;
+            String className = null;
 
             try {
-                resolvedPath = pathExpression.resolvePath(false, limit);
-                className = resolvedPath.getValueTypeInstance().getJavaName();
-                maybeInstanceMethod = true;
+                if (maybeInstanceMethod) {
+                    resolvedPath = pathExpression.resolvePath(false, limit);
+                    className = resolvedPath.getValueTypeInstance().getJavaName();
+                }
             } catch (MarkupException ignored) {
+                maybeInstanceMethod = false;
+            }
+
+            if (!maybeInstanceMethod) {
                 // If we don't have a valid path expression, the only other possible interpretation would be
                 // a static method call. Since a static method call is not resolved by a path expression, we
                 // check that only the default binding context selector is used.
@@ -331,7 +342,6 @@ abstract class AbstractFunctionEmitterFactory {
                 }
             }
         } else {
-            maybeInstanceMethod = true;
             methodName = pathExpression.getSimplePath();
             declaringClass = pathExpression.getBindingContext().getType().getJvmType();
         }
@@ -392,6 +402,12 @@ abstract class AbstractFunctionEmitterFactory {
 
                 return new Callable(Collections.emptyList(), constructor, pathExpression.getSourceInfo());
             }
+        }
+
+        // At this point, we've tried to find a method that is applicable for the arguments and failed.
+        // If we were looking for an instance method, we try again, but only look for static methods.
+        if (maybeInstanceMethod) {
+            return findFunction(pathExpression, returnType, arguments, preferObservable, false);
         }
 
         if (diagnostics.size() == 1) {
