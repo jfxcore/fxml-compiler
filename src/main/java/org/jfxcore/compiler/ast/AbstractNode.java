@@ -1,9 +1,10 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2024, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast;
 
 import org.jfxcore.compiler.diagnostic.SourceInfo;
+import org.jfxcore.compiler.diagnostic.errors.ParserErrors;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -66,10 +67,14 @@ public abstract class AbstractNode implements Node {
     public void acceptChildren(Visitor visitor) {}
 
     @SuppressWarnings("unchecked")
-    protected static <T extends Node> void acceptChildren(List<T> children, Visitor visitor) {
+    protected static <T extends Node> void acceptChildren(List<T> children, Visitor visitor, Class<?> type) {
         for (int i = 0; i < children.size(); ++i) {
-            T node = checkNotNull((T)children.get(i).accept(visitor));
-            children.set(i, node);
+            Node node = checkNotNull(children.get(i).accept(visitor));
+            if (!type.isInstance(node)) {
+                throw ParserErrors.unexpectedExpression(node.getSourceInfo());
+            }
+
+            children.set(i, (T)node);
         }
 
         children.removeIf(Node::isMarkedForRemoval);

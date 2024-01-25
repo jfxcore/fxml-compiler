@@ -1,4 +1,4 @@
-// Copyright (c) 2022, 2023, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2024, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.emit;
@@ -83,11 +83,11 @@ public class EmitObservableFunctionNode
     @Override
     public void acceptChildren(Visitor visitor) {
         super.acceptChildren(visitor);
-        acceptChildren(function.getReceiver(), visitor);
+        acceptChildren(function.getReceiver(), visitor, ValueEmitterNode.class);
         if (inverseFunction != null) {
-            acceptChildren(inverseFunction.getReceiver(), visitor);
+            acceptChildren(inverseFunction.getReceiver(), visitor, ValueEmitterNode.class);
         }
-        acceptChildren(arguments, visitor);
+        acceptChildren(arguments, visitor, EmitMethodArgumentNode.class);
     }
 
     @Override

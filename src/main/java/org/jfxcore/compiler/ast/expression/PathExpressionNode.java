@@ -171,7 +171,7 @@ public class PathExpressionNode extends AbstractNode implements ExpressionNode {
     public void acceptChildren(Visitor visitor) {
         super.acceptChildren(visitor);
         bindingContext = (BindingContextNode) bindingContext.accept(visitor);
-        acceptChildren(segments, visitor);
+        acceptChildren(segments, visitor, PathSegmentNode.class);
     }
 
     @Override
