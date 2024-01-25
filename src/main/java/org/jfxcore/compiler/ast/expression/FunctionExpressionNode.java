@@ -1,4 +1,4 @@
-// Copyright (c) 2022, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2024, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.expression;
@@ -75,7 +75,7 @@ public class FunctionExpressionNode extends AbstractNode implements ExpressionNo
     public void acceptChildren(Visitor visitor) {
         super.acceptChildren(visitor);
         path = (PathExpressionNode)path.accept(visitor);
-        acceptChildren(arguments, visitor);
+        acceptChildren(arguments, visitor, Node.class);
 
         if (inversePath != null) {
             inversePath = (PathExpressionNode) inversePath.accept(visitor);

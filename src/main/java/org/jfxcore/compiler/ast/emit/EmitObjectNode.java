@@ -1,4 +1,4 @@
-// Copyright (c) 2022, 2023, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2024, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.emit;
@@ -482,8 +482,8 @@ public class EmitObjectNode extends ReferenceableNode {
     public void acceptChildren(Visitor visitor) {
         super.acceptChildren(visitor);
         type = (ResolvedTypeNode)type.accept(visitor);
-        acceptChildren(arguments, visitor);
-        acceptChildren(children, visitor);
+        acceptChildren(arguments, visitor, ValueNode.class);
+        acceptChildren(children, visitor, Node.class);
     }
 
     @Override
