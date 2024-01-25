@@ -1,4 +1,4 @@
-// Copyright (c) 2022, 2023, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2024, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.bindings;
@@ -230,6 +230,17 @@ public class FunctionBindingTest extends CompilerTestBase {
         assertMethodCall(root, ms -> ms.stream().anyMatch(m -> m.getName().equals("requireNonNull")));
         assertMethodCall(root, ms -> ms.stream().anyMatch(m -> m.getName().equals("doubleValue")));
         assertMethodCall(root, ms -> ms.stream().anyMatch(m -> m.getName().equals("getValue")));
+    }
+
+    @Test
+    public void Bind_Once_To_Static_Method_With_Same_Name_As_Instance_Method() {
+        TestPane root = compileAndRun("""
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                      id="{fx:once Double.toString(doubleProp)}"/>
+        """);
+
+        assertFalse(root.idProperty().isBound());
+        assertEquals("1.0", root.getId());
     }
 
     @Test
@@ -537,6 +548,17 @@ public class FunctionBindingTest extends CompilerTestBase {
 
         root.stringProp.set("baz");
         assertEquals("foo-2.0-baz", root.getId());
+    }
+
+    @Test
+    public void Bind_Unidirectional_To_Static_Method_With_Same_Name_As_Instance_Method() {
+        TestPane root = compileAndRun("""
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                      id="{fx:bind Double.toString(doubleProp)}"/>
+        """);
+
+        assertTrue(root.idProperty().isBound());
+        assertEquals("1.0", root.getId());
     }
 
     @Test
