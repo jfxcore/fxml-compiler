@@ -69,12 +69,12 @@ public abstract class AbstractNode implements Node {
     @SuppressWarnings("unchecked")
     protected static <T extends Node> void acceptChildren(List<T> children, Visitor visitor, Class<?> type) {
         for (int i = 0; i < children.size(); ++i) {
-            Node node = children.get(i).accept(visitor);
+            Node node = checkNotNull(children.get(i).accept(visitor));
             if (!type.isInstance(node)) {
                 throw ParserErrors.unexpectedExpression(node.getSourceInfo());
             }
 
-            children.set(i, checkNotNull((T)node));
+            children.set(i, (T)node);
         }
 
         children.removeIf(Node::isMarkedForRemoval);
