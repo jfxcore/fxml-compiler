@@ -1,4 +1,4 @@
-// Copyright (c) 2022, 2023, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2024, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.util;
@@ -1029,16 +1029,23 @@ public class Bytecode {
             }
         }
 
-        invokeinterface(Classes.ObservableValueType(), "getValue", Descriptors.function(Classes.ObjectType()));
-
         if (unchecked(sourceInfo, () -> source.subtypeOf(Classes.ObservableBooleanValueType()))) {
+            invokeinterface(Classes.ObservableValueType(), "getValue", Descriptors.function(Classes.ObjectType()));
             checkcast(Classes.BooleanType());
             ext_autoconv(sourceInfo, Classes.BooleanType(), target);
         } else if (unchecked(sourceInfo, () -> source.subtypeOf(Classes.ObservableNumberValueType()))) {
+            invokeinterface(Classes.ObservableValueType(), "getValue", Descriptors.function(Classes.ObjectType()));
             checkcast(Classes.NumberType());
             ext_autoconv(sourceInfo, Classes.NumberType(), target);
         } else if (!TypeHelper.equals(target, Classes.ObjectType())) {
+            if (target.isPrimitive()) {
+                throw new IllegalArgumentException("source=" + source.getName() + ", target=" + target.getName());
+            }
+
+            invokeinterface(Classes.ObservableValueType(), "getValue", Descriptors.function(Classes.ObjectType()));
             checkcast(target);
+        } else {
+            invokeinterface(Classes.ObservableValueType(), "getValue", Descriptors.function(Classes.ObjectType()));
         }
 
         return this;

@@ -1,4 +1,4 @@
-// Copyright (c) 2022, 2023, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2024, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.generate;
@@ -59,6 +59,7 @@ public class ObservableFunctionGenerator extends ClassGenerator {
     private final boolean storeInverseReceiver;
     private final List<EmitMethodArgumentNode> arguments;
     private final List<CtField> paramFields;
+    private final List<CtClass> paramTypes;
     private final List<String> fieldNames;
 
     private final TypeInstance superType;
@@ -107,6 +108,7 @@ public class ObservableFunctionGenerator extends ClassGenerator {
             && inverseFunction.getBehavior() instanceof CtMethod;
         this.arguments = new ArrayList<>(arguments);
         this.paramFields = new ArrayList<>();
+        this.paramTypes = new ArrayList<>();
         this.fieldNames = new ArrayList<>();
 
         Resolver resolver = new Resolver(SourceInfo.none());
@@ -203,6 +205,12 @@ public class ObservableFunctionGenerator extends ClassGenerator {
                 CtClass fieldType = isObservableArgument(child) && !bidirectional ?
                     resolver.getObservableClass(TypeHelper.getJvmType(child), false) :
                     TypeHelper.getJvmType(child);
+
+                if (isObservableArgument(child)) {
+                    paramTypes.add(resolver.findObservableArgument(TypeHelper.getTypeInstance(child)).jvmType());
+                } else {
+                    paramTypes.add(TypeHelper.getJvmType(child));
+                }
 
                 CtField paramField = new CtField(fieldType, mangle("param" + fieldNum), generatedClass);
 
@@ -583,8 +591,10 @@ public class ObservableFunctionGenerator extends ClassGenerator {
                 if (child instanceof EmitLiteralNode) {
                     context.emit(child);
                 } else {
-                    CtField field = paramFields.get(fieldIdx++);
+                    CtField field = paramFields.get(fieldIdx);
                     CtClass fieldType = field.getType();
+                    CtClass paramType = paramTypes.get(fieldIdx);
+                    fieldIdx++;
 
                     code.aload(0)
                         .getfield(generatedClass, field.getName(), fieldType);
@@ -602,7 +612,15 @@ public class ObservableFunctionGenerator extends ClassGenerator {
                                                                    requestedType.jvmType()))
                                 .releaseLocal(local);
                         } else {
-                            code.ext_ObservableUnbox(child.getSourceInfo(), fieldType, requestedType.jvmType());
+                            try {
+                                code.ext_ObservableUnbox(child.getSourceInfo(), fieldType, requestedType.jvmType());
+                            } catch (IllegalArgumentException ex) {
+                                // In some cases, we can't directly unbox an observable, for example when the
+                                // field type is ObservableValue<Integer>, and the requested type is int.
+                                // The solution is to cast the value to Integer first, then convert to int.
+                                code.ext_ObservableUnbox(child.getSourceInfo(), fieldType, paramType)
+                                    .ext_autoconv(child.getSourceInfo(), paramType, requestedType.jvmType());
+                            }
                         }
                     } else {
                         code.ext_autoconv(child.getSourceInfo(), fieldType, requestedType.jvmType());
