@@ -1044,6 +1044,8 @@ public class Bytecode {
 
             invokeinterface(Classes.ObservableValueType(), "getValue", Descriptors.function(Classes.ObjectType()));
             checkcast(target);
+        } else {
+            invokeinterface(Classes.ObservableValueType(), "getValue", Descriptors.function(Classes.ObjectType()));
         }
 
         return this;
