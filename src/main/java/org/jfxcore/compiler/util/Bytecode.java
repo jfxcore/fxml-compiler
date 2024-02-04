@@ -1029,12 +1029,12 @@ public class Bytecode {
             }
         }
 
-        invokeinterface(Classes.ObservableValueType(), "getValue", Descriptors.function(Classes.ObjectType()));
-
         if (unchecked(sourceInfo, () -> source.subtypeOf(Classes.ObservableBooleanValueType()))) {
+            invokeinterface(Classes.ObservableValueType(), "getValue", Descriptors.function(Classes.ObjectType()));
             checkcast(Classes.BooleanType());
             ext_autoconv(sourceInfo, Classes.BooleanType(), target);
         } else if (unchecked(sourceInfo, () -> source.subtypeOf(Classes.ObservableNumberValueType()))) {
+            invokeinterface(Classes.ObservableValueType(), "getValue", Descriptors.function(Classes.ObjectType()));
             checkcast(Classes.NumberType());
             ext_autoconv(sourceInfo, Classes.NumberType(), target);
         } else if (!TypeHelper.equals(target, Classes.ObjectType())) {
@@ -1042,6 +1042,7 @@ public class Bytecode {
                 throw new IllegalArgumentException("source=" + source.getName() + ", target=" + target.getName());
             }
 
+            invokeinterface(Classes.ObservableValueType(), "getValue", Descriptors.function(Classes.ObjectType()));
             checkcast(target);
         }
 
