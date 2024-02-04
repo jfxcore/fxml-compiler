@@ -76,26 +76,30 @@ public class PathExpressionNode extends AbstractNode implements ExpressionNode {
     }
 
     public ResolvedPath resolvePath(boolean preferObservable) {
-        return resolvePath(preferObservable, Integer.MAX_VALUE);
+        return resolvePath(preferObservable, true, Integer.MAX_VALUE);
     }
 
     public ResolvedPath resolvePath(boolean preferObservable, int limit) {
+        return resolvePath(preferObservable, true, limit);
+    }
+
+    private ResolvedPath resolvePath(boolean preferObservable, boolean mayResolveAgainstImports, int limit) {
         if (preferObservable) {
             if (resolvedObservablePath != null) {
                 return resolvedObservablePath;
             }
 
-            return resolvedObservablePath = resolvePathImpl(true, limit);
+            return resolvedObservablePath = resolvePathImpl(true, mayResolveAgainstImports, limit);
         }
 
         if (resolvedPath != null) {
             return resolvedPath;
         }
 
-        return resolvedPath = resolvePathImpl(false, limit);
+        return resolvedPath = resolvePathImpl(false, mayResolveAgainstImports, limit);
     }
 
-    private ResolvedPath resolvePathImpl(boolean preferObservable, int limit) {
+    private ResolvedPath resolvePathImpl(boolean preferObservable, boolean mayResolveAgainstImports, int limit) {
         try {
             return ResolvedPath.parse(
                 bindingContext.toSegment(),
@@ -111,8 +115,8 @@ public class PathExpressionNode extends AbstractNode implements ExpressionNode {
             CtClass type = null;
             int staticLimit = 0;
 
-            while (staticLimit < getSegments().size() - 1) {
-                PathSegmentNode segment = getSegments().get(staticLimit);
+            while (staticLimit < segments.size() - 1) {
+                PathSegmentNode segment = segments.get(staticLimit);
 
                 // If the path contains an observable selector, it can't be the name of a class.
                 if (segment.isObservableSelector()) {
@@ -124,7 +128,13 @@ public class PathExpressionNode extends AbstractNode implements ExpressionNode {
                 }
 
                 classBuilder.append(segment.getText());
-                type = resolver.tryResolveClassAgainstImports(classBuilder.toString());
+
+                type = resolver.tryResolveNestedClass(bindingContext.getType().getJvmType(), classBuilder.toString());
+
+                if (type == null && mayResolveAgainstImports) {
+                    type = resolver.tryResolveClassAgainstImports(classBuilder.toString());
+                }
+
                 if (type != null) {
                     break;
                 }
@@ -139,16 +149,16 @@ public class PathExpressionNode extends AbstractNode implements ExpressionNode {
 
             // Create a new path expression that uses a STATIC binding context.
             var newPathExpression = new PathExpressionNode(
-                getOperator(),
+                operator,
                 new BindingContextNode(
                     BindingContextSelector.STATIC,
                     resolver.getTypeInstance(type),
                     Integer.MAX_VALUE,
                     SourceInfo.none()),
-                getSegments().stream().skip(staticLimit + 1).toList(),
+                segments.stream().skip(staticLimit + 1).toList(),
                 getSourceInfo());
 
-            return newPathExpression.resolvePath(false);
+            return newPathExpression.resolvePath(false, false, Integer.MAX_VALUE);
         }
     }
 
