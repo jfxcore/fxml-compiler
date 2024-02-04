@@ -60,7 +60,6 @@ public class ObservableFunctionGenerator extends ClassGenerator {
     private final List<EmitMethodArgumentNode> arguments;
     private final List<CtField> paramFields;
     private final List<CtClass> paramTypes;
-    private final List<String> fieldNames;
 
     private final TypeInstance superType;
     private final CtClass returnType;
@@ -109,7 +108,6 @@ public class ObservableFunctionGenerator extends ClassGenerator {
         this.arguments = new ArrayList<>(arguments);
         this.paramFields = new ArrayList<>();
         this.paramTypes = new ArrayList<>();
-        this.fieldNames = new ArrayList<>();
 
         Resolver resolver = new Resolver(SourceInfo.none());
         CtClass returnType = function.getBehavior() instanceof CtConstructor ?
@@ -154,16 +152,6 @@ public class ObservableFunctionGenerator extends ClassGenerator {
         return NameHelper.getUniqueName("Function", this);
     }
 
-    private String mangle(String name) {
-        int idx = fieldNames.indexOf(name);
-        if (idx >= 0) {
-            return "$" + idx;
-        }
-
-        fieldNames.add(name);
-        return "$" + (fieldNames.size() - 1);
-    }
-
     @Override
     public void emitClass(BytecodeEmitContext context) throws Exception {
         generatedClass = context.getNestedClasses().create(getClassName());
@@ -185,13 +173,13 @@ public class ObservableFunctionGenerator extends ClassGenerator {
         CtField field;
 
         if (storeReceiver) {
-            field = new CtField(function.getBehavior().getDeclaringClass(), mangle("receiver"), generatedClass);
+            field = new CtField(function.getBehavior().getDeclaringClass(), "receiver", generatedClass);
             field.setModifiers(Modifier.FINAL | Modifier.PRIVATE);
             generatedClass.addField(field);
         }
 
         if (storeInverseReceiver) {
-            field = new CtField(inverseFunction.getBehavior().getDeclaringClass(), mangle("inverseReceiver"), generatedClass);
+            field = new CtField(inverseFunction.getBehavior().getDeclaringClass(), "inverseReceiver", generatedClass);
             field.setModifiers(Modifier.FINAL | Modifier.PRIVATE);
             generatedClass.addField(field);
         }
@@ -212,7 +200,7 @@ public class ObservableFunctionGenerator extends ClassGenerator {
                     paramTypes.add(TypeHelper.getJvmType(child));
                 }
 
-                CtField paramField = new CtField(fieldType, mangle("param" + fieldNum), generatedClass);
+                CtField paramField = new CtField(fieldType, "param" + fieldNum, generatedClass);
 
                 paramField.setModifiers(Modifier.PRIVATE);
                 paramFields.add(paramField);
@@ -227,25 +215,25 @@ public class ObservableFunctionGenerator extends ClassGenerator {
         }
 
         if (numObservables > 0) {
-            field = new CtField(InvalidationListenerType(), mangle(INVALIDATION_LISTENER_FIELD), generatedClass);
+            field = new CtField(InvalidationListenerType(), INVALIDATION_LISTENER_FIELD, generatedClass);
             field.setModifiers(Modifier.PRIVATE);
             generatedClass.addField(field);
 
-            field = new CtField(ChangeListenerType(), mangle(CHANGE_LISTENER_FIELD), generatedClass);
+            field = new CtField(ChangeListenerType(), CHANGE_LISTENER_FIELD, generatedClass);
             field.setModifiers(Modifier.PRIVATE);
             generatedClass.addField(field);
         }
 
-        field = new CtField(CtClass.intType, mangle(FLAGS_FIELD), generatedClass);
+        field = new CtField(CtClass.intType, FLAGS_FIELD, generatedClass);
         field.setModifiers(Modifier.PRIVATE);
         generatedClass.addField(field);
 
-        field = new CtField(TypeHelper.getBoxedType(returnType), mangle(VALUE_FIELD), generatedClass);
+        field = new CtField(TypeHelper.getBoxedType(returnType), VALUE_FIELD, generatedClass);
         field.setModifiers(Modifier.PRIVATE);
         generatedClass.addField(field);
 
         if (returnType.isPrimitive()) {
-            field = new CtField(returnType, mangle(PRIMITIVE_VALUE_FIELD), generatedClass);
+            field = new CtField(returnType, PRIMITIVE_VALUE_FIELD, generatedClass);
             field.setModifiers(Modifier.PRIVATE);
             generatedClass.addField(field);
         }
@@ -438,7 +426,7 @@ public class ObservableFunctionGenerator extends ClassGenerator {
                 context.emit(emitter);
             }
 
-            code.putfield(generatedClass, mangle("receiver"), function.getBehavior().getDeclaringClass());
+            code.putfield(generatedClass, "receiver", function.getBehavior().getDeclaringClass());
         }
 
         if (storeInverseReceiver) {
@@ -448,7 +436,7 @@ public class ObservableFunctionGenerator extends ClassGenerator {
                 context.emit(emitter);
             }
 
-            code.putfield(generatedClass, mangle("inverseReceiver"), inverseFunction.getBehavior().getDeclaringClass());
+            code.putfield(generatedClass, "inverseReceiver", inverseFunction.getBehavior().getDeclaringClass());
         }
 
         int fieldIdx = 0;
@@ -475,8 +463,8 @@ public class ObservableFunctionGenerator extends ClassGenerator {
     private void emitAddListenerMethod(CtMethod method, boolean changeListenerIsTrue) throws Exception {
         Bytecode code = new Bytecode(method.getDeclaringClass(), 2);
         CtClass declaringClass = method.getDeclaringClass();
-        String fieldName = mangle(changeListenerIsTrue ? CHANGE_LISTENER_FIELD : INVALIDATION_LISTENER_FIELD);
-        String otherFieldName = mangle(changeListenerIsTrue ? INVALIDATION_LISTENER_FIELD : CHANGE_LISTENER_FIELD);
+        String fieldName = changeListenerIsTrue ? CHANGE_LISTENER_FIELD : INVALIDATION_LISTENER_FIELD;
+        String otherFieldName = changeListenerIsTrue ? INVALIDATION_LISTENER_FIELD : CHANGE_LISTENER_FIELD;
         CtClass listenerType = changeListenerIsTrue ? ChangeListenerType() : InvalidationListenerType();
         CtClass otherListenerType = changeListenerIsTrue ? InvalidationListenerType() : ChangeListenerType();
 
@@ -513,8 +501,8 @@ public class ObservableFunctionGenerator extends ClassGenerator {
     private void emitRemoveListenerMethod(CtMethod method, boolean changeListenerIsTrue) throws Exception {
         Bytecode code = new Bytecode(method.getDeclaringClass(), 2);
         CtClass declaringClass = method.getDeclaringClass();
-        String fieldName = mangle(changeListenerIsTrue ? CHANGE_LISTENER_FIELD : INVALIDATION_LISTENER_FIELD);
-        String otherFieldName = mangle(changeListenerIsTrue ? INVALIDATION_LISTENER_FIELD : CHANGE_LISTENER_FIELD);
+        String fieldName = changeListenerIsTrue ? CHANGE_LISTENER_FIELD : INVALIDATION_LISTENER_FIELD;
+        String otherFieldName = changeListenerIsTrue ? INVALIDATION_LISTENER_FIELD : CHANGE_LISTENER_FIELD;
         CtClass listenerType = changeListenerIsTrue ? ChangeListenerType() : InvalidationListenerType();
         CtClass otherListenerType = changeListenerIsTrue ? InvalidationListenerType() : ChangeListenerType();
 
@@ -560,7 +548,7 @@ public class ObservableFunctionGenerator extends ClassGenerator {
                 .dup();
         } else if (!Modifier.isStatic(function.getBehavior().getModifiers())) {
             code.aload(0)
-                .getfield(generatedClass, mangle("receiver"), function.getBehavior().getDeclaringClass());
+                .getfield(generatedClass, "receiver", function.getBehavior().getDeclaringClass());
         }
 
         int fieldIdx = 0;
@@ -649,7 +637,7 @@ public class ObservableFunctionGenerator extends ClassGenerator {
             // this.pvalue = $valueLocal
             code.aload(0)
                 .ext_load(returnType, valueLocal)
-                .putfield(generatedClass, mangle(PRIMITIVE_VALUE_FIELD), returnType);
+                .putfield(generatedClass, PRIMITIVE_VALUE_FIELD, returnType);
 
             // if (boxValue)
             code.iload(1)
@@ -659,23 +647,23 @@ public class ObservableFunctionGenerator extends ClassGenerator {
                         .aload(0)
                         .ext_load(returnType, valueLocal)
                         .ext_box(returnType)
-                        .putfield(generatedClass, mangle(VALUE_FIELD), TypeHelper.getBoxedType(returnType))
+                        .putfield(generatedClass, VALUE_FIELD, TypeHelper.getBoxedType(returnType))
                         .aload(0)
                         .iconst(1) // 1 = valid, boxed
-                        .putfield(generatedClass, mangle(FLAGS_FIELD), CtClass.intType),
+                        .putfield(generatedClass, FLAGS_FIELD, CtClass.intType),
                     () -> code
                         .aload(0)
                         .iconst(2) // 2 = valid, unboxed
-                        .putfield(generatedClass, mangle(FLAGS_FIELD), CtClass.intType));
+                        .putfield(generatedClass, FLAGS_FIELD, CtClass.intType));
         } else {
             // this.value = $valueLocal
             code.aload(0)
                 .aload(valueLocal)
-                .putfield(generatedClass, mangle(VALUE_FIELD), TypeHelper.getBoxedType(returnType));
+                .putfield(generatedClass, VALUE_FIELD, TypeHelper.getBoxedType(returnType));
 
             code.aload(0)
                 .iconst(1) // 1 = valid, boxed
-                .putfield(generatedClass, mangle(FLAGS_FIELD), CtClass.intType);
+                .putfield(generatedClass, FLAGS_FIELD, CtClass.intType);
         }
 
         code.releaseLocal(valueLocal);
@@ -690,7 +678,7 @@ public class ObservableFunctionGenerator extends ClassGenerator {
 
         // if (this.valid == 0)
         code.aload(0)
-            .getfield(method.getDeclaringClass(), mangle(FLAGS_FIELD), CtClass.intType)
+            .getfield(method.getDeclaringClass(), FLAGS_FIELD, CtClass.intType)
             .ifeq(() -> code
                 // validate(false)
                 .aload(0)
@@ -700,7 +688,7 @@ public class ObservableFunctionGenerator extends ClassGenerator {
                     VALIDATE_METHOD,
                     function(CtClass.voidType, CtClass.booleanType)))
             .aload(0)
-            .getfield(method.getDeclaringClass(), mangle(PRIMITIVE_VALUE_FIELD), returnType)
+            .getfield(method.getDeclaringClass(), PRIMITIVE_VALUE_FIELD, returnType)
             .ext_return(method.getReturnType());
 
         method.getMethodInfo().setCodeAttribute(code.toCodeAttribute());
@@ -724,12 +712,12 @@ public class ObservableFunctionGenerator extends ClassGenerator {
 
         code.aload(0)
             .iconst(0)
-            .putfield(generatedClass, mangle(FLAGS_FIELD), CtClass.intType);
+            .putfield(generatedClass, FLAGS_FIELD, CtClass.intType);
 
         code.aload(0)
             .ext_load(paramType, 1)
             .ext_castconv(SourceInfo.none(), paramType, returnType)
-            .putfield(generatedClass, mangle(returnType.isPrimitive() ? PRIMITIVE_VALUE_FIELD : VALUE_FIELD), returnType);
+            .putfield(generatedClass, returnType.isPrimitive() ? PRIMITIVE_VALUE_FIELD : VALUE_FIELD, returnType);
 
         Local convertedValueLocal = code.acquireLocal(sourceValueType);
         int start = code.position();
@@ -745,13 +733,13 @@ public class ObservableFunctionGenerator extends ClassGenerator {
 
             if (!Modifier.isStatic(inverseFunction.getBehavior().getModifiers())) {
                 code.aload(0)
-                    .getfield(generatedClass, mangle("inverseReceiver"),
+                    .getfield(generatedClass, "inverseReceiver",
                               inverseFunction.getBehavior().getDeclaringClass());
             }
         }
 
         code.aload(0)
-            .getfield(generatedClass, mangle(returnType.isPrimitive() ? PRIMITIVE_VALUE_FIELD : VALUE_FIELD), returnType);
+            .getfield(generatedClass, returnType.isPrimitive() ? PRIMITIVE_VALUE_FIELD : VALUE_FIELD, returnType);
 
         code.ext_invoke(inverseFunction.getBehavior())
             .ext_autoconv(SourceInfo.none(), methodReturnType, sourceValueType)
@@ -802,7 +790,7 @@ public class ObservableFunctionGenerator extends ClassGenerator {
 
         code.aload(0)
             .iconst(returnType.isPrimitive() ? 2 : 1)
-            .putfield(generatedClass, mangle(FLAGS_FIELD), CtClass.intType);
+            .putfield(generatedClass, FLAGS_FIELD, CtClass.intType);
 
         code.vreturn();
 
@@ -833,7 +821,7 @@ public class ObservableFunctionGenerator extends ClassGenerator {
         CtClass declaringClass = method.getDeclaringClass();
 
         code.aload(0)
-            .getfield(declaringClass, mangle(FLAGS_FIELD), CtClass.intType)
+            .getfield(declaringClass, FLAGS_FIELD, CtClass.intType)
             .ifeq(
                 // if (this.flags == 0)
                 () -> {
@@ -854,23 +842,23 @@ public class ObservableFunctionGenerator extends ClassGenerator {
                 () -> {
                     if (returnType.isPrimitive()) {
                         code.aload(0)
-                            .getfield(declaringClass, mangle(FLAGS_FIELD), CtClass.intType)
+                            .getfield(declaringClass, FLAGS_FIELD, CtClass.intType)
                             .iconst(2)
                             .if_icmpeq(() -> code
                                 .aload(0)
                                 .aload(0)
-                                .getfield(declaringClass, mangle(PRIMITIVE_VALUE_FIELD), returnType)
+                                .getfield(declaringClass, PRIMITIVE_VALUE_FIELD, returnType)
                                 .ext_box(returnType)
-                                .putfield(declaringClass, mangle(VALUE_FIELD), TypeHelper.getBoxedType(returnType))
+                                .putfield(declaringClass, VALUE_FIELD, TypeHelper.getBoxedType(returnType))
                                 .aload(0)
                                 .iconst(1)
-                                .putfield(declaringClass, mangle(FLAGS_FIELD), CtClass.intType));
+                                .putfield(declaringClass, FLAGS_FIELD, CtClass.intType));
                     }
                 });
 
         // return this.value
         code.aload(0)
-            .getfield(declaringClass, mangle(VALUE_FIELD), TypeHelper.getBoxedType(returnType))
+            .getfield(declaringClass, VALUE_FIELD, TypeHelper.getBoxedType(returnType))
             .areturn();
 
         method.getMethodInfo().setCodeAttribute(code.toCodeAttribute());
@@ -908,36 +896,36 @@ public class ObservableFunctionGenerator extends ClassGenerator {
         Local newValue = code.acquireLocal(false);
 
         code.aload(0)
-            .getfield(generatedClass, mangle(FLAGS_FIELD), CtClass.intType)
+            .getfield(generatedClass, FLAGS_FIELD, CtClass.intType)
             .ifne(() -> code
                 .aload(0)
                 .iconst(0)
-                .putfield(generatedClass, mangle(FLAGS_FIELD), CtClass.intType)
+                .putfield(generatedClass, FLAGS_FIELD, CtClass.intType)
                 .aload(0)
-                .getfield(generatedClass, mangle(CHANGE_LISTENER_FIELD), ChangeListenerType())
+                .getfield(generatedClass, CHANGE_LISTENER_FIELD, ChangeListenerType())
                 .ifnonnull(() -> {
                     if (returnType.isPrimitive()) {
                         // if (this.flags == 2)
                         code.aload(0)
-                            .getfield(generatedClass, mangle(FLAGS_FIELD), CtClass.intType)
+                            .getfield(generatedClass, FLAGS_FIELD, CtClass.intType)
                             .iconst(2)
                             .if_icmpeq(() -> code
                                 // this.value = this.pvalue
                                 .aload(0)
                                 .aload(0)
-                                .getfield(generatedClass, mangle(PRIMITIVE_VALUE_FIELD), returnType)
+                                .getfield(generatedClass, PRIMITIVE_VALUE_FIELD, returnType)
                                 .ext_box(returnType)
-                                .putfield(generatedClass, mangle(VALUE_FIELD), TypeHelper.getBoxedType(returnType))
+                                .putfield(generatedClass, VALUE_FIELD, TypeHelper.getBoxedType(returnType))
 
                                 // this.flags = 1
                                 .aload(0)
                                 .iconst(1)
-                                .putfield(generatedClass, mangle(FLAGS_FIELD), CtClass.intType));
+                                .putfield(generatedClass, FLAGS_FIELD, CtClass.intType));
                     }
 
                     // oldValue = this.value
                     code.aload(0)
-                        .getfield(generatedClass, mangle(VALUE_FIELD), TypeHelper.getBoxedType(returnType))
+                        .getfield(generatedClass, VALUE_FIELD, TypeHelper.getBoxedType(returnType))
                         .astore(oldValue);
 
                     // newValue = getValue()
@@ -947,7 +935,7 @@ public class ObservableFunctionGenerator extends ClassGenerator {
 
                     // this.changeListener.changed(this, oldValue, newValue)
                     code.aload(0)
-                        .getfield(generatedClass, mangle(CHANGE_LISTENER_FIELD), ChangeListenerType())
+                        .getfield(generatedClass, CHANGE_LISTENER_FIELD, ChangeListenerType())
                         .aload(0)
                         .aload(oldValue)
                         .aload(newValue)
@@ -955,10 +943,10 @@ public class ObservableFunctionGenerator extends ClassGenerator {
                                          function(CtClass.voidType, ObservableValueType(), ObjectType(), ObjectType()));
                 })
                 .aload(0)
-                .getfield(generatedClass, mangle(INVALIDATION_LISTENER_FIELD), InvalidationListenerType())
+                .getfield(generatedClass, INVALIDATION_LISTENER_FIELD, InvalidationListenerType())
                 .ifnonnull(() -> code
                     .aload(0)
-                    .getfield(generatedClass, mangle(INVALIDATION_LISTENER_FIELD), InvalidationListenerType())
+                    .getfield(generatedClass, INVALIDATION_LISTENER_FIELD, InvalidationListenerType())
                     .aload(0)
                     .invokeinterface(InvalidationListenerType(), "invalidated",
                                      function(CtClass.voidType, ObservableType()))))
@@ -1064,7 +1052,7 @@ public class ObservableFunctionGenerator extends ClassGenerator {
         String methodSignature = function(beanIsTrue ? ObjectType() : StringType());
 
         code.aload(0)
-            .getfield(generatedClass, mangle("param1"), fieldType);
+            .getfield(generatedClass, "param1", fieldType);
 
         if (bidirectional) {
             Local local = code.acquireLocal(fieldType);
