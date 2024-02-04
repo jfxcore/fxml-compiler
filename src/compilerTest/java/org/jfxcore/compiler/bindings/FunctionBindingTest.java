@@ -5,13 +5,16 @@ package org.jfxcore.compiler.bindings;
 
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
+import javafx.beans.property.ListProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleDoubleProperty;
+import javafx.beans.property.SimpleListProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 import javafx.beans.value.ObservableBooleanValue;
+import javafx.collections.FXCollections;
 import javafx.scene.control.Label;
 import javafx.scene.layout.Pane;
 import org.jfxcore.compiler.diagnostic.ErrorCode;
@@ -39,7 +42,7 @@ public class FunctionBindingTest extends CompilerTestBase {
 
     @SuppressWarnings("unused")
     public static class TestPane extends Pane implements TestDefaultMethod {
-        public final ObjectProperty<BindingPathTest.TestContext> context = new SimpleObjectProperty<>(new BindingPathTest.TestContext());
+        public final ObjectProperty<TestContext> context = new SimpleObjectProperty<>(new TestContext());
 
         public DoubleProperty doubleProp = new SimpleDoubleProperty(1);
         public StringProperty stringProp = new SimpleStringProperty("bar");
@@ -71,6 +74,9 @@ public class FunctionBindingTest extends CompilerTestBase {
         public ObjectProperty<Stringifier> objPropProperty() {
             return objProp;
         }
+
+        public final ListProperty<String> listProp = new SimpleListProperty<>(
+            FXCollections.observableArrayList("foo", "bar", "baz"));
 
         public final Container1 c1 = new Container1(new Container2(new DecimalFormat("000")));
         public static record Container1(Container2 c2) {}
@@ -562,6 +568,17 @@ public class FunctionBindingTest extends CompilerTestBase {
     }
 
     @Test
+    public void Bind_Unidirectional_To_Static_Method_With_Path_Expression() {
+        TestPane root = compileAndRun("""
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                      id="{fx:bind Integer.toString(listProp.size)}"/>
+        """);
+
+        assertTrue(root.idProperty().isBound());
+        assertEquals("3", root.getId());
+    }
+
+    @Test
     public void Bind_Unidirectional_To_Instance_Method_With_Mixed_Params() {
         TestPane root = compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
@@ -659,7 +676,7 @@ public class FunctionBindingTest extends CompilerTestBase {
         root.context.get().doubleValProperty().set(0);
         assertEquals("234.0-0.0-0.0", root.getId());
 
-        BindingPathTest.TestContext newCtx = new BindingPathTest.TestContext();
+        TestContext newCtx = new TestContext();
         newCtx.invariantDoubleVal = 1;
         newCtx.doubleValProperty().set(2);
         root.context.set(newCtx);

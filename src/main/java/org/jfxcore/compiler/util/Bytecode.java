@@ -1,4 +1,4 @@
-// Copyright (c) 2022, 2023, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2024, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.util;
@@ -1038,6 +1038,10 @@ public class Bytecode {
             checkcast(Classes.NumberType());
             ext_autoconv(sourceInfo, Classes.NumberType(), target);
         } else if (!TypeHelper.equals(target, Classes.ObjectType())) {
+            if (target.isPrimitive()) {
+                throw new IllegalArgumentException("source=" + source.getName() + ", target=" + target.getName());
+            }
+
             checkcast(target);
         }
 
