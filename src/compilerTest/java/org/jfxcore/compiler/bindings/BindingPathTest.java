@@ -118,6 +118,10 @@ public class BindingPathTest extends CompilerTestBase {
         public ObservableValue rawProp = new SimpleBooleanProperty(true);
 
         public ReadOnlyBooleanProperty notBindableProperty() { return null; }
+
+        public record NestedClass(String value) {
+            public static final NestedClass INSTANCE = new NestedClass("testValue");
+        }
     }
 
     @Test
@@ -345,6 +349,17 @@ public class BindingPathTest extends CompilerTestBase {
     }
 
     @Test
+    public void Bind_Once_To_Static_Field_In_NestedClass() {
+        TestPane root = compileAndRun("""
+            <?import javafx.scene.layout.*?>
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                      id="{fx:once TestPane.NestedClass.INSTANCE.value}"/>
+        """);
+
+        assertEquals("testValue", root.getId());
+    }
+
+    @Test
     public void Bind_Unidirectional_To_Interface_Method() {
         TestPane root = compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
@@ -520,6 +535,17 @@ public class BindingPathTest extends CompilerTestBase {
 
         assertEquals(ErrorCode.INSTANCE_MEMBER_REFERENCED_FROM_STATIC_CONTEXT, ex.getDiagnostic().getCode());
         assertCodeHighlight("Double.toString", ex);
+    }
+
+    @Test
+    public void Bind_Unidirectional_To_Static_Field_In_NestedClass() {
+        TestPane root = compileAndRun("""
+            <?import javafx.scene.layout.*?>
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                      id="{fx:bind TestPane.NestedClass.INSTANCE.value}"/>
+        """);
+
+        assertEquals("testValue", root.getId());
     }
 
     @Test
