@@ -357,6 +357,32 @@ public class PropertyAssignmentTest {
             assertEquals("bar", root.OtherTextProperty().get());
         }
 
+        @Test
+        public void Uppercase_Property_Name_In_Qualified_Notation_Is_Invalid() {
+            MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+                <?import javafx.scene.control.*?>
+                <Button xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
+                    <Button.Text>Hello!</Button.Text>
+                </Button>
+            """));
+
+            assertEquals(ErrorCode.PROPERTY_NOT_FOUND, ex.getDiagnostic().getCode());
+            assertCodeHighlight("Button.Text", ex);
+        }
+
+        @Test
+        public void Uppercase_Static_Property_Name_In_Qualified_Notation_Is_Invalid() {
+            MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+                <?import javafx.scene.control.*?>
+                <Button xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
+                    <StaticPropertyButton.Text>Hello!</StaticPropertyButton.Text>
+                </Button>
+            """));
+
+            assertEquals(ErrorCode.CLASS_NOT_FOUND, ex.getDiagnostic().getCode());
+            assertCodeHighlight("StaticPropertyButton.Text", ex);
+        }
+
         public static class VerbatimMatchTest extends Button {
             private final StringProperty text = new SimpleStringProperty();
             public StringProperty text() { return text; }

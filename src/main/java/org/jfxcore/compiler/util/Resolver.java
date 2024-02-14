@@ -362,8 +362,8 @@ public class Resolver {
 
             CtMethod setter = null;
             if (propertyType != null && getter != null) {
-                setter = tryResolveStaticSetter(
-                    declaringType.jvmType(), receiverType.jvmType(), propertyName, propertyType.jvmType());
+                setter = tryResolveStaticSetter(declaringType.jvmType(), receiverType.jvmType(),
+                                                propertyName, false, propertyType.jvmType());
             }
 
             if (propertyGetter == null && getter == null) {
@@ -587,19 +587,25 @@ public class Resolver {
      * @return The method, or {@code null} if no setter can be found.
      */
     public CtMethod tryResolveStaticSetter(
-            CtClass declaringClass, CtClass receiverClass, String name, @Nullable CtClass paramType) {
+            CtClass declaringClass, CtClass receiverClass, String name, boolean verbatim, @Nullable CtClass paramType) {
         CacheKey key = new CacheKey("tryResolveStaticSetter", declaringClass, receiverClass, name, paramType);
         CacheEntry entry = getCache().get(key);
         if (entry.found() && cacheEnabled) {
             return (CtMethod)entry.value();
         }
 
-        String setterName = NameHelper.getSetterName(name);
+        String setterName;
+
+        if (!verbatim && Character.isLowerCase(name.charAt(0))) {
+            setterName = NameHelper.getSetterName(name);
+        } else {
+            setterName = null;
+        }
 
         CtMethod method = findMethod(declaringClass, m -> {
             try {
                 if (Modifier.isPublic(m.getModifiers())
-                        && m.getName().equals(setterName)
+                        && (m.getName().equals(name) || (!verbatim && m.getName().equals(setterName)))
                         && m.getParameterTypes().length == 2
                         && receiverClass.subtypeOf(m.getParameterTypes()[0])
                         && TypeHelper.equals(m.getReturnType(), CtClass.voidType)
@@ -634,8 +640,15 @@ public class Resolver {
             return (CtMethod)entry.value();
         }
 
-        String getterName1 = NameHelper.getGetterName(name, false);
-        String getterName2 = NameHelper.getGetterName(name, true);
+        String alt0, alt1;
+
+        if (!verbatim && Character.isLowerCase(name.charAt(0))) {
+            alt0 = NameHelper.getGetterName(name, false);
+            alt1 = NameHelper.getGetterName(name, true);
+        } else {
+            alt0 = null;
+            alt1 = null;
+        }
 
         CtMethod method = findMethod(declaringClass, m -> {
             int modifiers = m.getModifiers();
@@ -643,8 +656,7 @@ public class Resolver {
             try {
                 if (Modifier.isPublic(modifiers)
                         && Modifier.isStatic(modifiers)
-                        && (verbatim ? m.getName().equals(name) :
-                            (m.getName().equals(getterName1) || m.getName().equals(getterName2)))
+                        && (m.getName().equals(name) || (!verbatim && (m.getName().equals(alt0) || m.getName().equals(alt1))))
                         && m.getParameterTypes().length == 1
                         && receiverClass.subtypeOf(m.getParameterTypes()[0])
                         && !TypeHelper.equals(m.getReturnType(), CtClass.voidType)
@@ -676,12 +688,14 @@ public class Resolver {
             return (GetterInfo)entry.value();
         }
 
-        List<String> potentialNames = List.of(
-            name,
-            NameHelper.getPropertyGetterName(name),
-            NameHelper.getGetterName(name, false),
-            NameHelper.getGetterName(name, true)
-        );
+        List<String> potentialNames = new ArrayList<>(4);
+        potentialNames.add(name);
+        potentialNames.add(NameHelper.getPropertyGetterName(name));
+
+        if (Character.isLowerCase(name.charAt(0))) {
+            potentialNames.add(NameHelper.getGetterName(name, false));
+            potentialNames.add(NameHelper.getGetterName(name, true));
+        }
 
         CtMethod method = potentialNames.stream()
             .map(n -> resolvePropertyGetterImpl(declaringClass, receiverClass, n))
