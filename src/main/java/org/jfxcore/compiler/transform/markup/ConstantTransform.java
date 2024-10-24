@@ -1,4 +1,4 @@
-// Copyright (c) 2023, JFXcore. All rights reserved.
+// Copyright (c) 2023, 2024, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.transform.markup;
@@ -23,7 +23,7 @@ import java.util.List;
 
 /**
  * A static constant can be referenced in FXML with the following syntax:
- * <pre>{code
+ * <pre>{@code
  *     <TableView fx:constant="CONSTRAINED_RESIZE_POLICY"/>
  * }</pre>
  * Note that the type of this element is actually {@code Callback}, and not {@code TableView}.

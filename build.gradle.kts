@@ -2,7 +2,7 @@ plugins {
     `java-library`
     `maven-publish`
     signing
-    kotlin("jvm") version "1.5.10"
+    kotlin("jvm") version "1.9.25"
     id("com.github.johnrengelman.shadow") version "7.1.0"
 }
 
@@ -33,6 +33,12 @@ java {
     targetCompatibility = JavaVersion.VERSION_17
 }
 
+kotlin {
+    compilerOptions {
+        jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
+    }
+}
+
 configurations["compilerTestImplementation"].extendsFrom(configurations.implementation.get())
 configurations["compilerTestRuntimeOnly"].extendsFrom(configurations.runtimeOnly.get())
 
@@ -52,6 +58,7 @@ tasks.compileJava {
 }
 
 tasks.named<Jar>("sourcesJar") {
+    dependsOn(copyVersionInfo)
     duplicatesStrategy = DuplicatesStrategy.INCLUDE
 }
 
