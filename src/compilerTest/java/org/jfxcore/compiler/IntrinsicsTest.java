@@ -48,6 +48,24 @@ public class IntrinsicsTest extends CompilerTestBase {
     }
 
     @Test
+    public void FxId_On_Constructor_Argument_Must_Be_Initialized_Before_Parent_In_Preamble() {
+        compileAndRun("""
+            <?import javafx.scene.layout.*?>
+            <?import javafx.scene.chart.*?>
+            <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
+                <LineChart fx:id="chart1">
+                    <xAxis>
+                        <NumberAxis fx:id="xAxis1"/>
+                    </xAxis>
+                    <yAxis>
+                        <NumberAxis/>
+                    </yAxis>
+                </LineChart>
+            </GridPane>
+        """);
+    }
+
+    @Test
     public void Unknown_Intrinsic() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.scene.layout.*?>
