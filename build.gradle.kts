@@ -2,7 +2,7 @@ plugins {
     `java-library`
     `maven-publish`
     signing
-    kotlin("jvm") version "1.5.10"
+    kotlin("jvm") version "1.9.25"
     id("com.github.johnrengelman.shadow") version "7.1.0"
 }
 
