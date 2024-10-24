@@ -33,6 +33,12 @@ java {
     targetCompatibility = JavaVersion.VERSION_17
 }
 
+kotlin {
+    compilerOptions {
+        jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
+    }
+}
+
 configurations["compilerTestImplementation"].extendsFrom(configurations.implementation.get())
 configurations["compilerTestRuntimeOnly"].extendsFrom(configurations.runtimeOnly.get())
 
@@ -52,6 +58,7 @@ tasks.compileJava {
 }
 
 tasks.named<Jar>("sourcesJar") {
+    dependsOn(copyVersionInfo)
     duplicatesStrategy = DuplicatesStrategy.INCLUDE
 }
 

@@ -23,7 +23,7 @@ import java.util.List;
 
 /**
  * A static constant can be referenced in FXML with the following syntax:
- * <pre>{code
+ * <pre>{@code
  *     <TableView fx:constant="CONSTRAINED_RESIZE_POLICY"/>
  * }</pre>
  * Note that the type of this element is actually {@code Callback}, and not {@code TableView}.
