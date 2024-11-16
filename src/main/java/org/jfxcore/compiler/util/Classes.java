@@ -1,4 +1,4 @@
-// Copyright (c) 2021, 2023, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2024, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.util;
@@ -28,6 +28,32 @@ public final class Classes {
     public static final String DefaultPropertyAnnotationName = "javafx.beans.DefaultProperty";
     public static final String NamedArgAnnotationName = "javafx.beans.NamedArg";
 
+    private static final CtClass nullType = new CtClass("<null>") {
+        @Override
+        public boolean subtypeOf(CtClass clazz) {
+            return !clazz.isPrimitive();
+        }
+
+        @Override
+        public boolean subclassOf(CtClass superclass) {
+            return !superclass.isPrimitive();
+        }
+    };
+
+    private static final CtClass bottomType = new CtClass("<bottom>") {
+        @Override
+        public boolean subtypeOf(CtClass clazz) {
+            return true;
+        }
+
+        @Override
+        public boolean subclassOf(CtClass superclass) {
+            return true;
+        }
+    };
+
+    public static CtClass NullType() { return nullType; }
+    public static CtClass BottomType() { return bottomType; }
     public static CtClass ObjectType() { return get("java.lang.Object"); }
     public static CtClass ObjectsType() { return get("java.util.Objects"); }
     public static CtClass ClassType() { return get("java.lang.Class"); }
