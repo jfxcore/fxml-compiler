@@ -1,4 +1,4 @@
-// Copyright (c) 2023, JFXcore. All rights reserved.
+// Copyright (c) 2023, 2024, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.collections;
@@ -44,7 +44,7 @@ public class MapObservableValueWrapperTest extends CompilerTestBase {
     public void compile() {
         root = compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                      mapProp="{fx:bind map}"/>
+                      mapProp="${map}"/>
         """);
 
         mapWrapperClass =

@@ -1,4 +1,4 @@
-// Copyright (c) 2021, 2023, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2024, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler;
@@ -34,7 +34,7 @@ public class MarkupExtensionTest extends CompilerTestBase {
                 <fx:define>
                     <Background fx:id="a" fills="{BackgroundFill fill=#ff0000; radii={fx:null}; insets=1,2,3.5,.4}"/>
                     <Background fx:id="b" fills="{BackgroundFill fill=red; radii=EMPTY; insets=1,2,3.5,.4}"/>
-                    <Background fx:id="c" fills="{BackgroundFill fill=RED; radii={fx:once CornerRadii.EMPTY}; insets=1,2,3.5,.4}"/>
+                    <Background fx:id="c" fills="{BackgroundFill fill=RED; radii=$CornerRadii.EMPTY; insets=1,2,3.5,.4}"/>
                 </fx:define>
             </GridPane>
         """);
@@ -61,7 +61,7 @@ public class MarkupExtensionTest extends CompilerTestBase {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.scene.control.*?>
             <Label xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                   text="{fx:once foo"/>
+                   text="{fx:foo bar"/>
         """));
 
         assertEquals(ErrorCode.EXPECTED_TOKEN, ex.getDiagnostic().getCode());
@@ -139,11 +139,11 @@ public class MarkupExtensionTest extends CompilerTestBase {
             <?import javafx.fxml.*?>
             <?import javafx.scene.control.*?>
             <Label xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                   text="{fx:url {fx:bind foo}}"/>
+                   text="{fx:url ${foo}}"/>
         """));
 
         assertEquals(ErrorCode.PROPERTY_MUST_CONTAIN_TEXT, ex.getDiagnostic().getCode());
-        assertCodeHighlight("{fx:bind foo}", ex);
+        assertCodeHighlight("${foo}", ex);
     }
 
     @Test

@@ -1,4 +1,4 @@
-// Copyright (c) 2021, 2023, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2024, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.bindings;
@@ -14,14 +14,12 @@ import javafx.scene.layout.Pane;
 import javafx.scene.shape.Rectangle;
 import org.jfxcore.compiler.diagnostic.ErrorCode;
 import org.jfxcore.compiler.diagnostic.MarkupException;
-import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.util.CompilerTestBase;
 import org.jfxcore.compiler.util.Reflection;
 import org.jfxcore.compiler.util.TestExtension;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-import static org.jfxcore.compiler.util.ExceptionHelper.*;
 import static org.jfxcore.compiler.util.MoreAssertions.*;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -36,12 +34,12 @@ public class ControlBindingTest extends CompilerTestBase {
             <?import javafx.scene.layout.*?>
             <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <Button fx:id="btn" text="foo"/>
-                <Label prefWidth="{fx:once btn.text}"/>
+                <Label prefWidth="$btn.text"/>
             </Pane>
         """));
 
         assertEquals(ErrorCode.CANNOT_CONVERT_SOURCE_TYPE, ex.getDiagnostic().getCode());
-        assertCodeHighlight("{fx:once btn.text}", ex);
+        assertCodeHighlight("$btn.text", ex);
     }
 
     @Test
@@ -51,20 +49,12 @@ public class ControlBindingTest extends CompilerTestBase {
             <?import javafx.scene.layout.*?>
             <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <Button fx:id="btn" text="foo"/>
-                <Label text="{fx:once btn.text}"/>
-                <Label>
-                    <text>
-                        <fx:once path="btn.text"/>
-                    </text>
-                </Label>
+                <Label text="$btn.text"/>
             </Pane>
         """);
 
         assertFalse(((Label)root.getChildren().get(1)).textProperty().isBound());
         assertEquals("foo", ((Label)root.getChildren().get(1)).getText());
-
-        assertFalse(((Label)root.getChildren().get(2)).textProperty().isBound());
-        assertEquals("foo", ((Label)root.getChildren().get(2)).getText());
     }
 
     @Test
@@ -74,7 +64,7 @@ public class ControlBindingTest extends CompilerTestBase {
             <?import javafx.scene.layout.*?>
             <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <Button fx:id="btn" prefWidth="123"/>
-                <Label prefWidth="{fx:once btn.prefWidth}"/>
+                <Label prefWidth="$btn.prefWidth"/>
             </Pane>
         """);
 
@@ -88,7 +78,7 @@ public class ControlBindingTest extends CompilerTestBase {
             <?import javafx.scene.shape.*?>
             <?import javafx.scene.layout.*?>
             <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
-                <Rectangle fill="red" stroke="{fx:once self/fill}"/>
+                <Rectangle fill="red" stroke="$self/fill"/>
             </Pane>
         """);
 
@@ -110,7 +100,7 @@ public class ControlBindingTest extends CompilerTestBase {
             <?import javafx.scene.layout.*?>
             <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <properties>
-                    <NonNode fx:id="prop" prop1="123.0" prop2="{fx:once self/prop1}"/>
+                    <NonNode fx:id="prop" prop1="123.0" prop2="$self/prop1"/>
                 </properties>
             </Pane>
         """);
@@ -135,12 +125,12 @@ public class ControlBindingTest extends CompilerTestBase {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.scene.layout.*?>
             <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
-                <NodeUnderInitialization arg1="{fx:once self/test}"/>
+                <NodeUnderInitialization arg1="$self/test"/>
             </Pane>
         """));
 
         assertEquals(ErrorCode.CANNOT_REFERENCE_NODE_UNDER_INITIALIZATION, ex.getDiagnostic().getCode());
-        assertCodeHighlight("{fx:once self/test}", ex);
+        assertCodeHighlight("$self/test", ex);
     }
 
     @Test
@@ -148,12 +138,12 @@ public class ControlBindingTest extends CompilerTestBase {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.scene.layout.*?>
             <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
-                <NodeUnderInitialization arg1="{fx:once NodeUnderInitialization.function(self/test)}"/>
+                <NodeUnderInitialization arg1="$NodeUnderInitialization.function(self/test)"/>
             </Pane>
         """));
 
         assertEquals(ErrorCode.CANNOT_REFERENCE_NODE_UNDER_INITIALIZATION, ex.getDiagnostic().getCode());
-        assertCodeHighlight("{fx:once NodeUnderInitialization.function(self/test)}", ex);
+        assertCodeHighlight("$NodeUnderInitialization.function(self/test)", ex);
     }
 
     @Test
@@ -163,14 +153,14 @@ public class ControlBindingTest extends CompilerTestBase {
             <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <NodeUnderInitialization>
                     <arg2>
-                        <NodeUnderInitialization arg1="{fx:once parent[0]/test}"/>
+                        <NodeUnderInitialization arg1="$parent[0]/test"/>
                     </arg2>
                 </NodeUnderInitialization>
             </Pane>
         """));
 
         assertEquals(ErrorCode.CANNOT_REFERENCE_NODE_UNDER_INITIALIZATION, ex.getDiagnostic().getCode());
-        assertCodeHighlight("{fx:once parent[0]/test}", ex);
+        assertCodeHighlight("$parent[0]/test", ex);
     }
 
     @Test
@@ -182,7 +172,7 @@ public class ControlBindingTest extends CompilerTestBase {
                     <arg2>
                         <NodeUnderInitialization>
                             <arg2>
-                                <NodeUnderInitialization arg1="{fx:once parent[1]/test}"/>
+                                <NodeUnderInitialization arg1="$parent[1]/test"/>
                             </arg2>
                         </NodeUnderInitialization>
                     </arg2>
@@ -191,7 +181,7 @@ public class ControlBindingTest extends CompilerTestBase {
         """));
 
         assertEquals(ErrorCode.CANNOT_REFERENCE_NODE_UNDER_INITIALIZATION, ex.getDiagnostic().getCode());
-        assertCodeHighlight("{fx:once parent[1]/test}", ex);
+        assertCodeHighlight("$parent[1]/test", ex);
     }
 
     @Test
@@ -201,14 +191,14 @@ public class ControlBindingTest extends CompilerTestBase {
             <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <NodeUnderInitialization>
                     <arg2>
-                        <Pane prefWidth="{fx:once parent[0]/test}"/>
+                        <Pane prefWidth="$parent[0]/test"/>
                     </arg2>
                 </NodeUnderInitialization>
             </Pane>
         """));
 
         assertEquals(ErrorCode.CANNOT_REFERENCE_NODE_UNDER_INITIALIZATION, ex.getDiagnostic().getCode());
-        assertCodeHighlight("prefWidth=\"{fx:once parent[0]/test}\"", ex);
+        assertCodeHighlight("prefWidth=\"$parent[0]/test\"", ex);
     }
 
     @Test
@@ -219,7 +209,7 @@ public class ControlBindingTest extends CompilerTestBase {
                 <NodeUnderInitialization>
                     <arg2>
                         <NodeUnderInitialization arg1="123">
-                            <Pane fx:id="testNode" prefWidth="{fx:bind parent[0]/test}"/>
+                            <Pane fx:id="testNode" prefWidth="${parent[0]/test}"/>
                         </NodeUnderInitialization>
                     </arg2>
                 </NodeUnderInitialization>
@@ -246,7 +236,7 @@ public class ControlBindingTest extends CompilerTestBase {
             <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <NodeUnderInitializationWithAlternativeProperty>
                     <content>
-                        <Pane prefWidth="{fx:bind parent[0]/prefHeight}"/>
+                        <Pane prefWidth="${parent[0]/prefHeight}"/>
                     </content>
                 </NodeUnderInitializationWithAlternativeProperty>
             </Pane>
@@ -265,12 +255,12 @@ public class ControlBindingTest extends CompilerTestBase {
             <?import javafx.scene.layout.*?>
             <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <Button fx:id="btn" text="foo"/>
-                <Label prefWidth="{fx:bind btn.text}"/>
+                <Label prefWidth="${btn.text}"/>
             </Pane>
         """));
 
         assertEquals(ErrorCode.CANNOT_CONVERT_SOURCE_TYPE, ex.getDiagnostic().getCode());
-        assertCodeHighlight("{fx:bind btn.text}", ex);
+        assertCodeHighlight("${btn.text}", ex);
     }
 
     @Test
@@ -279,9 +269,9 @@ public class ControlBindingTest extends CompilerTestBase {
             <?import javafx.scene.control.*?>
             <?import javafx.scene.layout.*?>
             <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                  prefWidth="{fx:bind btn.prefWidth}">
-                <Pane fx:id="pane" prefWidth="{fx:bind prefWidth}">
-                    <Pane prefWidth="{fx:bind pane.prefWidth}">
+                  prefWidth="${btn.prefWidth}">
+                <Pane fx:id="pane" prefWidth="${prefWidth}">
+                    <Pane prefWidth="${pane.prefWidth}">
                         <Button fx:id="btn" prefWidth="123"/>
                     </Pane>
                 </Pane>
@@ -300,12 +290,12 @@ public class ControlBindingTest extends CompilerTestBase {
             <?import javafx.scene.layout.*?>
             <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <Button fx:id="btn" text="foo"/>
-                <Label prefWidth="{fx:bindBidirectional btn.text}"/>
+                <Label prefWidth="#{btn.text}"/>
             </Pane>
         """));
 
         assertEquals(ErrorCode.SOURCE_TYPE_MISMATCH, ex.getDiagnostic().getCode());
-        assertCodeHighlight("{fx:bindBidirectional btn.text}", ex);
+        assertCodeHighlight("#{btn.text}", ex);
     }
 
     @Test
@@ -315,7 +305,7 @@ public class ControlBindingTest extends CompilerTestBase {
             <?import javafx.scene.layout.*?>
             <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <Label fx:id="lbl" text="foo"/>
-                <Label text="{fx:bindBidirectional lbl.text}"/>
+                <Label text="#{lbl.text}"/>
             </Pane>
         """);
 
@@ -335,9 +325,9 @@ public class ControlBindingTest extends CompilerTestBase {
             <?import javafx.scene.control.*?>
             <?import javafx.scene.layout.*?>
             <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                  prefWidth="{fx:bindBidirectional btn.prefWidth}">
-                <Pane fx:id="pane" prefWidth="{fx:bindBidirectional prefWidth}">
-                    <Pane prefWidth="{fx:bindBidirectional pane.prefWidth}">
+                  prefWidth="#{btn.prefWidth}">
+                <Pane fx:id="pane" prefWidth="#{prefWidth}">
+                    <Pane prefWidth="#{pane.prefWidth}">
                         <Button fx:id="btn" prefWidth="123"/>
                     </Pane>
                 </Pane>

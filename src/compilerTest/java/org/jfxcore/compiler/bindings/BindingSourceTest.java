@@ -1,4 +1,4 @@
-// Copyright (c) 2021, 2023, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2024, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.bindings;
@@ -26,8 +26,8 @@ public class BindingSourceTest extends CompilerTestBase {
             <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                   prefHeight="123">
                 <Pane fx:id="pane" prefWidth="234">
-                    <Pane prefWidth="{fx:once parent[0]/prefWidth}"
-                          prefHeight="{fx:once parent[1]/prefHeight}"/>
+                    <Pane prefWidth="$parent[0]/prefWidth"
+                          prefHeight="$parent[1]/prefHeight"/>
                 </Pane>
             </Pane>
         """);
@@ -46,7 +46,7 @@ public class BindingSourceTest extends CompilerTestBase {
             <?import javafx.scene.layout.*?>
             <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                       prefWidth="123">
-                <Pane prefWidth="{fx:once parent[Pane]/prefWidth}"/>
+                <Pane prefWidth="$parent[Pane]/prefWidth"/>
             </Pane>
         """);
 
@@ -59,7 +59,7 @@ public class BindingSourceTest extends CompilerTestBase {
         Pane root = compileAndRun("""
             <?import javafx.scene.layout.*?>
             <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
-                <Pane maxWidth="{fx:once Region.USE_PREF_SIZE}"/>
+                <Pane maxWidth="$Region.USE_PREF_SIZE"/>
             </Pane>
         """);
 
@@ -71,26 +71,11 @@ public class BindingSourceTest extends CompilerTestBase {
         Pane root = compileAndRun("""
             <?import javafx.scene.layout.*?>
             <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
-                <Pane maxWidth="{fx:once javafx.scene.layout.Region.USE_PREF_SIZE}"/>
+                <Pane maxWidth="$javafx.scene.layout.Region.USE_PREF_SIZE"/>
             </Pane>
         """);
 
         assertFieldAccess(root, "javafx.scene.layout.Region", "USE_PREF_SIZE", "D");
-    }
-
-    @Test
-    public void Bind_Once_With_Default_Property() {
-        Pane root = compileAndRun("""
-            <?import javafx.scene.layout.*?>
-            <?import javafx.scene.control.*?>
-            <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
-                <Button>
-                    <fx:once path="javafx.application.Application.STYLESHEET_CASPIAN"/>
-                </Button>
-            </Pane>
-        """);
-
-        assertEquals("CASPIAN", ((Button)root.getChildren().get(0)).getText());
     }
 
     @Test
@@ -100,8 +85,8 @@ public class BindingSourceTest extends CompilerTestBase {
             <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                   prefHeight="123">
                 <Pane fx:id="pane" prefWidth="234">
-                    <Pane prefWidth="{fx:bind parent[0]/prefWidth}"
-                          prefHeight="{fx:bind parent[1]/prefHeight}"/>
+                    <Pane prefWidth="${parent[0]/prefWidth}"
+                          prefHeight="${parent[1]/prefHeight}"/>
                 </Pane>
             </Pane>
         """);
@@ -120,7 +105,7 @@ public class BindingSourceTest extends CompilerTestBase {
             <?import javafx.scene.layout.*?>
             <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <Pane fx:id="pane" prefWidth="123">
-                    <Pane prefWidth="{fx:bind parent/prefWidth}"/>
+                    <Pane prefWidth="${parent/prefWidth}"/>
                 </Pane>
             </Pane>
         """);
@@ -135,7 +120,7 @@ public class BindingSourceTest extends CompilerTestBase {
             <?import javafx.scene.layout.*?>
             <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <Pane fx:id="pane" prefWidth="123">
-                    <Pane prefWidth="{fx:bind parent[1]/pane.prefWidth}"/>
+                    <Pane prefWidth="${parent[1]/pane.prefWidth}"/>
                 </Pane>
             </Pane>
         """);
@@ -151,8 +136,8 @@ public class BindingSourceTest extends CompilerTestBase {
             <StackPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                        prefHeight="123">
                 <Pane prefWidth="234">
-                    <Pane prefWidth="{fx:bind parent[Pane]/prefWidth}"
-                          prefHeight="{fx:bind parent[StackPane]/prefHeight}"/>
+                    <Pane prefWidth="${parent[Pane]/prefWidth}"
+                          prefHeight="${parent[StackPane]/prefHeight}"/>
                 </Pane>
             </StackPane>
         """);
@@ -169,8 +154,8 @@ public class BindingSourceTest extends CompilerTestBase {
             <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                        prefHeight="123">
                 <Pane prefWidth="234">
-                    <Pane prefWidth="{fx:bind parent[Pane:0]/prefWidth}"
-                          prefHeight="{fx:bind parent[Pane:1]/prefHeight}"/>
+                    <Pane prefWidth="${parent[Pane:0]/prefWidth}"
+                          prefHeight="${parent[Pane:1]/prefHeight}"/>
                 </Pane>
             </Pane>
         """);
@@ -185,7 +170,7 @@ public class BindingSourceTest extends CompilerTestBase {
         Pane root = compileAndRun("""
             <?import javafx.scene.layout.*?>
             <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
-                <Pane maxWidth="{fx:bind Region.USE_PREF_SIZE}"/>
+                <Pane maxWidth="${Region.USE_PREF_SIZE}"/>
             </Pane>
         """);
 
@@ -197,7 +182,7 @@ public class BindingSourceTest extends CompilerTestBase {
         Pane root = compileAndRun("""
             <?import javafx.scene.layout.*?>
             <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
-                <Pane maxWidth="{fx:bind javafx.scene.layout.Region.USE_PREF_SIZE}"/>
+                <Pane maxWidth="${javafx.scene.layout.Region.USE_PREF_SIZE}"/>
             </Pane>
         """);
 
@@ -210,7 +195,7 @@ public class BindingSourceTest extends CompilerTestBase {
             <?import javafx.scene.control.*?>
             <?import org.jfxcore.compiler.bindings.BindingPathTest.TestPane?>
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
-                <Label prefWidth="{fx:once parent/notfound}"/>
+                <Label prefWidth="$parent/notfound"/>
             </TestPane>
         """));
 
@@ -225,7 +210,7 @@ public class BindingSourceTest extends CompilerTestBase {
             <?import org.jfxcore.compiler.bindings.BindingPathTest.TestPane?>
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                       prefWidth="123">
-                <Label prefWidth="{fx:once parent[Button]/prefWidth}"/>
+                <Label prefWidth="$parent[Button]/prefWidth"/>
             </TestPane>
         """));
 
@@ -239,7 +224,7 @@ public class BindingSourceTest extends CompilerTestBase {
             <?import javafx.scene.control.*?>
             <?import org.jfxcore.compiler.bindings.BindingPathTest.TestPane?>
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
-                <Label prefWidth="{fx:once parent[-1]/prefWidth}"/>
+                <Label prefWidth="$parent[-1]/prefWidth"/>
             </TestPane>
         """));
 
@@ -253,7 +238,7 @@ public class BindingSourceTest extends CompilerTestBase {
             <?import javafx.scene.control.*?>
             <?import org.jfxcore.compiler.bindings.BindingPathTest.TestPane?>
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
-                <Label prefWidth="{fx:bind parent[1]/prefWidth}"/>
+                <Label prefWidth="${parent[1]/prefWidth}"/>
             </TestPane>
         """));
 
@@ -268,7 +253,7 @@ public class BindingSourceTest extends CompilerTestBase {
             <?import javafx.geometry.*?>
             <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0" prefWidth="123">
                 <rotationAxis>
-                    <Point3D x="{fx:once parent/prefWidth}" y="0" z="0"/>
+                    <Point3D x="$parent/prefWidth" y="0" z="0"/>
                 </rotationAxis>
             </Pane>
         """);
@@ -282,7 +267,7 @@ public class BindingSourceTest extends CompilerTestBase {
             <?import javafx.scene.layout.*?>
             <?import javafx.scene.control.*?>
             <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
-                <Label text="{fx:bind parent/0123}"/>
+                <Label text="${parent/0123}"/>
             </Pane>
         """));
 
@@ -296,7 +281,7 @@ public class BindingSourceTest extends CompilerTestBase {
             <?import javafx.scene.layout.*?>
             <?import javafx.scene.control.*?>
             <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
-                <Button graphic="{fx:once parent/this}"/>
+                <Button graphic="$parent/this"/>
             </Pane>
         """);
 
@@ -308,7 +293,7 @@ public class BindingSourceTest extends CompilerTestBase {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.scene.layout.*?>
             <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
-                <Pane prefHeight="{fx:bind foobar/prefWidth}"/>
+                <Pane prefHeight="${foobar/prefWidth}"/>
             </Pane>
         """));
 
@@ -321,7 +306,7 @@ public class BindingSourceTest extends CompilerTestBase {
         Pane root = compileAndRun("""
             <?import javafx.scene.layout.*?>
             <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
-                <Pane prefWidth="123" prefHeight="{fx:bind self/prefWidth}"/>
+                <Pane prefWidth="123" prefHeight="${self/prefWidth}"/>
             </Pane>
         """);
 
@@ -335,7 +320,7 @@ public class BindingSourceTest extends CompilerTestBase {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.scene.layout.*?>
             <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
-                <Pane prefWidth="123" prefHeight="{fx:bind self[2]/prefWidth}"/>
+                <Pane prefWidth="123" prefHeight="${self[2]/prefWidth}"/>
             </Pane>
         """));
 

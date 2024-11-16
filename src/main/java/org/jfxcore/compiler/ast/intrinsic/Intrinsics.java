@@ -81,8 +81,7 @@ public class Intrinsics {
 
     public static final Intrinsic BIND_CONTENT_BIDIRECTIONAL = new Intrinsic(
         "bindContentBidirectional", Kind.OBJECT, Placement.ANY,
-        new IntrinsicProperty("path", Classes::StringType, true),
-        new IntrinsicProperty("inverseMethod", Classes::StringType));
+        new IntrinsicProperty("path", Classes::StringType, true));
 
     private static final List<Intrinsic> NODES = List.of(
         NULL, CLASS, CLASS_MODIFIER, CLASS_PARAMETERS, MARKUP_CLASS_NAME, ID, VALUE, CONSTANT, FACTORY,

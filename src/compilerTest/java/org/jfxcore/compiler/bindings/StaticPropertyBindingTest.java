@@ -1,4 +1,4 @@
-// Copyright (c) 2022, 2023, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2024, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.bindings;
@@ -46,7 +46,7 @@ public class StaticPropertyBindingTest extends CompilerTestBase {
             <?import javafx.scene.control.*?>
             <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <Pane fx:id="pane" TextSource.text="foo"/>
-                <Label text="{fx:once pane.(TextSource.text)}"/>
+                <Label text="$pane.(TextSource.text)"/>
             </Pane>
         """);
 
@@ -63,7 +63,7 @@ public class StaticPropertyBindingTest extends CompilerTestBase {
             <?import javafx.scene.control.*?>
             <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <Pane fx:id="pane" TextSource.text="foo"/>
-                <Label text="{fx:once pane.(org.jfxcore.compiler.bindings.StaticPropertyBindingTest.TextSource.text)}"/>
+                <Label text="$pane.(org.jfxcore.compiler.bindings.StaticPropertyBindingTest.TextSource.text)"/>
             </Pane>
         """);
 
@@ -81,7 +81,7 @@ public class StaticPropertyBindingTest extends CompilerTestBase {
             <?import org.jfxcore.compiler.bindings.*?>
             <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <Pane fx:id="pane" TextSource.text="foo"/>
-                <Label text="{fx:once pane.(StaticPropertyBindingTest.TextSource.text)}"/>
+                <Label text="$pane.(StaticPropertyBindingTest.TextSource.text)"/>
             </Pane>
         """);
 
@@ -98,7 +98,7 @@ public class StaticPropertyBindingTest extends CompilerTestBase {
             <?import javafx.scene.control.*?>
             <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <Pane fx:id="pane"/>
-                <Label text="{fx:bind pane.(TextSource.text)}"/>
+                <Label text="${pane.(TextSource.text)}"/>
             </Pane>
         """);
 
@@ -123,7 +123,7 @@ public class StaticPropertyBindingTest extends CompilerTestBase {
             <?import javafx.scene.control.*?>
             <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <Pane fx:id="pane" TextSource.text="foo"/>
-                <Label text="{fx:bindBidirectional pane.(TextSource.text)}"/>
+                <Label text="#{pane.(TextSource.text)}"/>
             </Pane>
         """);
 
@@ -148,7 +148,7 @@ public class StaticPropertyBindingTest extends CompilerTestBase {
             <?import javafx.scene.control.*?>
             <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <Label fx:id="lbl" text="foo"/>
-                <Pane TextSource.text="{fx:bind lbl.text}"/>
+                <Pane TextSource.text="${lbl.text}"/>
             </Pane>
         """);
 
@@ -173,7 +173,7 @@ public class StaticPropertyBindingTest extends CompilerTestBase {
             <?import javafx.scene.control.*?>
             <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <Label fx:id="lbl" text="foo"/>
-                <Pane org.jfxcore.compiler.bindings.StaticPropertyBindingTest.TextSource.text="{fx:bind lbl.text}"/>
+                <Pane org.jfxcore.compiler.bindings.StaticPropertyBindingTest.TextSource.text="${lbl.text}"/>
             </Pane>
         """);
 
@@ -198,7 +198,7 @@ public class StaticPropertyBindingTest extends CompilerTestBase {
             <?import javafx.scene.control.*?>
             <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <Label fx:id="lbl" text="foo"/>
-                <Pane TextSource.text="{fx:bindBidirectional lbl.text}"/>
+                <Pane TextSource.text="#{lbl.text}"/>
             </Pane>
         """);
 
@@ -223,7 +223,7 @@ public class StaticPropertyBindingTest extends CompilerTestBase {
             <?import javafx.scene.control.*?>
             <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <Pane fx:id="pane" TextSource.text="foo"/>
-                <Label text="{fx:once pane.(TextSource.nonexistent)}"/>
+                <Label text="$pane.(TextSource.nonexistent)"/>
             </Pane>
         """));
 
@@ -238,13 +238,13 @@ public class StaticPropertyBindingTest extends CompilerTestBase {
             <?import javafx.scene.control.*?>
             <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <Label fx:id="lbl" text="foo"/>
-                <Pane TextSource.nonexistent="{fx:bind lbl.text}"/>
+                <Pane TextSource.nonexistent="${lbl.text}"/>
             </Pane>
         """));
 
         assertEquals(ErrorCode.PROPERTY_NOT_FOUND, ex.getDiagnostic().getCode());
         assertCodeHighlight("""
-            TextSource.nonexistent="{fx:bind lbl.text}"
+            TextSource.nonexistent="${lbl.text}"
         """.trim(), ex);
     }
 
@@ -255,7 +255,7 @@ public class StaticPropertyBindingTest extends CompilerTestBase {
             <?import javafx.scene.control.*?>
             <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <Pane fx:id="pane"/>
-                <Label text="{fx:once pane.(TextSource.(TextSource.text))}"/>
+                <Label text="$pane.(TextSource.(TextSource.text))"/>
             </Pane>
         """));
 
@@ -298,7 +298,7 @@ public class StaticPropertyBindingTest extends CompilerTestBase {
                         <Label text="foo"/>
                     </LabelSource.label>
                 </Pane>
-                <Label text="{fx:bind pane.(LabelSource.label).text}"/>
+                <Label text="${pane.(LabelSource.label).text}"/>
             </Pane>
         """);
 
@@ -321,7 +321,7 @@ public class StaticPropertyBindingTest extends CompilerTestBase {
                         <Label text="foo"/>
                     </ObservableLabelSource.label>
                 </Pane>
-                <Label text="{fx:bind pane.(ObservableLabelSource.label).text}"/>
+                <Label text="${pane.(ObservableLabelSource.label).text}"/>
             </Pane>
         """);
 

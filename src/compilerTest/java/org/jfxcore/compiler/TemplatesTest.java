@@ -1,4 +1,4 @@
-// Copyright (c) 2021, 2023, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2024, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler;
@@ -55,7 +55,7 @@ public class TemplatesTest extends CompilerTestBase {
                     <cellFactory>
                         <TemplatedListCellFactory fx:typeArguments="java.lang.Double">
                             <Template fx:typeArguments="java.lang.Double">
-                                <Label text="{fx:once this.toString}"/>
+                                <Label text="$this.toString"/>
                             </Template>
                         </TemplatedListCellFactory>
                     </cellFactory>
@@ -88,7 +88,7 @@ public class TemplatesTest extends CompilerTestBase {
                     <cellFactory>
                         <TemplatedListCellFactory fx:typeArguments="java.lang.Double">
                             <Template fx:typeArguments="java.lang.Double">
-                                <Label text="{fx:once java.lang.String.format('%s', this)}"/>
+                                <Label text="$java.lang.String.format('%s', this)"/>
                             </Template>
                         </TemplatedListCellFactory>
                     </cellFactory>
@@ -124,7 +124,7 @@ public class TemplatesTest extends CompilerTestBase {
                                 <cellFactory>
                                     <TemplatedListCellFactory fx:typeArguments="String">
                                         <Template fx:typeArguments="String">
-                                            <Label text="{fx:once this}"/>
+                                            <Label text="$this"/>
                                         </Template>
                                     </TemplatedListCellFactory>
                                 </cellFactory>
@@ -132,7 +132,7 @@ public class TemplatesTest extends CompilerTestBase {
                         </Template>
                     </TemplatedListCellFactory>
                 </fx:define>
-                <ListView cellFactory="{fx:once templ}" />
+                <ListView cellFactory="$templ" />
             </Pane>
         """);
 
@@ -212,7 +212,7 @@ public class TemplatesTest extends CompilerTestBase {
                 <fx:define>
                     <Template fx:typeArguments="java.lang.String">
                         <ScrollPane>
-                            <Button prefWidth="{fx:bind parent[2]/prefHeight}"/>
+                            <Button prefWidth="${parent[2]/prefHeight}"/>
                         </ScrollPane>
                     </Template>
                 </fx:define>
@@ -232,7 +232,7 @@ public class TemplatesTest extends CompilerTestBase {
                 <fx:define>
                     <Template fx:typeArguments="java.lang.String">
                         <ScrollPane>
-                            <Button prefWidth="{fx:bind parent[Pane]/prefHeight}"/>
+                            <Button prefWidth="${parent[Pane]/prefHeight}"/>
                         </ScrollPane>
                     </Template>
                 </fx:define>
@@ -277,7 +277,7 @@ public class TemplatesTest extends CompilerTestBase {
                     <cellFactory>
                         <TemplatedListCellFactory fx:typeArguments="String">
                             <Template fx:typeArguments="java.lang.String">
-                                <Label text="{fx:once this}"/>
+                                <Label text="$this"/>
                             </Template>
                         </TemplatedListCellFactory>
                     </cellFactory>
@@ -310,7 +310,7 @@ public class TemplatesTest extends CompilerTestBase {
                     <cellFactory>
                         <TemplatedListCellFactory fx:typeArguments="java.lang.String">
                             <Template fx:typeArguments="java.lang.String">
-                                <Label text="{fx:bindBidirectional this}"/>
+                                <Label text="#{this}"/>
                             </Template>
                         </TemplatedListCellFactory>
                     </cellFactory>

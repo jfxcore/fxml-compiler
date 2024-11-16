@@ -1,4 +1,4 @@
-// Copyright (c) 2022, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2024, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.transform.markup;
@@ -25,10 +25,17 @@ import java.util.List;
 
 /**
  * If an {@link ObjectNode} contains child nodes, this transform tries to look up the default
- * property of the class as indicated by the {@link javafx.beans.DefaultProperty} annotation.
- * If a default property annotation exists, the child nodes are added to the default property.
+ * property of the class as indicated by the {@link javafx.beans.DefaultProperty} annotation,
+ * or when this transform is applied to intrinsics, the {@link Intrinsic#getDefaultProperty()}.
+ * If a default property exists, the child nodes are added to the default property.
  */
 public class DefaultPropertyTransform implements Transform {
+
+    private final boolean applyToIntrinsics;
+
+    public DefaultPropertyTransform(boolean applyToIntrinsics) {
+        this.applyToIntrinsics = applyToIntrinsics;
+    }
 
     @Override
     public Node transform(TransformContext context, Node node) {
@@ -42,10 +49,10 @@ public class DefaultPropertyTransform implements Transform {
         }
 
         String defaultProperty;
-        Intrinsic intrinsic = Intrinsics.find(objectNode);
 
-        if (intrinsic != null) {
-            if (intrinsic.getKind() != Intrinsic.Kind.PROPERTY) {
+        if (applyToIntrinsics) {
+            Intrinsic intrinsic = Intrinsics.find(objectNode);
+            if (intrinsic != null && intrinsic.getKind() != Intrinsic.Kind.PROPERTY) {
                 IntrinsicProperty intrinsicDefaultProperty = intrinsic.getDefaultProperty();
                 defaultProperty = intrinsicDefaultProperty != null ? intrinsicDefaultProperty.getName() : null;
             } else {

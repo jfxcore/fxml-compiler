@@ -1,4 +1,4 @@
-// Copyright (c) 2022, 2023, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2024, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.parse;
@@ -33,22 +33,16 @@ import static org.jfxcore.compiler.parse.CurlyTokenType.*;
 
 public class InlineParser {
 
-    public static final String COMPACT_EXPR_PREFIX = "$";
-    public static final String COMPACT_BIND_EXPR_PREFIX = "${";
-    public static final String COMPACT_BIND_BIDIRECTIONAL_EXPR_PREFIX = "#{";
-    public static final String COMPACT_CONTENT_EXPR_PREFIX = "[$]";
-    public static final String COMPACT_BIND_CONTENT_EXPR_PREFIX = "[$]{";
-    public static final String COMPACT_BIND_CONTENT_BIDIRECTIONAL_EXPR_PREFIX = "[#]{";
+    public static final String ONCE_EXPR_PREFIX = "$";
+    public static final String BIND_EXPR_PREFIX = "${";
+    public static final String BIND_BIDIRECTIONAL_EXPR_PREFIX = "#{";
 
     private record SyntaxMapping(String compact, Intrinsic intrinsic, boolean closingCurly) {}
 
-    private static final SyntaxMapping[] COMPACT_SYNTAX_MAPPING = new SyntaxMapping[] {
-        new SyntaxMapping(COMPACT_BIND_EXPR_PREFIX, Intrinsics.BIND, true),
-        new SyntaxMapping(COMPACT_BIND_BIDIRECTIONAL_EXPR_PREFIX, Intrinsics.BIND_BIDIRECTIONAL, true),
-        new SyntaxMapping(COMPACT_EXPR_PREFIX, Intrinsics.ONCE, false),
-        new SyntaxMapping(COMPACT_BIND_CONTENT_EXPR_PREFIX, Intrinsics.BIND_CONTENT, true),
-        new SyntaxMapping(COMPACT_BIND_CONTENT_BIDIRECTIONAL_EXPR_PREFIX, Intrinsics.BIND_CONTENT_BIDIRECTIONAL, true),
-        new SyntaxMapping(COMPACT_CONTENT_EXPR_PREFIX, Intrinsics.CONTENT, false)
+    private static final SyntaxMapping[] SYNTAX_MAPPING = new SyntaxMapping[] {
+        new SyntaxMapping(BIND_BIDIRECTIONAL_EXPR_PREFIX, Intrinsics.BIND_BIDIRECTIONAL, true),
+        new SyntaxMapping(BIND_EXPR_PREFIX, Intrinsics.BIND, true),
+        new SyntaxMapping(ONCE_EXPR_PREFIX, Intrinsics.ONCE, false)
     };
 
     private final String source;
@@ -67,13 +61,6 @@ public class InlineParser {
         this.sourceOffset = sourceOffset;
     }
 
-    public ValueNode parsePath() {
-        InlineTokenizer tokenizer = new InlineTokenizer(source, sourceOffset);
-        PathNode pathNode = parsePath(tokenizer, true);
-        return tokenizer.size() > 0 && tokenizer.peekNotNull().getType() == OPEN_PAREN ?
-            parseFunctionExpression(tokenizer, pathNode) : pathNode;
-    }
-
     public ObjectNode parseObject() {
         InlineTokenizer tokenizer = new InlineTokenizer(source, sourceOffset);
         ObjectNode result = parseObjectExpression(tokenizer, tryGetSyntaxMapping(tokenizer));
@@ -84,7 +71,7 @@ public class InlineParser {
         return result;
     }
 
-    private ValueNode parseExpression(InlineTokenizer tokenizer, boolean singleExpressionOnly) {
+    private ValueNode parseExpression(InlineTokenizer tokenizer, boolean eager) {
         List<ValueNode> list = new ArrayList<>();
         List<ValueNode> values = new ArrayList<>();
         CurlyTokenClass nextTokenClass;
@@ -92,11 +79,15 @@ public class InlineParser {
         do {
             values.add(parseSingleExpression(tokenizer));
 
-            if (singleExpressionOnly) {
+            if (tokenizer.isEmpty()) {
                 break;
             }
 
             if (tokenizer.peekNotNull().getType() == COMMA) {
+                if (eager) {
+                    break;
+                }
+
                 tokenizer.remove(COMMA);
                 list.add(compositeNode(values));
                 values.clear();
@@ -118,7 +109,7 @@ public class InlineParser {
 
     private SyntaxMapping tryGetSyntaxMapping(InlineTokenizer tokenizer) {
         outerLoop:
-        for (SyntaxMapping mapping : COMPACT_SYNTAX_MAPPING) {
+        for (SyntaxMapping mapping : SYNTAX_MAPPING) {
             String value = tokenizer.peekNotNull().getValue();
             if (value.isEmpty() || value.charAt(0) != mapping.compact().charAt(0)) {
                 continue;
@@ -212,7 +203,10 @@ public class InlineParser {
 
         List<ValueNode> children = new ArrayList<>();
         List<PropertyNode> properties = new ArrayList<>();
-        eatSemis(tokenizer);
+
+        if (mapping == null) {
+            eatSemis(tokenizer);
+        }
 
         try {
             while (tokenizer.peek(CLOSE_CURLY) == null) {
@@ -228,7 +222,7 @@ public class InlineParser {
                 }
 
                 tokenizer.mark();
-                ValueNode key = parseExpression(tokenizer, mapping != null);
+                ValueNode key = parseExpression(tokenizer, mapping != null && !mapping.closingCurly());
 
                 if (tokenizer.poll(EQUALS) != null) {
                     tokenizer.resetToMark();
@@ -239,6 +233,13 @@ public class InlineParser {
                     tokenizer.forgetMark();
                     sourceEnd = key.getSourceInfo();
                     children.add(key);
+                }
+
+                if (mapping != null && !mapping.closingCurly() && !tokenizer.isEmpty()) {
+                    var tokenClass = tokenizer.peekNotNull().getType().getTokenClass();
+                    if (tokenClass == CurlyTokenClass.DELIMITER || tokenClass == CurlyTokenClass.SEMI) {
+                        break;
+                    }
                 }
 
                 eatSemis(tokenizer);

@@ -1,4 +1,4 @@
-// Copyright (c) 2022, 2023, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2024, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.diagnostic.errors;
@@ -127,13 +127,6 @@ public class GeneralErrors {
         return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
             ErrorCode.INCOMPATIBLE_RETURN_VALUE,
             NameHelper.getLongMethodSignature(behavior), requiredType.getJavaName()));
-    }
-
-    public static MarkupException incompatibleValue(
-            SourceInfo sourceInfo, TypeInstance actualType, TypeInstance requiredType) {
-        return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
-            ErrorCode.INCOMPATIBLE_VALUE,
-            actualType.getJavaName(), requiredType.getJavaName()));
     }
 
     public static MarkupException cannotAssignFunctionArgument(
