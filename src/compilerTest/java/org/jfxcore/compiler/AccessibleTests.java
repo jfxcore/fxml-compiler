@@ -1,4 +1,4 @@
-// Copyright (c) 2022, 2023, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2024, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler;
@@ -100,7 +100,7 @@ public class AccessibleTests extends CompilerTestBase {
     public void Bind_Once_To_Private_Method_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                      prefWidth="{fx:once privateMethod(123)}"/>
+                      prefWidth="$privateMethod(123)"/>
         """));
 
         assertEquals(ErrorCode.MEMBER_NOT_FOUND, ex.getDiagnostic().getCode());
@@ -111,7 +111,7 @@ public class AccessibleTests extends CompilerTestBase {
     public void Bind_Once_To_PackagePrivate_Method_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                      prefWidth="{fx:once packagePrivateMethod(123)}"/>
+                      prefWidth="$packagePrivateMethod(123)"/>
         """));
 
         assertEquals(ErrorCode.MEMBER_NOT_ACCESSIBLE, ex.getDiagnostic().getCode());
@@ -122,7 +122,7 @@ public class AccessibleTests extends CompilerTestBase {
     public void Bind_Once_To_Protected_Method_With_Constant_Argument_Succeeds() {
         TestPane root = compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                      prefWidth="{fx:once protectedMethod(123)}"/>
+                      prefWidth="$protectedMethod(123)"/>
         """);
 
         assertEquals(123, root.getPrefWidth(), 0.001);
@@ -132,7 +132,7 @@ public class AccessibleTests extends CompilerTestBase {
     public void Bind_Once_To_Protected_With_Observable_Argument_Method_Succeeds() {
         TestPane root = compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                      prefWidth="{fx:once protectedMethod(prefHeight)}"/>
+                      prefWidth="$protectedMethod(prefHeight)"/>
         """);
 
         assertEquals(-1, root.getPrefWidth(), 0.001);
@@ -142,7 +142,7 @@ public class AccessibleTests extends CompilerTestBase {
     public void Bind_Once_To_Nested_Protected_Method_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                      prefWidth="{fx:once Nested.protectedMethod(123)}"/>
+                      prefWidth="$Nested.protectedMethod(123)"/>
         """));
 
         assertEquals(ErrorCode.INSTANCE_MEMBER_REFERENCED_FROM_STATIC_CONTEXT, ex.getDiagnostic().getCode());
@@ -153,7 +153,7 @@ public class AccessibleTests extends CompilerTestBase {
     public void Bind_Once_To_Nested_Static_Protected_Method_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                      prefWidth="{fx:once Nested.staticProtectedMethod(123)}"/>
+                      prefWidth="$Nested.staticProtectedMethod(123)"/>
         """));
 
         assertEquals(ErrorCode.MEMBER_NOT_ACCESSIBLE, ex.getDiagnostic().getCode());
@@ -164,7 +164,7 @@ public class AccessibleTests extends CompilerTestBase {
     public void Bind_Unidirectional_To_PackagePrivate_Method_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                      prefWidth="{fx:bind packagePrivateMethod(123)}"/>
+                      prefWidth="${packagePrivateMethod(123)}"/>
         """));
 
         assertEquals(ErrorCode.MEMBER_NOT_ACCESSIBLE, ex.getDiagnostic().getCode());
@@ -175,7 +175,7 @@ public class AccessibleTests extends CompilerTestBase {
     public void Bind_Unidirectional_To_Protected_Method_With_Constant_Argument_Succeeds() {
         TestPane root = compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                      prefWidth="{fx:bind protectedMethod(123)}"/>
+                      prefWidth="${protectedMethod(123)}"/>
         """);
 
         assertEquals(123, root.getPrefWidth(), 0.001);
@@ -185,7 +185,7 @@ public class AccessibleTests extends CompilerTestBase {
     public void Bind_Unidirectional_To_Protected_Method_With_Observable_Argument_Succeeds() {
         TestPane root = compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                      prefWidth="{fx:bind protectedMethod(prefHeight)}"/>
+                      prefWidth="${protectedMethod(prefHeight)}"/>
         """);
 
         root.setPrefHeight(5);
@@ -196,7 +196,7 @@ public class AccessibleTests extends CompilerTestBase {
     public void Bind_Bidirectional_To_Protected_Method_With_Observable_Argument_Succeeds() {
         TestPane root = compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                      prefWidth="{fx:bindBidirectional protectedMethod(prefHeight)}"/>
+                      prefWidth="#{protectedMethod(prefHeight)}"/>
         """);
 
         root.setPrefHeight(5);
@@ -207,7 +207,7 @@ public class AccessibleTests extends CompilerTestBase {
     public void Bind_Bidirectional_To_Protected_Method_With_Inaccessible_InverseMethod_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                      prefWidth="{fx:bindBidirectional protectedMethod(prefHeight); inverseMethod=InaccessibleMethodHolder.protectedMethod}"/>
+                      prefWidth="#{protectedMethod(prefHeight); inverseMethod=InaccessibleMethodHolder.protectedMethod}"/>
         """));
 
         assertEquals(ErrorCode.MEMBER_NOT_ACCESSIBLE, ex.getDiagnostic().getCode());

@@ -1,4 +1,4 @@
-// Copyright (c) 2021, 2023, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2024, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.bindings;
@@ -67,7 +67,7 @@ public class OperatorTest extends CompilerTestBase {
     public void Bind_Once_With_NotOperator_Succeeds_For_BooleanProperty() {
         TestPane root = compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                      visible="{fx:once !booleanProp}"/>
+                      visible="$!booleanProp"/>
         """);
 
         assertFalse(root.isVisible());
@@ -77,7 +77,7 @@ public class OperatorTest extends CompilerTestBase {
     public void Bind_Once_With_NotOperator_Succeeds_For_DoubleProperty() {
         TestPane root = compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                      visible="{fx:once !doubleProp}"/>
+                      visible="$!doubleProp"/>
         """);
 
         assertFalse(root.isVisible());
@@ -87,7 +87,7 @@ public class OperatorTest extends CompilerTestBase {
     public void Bind_Once_With_BoolifyOperator_Succeeds_For_DoubleProperty() {
         TestPane root = compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                      visible="{fx:once !!doubleProp}"/>
+                      visible="$!!doubleProp"/>
         """);
 
         assertTrue(root.isVisible());
@@ -98,7 +98,7 @@ public class OperatorTest extends CompilerTestBase {
         TestPane root = compileAndRun("""
             <?import org.jfxcore.compiler.bindings.OperatorTest?>
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                      visible="{fx:once !OperatorTest.stringifyWithNull('%s', doubleProp)}"/>
+                      visible="$!OperatorTest.stringifyWithNull('%s', doubleProp)"/>
         """);
 
         assertFalse(root.isVisible());
@@ -110,7 +110,7 @@ public class OperatorTest extends CompilerTestBase {
     public void Bind_Once_With_BoolifyOperator_Succeeds_For_FunctionExpression() {
         TestPane root = compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                      visible="{fx:once !!java.lang.String.format('%s', doubleProp)}"/>
+                      visible="$!!java.lang.String.format('%s', doubleProp)"/>
         """);
 
         assertTrue(root.isVisible());
@@ -122,7 +122,7 @@ public class OperatorTest extends CompilerTestBase {
     public void Bind_Unidirectional_With_NotOperator_Succeeds_For_ObservableValue() {
         TestPane root = compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                      visible="{fx:bind !observableBool}"/>
+                      visible="${!observableBool}"/>
         """);
 
         assertFalse(root.isVisible());
@@ -135,7 +135,7 @@ public class OperatorTest extends CompilerTestBase {
     public void Bind_Unidirectional_With_NotOperator_Succeeds_For_BooleanProperty() {
         TestPane root = compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                      visible="{fx:bind !booleanProp}"/>
+                      visible="${!booleanProp}"/>
         """);
 
         assertFalse(root.isVisible());
@@ -152,7 +152,7 @@ public class OperatorTest extends CompilerTestBase {
     public void Bind_Unidirectional_With_BoolifyOperator_Is_Elided() {
         TestPane root = compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                      visible="{fx:bind !!booleanProp}"/>
+                      visible="${!!booleanProp}"/>
         """);
 
         assertTrue(root.isVisible());
@@ -168,7 +168,7 @@ public class OperatorTest extends CompilerTestBase {
     public void Bind_Unidirectional_With_NotOperator_Succeeds_For_DoubleProperty() {
         TestPane root = compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                      visible="{fx:bind !doubleProp}"/>
+                      visible="${!doubleProp}"/>
         """);
 
         assertFalse(root.isVisible());
@@ -185,7 +185,7 @@ public class OperatorTest extends CompilerTestBase {
     public void Bind_Unidirectional_With_BoolifyOperator_Succeeds_For_DoubleProperty() {
         TestPane root = compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                      visible="{fx:bind !!doubleProp}"/>
+                      visible="${!!doubleProp}"/>
         """);
 
         assertTrue(root.isVisible());
@@ -203,7 +203,7 @@ public class OperatorTest extends CompilerTestBase {
         TestPane root = compileAndRun("""
             <?import org.jfxcore.compiler.bindings.OperatorTest?>
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                      visible="{fx:bind !OperatorTest.stringifyWithNull('%s', doubleProp)}"/>
+                      visible="${!OperatorTest.stringifyWithNull('%s', doubleProp)}"/>
         """);
 
         assertFalse(root.isVisible());
@@ -221,7 +221,7 @@ public class OperatorTest extends CompilerTestBase {
         TestPane root = compileAndRun("""
             <?import org.jfxcore.compiler.bindings.OperatorTest?>
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                      visible="{fx:bind !!OperatorTest.stringifyWithNull('%s', doubleProp)}"/>
+                      visible="${!!OperatorTest.stringifyWithNull('%s', doubleProp)}"/>
         """);
 
         assertTrue(root.isVisible());
@@ -238,7 +238,7 @@ public class OperatorTest extends CompilerTestBase {
     public void Bind_Bidirectional_With_NotOperator_Fails_For_DoubleProperty() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                      visible="{fx:bindBidirectional !doubleProp}"/>
+                      visible="#{!doubleProp}"/>
         """));
 
         assertEquals(ErrorCode.EXPRESSION_NOT_INVERTIBLE, ex.getDiagnostic().getCode());
@@ -249,7 +249,7 @@ public class OperatorTest extends CompilerTestBase {
     public void Bind_Bidirectional_With_BoolifyOperator_Fails_For_DoubleProperty() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                      visible="{fx:bindBidirectional !!doubleProp}"/>
+                      visible="#{!!doubleProp}"/>
         """));
 
         assertEquals(ErrorCode.EXPRESSION_NOT_INVERTIBLE, ex.getDiagnostic().getCode());
@@ -261,7 +261,7 @@ public class OperatorTest extends CompilerTestBase {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import org.jfxcore.compiler.bindings.OperatorTest?>
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                      visible="{fx:bindBidirectional !OperatorTest.doubleToString(doubleProp)}"/>
+                      visible="#{!OperatorTest.doubleToString(doubleProp)}"/>
         """));
 
         assertEquals(ErrorCode.EXPRESSION_NOT_INVERTIBLE, ex.getDiagnostic().getCode());
@@ -273,7 +273,7 @@ public class OperatorTest extends CompilerTestBase {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import org.jfxcore.compiler.bindings.OperatorTest?>
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                      visible="{fx:bindBidirectional !!OperatorTest.doubleToString(doubleProp)}"/>
+                      visible="#{!!OperatorTest.doubleToString(doubleProp)}"/>
         """));
 
         assertEquals(ErrorCode.EXPRESSION_NOT_INVERTIBLE, ex.getDiagnostic().getCode());
@@ -285,7 +285,7 @@ public class OperatorTest extends CompilerTestBase {
     public void Bind_Bidirectional_With_NotOperator_Succeeds_For_BooleanProperty() {
         TestPane root = compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                      visible="{fx:bindBidirectional !booleanProp}"/>
+                      visible="#{!booleanProp}"/>
         """);
 
         root.booleanProp.set(false);

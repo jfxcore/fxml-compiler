@@ -1,4 +1,4 @@
-// Copyright (c) 2022, 2023, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2024, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.transform;
@@ -14,6 +14,7 @@ import org.jfxcore.compiler.ast.ValueNode;
 import org.jfxcore.compiler.ast.Visitor;
 import org.jfxcore.compiler.transform.codebehind.AddCodeFieldsTransform;
 import org.jfxcore.compiler.transform.codebehind.FlattenClassTransform;
+import org.jfxcore.compiler.transform.common.ContentExpressionTransform;
 import org.jfxcore.compiler.transform.common.IntrinsicsTransform;
 import org.jfxcore.compiler.transform.common.ResolveTypeTransform;
 import org.jfxcore.compiler.transform.markup.AddTemplateIdFields;
@@ -62,6 +63,8 @@ public class Transformer {
     public static Transformer getCodeTransformer(ClassPool classPool) {
         return new Transformer(
             classPool,
+            new DefaultPropertyTransform(true),
+            new ContentExpressionTransform(),
             new IntrinsicsTransform(),
             new ResolveTypeTransform(true),
             new AddCodeFieldsTransform(),
@@ -71,12 +74,14 @@ public class Transformer {
     public static Transformer getBytecodeTransformer(ClassPool classPool) {
         return new Transformer(
             classPool,
+            new DefaultPropertyTransform(true),
+            new ContentExpressionTransform(),
             new IntrinsicsTransform(),
             new ResolveTypeTransform(false),
             new ObjectToPropertyTransform(),
             new ConstantTransform(),
             new ValidateTypeTransform(),
-            new DefaultPropertyTransform(),
+            new DefaultPropertyTransform(false),
             new TemplateContentTransform(),
             new AddTemplateIdFields(),
             new RemoveIntrinsicsTransform(),

@@ -1,9 +1,8 @@
-// Copyright (c) 2022, 2023, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2024, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.parse;
 
-import org.jfxcore.compiler.ast.intrinsic.IntrinsicProperty;
 import org.jfxcore.compiler.diagnostic.Diagnostic;
 import org.jfxcore.compiler.diagnostic.ErrorCode;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
@@ -41,24 +40,11 @@ public class FxmlParser {
         Intrinsics.STYLESHEET
     };
 
-    // Intrinsic properties that are always interpreted as paths.
-    private static final IntrinsicProperty[] PATH_INTRINSICS = new IntrinsicProperty[] {
-        Intrinsics.ONCE.findProperty("path"),
-        Intrinsics.CONTENT.findProperty("path"),
-        Intrinsics.BIND.findProperty("path"),
-        Intrinsics.BIND_CONTENT.findProperty("path"),
-        Intrinsics.BIND_BIDIRECTIONAL.findProperty("path"),
-        Intrinsics.BIND_CONTENT_BIDIRECTIONAL.findProperty("path")
-    };
-
     private static final String[] INLINE_EXPR_TOKENS = new String[] {
         "{",
-        InlineParser.COMPACT_BIND_BIDIRECTIONAL_EXPR_PREFIX,
-        InlineParser.COMPACT_BIND_EXPR_PREFIX,
-        InlineParser.COMPACT_BIND_CONTENT_BIDIRECTIONAL_EXPR_PREFIX,
-        InlineParser.COMPACT_BIND_CONTENT_EXPR_PREFIX,
-        InlineParser.COMPACT_CONTENT_EXPR_PREFIX,
-        InlineParser.COMPACT_EXPR_PREFIX
+        InlineParser.BIND_BIDIRECTIONAL_EXPR_PREFIX,
+        InlineParser.BIND_EXPR_PREFIX,
+        InlineParser.ONCE_EXPR_PREFIX
     };
 
     private final String source;
@@ -164,8 +150,6 @@ public class FxmlParser {
     }
 
     private ValueNode nodeFromText(Node node, String text, SourceInfo sourceInfo) {
-        boolean parseAsPath = false;
-
         if (node.getParentNode() instanceof Element parent) {
             if (FxmlNamespace.FXML.equalsIgnoreCase(parent.getNamespaceURI())) {
                 for (Intrinsic intrinsic : VERBATIM_INTRINSICS) {
@@ -174,37 +158,12 @@ public class FxmlParser {
                     }
                 }
             }
-
-            if (parent.getParentNode() instanceof Element parent2
-                    && FxmlNamespace.FXML.equalsIgnoreCase(parent2.getNamespaceURI())) {
-                for (IntrinsicProperty intrinsicProperty : PATH_INTRINSICS) {
-                    if (intrinsicProperty.getIntrinsic().getName().equals(parent2.getLocalName())
-                            && intrinsicProperty.getName().equals(parent.getLocalName())) {
-                        parseAsPath = true;
-                        break;
-                    }
-                }
-            }
         }
 
         String prefix = getFxmlNamespacePrefix(node);
 
-        if (node instanceof Attr attr) {
+        if (node instanceof Attr) {
             sourceInfo = (SourceInfo)node.getUserData(XmlReader.ATTR_VALUE_SOURCE_INFO_KEY);
-
-            if (!parseAsPath && FxmlNamespace.FXML.equalsIgnoreCase(attr.getOwnerElement().getNamespaceURI())) {
-                for (IntrinsicProperty intrinsicProperty : PATH_INTRINSICS) {
-                    if (intrinsicProperty.getIntrinsic().getName().equals(attr.getOwnerElement().getLocalName())
-                            && intrinsicProperty.getName().equals(attr.getLocalName())) {
-                        parseAsPath = true;
-                        break;
-                    }
-                }
-            }
-        }
-
-        if (parseAsPath) {
-            return new InlineParser(text, prefix, sourceInfo.getStart()).parsePath();
         }
 
         if (text.length() > 1) {

@@ -1,4 +1,4 @@
-// Copyright (c) 2022, 2023, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2024, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler;
@@ -195,7 +195,7 @@ public class InstantiationTest extends CompilerTestBase {
             GridPane root = compileAndRun("""
                 <?import javafx.scene.layout.*?>
                 <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0" id="foo">
-                    <MyButton data="{fx:bind id}"/>
+                    <MyButton data="${id}"/>
                 </GridPane>
             """);
 
@@ -459,13 +459,13 @@ public class InstantiationTest extends CompilerTestBase {
                 <?import javafx.scene.layout.*?>
                 <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                     <fx:define>
-                        <BackgroundFill fx:id="bf" fill="{fx:bind test}" radii="EMPTY" insets="0"/>
+                        <BackgroundFill fx:id="bf" fill="${test}" radii="EMPTY" insets="0"/>
                     </fx:define>
                 </GridPane>
             """));
 
             assertEquals(ErrorCode.EXPRESSION_NOT_APPLICABLE, ex.getDiagnostic().getCode());
-            assertCodeHighlight("{fx:bind test}", ex);
+            assertCodeHighlight("${test}", ex);
         }
 
         @Test
@@ -476,7 +476,7 @@ public class InstantiationTest extends CompilerTestBase {
                 <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                     <fx:define>
                         <Color fx:id="col">red</Color>
-                        <BackgroundFill fx:id="bf" fill="{fx:once col}" radii="EMPTY" insets="0"/>
+                        <BackgroundFill fx:id="bf" fill="$col" radii="EMPTY" insets="0"/>
                     </fx:define>
                 </GridPane>
             """);
