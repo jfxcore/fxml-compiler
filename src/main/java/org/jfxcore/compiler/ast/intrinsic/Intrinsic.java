@@ -1,4 +1,4 @@
-// Copyright (c) 2022, 2023, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2024, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.intrinsic;
@@ -27,10 +27,6 @@ public class Intrinsic {
     private final Placement placement;
     private final List<IntrinsicProperty> properties;
     private TypeInstance cachedTypeInstance;
-
-    public Intrinsic(String name, Kind kind, Placement placement, IntrinsicProperty... properties) {
-        this(name, kind, placement, () -> new CtClass("<no-type>") {}, properties);
-    }
 
     public Intrinsic(String name, Kind kind, Placement placement, Supplier<CtClass> type, IntrinsicProperty... properties) {
         this.name = name;
