@@ -1,4 +1,4 @@
-// Copyright (c) 2022, 2023, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2024, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.util;
@@ -384,6 +384,18 @@ public class TypeInstance {
 
             return dimensions == otherDimensions && type.subtypeOf(o);
         });
+    }
+
+    public TypeInstance boxed() {
+        if (equals(booleanType())) return BooleanType();
+        if (equals(byteType())) return ByteType();
+        if (equals(shortType())) return ShortType();
+        if (equals(intType())) return IntegerType();
+        if (equals(longType())) return LongType();
+        if (equals(floatType())) return FloatType();
+        if (equals(doubleType())) return DoubleType();
+        if (equals(charType())) return CharacterType();
+        return this;
     }
 
     public boolean equals(CtClass other) {

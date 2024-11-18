@@ -18,6 +18,7 @@ import org.jfxcore.compiler.transform.Transform;
 import org.jfxcore.compiler.transform.TransformContext;
 import org.jfxcore.compiler.util.NameHelper;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -40,6 +41,9 @@ public class IntrinsicsTransform implements Transform {
     private static final List<Set<Intrinsic>> CONFLICTING_INTRINSICS = List.of(
         Set.of(Intrinsics.VALUE, Intrinsics.CONSTANT, Intrinsics.FACTORY),
         Set.of(Intrinsics.TYPE_ARGUMENTS, Intrinsics.CONSTANT));
+
+    private static final Map<Intrinsic, Set<String>> CONFLICTING_PROPERTIES = Map.of(
+        Intrinsics.BIND_BIDIRECTIONAL, Set.of("converter", "format", "inverseMethod"));
 
     private static final Set<Intrinsic> EXPR_INTRINSICS = Set.of(
         Intrinsics.ONCE, Intrinsics.CONTENT, Intrinsics.BIND, Intrinsics.BIND_CONTENT,
@@ -131,7 +135,32 @@ public class IntrinsicsTransform implements Transform {
             }
         }
 
+        validateConflictingProperties(intrinsic, objectNode.getProperties());
+
         return objectNode;
+    }
+
+    /**
+     * Ensures that conflicting intrinsic properties cannot be used at the same time.
+     */
+    private void validateConflictingProperties(Intrinsic intrinsic, List<PropertyNode> properties) {
+        if (properties.size() < 2) {
+            return;
+        }
+
+        Set<String> conflictSet = CONFLICTING_PROPERTIES.get(intrinsic);
+        String existingProperty = null;
+
+        for (PropertyNode propertyNode : properties) {
+            if (conflictSet.contains(propertyNode.getName())) {
+                if (existingProperty == null) {
+                    existingProperty = propertyNode.getMarkupName();
+                } else {
+                    throw ObjectInitializationErrors.conflictingProperties(
+                        propertyNode.getSourceInfo(), propertyNode.getMarkupName(), existingProperty);
+                }
+            }
+        }
     }
 
     /**

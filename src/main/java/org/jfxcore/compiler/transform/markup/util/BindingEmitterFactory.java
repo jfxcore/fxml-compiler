@@ -6,6 +6,7 @@ package org.jfxcore.compiler.transform.markup.util;
 import org.jetbrains.annotations.Nullable;
 import org.jfxcore.compiler.ast.BindingMode;
 import org.jfxcore.compiler.ast.BindingNode;
+import org.jfxcore.compiler.ast.Node;
 import org.jfxcore.compiler.ast.PropertyNode;
 import org.jfxcore.compiler.ast.emit.EmitCollectionWrapperNode;
 import org.jfxcore.compiler.ast.emit.EmitPropertyBindingNode;
@@ -22,10 +23,13 @@ import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.diagnostic.errors.BindingSourceErrors;
 import org.jfxcore.compiler.diagnostic.errors.PropertyAssignmentErrors;
 import org.jfxcore.compiler.transform.TransformContext;
+import org.jfxcore.compiler.util.Classes;
+import org.jfxcore.compiler.util.NameHelper;
 import org.jfxcore.compiler.util.PropertyInfo;
 import org.jfxcore.compiler.util.Resolver;
 import org.jfxcore.compiler.util.TypeHelper;
 import org.jfxcore.compiler.util.TypeInstance;
+import java.util.List;
 
 import static org.jfxcore.compiler.util.Classes.*;
 
@@ -36,7 +40,7 @@ public class BindingEmitterFactory {
         checkPreconditions(context, propertyNode, propertyInfo, bindingNode);
 
         if (bindingNode.getMode().isObservable()) {
-            return createPropertyBindingEmitter(bindingNode, propertyInfo);
+            return createPropertyBindingEmitter(context, bindingNode, propertyInfo);
         }
 
         return createPropertyAssignmentEmitter(bindingNode, propertyInfo);
@@ -99,10 +103,11 @@ public class BindingEmitterFactory {
         return new EmitPropertySetterNode(propertyInfo, value, bindingMode.isContent(), sourceInfo);
     }
 
-    private static EmitterNode createPropertyBindingEmitter(BindingNode bindingNode, PropertyInfo propertyInfo) {
+    private static EmitterNode createPropertyBindingEmitter(
+            TransformContext context, BindingNode bindingNode, PropertyInfo propertyInfo) {
         BindingMode bindingMode = bindingNode.getMode();
         TypeInstance targetType = propertyInfo.getType();
-        ValueEmitterNode value;
+        ValueEmitterNode value, format = null, converter = null;
         BindingEmitterInfo result;
 
         try {
@@ -143,7 +148,57 @@ public class BindingEmitterFactory {
                     bindingNode.getSourceInfo(), result.getValueType().getJavaName(), targetType.getJavaName());
             }
         } else if (bindingMode.isBidirectional()) {
-            if (!targetType.equals(result.getValueType())) {
+            if (!propertyInfo.getObservableType().subtypeOf(Classes.StringPropertyType())) {
+                if (bindingNode.getConverter() != null) {
+                    throw BindingSourceErrors.stringConversionNotApplicable(
+                        bindingNode.getConverter().getSourceInfo(), "converter");
+                }
+
+                if (bindingNode.getFormat() != null) {
+                    throw BindingSourceErrors.stringConversionNotApplicable(
+                        bindingNode.getFormat().getSourceInfo(), "format");
+                }
+            }
+
+            PropertyNode converterProperty = bindingNode.getConverter();
+            Node converterNode = converterProperty != null ? converterProperty.getSingleValue(context) : null;
+
+            if (converterNode instanceof ValueEmitterNode c) {
+                converter = c;
+            } else if (converterNode instanceof BindingNode binding) {
+                converter = binding.toEmitter(propertyInfo.getDeclaringType()).getValue();
+            }
+
+            if (converter != null) {
+                var resolver = new Resolver(converter.getSourceInfo());
+                var type = resolver.getTypeInstance(Classes.StringConverterType(), List.of(result.getValueType().boxed()));
+
+                if (!type.isAssignableFrom(converter.getType().getTypeInstance())) {
+                    throw BindingSourceErrors.cannotConvertSourceType(
+                        converter.getSourceInfo(),
+                        converter.getType().getTypeInstance().getJavaName(),
+                        type.getJavaName());
+                }
+            }
+
+            PropertyNode formatProperty = bindingNode.getFormat();
+            Node formatNode = formatProperty != null ? formatProperty.getSingleValue(context) : null;
+
+            if (formatNode instanceof ValueEmitterNode f) {
+                format = f;
+            } else if (formatNode instanceof BindingNode binding) {
+                format = binding.toEmitter(propertyInfo.getDeclaringType()).getValue();
+            }
+
+            if (format != null && !format.getType().getTypeInstance().subtypeOf(Classes.FormatType())) {
+                throw BindingSourceErrors.cannotConvertSourceType(
+                    format.getSourceInfo(),
+                    format.getType().getTypeInstance().getJavaName(),
+                    NameHelper.getJavaClassName(format.getSourceInfo(), Classes.FormatType()));
+            }
+
+            // Bidirectional bindings require equal types
+            if (!targetType.equals(result.getValueType()) && converter == null && format == null) {
                 throw BindingSourceErrors.sourceTypeMismatch(
                     bindingNode.getSourceInfo(), result.getValueType().getJavaName(), targetType.getJavaName());
             }
@@ -171,7 +226,8 @@ public class BindingEmitterFactory {
             }
         }
 
-        return new EmitPropertyBindingNode(propertyInfo, value, bindingMode, bindingNode.getSourceInfo());
+        return new EmitPropertyBindingNode(
+            propertyInfo, bindingMode, value, converter, format, bindingNode.getSourceInfo());
     }
 
     private static void checkPreconditions(

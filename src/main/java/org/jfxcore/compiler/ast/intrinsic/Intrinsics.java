@@ -77,6 +77,8 @@ public class Intrinsics {
     public static final Intrinsic BIND_BIDIRECTIONAL = new Intrinsic(
         "bindBidirectional", Kind.OBJECT, Placement.ANY, Classes::BottomType,
         new IntrinsicProperty("path", Classes::StringType, true),
+        new IntrinsicProperty("format", Classes::FormatType),
+        new IntrinsicProperty("converter", Classes::StringConverterType),
         new IntrinsicProperty("inverseMethod", Classes::StringType));
 
     public static final Intrinsic BIND_CONTENT_BIDIRECTIONAL = new Intrinsic(
