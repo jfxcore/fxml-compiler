@@ -55,15 +55,10 @@ public class ContentExpressionTransform implements Transform {
 
         List<ValueNode> values = compositeNode.getValues();
 
-        if (!(values.get(0) instanceof TextNode text1 && text1.getText().equals("["))) {
+        if (values.size() < 3
+                || !(values.get(0) instanceof TextNode text2 && text2.getText().equals("."))
+                || !(values.get(1) instanceof TextNode text3 && text3.getText().equals("."))) {
             return expression;
-        }
-
-        if (values.size() < 5
-                || !(values.get(1) instanceof TextNode text2 && text2.getText().equals("."))
-                || !(values.get(2) instanceof TextNode text3 && text3.getText().equals("."))
-                || !(values.get(values.size() - 1) instanceof TextNode text4 && text4.getText().equals("]"))) {
-            throw ParserErrors.invalidExpression(compositeNode.getSourceInfo());
         }
 
         var type = new TypeNode(
@@ -72,7 +67,11 @@ public class ContentExpressionTransform implements Transform {
             true,
             expression.getType().getSourceInfo());
 
-        List<ValueNode> newValues = values.subList(3, values.size() - 1);
+        List<ValueNode> newValues = values.subList(2, values.size());
+        if (newValues.size() != 1) {
+            throw ParserErrors.invalidExpression(compositeNode.getSourceInfo());
+        }
+
         pathProperty.getValues().clear();
         pathProperty.getValues().addAll(newValues);
 
