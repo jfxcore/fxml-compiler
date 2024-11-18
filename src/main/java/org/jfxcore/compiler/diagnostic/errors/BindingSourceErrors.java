@@ -1,4 +1,4 @@
-// Copyright (c) 2022, 2023, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2024, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.diagnostic.errors;
@@ -114,4 +114,8 @@ public class BindingSourceErrors {
             ErrorCode.INVALID_INVERSE_METHOD_ANNOTATION_VALUE, NameHelper.getLongMethodSignature(behavior)));
     }
 
+    public static MarkupException stringConversionNotApplicable(SourceInfo sourceInfo, String propertyName) {
+        return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
+            ErrorCode.STRING_CONVERSION_NOT_APPLICABLE, propertyName));
+    }
 }

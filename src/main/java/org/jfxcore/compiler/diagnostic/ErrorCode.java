@@ -1,4 +1,4 @@
-// Copyright (c) 2022, 2023, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2024, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.diagnostic;
@@ -94,6 +94,6 @@ public enum ErrorCode {
     CANNOT_BIND_FUNCTION,
     METHOD_NOT_INVERTIBLE,
     INVALID_INVERSE_METHOD,
-    INVALID_INVERSE_METHOD_ANNOTATION_VALUE
-
+    INVALID_INVERSE_METHOD_ANNOTATION_VALUE,
+    STRING_CONVERSION_NOT_APPLICABLE
 }

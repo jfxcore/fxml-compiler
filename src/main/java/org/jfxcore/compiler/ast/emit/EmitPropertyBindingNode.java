@@ -4,11 +4,11 @@
 package org.jfxcore.compiler.ast.emit;
 
 import javassist.CtClass;
+import org.jetbrains.annotations.Nullable;
 import org.jfxcore.compiler.ast.AbstractNode;
 import org.jfxcore.compiler.ast.BindingMode;
 import org.jfxcore.compiler.ast.GeneratorEmitterNode;
 import org.jfxcore.compiler.ast.NodeDataKey;
-import org.jfxcore.compiler.ast.ValueNode;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.ast.Visitor;
 import org.jfxcore.compiler.diagnostic.errors.GeneralErrors;
@@ -33,14 +33,31 @@ public class EmitPropertyBindingNode extends AbstractNode implements EmitterNode
 
     private final PropertyInfo propertyInfo;
     private final BindingMode bindingMode;
-    private ValueNode child;
+    private ValueEmitterNode child;
+    private ValueEmitterNode converter;
+    private ValueEmitterNode format;
 
     public EmitPropertyBindingNode(
-            PropertyInfo propertyInfo, ValueNode child, BindingMode bindingMode, SourceInfo sourceInfo) {
+            PropertyInfo propertyInfo,
+            BindingMode bindingMode,
+            ValueEmitterNode child,
+            @Nullable ValueEmitterNode converter,
+            @Nullable ValueEmitterNode format,
+            SourceInfo sourceInfo) {
         super(sourceInfo);
         this.propertyInfo = checkNotNull(propertyInfo);
-        this.child = checkNotNull(child);
         this.bindingMode = bindingMode;
+        this.child = checkNotNull(child);
+        this.converter = converter;
+        this.format = format;
+
+        if (bindingMode != BindingMode.BIDIRECTIONAL && (converter != null || format != null)) {
+            throw new IllegalArgumentException();
+        }
+
+        if (converter != null && format != null) {
+            throw new IllegalArgumentException();
+        }
     }
 
     public boolean isBidirectional() {
@@ -74,25 +91,53 @@ public class EmitPropertyBindingNode extends AbstractNode implements EmitterNode
 
     private void emitBinding(BytecodeEmitContext context, Local local) {
         if (bindingMode.isBidirectional()) {
-            emitBindBidirectional(context, local);
+            Local param2 = null;
+
+            if (converter != null) {
+                param2 = context.getOutput().acquireLocal(false);
+                converter.emit(context);
+                context.getOutput().astore(param2);
+            } else if (format != null) {
+                param2 = context.getOutput().acquireLocal(false);
+                format.emit(context);
+                context.getOutput().astore(param2);
+            }
+
+            emitBindBidirectional(context, local, param2);
+
+            if (param2 != null) {
+                context.getOutput().releaseLocal(param2);
+            }
         } else if (bindingMode.isUnidirectional()) {
             emitBindUnidirectional(context, local);
         }
     }
 
-    private void emitBindBidirectional(BytecodeEmitContext context, Local local) {
+    private void emitBindBidirectional(BytecodeEmitContext context, Local param1, @Nullable Local param2) {
         Bytecode code = context.getOutput();
 
         code.dup()
             .ext_invoke(checkNotNull(propertyInfo.getPropertyGetter()))
-            .aload(local);
+            .aload(param1);
+
+        if (param2 != null) {
+            code.aload(param2);
+        }
 
         if (child.getNodeData(NodeDataKey.BIND_BIDIRECTIONAL_NEGATED) == Boolean.TRUE) {
             throw GeneralErrors.unsupported("Negated bidirectional bindings are not supported.");
         } else if (bindingMode.isContent()) {
             emitBindContent(context, true);
         } else {
-            code.invokeinterface(PropertyType(), "bindBidirectional", function(voidType, PropertyType()));
+            if (converter != null) {
+                code.invokevirtual(StringPropertyType(), "bindBidirectional",
+                                   function(voidType, PropertyType(), StringConverterType()));
+            } else if (format != null) {
+                code.invokevirtual(StringPropertyType(), "bindBidirectional",
+                                   function(voidType, PropertyType(), FormatType()));
+            } else {
+                code.invokeinterface(PropertyType(), "bindBidirectional", function(voidType, PropertyType()));
+            }
         }
     }
 
@@ -179,12 +224,26 @@ public class EmitPropertyBindingNode extends AbstractNode implements EmitterNode
     @Override
     public void acceptChildren(Visitor visitor) {
         super.acceptChildren(visitor);
-        child = (ValueNode)child.accept(visitor);
+        child = (ValueEmitterNode)child.accept(visitor);
+
+        if (converter != null) {
+            converter = (ValueEmitterNode)converter.accept(visitor);
+        }
+
+        if (format != null) {
+            format = (ValueEmitterNode)format.accept(visitor);
+        }
     }
 
     @Override
     public EmitPropertyBindingNode deepClone() {
-        return new EmitPropertyBindingNode(propertyInfo, child, bindingMode, getSourceInfo());
+        return new EmitPropertyBindingNode(
+            propertyInfo,
+            bindingMode,
+            child.deepClone(),
+            converter != null ? converter.deepClone() : null,
+            format != null ? format.deepClone() : null,
+            getSourceInfo());
     }
 
     @Override
@@ -194,12 +253,13 @@ public class EmitPropertyBindingNode extends AbstractNode implements EmitterNode
         EmitPropertyBindingNode that = (EmitPropertyBindingNode)o;
         return bindingMode == that.bindingMode &&
             propertyInfo.equals(that.propertyInfo) &&
-            child.equals(that.child);
+            child.equals(that.child) &&
+            Objects.equals(converter, that.converter) &&
+            Objects.equals(format, that.format);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(propertyInfo, bindingMode, child);
+        return Objects.hash(propertyInfo, bindingMode, child, converter, format);
     }
-
 }

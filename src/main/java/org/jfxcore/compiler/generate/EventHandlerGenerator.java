@@ -1,4 +1,4 @@
-// Copyright (c) 2022, 2023, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2024, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.generate;
@@ -79,7 +79,7 @@ public class EventHandlerGenerator extends ClassGenerator {
         constructor.setModifiers(Modifier.PUBLIC);
         generatedClass.addConstructor(constructor);
 
-        handleMethod = new CtMethod(CtClass.voidType, "handle", new CtClass[] {Classes.EventTypent()}, generatedClass);
+        handleMethod = new CtMethod(CtClass.voidType, "handle", new CtClass[] {Classes.EventType()}, generatedClass);
         handleMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
         generatedClass.addMethod(handleMethod);
     }
