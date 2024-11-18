@@ -354,20 +354,18 @@ public class InlineParserTest extends TestBase {
 
     @ParameterizedTest
     @CsvSource({
-        "$[..foo.bar.baz],once",
-        "${[..foo.bar.baz]},bind",
-        "#{[..foo.bar.baz]},bindBidirectional"
+        "$..foo.bar.baz,once",
+        "${..foo.bar.baz},bind",
+        "#{..foo.bar.baz},bindBidirectional"
     })
     public void Compact_Content_Syntax_Is_Expanded(String compactIntrinsic, String intrinsicName) {
         ObjectNode objectNode = new InlineParser(compactIntrinsic, "fx").parseObject();
         assertEquals(intrinsicName, objectNode.getType().getName());
         List<ValueNode> values = ((CompositeNode)objectNode.getChildren().get(0)).getValues();
-        assertEquals(5, values.size());
-        assertTrue(values.get(0) instanceof TextNode t && t.getText().equals("["));
+        assertEquals(3, values.size());
+        assertTrue(values.get(0) instanceof TextNode t && t.getText().equals("."));
         assertTrue(values.get(1) instanceof TextNode t && t.getText().equals("."));
-        assertTrue(values.get(2) instanceof TextNode t && t.getText().equals("."));
-        assertTrue(values.get(3) instanceof PathNode t && t.getText().equals("foo.bar.baz"));
-        assertTrue(values.get(4) instanceof TextNode t && t.getText().equals("]"));
+        assertTrue(values.get(2) instanceof PathNode t && t.getText().equals("foo.bar.baz"));
     }
 
     @ParameterizedTest
@@ -432,9 +430,9 @@ public class InlineParserTest extends TestBase {
 
     @ParameterizedTest
     @CsvSource({
-        "$[..foo.bar.baz],once",
-        "${[..foo.bar.baz]},bind",
-        "#{[..foo.bar.baz]},bindBidirectional"
+        "$..foo.bar.baz,once",
+        "${..foo.bar.baz},bind",
+        "#{..foo.bar.baz},bindBidirectional"
     })
     public void Compact_Content_Syntax_Is_Expanded_Within_ListExpression(String compactIntrinsic, String intrinsicName) {
         String input = String.format("{Test qux, %s}", compactIntrinsic);
@@ -444,12 +442,10 @@ public class InlineParserTest extends TestBase {
         ObjectNode objectNode = (ObjectNode)list.getValues().get(1);
         assertEquals(intrinsicName, objectNode.getType().getName());
         List<ValueNode> values = ((CompositeNode)objectNode.getChildren().get(0)).getValues();
-        assertEquals(5, values.size());
-        assertTrue(values.get(0) instanceof TextNode t && t.getText().equals("["));
+        assertEquals(3, values.size());
+        assertTrue(values.get(0) instanceof TextNode t && t.getText().equals("."));
         assertTrue(values.get(1) instanceof TextNode t && t.getText().equals("."));
-        assertTrue(values.get(2) instanceof TextNode t && t.getText().equals("."));
-        assertTrue(values.get(3) instanceof PathNode t && t.getText().equals("foo.bar.baz"));
-        assertTrue(values.get(4) instanceof TextNode t && t.getText().equals("]"));
+        assertTrue(values.get(2) instanceof PathNode t && t.getText().equals("foo.bar.baz"));
     }
 
     @ParameterizedTest
@@ -470,9 +466,9 @@ public class InlineParserTest extends TestBase {
 
     @ParameterizedTest
     @CsvSource({
-        "$[..foo.bar.baz],once",
-        "${[..foo.bar.baz]},bind",
-        "#{[..foo.bar.baz]},bindBidirectional"
+        "$..foo.bar.baz,once",
+        "${..foo.bar.baz},bind",
+        "#{..foo.bar.baz},bindBidirectional"
     })
     public void Compact_Content_Syntax_Is_Expanded_Within_PropertyExpression(String compactIntrinsic, String intrinsicName) {
         String input = String.format("{Test qux=%s}", compactIntrinsic);
@@ -482,12 +478,10 @@ public class InlineParserTest extends TestBase {
         ObjectNode objectNode = (ObjectNode)property.getValues().get(0);
         assertEquals(intrinsicName, objectNode.getType().getName());
         List<ValueNode> values = ((CompositeNode)objectNode.getChildren().get(0)).getValues();
-        assertEquals(5, values.size());
-        assertTrue(values.get(0) instanceof TextNode t && t.getText().equals("["));
+        assertEquals(3, values.size());
+        assertTrue(values.get(0) instanceof TextNode t && t.getText().equals("."));
         assertTrue(values.get(1) instanceof TextNode t && t.getText().equals("."));
-        assertTrue(values.get(2) instanceof TextNode t && t.getText().equals("."));
-        assertTrue(values.get(3) instanceof PathNode t && t.getText().equals("foo.bar.baz"));
-        assertTrue(values.get(4) instanceof TextNode t && t.getText().equals("]"));
+        assertTrue(values.get(2) instanceof PathNode t && t.getText().equals("foo.bar.baz"));
     }
 
     @ParameterizedTest
@@ -512,9 +506,9 @@ public class InlineParserTest extends TestBase {
 
     @ParameterizedTest
     @CsvSource({
-        "$[..foo.bar.baz],once",
-        "${[..foo.bar.baz]},bind",
-        "#{[..foo.bar.baz]},bindBidirectional"
+        "$..foo.bar.baz,once",
+        "${..foo.bar.baz},bind",
+        "#{..foo.bar.baz},bindBidirectional"
     })
     public void Compact_Content_Syntax_Is_Expanded_Within_FunctionExpression(String compactIntrinsic, String intrinsicName) {
         String input = String.format("{Test qux=func(%s, 'quux')}", compactIntrinsic);
@@ -528,11 +522,9 @@ public class InlineParserTest extends TestBase {
         ObjectNode objectNode = (ObjectNode)functionNode.getArguments().get(0);
         assertEquals(intrinsicName, objectNode.getType().getName());
         List<ValueNode> values = ((CompositeNode)objectNode.getChildren().get(0)).getValues();
-        assertEquals(5, values.size());
-        assertTrue(values.get(0) instanceof TextNode t && t.getText().equals("["));
+        assertEquals(3, values.size());
+        assertTrue(values.get(0) instanceof TextNode t && t.getText().equals("."));
         assertTrue(values.get(1) instanceof TextNode t && t.getText().equals("."));
-        assertTrue(values.get(2) instanceof TextNode t && t.getText().equals("."));
-        assertTrue(values.get(3) instanceof PathNode t && t.getText().equals("foo.bar.baz"));
-        assertTrue(values.get(4) instanceof TextNode t && t.getText().equals("]"));
+        assertTrue(values.get(2) instanceof PathNode t && t.getText().equals("foo.bar.baz"));
     }
 }

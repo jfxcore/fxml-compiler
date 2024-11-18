@@ -111,6 +111,16 @@ public class ListBindingTest extends CompilerTestBase {
     }
 
     @Test
+    public void Invalid_Content_Expression() {
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <ListTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                          listProp="$...list1"/>
+        """));
+
+        assertEquals(ErrorCode.INVALID_EXPRESSION, ex.getDiagnostic().getCode());
+    }
+
+    @Test
     public void Once_Binding_To_Vanilla_List() {
         ListTestPane root = compileAndRun("""
             <ListTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
@@ -219,7 +229,7 @@ public class ListBindingTest extends CompilerTestBase {
     public void Once_ContentBinding_To_Vanilla_List() {
         ListTestPane root = compileAndRun("""
             <ListTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                          listProp="$[..list1]"/>
+                          listProp="$..list1"/>
         """);
 
         assertNotNewExpr(root, LIST_WRAPPER, OBSERVABLE_VALUE_WRAPPER);
@@ -233,7 +243,7 @@ public class ListBindingTest extends CompilerTestBase {
     public void Once_ContentBinding_To_Vanilla_List_Indirect() {
         ListTestPane root = compileAndRun("""
             <ListTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                          listProp="$[..indirect.list1]"/>
+                          listProp="$..indirect.list1"/>
         """);
 
         assertNotNewExpr(root, LIST_WRAPPER, OBSERVABLE_VALUE_WRAPPER);
@@ -247,7 +257,7 @@ public class ListBindingTest extends CompilerTestBase {
     public void Once_ContentBinding_To_Observable_List() {
         ListTestPane root = compileAndRun("""
             <ListTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                          listProp="$[..list2]"/>
+                          listProp="$..list2"/>
         """);
 
         assertNotNewExpr(root, LIST_WRAPPER, OBSERVABLE_VALUE_WRAPPER);
@@ -261,7 +271,7 @@ public class ListBindingTest extends CompilerTestBase {
     public void Once_ContentBinding_To_Observable_List_Indirect() {
         ListTestPane root = compileAndRun("""
             <ListTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                          listProp="$[..indirect.list2]"/>
+                          listProp="$..indirect.list2"/>
         """);
 
         assertNotNewExpr(root, LIST_WRAPPER, OBSERVABLE_VALUE_WRAPPER);
@@ -275,7 +285,7 @@ public class ListBindingTest extends CompilerTestBase {
     public void Once_ContentBinding_To_ObservableValue_Of_Vanilla_List() {
         ListTestPane root = compileAndRun("""
             <ListTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                          listProp="$[..list3]"/>
+                          listProp="$..list3"/>
         """);
 
         assertNotNewExpr(root, LIST_WRAPPER, OBSERVABLE_VALUE_WRAPPER);
@@ -289,7 +299,7 @@ public class ListBindingTest extends CompilerTestBase {
     public void Once_ContentBinding_To_ObservableValue_Of_Vanilla_List_Indirect() {
         ListTestPane root = compileAndRun("""
             <ListTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                          listProp="$[..indirect.list3]"/>
+                          listProp="$..indirect.list3"/>
         """);
 
         assertNotNewExpr(root, LIST_WRAPPER, OBSERVABLE_VALUE_WRAPPER);
@@ -303,7 +313,7 @@ public class ListBindingTest extends CompilerTestBase {
     public void Once_ContentBinding_To_ObservableValue_Of_Observable_List() {
         ListTestPane root = compileAndRun("""
             <ListTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                          listProp="$[..list4]"/>
+                          listProp="$..list4"/>
         """);
 
         assertNotNewExpr(root, LIST_WRAPPER, OBSERVABLE_VALUE_WRAPPER);
@@ -317,7 +327,7 @@ public class ListBindingTest extends CompilerTestBase {
     public void Once_ContentBinding_To_ObservableValue_Of_Observable_List_Indirect() {
         ListTestPane root = compileAndRun("""
             <ListTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                          listProp="$[..indirect.list4]"/>
+                          listProp="$..indirect.list4"/>
         """);
 
         assertNotNewExpr(root, LIST_WRAPPER, OBSERVABLE_VALUE_WRAPPER);
@@ -416,7 +426,7 @@ public class ListBindingTest extends CompilerTestBase {
     public void Unidirectional_ContentBinding_To_Vanilla_List_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <ListTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                          listProp="${[..list1]}"/>
+                          listProp="${..list1}"/>
         """));
 
         assertEquals(ErrorCode.INVALID_CONTENT_BINDING_SOURCE, ex.getDiagnostic().getCode());
@@ -430,7 +440,7 @@ public class ListBindingTest extends CompilerTestBase {
     public void Unidirectional_ContentBinding_Fails_For_ObjectProperty() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <ListTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                          objectProp="${[..list1]}"/>
+                          objectProp="${..list1}"/>
         """));
 
         assertEquals(ErrorCode.INVALID_CONTENT_BINDING_TARGET, ex.getDiagnostic().getCode());
@@ -475,7 +485,7 @@ public class ListBindingTest extends CompilerTestBase {
     public void Unidirectional_ContentBinding_To_ObservableList() {
         ListTestPane root = compileAndRun("""
             <ListTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                          listProp="${[..list2]}"/>
+                          listProp="${..list2}"/>
         """);
 
         assertNotNewExpr(root, "Constant", OBSERVABLE_VALUE_WRAPPER, LIST_WRAPPER);
@@ -541,7 +551,7 @@ public class ListBindingTest extends CompilerTestBase {
     public void Unidirectional_ContentBinding_To_ObservableValue_Of_Vanilla_List() {
         ListTestPane root = compileAndRun("""
             <ListTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                          listProp="${[..list3]}"/>
+                          listProp="${..list3}"/>
         """);
 
         assertNewExpr(root, OBSERVABLE_VALUE_WRAPPER);
@@ -593,7 +603,7 @@ public class ListBindingTest extends CompilerTestBase {
     public void Unidirectional_ContentBinding_To_ObservableValue_Of_ObservableList() {
         ListTestPane root = compileAndRun("""
             <ListTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                          listProp="${[..list4]}"/>
+                          listProp="${..list4}"/>
         """);
 
         assertNewExpr(root, OBSERVABLE_VALUE_WRAPPER);
@@ -642,7 +652,7 @@ public class ListBindingTest extends CompilerTestBase {
     public void Bidirectional_ContentBinding_To_Vanilla_List_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <ListTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                          listProp="#{[..list1]}"/>
+                          listProp="#{..list1}"/>
         """));
 
         assertEquals(ErrorCode.INVALID_BIDIRECTIONAL_CONTENT_BINDING_SOURCE, ex.getDiagnostic().getCode());
@@ -670,7 +680,7 @@ public class ListBindingTest extends CompilerTestBase {
     public void Bidirectional_ContentBinding_To_ObservableList() {
         ListTestPane root = compileAndRun("""
             <ListTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                          listProp="#{[..list2]}"/>
+                          listProp="#{..list2}"/>
         """);
 
         assertNotNewExpr(root, "Constant", OBSERVABLE_VALUE_WRAPPER, LIST_WRAPPER);
@@ -707,7 +717,7 @@ public class ListBindingTest extends CompilerTestBase {
     public void Bidirectional_ContentBinding_To_ObservableValue_Of_Vanilla_List_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <ListTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                          listProp="#{[..list3]}"/>
+                          listProp="#{..list3}"/>
         """));
 
         assertEquals(ErrorCode.INVALID_BIDIRECTIONAL_CONTENT_BINDING_SOURCE, ex.getDiagnostic().getCode());
@@ -736,7 +746,7 @@ public class ListBindingTest extends CompilerTestBase {
     public void Bidirectional_ContentBinding_To_Property_Of_ObservableList() {
         ListTestPane root = compileAndRun("""
             <ListTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                          listProp="#{[..list4]}"/>
+                          listProp="#{..list4}"/>
         """);
 
         assertNewExpr(root, OBSERVABLE_VALUE_WRAPPER);
@@ -771,7 +781,7 @@ public class ListBindingTest extends CompilerTestBase {
     public void Bidirectional_ContentBinding_To_ReadOnlyObservableValue_Of_ObservableList() {
         ListTestPane root = compileAndRun("""
             <ListTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                          listProp="#{[..list4ReadOnly]}"/>
+                          listProp="#{..list4ReadOnly}"/>
         """);
 
         assertNewExpr(root, OBSERVABLE_VALUE_WRAPPER);
@@ -797,7 +807,7 @@ public class ListBindingTest extends CompilerTestBase {
     public void Bidirectional_ContentBinding_To_ListProperty_With_Java_Getter_Name() {
         ListTestPane root = compileAndRun("""
             <ListTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                          listProp="#{[..listPropertyWithJavaGetterName]}"/>
+                          listProp="#{..listPropertyWithJavaGetterName}"/>
         """);
 
         assertFalse(root.listProp.isBound());
