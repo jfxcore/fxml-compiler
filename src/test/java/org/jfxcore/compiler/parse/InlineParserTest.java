@@ -164,6 +164,19 @@ public class InlineParserTest extends TestBase {
     }
 
     @Test
+    public void Unmatched_Parens_Throws() {
+        String markup = """
+            {foo bar(baz(qux)
+        """;
+
+        MarkupException ex = assertThrows(
+            MarkupException.class, () -> new InlineParser(markup, "fx").parseObject());
+
+        assertEquals(ErrorCode.EXPECTED_TOKEN, ex.getDiagnostic().getCode());
+        assertTrue(ex.getDiagnostic().getMessage().contains(")"));
+    }
+
+    @Test
     public void Empty_Property_Value_Throws() {
         String markup = """
             {GridPane
