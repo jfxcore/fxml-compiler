@@ -1,9 +1,11 @@
-// Copyright (c) 2022, 2023, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2024, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.transform.codebehind;
 
+import javassist.CtConstructor;
 import javassist.Modifier;
+import javassist.bytecode.annotation.AnnotationImpl;
 import org.jfxcore.compiler.ast.DocumentNode;
 import org.jfxcore.compiler.ast.Node;
 import org.jfxcore.compiler.ast.NodeDataKey;
@@ -15,12 +17,20 @@ import org.jfxcore.compiler.ast.intrinsic.Intrinsics;
 import org.jfxcore.compiler.diagnostic.errors.GeneralErrors;
 import org.jfxcore.compiler.diagnostic.errors.PropertyAssignmentErrors;
 import org.jfxcore.compiler.diagnostic.errors.SymbolResolutionErrors;
+import org.jfxcore.compiler.parse.TypeParser;
 import org.jfxcore.compiler.transform.Transform;
 import org.jfxcore.compiler.transform.TransformContext;
+import org.jfxcore.compiler.util.Classes;
 import org.jfxcore.compiler.util.FileUtil;
+import org.jfxcore.compiler.util.MethodFinder;
 import org.jfxcore.compiler.util.NameHelper;
+import org.jfxcore.compiler.util.TypeHelper;
+import org.jfxcore.compiler.util.TypeInstance;
+import java.lang.reflect.Proxy;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.stream.Collectors;
 
 /**
@@ -53,7 +63,9 @@ public class FlattenClassTransform implements Transform {
         }
 
         PropertyNode paramsNode = root.findIntrinsicProperty(Intrinsics.CLASS_PARAMETERS);
-        String[] params = paramsNode != null ? paramsNode.getTextValueNotEmpty(context).split(",") : new String[0];
+        List<TypeInstance> params = paramsNode != null
+            ? new TypeParser(paramsNode.getTextValueNotEmpty(context)).parse()
+            : List.of();
 
         if (codeBehindClass != null) {
             String[] parts = codeBehindClass.getTextValueNotEmpty(context).split("\\.");
@@ -108,12 +120,44 @@ public class FlattenClassTransform implements Transform {
             markupClassName = NameHelper.getDefaultMarkupClassName(className);
         }
 
+        List<List<String>> paramAnnotations = new ArrayList<>();
+
+        if (paramsNode != null) {
+            var rootType = TypeHelper.getTypeInstance(root);
+            var methodFinder = new MethodFinder(rootType, rootType.jvmType());
+
+            CtConstructor constructor = methodFinder.findConstructor(
+                params,
+                params.stream().map(x -> paramsNode.getSourceInfo()).toList(),
+                null,
+                paramsNode.getSourceInfo());
+
+            if (constructor == null) {
+                throw SymbolResolutionErrors.memberNotFound(
+                    paramsNode.getSourceInfo(), rootType.jvmType(), String.format("<ctor>(%s)",
+                        String.join(", ", params.stream().map(TypeInstance::getJavaName).toList())));
+            }
+
+            for (Object[] ctorParamAnnotations : constructor.getAvailableParameterAnnotations()) {
+                List<String> annotation = new ArrayList<>();
+                paramAnnotations.add(annotation);
+
+                for (Object ctorParamAnnotation : ctorParamAnnotations) {
+                    if (Proxy.getInvocationHandler(ctorParamAnnotation) instanceof AnnotationImpl annotationImpl
+                            && Classes.NamedArgAnnotationName.equals(annotationImpl.getTypeName())) {
+                        annotation.add(annotationImpl.getAnnotation().toString());
+                    }
+                }
+            }
+        }
+
         return new ClassNode(
             packageName,
             className,
             markupClassName,
             classModifiers,
-            params,
+            params.stream().map(TypeInstance::getJavaName).toArray(String[]::new),
+            paramAnnotations.stream().map(list -> list.toArray(String[]::new)).toArray(String[][]::new),
             (String)root.getNodeData(NodeDataKey.FORMATTED_TYPE_ARGUMENTS),
             codeBehindClass != null,
             root.getType(),
