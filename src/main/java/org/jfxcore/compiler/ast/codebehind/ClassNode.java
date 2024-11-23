@@ -1,4 +1,4 @@
-// Copyright (c) 2022, 2023, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2024, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.codebehind;
@@ -20,6 +20,7 @@ public class ClassNode extends ObjectNode implements JavaEmitterNode {
     private final String className;
     private final String markupClassName;
     private final String[] parameters;
+    private final String[][] parameterAnnotations;
     private final String typeArguments;
     private final int classModifiers;
     private final boolean hasCodeBehind;
@@ -30,6 +31,7 @@ public class ClassNode extends ObjectNode implements JavaEmitterNode {
             String markupClassName,
             int classModifiers,
             String[] parameters,
+            String[][] paramAnnotations,
             String typeArguments,
             boolean hasCodeBehind,
             TypeNode type,
@@ -41,6 +43,7 @@ public class ClassNode extends ObjectNode implements JavaEmitterNode {
         this.markupClassName = markupClassName;
         this.classModifiers = classModifiers;
         this.parameters = parameters;
+        this.parameterAnnotations = paramAnnotations;
         this.typeArguments = typeArguments;
         this.hasCodeBehind = hasCodeBehind;
     }
@@ -55,14 +58,6 @@ public class ClassNode extends ObjectNode implements JavaEmitterNode {
 
     public String getMarkupClassName() {
         return markupClassName;
-    }
-
-    public int getClassModifiers() {
-        return classModifiers;
-    }
-
-    public String[] getParameters() {
-        return parameters;
     }
 
     public boolean hasCodeBehind() {
@@ -113,6 +108,11 @@ public class ClassNode extends ObjectNode implements JavaEmitterNode {
                     code.append(", ");
                 }
 
+                if (parameterAnnotations[i].length > 0) {
+                    code.append(String.join(" ", parameterAnnotations[i]));
+                    code.append(" ");
+                }
+
                 code.append(String.format("%s arg%s", parameters[i], i));
             }
 
@@ -152,8 +152,8 @@ public class ClassNode extends ObjectNode implements JavaEmitterNode {
     @Override
     public ClassNode deepClone() {
         return new ClassNode(
-            packageName, className, markupClassName, classModifiers, parameters, typeArguments,
-            hasCodeBehind, getType(), getProperties(), getSourceInfo());
+            packageName, className, markupClassName, classModifiers, parameters, parameterAnnotations,
+            typeArguments, hasCodeBehind, getType(), getProperties(), getSourceInfo());
     }
 
     @Override
@@ -167,13 +167,15 @@ public class ClassNode extends ObjectNode implements JavaEmitterNode {
             && Objects.equals(className, other.className)
             && Objects.equals(markupClassName, other.markupClassName)
             && Objects.equals(typeArguments, other.typeArguments)
-            && Arrays.equals(parameters, other.parameters);
+            && Arrays.equals(parameters, other.parameters)
+            && Arrays.deepEquals(parameterAnnotations, other.parameterAnnotations);
     }
 
     @Override
     public int hashCode() {
         int result = Objects.hash(packageName, className, markupClassName, typeArguments, classModifiers, hasCodeBehind);
         result = 31 * result + Arrays.hashCode(parameters);
+        result = 31 * result + Arrays.deepHashCode(parameterAnnotations);
         return result;
     }
 

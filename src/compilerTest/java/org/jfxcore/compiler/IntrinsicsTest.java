@@ -3,6 +3,7 @@
 
 package org.jfxcore.compiler;
 
+import javafx.beans.NamedArg;
 import javafx.scene.layout.Pane;
 import org.jfxcore.compiler.diagnostic.ErrorCode;
 import org.jfxcore.compiler.diagnostic.MarkupException;
@@ -97,18 +98,20 @@ public class IntrinsicsTest extends CompilerTestBase {
 
     @Test
     public void Incompatible_Class_Parameters_Are_Invalid() {
-        RuntimeException ex = assertThrows(RuntimeException.class, () -> compileAndRun("""
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.scene.layout.*?>
             <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                       fx:classParameters="java.lang.String"/>
         """));
 
-        assertEquals("compiler.err.cant.apply.symbols", ex.getMessage());
+        assertEquals(ErrorCode.MEMBER_NOT_FOUND, ex.getDiagnostic().getCode());
+        assertCodeHighlight("fx:classParameters=\"java.lang.String\"", ex);
     }
 
     @SuppressWarnings("unused")
     public static class PaneWithParams extends Pane {
         public PaneWithParams(String param) {}
+        public PaneWithParams(@NamedArg("myArg1") String myArg1, @NamedArg("myArg2") double myArg2) {}
     }
 
     @Test
@@ -123,6 +126,28 @@ public class IntrinsicsTest extends CompilerTestBase {
         Constructor<?> ctor = clazz.getConstructors()[0];
         assertEquals(1, ctor.getParameterCount());
         assertEquals(String.class, ctor.getParameters()[0].getType());
+    }
+
+    @Test
+    public void Object_Is_Compiled_With_NamedArgs_ClassParameters() {
+        Class<?> clazz = compile("""
+            <?import org.jfxcore.compiler.IntrinsicsTest.*?>
+            <PaneWithParams xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                            fx:classParameters="java.lang.String, double"/>
+        """);
+
+        assertEquals(1, clazz.getConstructors().length);
+        Constructor<?> ctor = clazz.getConstructors()[0];
+        assertEquals(2, ctor.getParameterCount());
+        assertEquals(String.class, ctor.getParameters()[0].getType());
+        assertEquals(double.class, ctor.getParameters()[1].getType());
+
+        var annotations = ctor.getParameterAnnotations();
+        assertEquals(2, annotations.length);
+        assertEquals(1, annotations[0].length);
+        assertEquals("javafx.beans.NamedArg", annotations[0][0].annotationType().getName());
+        assertEquals(1, annotations[1].length);
+        assertEquals("javafx.beans.NamedArg", annotations[1][0].annotationType().getName());
     }
 
     @Test
