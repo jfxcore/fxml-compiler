@@ -177,6 +177,22 @@ public class InlineParserTest extends TestBase {
     }
 
     @Test
+    public void Function_Is_Parsed_With_Whitespace() {
+        String markup = """
+            {foo bar(
+                baz , qux
+            )}
+        """;
+
+        var objectNode = new InlineParser(markup, "fx").parseObject();
+        assertEquals(1, objectNode.getChildren().size());
+        var functionNode = (FunctionNode)objectNode.getChildren().get(0);
+        assertEquals(2, functionNode.getArguments().size());
+        assertEquals("baz", ((PathNode)functionNode.getArguments().get(0)).getText());
+        assertEquals("qux", ((PathNode)functionNode.getArguments().get(1)).getText());
+    }
+
+    @Test
     public void Empty_Property_Value_Throws() {
         String markup = """
             {GridPane
