@@ -279,7 +279,7 @@ public class InlineParser {
     private FunctionNode parseFunctionExpression(InlineTokenizer tokenizer, PathNode functionName) {
         tokenizer.remove(OPEN_PAREN);
         ValueNode arguments = parseExpression(tokenizer, false);
-        InlineToken lastToken = tokenizer.remove(CLOSE_PAREN);
+        InlineToken lastToken = tokenizer.removeSkipWS(CLOSE_PAREN);
 
         return new FunctionNode(
             functionName,
