@@ -1,4 +1,4 @@
-// Copyright (c) 2022, 2023, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2024, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.diagnostic.errors;
@@ -22,10 +22,10 @@ public class ObjectInitializationErrors {
             ErrorCode.CONSTRUCTOR_NOT_FOUND, "causes", causes, NameHelper.getJavaClassName(sourceInfo, type)));
     }
 
-    public static MarkupException valueOfMethodNotFound(SourceInfo sourceInfo, CtClass type, CtClass supertype) {
-        return new MarkupException(sourceInfo, supertype != null ?
-            Diagnostic.newDiagnosticVariant(ErrorCode.VALUEOF_METHOD_NOT_FOUND, "superclass",
-                NameHelper.getJavaClassName(sourceInfo, type), NameHelper.getJavaClassName(sourceInfo, supertype)) :
+    public static MarkupException valueOfMethodNotFound(SourceInfo sourceInfo, CtClass type, Diagnostic[] causes) {
+        return new MarkupException(sourceInfo, causes.length > 0 ?
+            Diagnostic.newDiagnosticVariant(ErrorCode.VALUEOF_METHOD_NOT_FOUND,
+                "causes", causes, NameHelper.getJavaClassName(sourceInfo, type)) :
             Diagnostic.newDiagnostic(ErrorCode.VALUEOF_METHOD_NOT_FOUND,
                 NameHelper.getJavaClassName(sourceInfo, type)));
     }

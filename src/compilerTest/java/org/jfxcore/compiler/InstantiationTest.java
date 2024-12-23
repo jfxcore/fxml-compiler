@@ -568,19 +568,151 @@ public class InstantiationTest extends CompilerTestBase {
         }
 
         @Test
-        public void Object_Is_Instantiated_With_Invalid_FxValue_Throws_Exception() {
-            MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
-                <?import java.lang.*?>
-                <?import javafx.scene.control.*?>
-                <Button xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
+        public void Double_Is_Instantiated_From_String_And_Primitive() {
+            GridPane root = compileAndRun("""
+                <?import javafx.scene.layout.*?>
+                <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                     <minHeight><Double><fx:value><Double fx:value="5.5D"/></fx:value></Double></minHeight>
-                </Button>
+                </GridPane>
+            """);
+
+            assertMethodCall(root, ms -> ms.stream().anyMatch(m -> m.getName().equals("valueOf")));
+            assertEquals(5.5, root.getMinHeight(), 0.001);
+        }
+
+        @Test
+        public void ValueOf_With_Object_Argument_Accepts_String() {
+            GridPane root = compileAndRun("""
+                <?import javafx.scene.layout.*?>
+                <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
+                    <id><String fx:value="foo"/></id>
+                </GridPane>
+            """);
+
+            assertMethodCall(root, ms -> ms.stream().anyMatch(m -> m.getName().equals("valueOf")));
+            assertEquals("foo", root.getId());
+        }
+
+        @Test
+        public void ValueOf_With_Object_Argument_Accepts_String_Expression() {
+            GridPane root = compileAndRun("""
+                <?import javafx.scene.layout.*?>
+                <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
+                    <id><String fx:value="$String('foo')"/></id>
+                </GridPane>
+            """);
+
+            assertMethodCall(root, ms -> ms.stream().anyMatch(m -> m.getName().equals("valueOf")));
+            assertEquals("foo", root.getId());
+        }
+
+        @Test
+        public void ValueOf_With_Object_Argument_Accepts_Number_Expression() {
+            GridPane root = compileAndRun("""
+                <?import javafx.scene.layout.*?>
+                <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
+                    <id><String fx:value="$Double(123)"/></id>
+                </GridPane>
+            """);
+
+            assertMethodCall(root, ms -> ms.stream().anyMatch(m -> m.getName().equals("valueOf")));
+            assertEquals("123.0", root.getId());
+        }
+
+        @Test
+        public void ValueOf_With_Object_Argument_Does_Not_Accept_Binding_Expression() {
+            MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+                <?import javafx.scene.layout.*?>
+                <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
+                    <id><String fx:value="${String('foo')}"/></id>
+                </GridPane>
             """));
 
-            assertEquals(ErrorCode.PROPERTY_MUST_CONTAIN_TEXT, ex.getDiagnostic().getCode());
-            assertCodeHighlight("""
-                <Double fx:value="5.5D"/>
-            """.trim(), ex);
+            assertEquals(ErrorCode.EXPRESSION_NOT_APPLICABLE, ex.getDiagnostic().getCode());
+            assertCodeHighlight("${String('foo')}".trim(), ex);
+        }
+
+        @Test
+        public void ValueOf_With_Object_Argument_Does_Not_Accept_Bidirectional_Binding_Expression() {
+            MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+                <?import javafx.scene.layout.*?>
+                <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
+                    <id><String fx:value="#{String('foo')}"/></id>
+                </GridPane>
+            """));
+
+            assertEquals(ErrorCode.EXPRESSION_NOT_APPLICABLE, ex.getDiagnostic().getCode());
+            assertCodeHighlight("#{String('foo')}".trim(), ex);
+        }
+
+        @Test
+        public void ValueOf_With_Object_Argument_Does_Not_Accept_Content_Binding_Expression() {
+            MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+                <?import javafx.scene.layout.*?>
+                <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
+                    <id><String fx:value="$..String('foo')"/></id>
+                </GridPane>
+            """));
+
+            assertEquals(ErrorCode.EXPRESSION_NOT_APPLICABLE, ex.getDiagnostic().getCode());
+            assertCodeHighlight("$..String('foo')".trim(), ex);
+        }
+
+        @SuppressWarnings("unused")
+        public static class ValueOfBase {
+            String value;
+
+            public static ValueOfDerived valueOf(String value) {
+                var result = new ValueOfDerived();
+                result.value = value;
+                return result;
+            }
+        }
+
+        @SuppressWarnings("unused")
+        public static class ValueOfDerived extends ValueOfBase {
+            public String valueOf(Object value) { // not static, can't be selected
+                throw new RuntimeException();
+            }
+        }
+
+        @Test
+        public void ValueOf_In_Superclass_Is_Acceptable() {
+            GridPane root = compileAndRun("""
+                <?import javafx.scene.layout.*?>
+                <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
+                    <fx:define>
+                        <ValueOfDerived fx:id="k" fx:value="foo"/>
+                    </fx:define>
+                </GridPane>
+            """);
+
+            assertInstanceOf(ValueOfDerived.class, root.getProperties().get("k"));
+            assertEquals("foo", ((ValueOfDerived)root.getProperties().get("k")).value);
+        }
+
+        @SuppressWarnings("unused")
+        public static class ValueOfInstance {
+            public ValueOfDerived valueOf(String value) {
+                throw new RuntimeException();
+            }
+        }
+
+        @Test
+        public void Instance_ValueOf_Method_Is_Not_Acceptable() {
+            MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+                <?import javafx.scene.layout.*?>
+                <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
+                    <fx:define>
+                        <ValueOfInstance fx:id="k" fx:value="foo"/>
+                    </fx:define>
+                </GridPane>
+            """));
+
+            assertEquals(ErrorCode.VALUEOF_METHOD_NOT_FOUND, ex.getDiagnostic().getCode());
+            assertEquals(1, ex.getDiagnostic().getCauses().length);
+            assertEquals(ErrorCode.METHOD_NOT_STATIC, ex.getDiagnostic().getCauses()[0].getCode());
+            assertCodeHighlight("fx:value=\"foo\"".trim(), ex);
         }
     }
 

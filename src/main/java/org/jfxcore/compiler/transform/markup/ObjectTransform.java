@@ -1,4 +1,4 @@
-// Copyright (c) 2022, 2023, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2024, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.transform.markup;
@@ -8,6 +8,8 @@ import javassist.CtField;
 import javassist.CtMethod;
 import javassist.Modifier;
 import javassist.NotFoundException;
+import org.jfxcore.compiler.ast.BindingMode;
+import org.jfxcore.compiler.ast.BindingNode;
 import org.jfxcore.compiler.ast.NodeDataKey;
 import org.jfxcore.compiler.ast.TemplateContentNode;
 import org.jfxcore.compiler.ast.emit.EmitInitializeRootNode;
@@ -16,12 +18,18 @@ import org.jfxcore.compiler.ast.ObjectNode;
 import org.jfxcore.compiler.ast.PropertyNode;
 import org.jfxcore.compiler.ast.ValueNode;
 import org.jfxcore.compiler.ast.emit.EmitClassConstantNode;
+import org.jfxcore.compiler.ast.emit.EmitLiteralNode;
 import org.jfxcore.compiler.ast.emit.EmitObjectNode;
+import org.jfxcore.compiler.ast.emit.EmitUnwrapObservableNode;
+import org.jfxcore.compiler.ast.emit.ValueEmitterNode;
+import org.jfxcore.compiler.ast.expression.BindingEmitterInfo;
 import org.jfxcore.compiler.ast.intrinsic.Intrinsics;
+import org.jfxcore.compiler.ast.text.TextNode;
 import org.jfxcore.compiler.diagnostic.Diagnostic;
 import org.jfxcore.compiler.diagnostic.ErrorCode;
 import org.jfxcore.compiler.diagnostic.MarkupException;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
+import org.jfxcore.compiler.diagnostic.errors.BindingSourceErrors;
 import org.jfxcore.compiler.diagnostic.errors.GeneralErrors;
 import org.jfxcore.compiler.diagnostic.errors.ObjectInitializationErrors;
 import org.jfxcore.compiler.diagnostic.errors.SymbolResolutionErrors;
@@ -32,6 +40,7 @@ import org.jfxcore.compiler.transform.markup.util.ValueEmitterFactory;
 import org.jfxcore.compiler.diagnostic.DiagnosticInfo;
 import org.jfxcore.compiler.util.AccessVerifier;
 import org.jfxcore.compiler.util.Classes;
+import org.jfxcore.compiler.util.MethodFinder;
 import org.jfxcore.compiler.util.PropertyHelper;
 import org.jfxcore.compiler.util.Resolver;
 import org.jfxcore.compiler.util.TypeHelper;
@@ -128,7 +137,7 @@ public class ObjectTransform implements Transform {
         PropertyNode valueNode = node.findIntrinsicProperty(Intrinsics.VALUE);
         if (valueNode != null) {
             valueNode.remove();
-            return createValueOfNode(context, node, valueNode, valueNode.getTextValue(context));
+            return createValueOfNode(context, node, valueNode);
         }
 
         PropertyNode constantNode = node.findIntrinsicProperty(Intrinsics.CONSTANT);
@@ -207,7 +216,7 @@ public class ObjectTransform implements Transform {
     }
 
     private ValueNode createValueOfNode(
-            TransformContext context, ObjectNode objectNode, PropertyNode propertyNode, String textValue) {
+            TransformContext context, ObjectNode objectNode, PropertyNode propertyNode) {
         TypeInstance nodeType = TypeHelper.getTypeInstance(objectNode);
 
         if (!objectNode.getChildren().isEmpty()) {
@@ -215,21 +224,45 @@ public class ObjectTransform implements Transform {
                 propertyNode.getSourceInfo(), nodeType.jvmType(), propertyNode.getMarkupName());
         }
 
-        Resolver resolver = new Resolver(propertyNode.getSourceInfo());
-        CtMethod valueOfMethod = resolver.tryResolveValueOfMethod(nodeType.jvmType());
-        boolean hasValueOfMethod = valueOfMethod != null;
+        Node propertyValue = propertyNode.getSingleValue(context);
+        ValueEmitterNode argumentValue;
 
-        if (hasValueOfMethod) {
-            AccessVerifier.verifyAccessible(valueOfMethod, context.getMarkupClass(), propertyNode.getSourceInfo());
+        if (propertyValue instanceof BindingNode bindingNode) {
+            if (bindingNode.getMode() != BindingMode.ONCE) {
+                throw GeneralErrors.expressionNotApplicable(bindingNode.getSourceInfo(), true);
+            }
+
+            BindingEmitterInfo emitterInfo = bindingNode.toEmitter(nodeType);
+            argumentValue = emitterInfo.getObservableType() != null
+                ? new EmitUnwrapObservableNode(emitterInfo.getValue())
+                : emitterInfo.getValue();
+        } else if (propertyValue instanceof ValueEmitterNode valueEmitterNode) {
+            argumentValue = valueEmitterNode;
+        } else if (propertyValue instanceof ValueNode valueNode
+                   && transform(context, valueNode) instanceof ValueEmitterNode valueEmitterNode) {
+            argumentValue = valueEmitterNode;
+        } else if (propertyValue instanceof TextNode textNode) {
+            argumentValue = new EmitLiteralNode(TypeInstance.StringType(), textNode.getText(), textNode.getSourceInfo());
         } else {
-            TypeInstance supertype = resolver.tryResolveSupertypeWithValueOfMethod(nodeType);
+            throw GeneralErrors.expressionNotApplicable(propertyValue.getSourceInfo(), false);
+        }
+
+        List<DiagnosticInfo> diagnostics = new ArrayList<>();
+        CtMethod valueOfMethod = new MethodFinder(nodeType, nodeType.jvmType())
+            .findMethod("valueOf", true, nodeType, List.of(TypeHelper.getTypeInstance(argumentValue)),
+                        List.of(propertyNode.getSourceInfo()), diagnostics, propertyNode.getSourceInfo());
+
+        if (valueOfMethod == null) {
             throw ObjectInitializationErrors.valueOfMethodNotFound(
-                propertyNode.getSourceInfo(), nodeType.jvmType(), supertype != null ? supertype.jvmType() :  null);
+                propertyNode.getSourceInfo(), nodeType.jvmType(),
+                diagnostics.stream().map(DiagnosticInfo::getDiagnostic).toArray(Diagnostic[]::new));
+        } else {
+            AccessVerifier.verifyAccessible(valueOfMethod, context.getMarkupClass(), propertyNode.getSourceInfo());
         }
 
         return EmitObjectNode
-            .valueOf(nodeType, propertyNode.getSourceInfo())
-            .textValue(textValue)
+            .valueOf(nodeType, valueOfMethod, propertyNode.getSourceInfo())
+            .value(argumentValue)
             .children(
                 Stream.concat(objectNode.getChildren().stream(), objectNode.getProperties().stream())
                       .collect(Collectors.toList()))

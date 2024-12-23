@@ -94,12 +94,14 @@ public class EmitObjectNode extends ReferenceableNode {
     public static class ValueOfBuilder {
         private final TypeInstance type;
         private final SourceInfo sourceInfo;
+        private final CtMethod method;
         private ValueEmitterNode value;
         private Collection<? extends Node> children = Collections.emptyList();
         private String fieldName;
 
-        private ValueOfBuilder(TypeInstance type, SourceInfo sourceInfo) {
+        private ValueOfBuilder(TypeInstance type, CtMethod method, SourceInfo sourceInfo) {
             this.type = type;
+            this.method = method;
             this.sourceInfo = sourceInfo;
         }
 
@@ -127,7 +129,7 @@ public class EmitObjectNode extends ReferenceableNode {
             return new EmitObjectNode(
                 fieldName,
                 type,
-                null,
+                method,
                 List.of(value),
                 children,
                 CreateKind.VALUE_OF,
@@ -206,10 +208,10 @@ public class EmitObjectNode extends ReferenceableNode {
     }
 
     /**
-     * Emits an object by invoking a T::valueOf(String)->T method.
+     * Emits an object by invoking a T::valueOf(?)->T method.
      */
-    public static ValueOfBuilder valueOf(TypeInstance type, SourceInfo sourceInfo) {
-        return new ValueOfBuilder(type, sourceInfo);
+    public static ValueOfBuilder valueOf(TypeInstance type, CtMethod valueOfMethod, SourceInfo sourceInfo) {
+        return new ValueOfBuilder(type, valueOfMethod, sourceInfo);
     }
 
     /**
@@ -398,7 +400,7 @@ public class EmitObjectNode extends ReferenceableNode {
                 emitInvokeConstructor(typeClass, context);
                 break;
             case VALUE_OF:
-                emitInvokeValueOf(typeClass, context.getOutput());
+                emitInvokeValueOf(typeClass, context);
                 break;
             case FACTORY:
                 emitInvokeFactoryMethod(context.getOutput());
@@ -454,21 +456,12 @@ public class EmitObjectNode extends ReferenceableNode {
         code.invokespecial(type, MethodInfo.nameInit, constructorOrFactoryMethod.getSignature());
     }
 
-    private void emitInvokeValueOf(CtClass type, Bytecode code) {
-        EmitLiteralNode literalNode = (EmitLiteralNode)arguments.get(0);
-        CtClass literalType = literalNode.getType().getJvmType();
-
-        if (literalType.equals(Classes.StringType())) {
-            code.ldc(literalNode.getLiteral(String.class));
-        } else if (literalType == CtClass.charType) {
-            code.iconst(literalNode.getLiteral(Character.class));
-        } else if (TypeHelper.isNumericPrimitive(literalType)) {
-            code.ext_const(literalType, literalNode.getLiteral(Number.class));
-        } else {
-            throw new IllegalArgumentException();
-        }
-
-        code.invokestatic(type, "valueOf", function(type, literalType));
+    private void emitInvokeValueOf(CtClass type, BytecodeEmitContext context) {
+        CtClass argType = unchecked(() -> constructorOrFactoryMethod.getParameterTypes()[0]);
+        context.emit(arguments.get(0));
+        context.getOutput()
+            .ext_autoconv(getSourceInfo(), TypeHelper.getJvmType(arguments.get(0)), argType)
+            .invokestatic(type, constructorOrFactoryMethod.getName(), function(type, argType));
     }
 
     private void emitInvokeFactoryMethod(Bytecode code) {
