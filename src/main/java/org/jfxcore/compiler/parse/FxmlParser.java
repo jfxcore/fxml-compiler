@@ -161,20 +161,15 @@ public class FxmlParser {
             }
         }
 
-        String prefix = getFxmlNamespacePrefix(node);
-
         if (node instanceof Attr) {
             sourceInfo = (SourceInfo)node.getUserData(XmlReader.ATTR_VALUE_SOURCE_INFO_KEY);
-        }
-
-        if (text.length() > 1) {
             String trimmed = text.trim();
             if (isInlineExpression(trimmed)) {
                 if (trimmed.startsWith("{}")) {
                     return new TextNode(text.substring(text.indexOf("{}") + 2), sourceInfo);
                 }
 
-                return new InlineParser(text, prefix, sourceInfo.getStart()).parseObject();
+                return new InlineParser(text, getFxmlNamespacePrefix(node), sourceInfo.getStart()).parseObject();
             }
         }
 

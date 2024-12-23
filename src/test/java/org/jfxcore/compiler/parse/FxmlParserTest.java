@@ -1,4 +1,4 @@
-// Copyright (c) 2022, 2023, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2024, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.parse;
@@ -142,6 +142,31 @@ public class FxmlParserTest extends TestBase {
 
         assertEquals("foo", getPropertyText(document, "text1"));
         assertEquals(" bar ", getPropertyText(document, "text2"));
+    }
+
+    @Test
+    public void InlineParser_Is_Only_Used_For_Attribute_Values() {
+        DocumentNode document = new FxmlParser("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Label xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                       prefWidth="{fx:foo bar}">
+                    <prefHeight>{fx:foo bar}</prefHeight>
+                </Label>
+            """).parseDocument();
+
+        var properties = ((ObjectNode)document.getRoot()).getProperties();
+        assertEquals(1, properties.size());
+        var values = properties.get(0).getValues();
+        assertEquals(1, values.size());
+        assertInstanceOf(ObjectNode.class, values.get(0));
+        assertTrue(((ObjectNode)values.get(0)).getType().isIntrinsic());
+
+        var children = ((ObjectNode)document.getRoot()).getChildren();
+        assertEquals(1, children.size());
+        values = ((ObjectNode)children.get(0)).getChildren();
+        assertEquals(1, values.size());
+        assertInstanceOf(TextNode.class, values.get(0));
+        assertEquals("{fx:foo bar}", ((TextNode)values.get(0)).getText());
     }
 
     private String getElementText(DocumentNode document, String elementName) {
