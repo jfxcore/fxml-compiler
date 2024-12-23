@@ -1,4 +1,4 @@
-// Copyright (c) 2022, 2023, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2024, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.transform.markup;
@@ -6,7 +6,7 @@ package org.jfxcore.compiler.transform.markup;
 import org.jfxcore.compiler.ast.Node;
 import org.jfxcore.compiler.ast.ObjectNode;
 import org.jfxcore.compiler.ast.PropertyNode;
-import org.jfxcore.compiler.ast.emit.EmitUrlNode;
+import org.jfxcore.compiler.ast.emit.EmitResourceNode;
 import org.jfxcore.compiler.ast.intrinsic.Intrinsics;
 import org.jfxcore.compiler.diagnostic.errors.PropertyAssignmentErrors;
 import org.jfxcore.compiler.transform.Transform;
@@ -19,20 +19,20 @@ import org.jfxcore.compiler.util.TypeInstance;
 
 import static org.jfxcore.compiler.util.ExceptionHelper.*;
 
-public class UrlIntrinsicTransform implements Transform {
+public class ResourceIntrinsicTransform implements Transform {
 
     @Override
     public Node transform(TransformContext context, Node node) {
-        if (!node.typeEquals(ObjectNode.class) || !((ObjectNode)node).isIntrinsic(Intrinsics.URL)){
+        if (!node.typeEquals(ObjectNode.class) || !((ObjectNode)node).isIntrinsic(Intrinsics.RESOURCE)){
             return node;
         }
 
         Resolver resolver = new Resolver(node.getSourceInfo());
-        PropertyNode value = ((ObjectNode)node).getProperty("value");
+        PropertyNode name = ((ObjectNode)node).getProperty("name");
         PropertyNode property = context.getParent().as(PropertyNode.class);
         if (property == null) {
-            return new EmitUrlNode(
-                value.getTextValueNotEmpty(context),
+            return new EmitResourceNode(
+                name.getTextValueNotEmpty(context),
                 resolver.getTypeInstance(Classes.URLType()),
                 node.getSourceInfo());
         }
@@ -61,7 +61,7 @@ public class UrlIntrinsicTransform implements Transform {
                 node.getSourceInfo(), propertyInfo, resolver.getTypeInstance(Classes.URLType()));
         }
 
-        return new EmitUrlNode(value.getTextValueNotEmpty(context), targetType, node.getSourceInfo());
+        return new EmitResourceNode(name.getTextValueNotEmpty(context), targetType, node.getSourceInfo());
     }
 
 }

@@ -36,13 +36,15 @@ public class InlineParser {
     public static final String ONCE_EXPR_PREFIX = "$";
     public static final String BIND_EXPR_PREFIX = "${";
     public static final String BIND_BIDIRECTIONAL_EXPR_PREFIX = "#{";
+    public static final String RESOURCE_PREFIX = "@";
 
     private record SyntaxMapping(String compact, Intrinsic intrinsic, boolean closingCurly) {}
 
     private static final SyntaxMapping[] SYNTAX_MAPPING = new SyntaxMapping[] {
         new SyntaxMapping(BIND_BIDIRECTIONAL_EXPR_PREFIX, Intrinsics.BIND_BIDIRECTIONAL, true),
         new SyntaxMapping(BIND_EXPR_PREFIX, Intrinsics.BIND, true),
-        new SyntaxMapping(ONCE_EXPR_PREFIX, Intrinsics.ONCE, false)
+        new SyntaxMapping(ONCE_EXPR_PREFIX, Intrinsics.ONCE, false),
+        new SyntaxMapping(RESOURCE_PREFIX, Intrinsics.RESOURCE, false),
     };
 
     private final String source;

@@ -33,7 +33,7 @@ import org.jfxcore.compiler.transform.markup.StylesheetTransform;
 import org.jfxcore.compiler.transform.markup.TemplateContentTransform;
 import org.jfxcore.compiler.transform.markup.TopologyTransform;
 import org.jfxcore.compiler.transform.markup.TypeIntrinsicTransform;
-import org.jfxcore.compiler.transform.markup.UrlIntrinsicTransform;
+import org.jfxcore.compiler.transform.markup.ResourceIntrinsicTransform;
 import org.jfxcore.compiler.transform.markup.ValidateTypeTransform;
 import java.util.Arrays;
 import java.util.List;
@@ -90,7 +90,7 @@ public class Transformer {
             new IdPropertyTransform(),
             new BindingTransform(),
             new DefineBlockTransform(),
-            new UrlIntrinsicTransform(),
+            new ResourceIntrinsicTransform(),
             new NullIntrinsicTransform(),
             new TypeIntrinsicTransform(),
             new ObjectTransform(),
