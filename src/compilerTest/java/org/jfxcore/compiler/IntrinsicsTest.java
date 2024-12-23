@@ -72,7 +72,6 @@ public class IntrinsicsTest extends CompilerTestBase {
         @Test
         public void Null_Can_Be_Assigned_To_ReferenceType() {
             Label root = compileAndRun("""
-                <?import javafx.fxml.*?>
                 <?import javafx.scene.control.*?>
                 <Label xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                        text="{fx:null}"/>
@@ -84,7 +83,6 @@ public class IntrinsicsTest extends CompilerTestBase {
         @Test
         public void Null_Cannot_Be_Assigned_To_PrimitiveType() {
             MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
-                <?import javafx.fxml.*?>
                 <?import javafx.scene.control.*?>
                 <Label xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                        prefWidth="{fx:null}"/>
@@ -261,7 +259,6 @@ public class IntrinsicsTest extends CompilerTestBase {
         @Test
         public void Resource_Operator_With_Relative_Location_Is_Evaluated_Correctly() {
             Label root = compileAndRun("""
-                <?import javafx.fxml.*?>
                 <?import javafx.scene.control.*?>
                 <Label xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                        text="@image.jpg"/>
@@ -273,7 +270,6 @@ public class IntrinsicsTest extends CompilerTestBase {
         @Test
         public void Resource_Intrinsic_With_Relative_Location_Is_Evaluated_Correctly() {
             Label root = compileAndRun("""
-                <?import javafx.fxml.*?>
                 <?import javafx.scene.control.*?>
                 <Label xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                        text="{fx:resource image.jpg}"/>
@@ -285,7 +281,6 @@ public class IntrinsicsTest extends CompilerTestBase {
         @Test
         public void Resource_Operator_With_Root_Location_Is_Evaluated_Correctly() {
             Label root = compileAndRun("""
-                <?import javafx.fxml.*?>
                 <?import javafx.scene.control.*?>
                 <Label xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                        text="@/org/jfxcore/compiler/classes/image.jpg"/>
@@ -297,7 +292,6 @@ public class IntrinsicsTest extends CompilerTestBase {
         @Test
         public void Resource_Intrinsic_With_Root_Location_Is_Evaluated_Correctly() {
             Label root = compileAndRun("""
-                <?import javafx.fxml.*?>
                 <?import javafx.scene.control.*?>
                 <Label xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                        text="{fx:resource /org/jfxcore/compiler/classes/image.jpg}"/>
@@ -309,7 +303,6 @@ public class IntrinsicsTest extends CompilerTestBase {
         @Test
         public void Resource_Operator_With_Quoted_Path_Is_Evaluated_Correctly() {
             Label root = compileAndRun("""
-                <?import javafx.fxml.*?>
                 <?import javafx.scene.control.*?>
                 <Label xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                        text="@'/org/jfxcore/compiler/classes/image with   spaces.jpg'"/>
@@ -321,7 +314,6 @@ public class IntrinsicsTest extends CompilerTestBase {
         @Test
         public void Resource_Intrinsic_With_Quoted_Path_Is_Evaluated_Correctly() {
             Label root = compileAndRun("""
-                <?import javafx.fxml.*?>
                 <?import javafx.scene.control.*?>
                 <Label xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                        text="{fx:resource '/org/jfxcore/compiler/classes/image with   spaces.jpg'}"/>
@@ -333,7 +325,6 @@ public class IntrinsicsTest extends CompilerTestBase {
         @Test
         public void Resource_Can_Be_Added_To_String_Collection() {
             Label root = compileAndRun("""
-                <?import javafx.fxml.*?>
                 <?import javafx.scene.control.*?>
                 <Label xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                     <stylesheets>
@@ -348,7 +339,6 @@ public class IntrinsicsTest extends CompilerTestBase {
         @Test
         public void Resource_Cannot_Be_Assigned_To_Incompatible_Property() {
             MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
-                <?import javafx.fxml.*?>
                 <?import javafx.scene.control.*?>
                 <Label xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                        prefWidth="{fx:resource image.jpg}"/>
@@ -361,7 +351,6 @@ public class IntrinsicsTest extends CompilerTestBase {
         @Test
         public void Unsuitable_Parameter_Fails() {
             MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
-                <?import javafx.fxml.*?>
                 <?import javafx.scene.control.*?>
                 <Label xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                        text="{fx:resource ${foo}}"/>
@@ -374,7 +363,6 @@ public class IntrinsicsTest extends CompilerTestBase {
         @Test
         public void Nonexistent_Resource_Throws_RuntimeException() {
             RuntimeException ex = assertThrows(RuntimeException.class, () -> compileAndRun("""
-                <?import javafx.fxml.*?>
                 <?import javafx.scene.control.*?>
                 <Label xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                        text="{fx:resource foobarbaz.jpg}"/>
