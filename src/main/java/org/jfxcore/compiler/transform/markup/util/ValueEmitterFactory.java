@@ -1,4 +1,4 @@
-// Copyright (c) 2022, 2023, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2024, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.transform.markup.util;
@@ -7,6 +7,7 @@ import javafx.scene.paint.Color;
 import javassist.CtClass;
 import javassist.CtConstructor;
 import javassist.CtField;
+import javassist.CtMethod;
 import javassist.Modifier;
 import javassist.NotFoundException;
 import javassist.bytecode.ParameterAnnotationsAttribute;
@@ -224,8 +225,11 @@ public class ValueEmitterFactory {
                         colorField.getName(),
                         sourceInfo);
                 } else {
+                    CtMethod valueOfMethod = new Resolver(sourceInfo).tryResolveMethod(
+                        Classes.ColorType(), m -> "valueOf".equals(m.getName()));
+
                     return EmitObjectNode
-                        .valueOf(TypeInstance.of(Classes.ColorType()), sourceInfo)
+                        .valueOf(TypeInstance.of(Classes.ColorType()), valueOfMethod, sourceInfo)
                         .textValue(value)
                         .create();
                 }

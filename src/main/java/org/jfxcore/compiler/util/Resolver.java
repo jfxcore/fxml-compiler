@@ -734,59 +734,6 @@ public class Resolver {
         });
     }
 
-    public CtMethod tryResolveValueOfMethod(CtClass declaringClass) {
-        CacheKey key = new CacheKey("tryResolveValueOfMethod", declaringClass);
-        CacheEntry entry = getCache().get(key);
-        if (entry.found() && cacheEnabled) {
-            return (CtMethod)entry.value();
-        }
-
-        for (CtMethod method : declaringClass.getDeclaredMethods()) {
-            if (!Modifier.isStatic(method.getModifiers()) || !method.getName().equals("valueOf") || isSynthetic(method)) {
-                continue;
-            }
-
-            try {
-                CtClass[] paramTypes = method.getParameterTypes();
-                if (paramTypes.length != 1 || !paramTypes[0].subtypeOf(Classes.StringType())) {
-                    continue;
-                }
-
-                CtClass retType = method.getReturnType();
-                if (!retType.subtypeOf(declaringClass)) {
-                    continue;
-                }
-            } catch (NotFoundException ex) {
-                throw SymbolResolutionErrors.classNotFound(sourceInfo, ex.getMessage());
-            }
-
-            getCache().put(key, method);
-            return method;
-        }
-
-        getCache().put(key, null);
-        return null;
-    }
-
-    public TypeInstance tryResolveSupertypeWithValueOfMethod(TypeInstance type) {
-        for (TypeInstance supertype : type.getSuperTypes()) {
-            if (supertype.equals(Classes.ObjectType())) {
-                continue;
-            }
-
-            if (tryResolveValueOfMethod(supertype.jvmType()) != null) {
-                return supertype;
-            }
-
-            type = tryResolveSupertypeWithValueOfMethod(supertype);
-            if (type != null) {
-                return type;
-            }
-        }
-
-        return null;
-    }
-
     /**
      * Returns the class annotation for the specified name, or <code>null</code> if the annotation was not found.
      */
