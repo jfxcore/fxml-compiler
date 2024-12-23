@@ -54,9 +54,9 @@ public class Intrinsics {
         "type", Kind.OBJECT, Placement.ANY, Classes::ClassType,
         new IntrinsicProperty("name", Classes::StringType, true));
 
-    public static final Intrinsic URL = new Intrinsic(
-        "url", Kind.OBJECT, Placement.ANY, Classes::URLType,
-        new IntrinsicProperty("value", Classes::StringType, true));
+    public static final Intrinsic RESOURCE = new Intrinsic(
+        "resource", Kind.OBJECT, Placement.ANY, Classes::URLType,
+        new IntrinsicProperty("name", Classes::StringType, true));
 
     public static final Intrinsic ONCE = new Intrinsic(
         "once", Kind.OBJECT, Placement.ANY, Classes::BottomType,
@@ -87,7 +87,7 @@ public class Intrinsics {
 
     private static final List<Intrinsic> NODES = List.of(
         NULL, CLASS, CLASS_MODIFIER, CLASS_PARAMETERS, MARKUP_CLASS_NAME, ID, VALUE, CONSTANT, FACTORY,
-        TYPE_ARGUMENTS, ITEM_TYPE, DEFINE, STYLESHEET, TYPE, URL, ONCE, CONTENT, BIND, BIND_CONTENT,
+        TYPE_ARGUMENTS, ITEM_TYPE, DEFINE, STYLESHEET, TYPE, RESOURCE, ONCE, CONTENT, BIND, BIND_CONTENT,
         BIND_BIDIRECTIONAL, BIND_CONTENT_BIDIRECTIONAL);
 
     public static Intrinsic find(ObjectNode node) {

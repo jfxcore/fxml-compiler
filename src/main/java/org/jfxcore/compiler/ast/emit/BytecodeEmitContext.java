@@ -107,7 +107,7 @@ public class BytecodeEmitContext extends EmitContext<Bytecode> {
             Visitor.visit(rootNode, new Visitor() {
                 @Override
                 protected Node onVisited(Node node) {
-                    if (node instanceof EmitUrlNode) {
+                    if (node instanceof EmitResourceNode) {
                         resourceSupport[0] = true;
                         return Visitor.STOP;
                     }
