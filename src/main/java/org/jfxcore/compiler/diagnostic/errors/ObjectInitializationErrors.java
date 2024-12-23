@@ -22,9 +22,12 @@ public class ObjectInitializationErrors {
             ErrorCode.CONSTRUCTOR_NOT_FOUND, "causes", causes, NameHelper.getJavaClassName(sourceInfo, type)));
     }
 
-    public static MarkupException valueOfMethodNotFound(SourceInfo sourceInfo, CtClass type) {
-        return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
-            ErrorCode.VALUEOF_METHOD_NOT_FOUND, NameHelper.getJavaClassName(sourceInfo, type)));
+    public static MarkupException valueOfMethodNotFound(SourceInfo sourceInfo, CtClass type, Diagnostic[] causes) {
+        return new MarkupException(sourceInfo, causes.length > 0 ?
+            Diagnostic.newDiagnosticVariant(ErrorCode.VALUEOF_METHOD_NOT_FOUND,
+                "causes", causes, NameHelper.getJavaClassName(sourceInfo, type)) :
+            Diagnostic.newDiagnostic(ErrorCode.VALUEOF_METHOD_NOT_FOUND,
+                NameHelper.getJavaClassName(sourceInfo, type)));
     }
 
     public static MarkupException conflictingProperties(SourceInfo sourceInfo, String property1, String property2) {

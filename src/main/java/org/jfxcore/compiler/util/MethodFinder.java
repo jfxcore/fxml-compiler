@@ -1,4 +1,4 @@
-// Copyright (c) 2022, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2024, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.util;
@@ -21,6 +21,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import static org.jfxcore.compiler.util.TypeInstance.*;
+import static org.jfxcore.compiler.util.TypeInstance.AssignmentContext.*;
 
 public class MethodFinder {
 
@@ -46,6 +47,7 @@ public class MethodFinder {
             SourceInfo sourceInfo) {
         return resolveOverloadedMethod(
             List.of(declaringType.getConstructors()),
+            false,
             null,
             argumentTypes,
             argumentSourceInfo,
@@ -55,6 +57,7 @@ public class MethodFinder {
 
     public @Nullable CtMethod findMethod(
             String methodName,
+            boolean staticInvocation,
             @Nullable TypeInstance returnType,
             List<TypeInstance> argumentTypes,
             List<SourceInfo> argumentSourceInfo,
@@ -62,6 +65,7 @@ public class MethodFinder {
             SourceInfo sourceInfo) {
         return resolveOverloadedMethod(
             findOverloadedMethods(methodName),
+            staticInvocation,
             returnType,
             argumentTypes,
             argumentSourceInfo,
@@ -71,6 +75,7 @@ public class MethodFinder {
 
     private <T extends CtBehavior> T resolveOverloadedMethod(
             List<T> methods,
+            boolean staticInvocation,
             @Nullable TypeInstance returnType,
             List<TypeInstance> argumentTypes,
             List<SourceInfo> argumentSourceInfo,
@@ -78,19 +83,19 @@ public class MethodFinder {
             SourceInfo sourceInfo) {
         List<T> applicableMethods;
 
-        var phase1 = new InvocationContext(AssignmentContext.STRICT, false, returnType, argumentTypes, argumentSourceInfo);
+        var phase1 = new InvocationContext(STRICT, staticInvocation, false, returnType, argumentTypes, argumentSourceInfo);
         applicableMethods = methods.stream().filter(method -> evaluateApplicability(method, phase1, null, sourceInfo)).toList();
         if (!applicableMethods.isEmpty()) {
             return findMostSpecificMethod(applicableMethods, argumentTypes, diagnostics, sourceInfo);
         }
 
-        var phase2 = new InvocationContext(AssignmentContext.LOOSE, false, returnType, argumentTypes, argumentSourceInfo);
+        var phase2 = new InvocationContext(LOOSE, staticInvocation, false, returnType, argumentTypes, argumentSourceInfo);
         applicableMethods = methods.stream().filter(method -> evaluateApplicability(method, phase2, null, sourceInfo)).toList();
         if (!applicableMethods.isEmpty()) {
             return findMostSpecificMethod(applicableMethods, argumentTypes, diagnostics, sourceInfo);
         }
 
-        var phase3 = new InvocationContext(AssignmentContext.LOOSE, true, returnType, argumentTypes, argumentSourceInfo);
+        var phase3 = new InvocationContext(LOOSE, staticInvocation, true, returnType, argumentTypes, argumentSourceInfo);
         applicableMethods = methods.stream().filter(method -> evaluateApplicability(method, phase3, diagnostics, sourceInfo)).toList();
         if (!applicableMethods.isEmpty()) {
             return findMostSpecificMethod(applicableMethods, argumentTypes, diagnostics, sourceInfo);
@@ -109,6 +114,18 @@ public class MethodFinder {
             @Nullable List<DiagnosticInfo> diagnostics,
             SourceInfo sourceInfo) {
         try {
+            if (!Modifier.isStatic(method.getModifiers()) && context.staticInvocation()) {
+                if (diagnostics != null) {
+                    diagnostics.add(new DiagnosticInfo(
+                        Diagnostic.newDiagnostic(
+                            ErrorCode.METHOD_NOT_STATIC,
+                            NameHelper.getLongMethodSignature(method)),
+                        sourceInfo));
+                }
+
+                return false;
+            }
+
             Resolver resolver = new Resolver(sourceInfo);
             TypeInstance[] paramTypes = resolver.getParameterTypes(method, List.of(invokingType));
             int numParams = paramTypes.length;
@@ -295,8 +312,8 @@ public class MethodFinder {
             return true;
         }
 
-        boolean t1Assignable = t1.isAssignableFrom(e, AssignmentContext.STRICT);
-        boolean t2Assignable = t2.isAssignableFrom(e, AssignmentContext.STRICT);
+        boolean t1Assignable = t1.isAssignableFrom(e, STRICT);
+        boolean t2Assignable = t2.isAssignableFrom(e, STRICT);
 
         if (t1Assignable && !t2Assignable) {
             return true;
@@ -350,12 +367,9 @@ public class MethodFinder {
         return 0;
     }
 
-    public enum InvocationType {
-        INSTANCE, STATIC, BOTH
-    }
-
     private record InvocationContext(
         AssignmentContext assignmentContext,
+        boolean staticInvocation,
         boolean allowVarargInvocation,
         @Nullable TypeInstance returnType,
         List<TypeInstance> arguments,

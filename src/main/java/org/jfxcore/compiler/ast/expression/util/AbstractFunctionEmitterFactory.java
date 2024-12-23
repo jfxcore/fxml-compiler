@@ -360,6 +360,7 @@ abstract class AbstractFunctionEmitterFactory {
         if (!isConstructor) {
             CtMethod method = new MethodFinder(invokingType, declaringClass).findMethod(
                 methodName,
+                false,
                 returnType,
                 argumentTypes,
                 argumentsSourceInfo,
@@ -484,7 +485,7 @@ abstract class AbstractFunctionEmitterFactory {
         List<DiagnosticInfo> diagnostics = new ArrayList<>();
 
         CtMethod jvmMethod = new MethodFinder(invokingType, declaringClass).findMethod(
-            methodName, argumentType, List.of(returnType), List.of(sourceInfo), diagnostics, sourceInfo);
+            methodName, false, argumentType, List.of(returnType), List.of(sourceInfo), diagnostics, sourceInfo);
 
         if (!diagnostics.isEmpty()) {
             throw BindingSourceErrors.invalidInverseMethod(

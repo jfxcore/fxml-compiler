@@ -247,12 +247,15 @@ public class ObjectTransform implements Transform {
             throw GeneralErrors.expressionNotApplicable(propertyValue.getSourceInfo(), false);
         }
 
+        List<DiagnosticInfo> diagnostics = new ArrayList<>();
         CtMethod valueOfMethod = new MethodFinder(nodeType, nodeType.jvmType())
-            .findMethod("valueOf", nodeType, List.of(TypeHelper.getTypeInstance(argumentValue)),
-                        List.of(propertyNode.getSourceInfo()), null, propertyNode.getSourceInfo());
+            .findMethod("valueOf", true, nodeType, List.of(TypeHelper.getTypeInstance(argumentValue)),
+                        List.of(propertyNode.getSourceInfo()), diagnostics, propertyNode.getSourceInfo());
 
         if (valueOfMethod == null) {
-            throw ObjectInitializationErrors.valueOfMethodNotFound(propertyNode.getSourceInfo(), nodeType.jvmType());
+            throw ObjectInitializationErrors.valueOfMethodNotFound(
+                propertyNode.getSourceInfo(), nodeType.jvmType(),
+                diagnostics.stream().map(DiagnosticInfo::getDiagnostic).toArray(Diagnostic[]::new));
         } else {
             AccessVerifier.verifyAccessible(valueOfMethod, context.getMarkupClass(), propertyNode.getSourceInfo());
         }

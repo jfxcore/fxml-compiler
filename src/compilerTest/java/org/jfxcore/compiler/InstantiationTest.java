@@ -670,7 +670,11 @@ public class InstantiationTest extends CompilerTestBase {
         }
 
         @SuppressWarnings("unused")
-        public static class ValueOfDerived extends ValueOfBase {}
+        public static class ValueOfDerived extends ValueOfBase {
+            public String valueOf(Object value) { // not static, can't be selected
+                throw new RuntimeException();
+            }
+        }
 
         @Test
         public void ValueOf_In_Superclass_Is_Acceptable() {
@@ -685,6 +689,30 @@ public class InstantiationTest extends CompilerTestBase {
 
             assertInstanceOf(ValueOfDerived.class, root.getProperties().get("k"));
             assertEquals("foo", ((ValueOfDerived)root.getProperties().get("k")).value);
+        }
+
+        @SuppressWarnings("unused")
+        public static class ValueOfInstance {
+            public ValueOfDerived valueOf(String value) {
+                throw new RuntimeException();
+            }
+        }
+
+        @Test
+        public void Instance_ValueOf_Method_Is_Not_Acceptable() {
+            MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+                <?import javafx.scene.layout.*?>
+                <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
+                    <fx:define>
+                        <ValueOfInstance fx:id="k" fx:value="foo"/>
+                    </fx:define>
+                </GridPane>
+            """));
+
+            assertEquals(ErrorCode.VALUEOF_METHOD_NOT_FOUND, ex.getDiagnostic().getCode());
+            assertEquals(1, ex.getDiagnostic().getCauses().length);
+            assertEquals(ErrorCode.METHOD_NOT_STATIC, ex.getDiagnostic().getCauses()[0].getCode());
+            assertCodeHighlight("fx:value=\"foo\"".trim(), ex);
         }
     }
 
