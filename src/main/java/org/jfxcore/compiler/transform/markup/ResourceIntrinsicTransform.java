@@ -30,7 +30,7 @@ public class ResourceIntrinsicTransform implements Transform {
         Resolver resolver = new Resolver(node.getSourceInfo());
         PropertyNode name = ((ObjectNode)node).getProperty("name");
         PropertyNode property = context.getParent().as(PropertyNode.class);
-        if (property == null) {
+        if (property == null || property.isIntrinsic()) {
             return new EmitResourceNode(
                 name.getTextValueNotEmpty(context),
                 resolver.getTypeInstance(Classes.URLType()),
