@@ -323,6 +323,20 @@ public class IntrinsicsTest extends CompilerTestBase {
         }
 
         @Test
+        public void Resource_Operator_Works_In_ValueOf_Expression() {
+            Label root = compileAndRun("""
+                <?import javafx.scene.control.*?>
+                <Label xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
+                    <text>
+                        <String fx:value="@image.jpg"/>
+                    </text>
+                </Label>
+            """);
+
+            assertTrue(root.getText().endsWith("org/jfxcore/compiler/classes/image.jpg"));
+        }
+
+        @Test
         public void Resource_Can_Be_Added_To_String_Collection() {
             Label root = compileAndRun("""
                 <?import javafx.scene.control.*?>

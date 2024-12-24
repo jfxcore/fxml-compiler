@@ -30,7 +30,7 @@ public class Intrinsics {
         "id", Kind.PROPERTY, Placement.ANY, Classes::StringType);
 
     public static final Intrinsic VALUE = new Intrinsic(
-        "value", Kind.PROPERTY, Placement.NOT_ROOT, Classes::StringType);
+        "value", Kind.PROPERTY, Placement.NOT_ROOT, Classes::BottomType);
 
     public static final Intrinsic CONSTANT = new Intrinsic(
         "constant", Kind.PROPERTY, Placement.NOT_ROOT, Classes::StringType);
