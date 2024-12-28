@@ -57,15 +57,15 @@ public class FunctionExpressionNode extends AbstractNode implements ExpressionNo
     }
 
     @Override
-    public BindingEmitterInfo toEmitter(BindingMode bindingMode, TypeInstance invokingType) {
+    public BindingEmitterInfo toEmitter(BindingMode bindingMode, TypeInstance invokingType, TypeInstance targetType) {
         boolean bidirectional = bindingMode == BindingMode.BIDIRECTIONAL;
 
         BindingEmitterInfo emitterInfo = bindingMode.isObservable() ?
-            new ObservableFunctionEmitterFactory(this, invokingType).newInstance(bidirectional) :
-            new SimpleFunctionEmitterFactory(this, invokingType).newInstance();
+            new ObservableFunctionEmitterFactory(this, invokingType, targetType).newInstance(bidirectional) :
+            new SimpleFunctionEmitterFactory(this, invokingType, targetType).newInstance();
 
         if (emitterInfo == null) {
-            emitterInfo = new SimpleFunctionEmitterFactory(this, invokingType).newInstance();
+            emitterInfo = new SimpleFunctionEmitterFactory(this, invokingType, targetType).newInstance();
         }
 
         return emitterInfo;

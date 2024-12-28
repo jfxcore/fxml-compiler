@@ -1,4 +1,4 @@
-// Copyright (c) 2021, 2023, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2024, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.emit;
@@ -58,7 +58,7 @@ public class EmitPropertySetterNode extends AbstractNode implements EmitterNode 
         context.emit(value);
 
         if (propertyInfo.getSetter() != null) {
-            code.ext_autoconv(getSourceInfo(), valueType, unchecked(() -> method.getParameterTypes()[0]))
+            code.ext_castconv(getSourceInfo(), valueType, unchecked(() -> method.getParameterTypes()[0]))
                 .ext_invoke(method);
         } else {
             switch (valueType.getName()) {

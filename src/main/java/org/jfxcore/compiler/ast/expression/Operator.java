@@ -1,4 +1,4 @@
-// Copyright (c) 2021, 2023, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2024, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.expression;
@@ -43,6 +43,10 @@ public enum Operator {
             // case NOT -> operandType.equals(CtClass.booleanType) || operandType.equals(Classes.BooleanType());
             default -> false;
         };
+    }
+
+    public boolean isBoolean() {
+        return this == BOOLIFY || this == NOT;
     }
 
     public ValueEmitterNode toEmitter(ValueEmitterNode child, BindingMode bindingMode) {

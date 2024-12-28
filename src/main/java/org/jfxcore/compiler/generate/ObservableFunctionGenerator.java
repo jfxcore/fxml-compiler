@@ -631,7 +631,17 @@ public class ObservableFunctionGenerator extends ClassGenerator {
             code.releaseLocal(varargsLocal);
         }
 
-        code.ext_store(returnType, valueLocal);
+        CtClass methodReturnType;
+        if (function.getBehavior() instanceof CtMethod m) {
+            methodReturnType = m.getReturnType();
+        } else if (function.getBehavior() instanceof CtConstructor c) {
+            methodReturnType = c.getDeclaringClass();
+        } else {
+            throw new InternalError();
+        }
+
+        code.ext_autoconv(function.getSourceInfo(), methodReturnType, returnType)
+            .ext_store(returnType, valueLocal);
 
         if (returnType.isPrimitive()) {
             // this.pvalue = $valueLocal

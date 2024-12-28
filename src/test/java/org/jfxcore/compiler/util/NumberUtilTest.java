@@ -1,4 +1,4 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2024, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.util;
@@ -18,9 +18,9 @@ public class NumberUtilTest {
 
     @Test
     public void Parse_Implicit_Double() {
-        Number number = NumberUtil.parse("123.0");
+        Number number = NumberUtil.parse("123.5");
         assertTrue(number instanceof Double);
-        assertEquals(123.0D, (double)number, 0.001);
+        assertEquals(123.5D, (double)number, 0.001);
     }
 
     @Test
@@ -43,24 +43,24 @@ public class NumberUtilTest {
 
     @Test
     public void Parse_Explicit_Float() {
-        Number number = NumberUtil.parse("123.0F");
+        Number number = NumberUtil.parse("123.5F");
         assertTrue(number instanceof Float);
-        assertEquals(123.0f, (float)number, 0.001);
+        assertEquals(123.5f, (float)number, 0.001);
 
-        number = NumberUtil.parse("123.0f");
+        number = NumberUtil.parse("123.5f");
         assertTrue(number instanceof Float);
-        assertEquals(123.0f, (float)number, 0.001);
+        assertEquals(123.5f, (float)number, 0.001);
     }
 
     @Test
     public void Parse_Explicit_Double() {
-        Number number = NumberUtil.parse("123.0D");
+        Number number = NumberUtil.parse("123.5D");
         assertTrue(number instanceof Double);
-        assertEquals(123.0D, (double)number, 0.001);
+        assertEquals(123.5D, (double)number, 0.001);
 
-        number = NumberUtil.parse("123.0d");
+        number = NumberUtil.parse("123.5d");
         assertTrue(number instanceof Double);
-        assertEquals(123.0D, (double)number, 0.001);
+        assertEquals(123.5D, (double)number, 0.001);
     }
 
 }

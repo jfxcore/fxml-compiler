@@ -10,8 +10,8 @@ import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.ast.ResolvedTypeNode;
 import org.jfxcore.compiler.ast.Visitor;
 import org.jfxcore.compiler.util.Bytecode;
-import org.jfxcore.compiler.util.Resolver;
 import org.jfxcore.compiler.util.TypeHelper;
+import org.jfxcore.compiler.util.TypeInstance;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -26,6 +26,7 @@ public class EmitMethodCallNode extends AbstractNode implements ValueEmitterNode
 
     public EmitMethodCallNode(
             CtMethod method,
+            TypeInstance returnType,
             Collection<ValueEmitterNode> methodReceiver,
             Collection<? extends ValueEmitterNode> arguments,
             SourceInfo sourceInfo) {
@@ -36,7 +37,7 @@ public class EmitMethodCallNode extends AbstractNode implements ValueEmitterNode
         }
 
         this.method = checkNotNull(method);
-        this.type = new ResolvedTypeNode(new Resolver(SourceInfo.none()).getTypeInstance(method, List.of()), sourceInfo);
+        this.type = new ResolvedTypeNode(returnType, sourceInfo);
         this.arguments = new ArrayList<>(checkNotNull(arguments));
         this.methodReceiver = new ArrayList<>(checkNotNull(methodReceiver));
     }
@@ -71,7 +72,8 @@ public class EmitMethodCallNode extends AbstractNode implements ValueEmitterNode
             context.emit(argument);
         }
 
-        code.ext_invoke(method);
+        code.ext_invoke(method)
+            .ext_castconv(getSourceInfo(), unchecked(method::getReturnType), type.getJvmType());
     }
 
     @Override

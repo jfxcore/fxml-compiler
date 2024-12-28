@@ -1,11 +1,10 @@
-// Copyright (c) 2021, 2023, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2024, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.util;
 
 public class NumberUtil {
 
-    @SuppressWarnings("DuplicateExpressions")
     public static Number parse(String value) throws NumberFormatException {
         if (value.endsWith("L") || value.endsWith("l")) {
             return Long.parseLong(value.substring(0, value.length() - 1));
@@ -29,7 +28,7 @@ public class NumberUtil {
         } catch (NumberFormatException ignored) {
         }
 
-        return Double.parseDouble(value.substring(0, value.length() - 1));
+        return Double.parseDouble(value);
     }
 
     public static TypeInstance parseType(String value) throws NumberFormatException {

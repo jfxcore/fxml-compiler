@@ -201,7 +201,7 @@ public class MethodFinderTest extends TestBase {
         var declaringClass = resolver.resolveClass(MethodFinderTest.class.getName());
         var invokingClass = resolver.getTypeInstance(declaringClass);
         var method = new MethodFinder(invokingClass, declaringClass).findMethod(
-            execution.methodName(), false, null, List.of(resolver.getTypeInstance(execution.argType())),
+            execution.methodName(), false, null, List.of(), List.of(resolver.getTypeInstance(execution.argType())),
             List.of(SourceInfo.none()), null, SourceInfo.none());
 
         if (execution.selectedParamType() == CtClass.voidType) {

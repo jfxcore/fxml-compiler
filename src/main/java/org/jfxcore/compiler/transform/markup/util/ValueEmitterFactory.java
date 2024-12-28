@@ -452,7 +452,7 @@ public class ValueEmitterFactory {
                 if (bindingNode.getBindingDistance() <= parentsUnderInitializationCount) {
                     return AcceptArgumentResult.error(null, ErrorCode.CANNOT_REFERENCE_NODE_UNDER_INITIALIZATION);
                 } else {
-                    value = bindingNode.toEmitter(invokingType).getValue();
+                    value = bindingNode.toEmitter(invokingType, targetType).getValue();
                     adjustParentIndex(value, parentsUnderInitializationCount + 1);
                 }
             } else {

@@ -44,8 +44,8 @@ public class BindingNode extends AbstractNode {
         }
     }
 
-    public BindingEmitterInfo toEmitter(TypeInstance invokingType) {
-        return expression.toEmitter(mode, invokingType);
+    public BindingEmitterInfo toEmitter(TypeInstance invokingType, TypeInstance targetType) {
+        return expression.toEmitter(mode, invokingType, targetType);
     }
 
     public BindingMode getMode() {

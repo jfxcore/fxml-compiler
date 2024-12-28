@@ -117,6 +117,13 @@ public class GeneralErrors {
             NameHelper.getJavaClassName(sourceInfo, declaringType), expected, actual));
     }
 
+    public static MarkupException numTypeArgumentsMismatch(
+            SourceInfo sourceInfo, CtBehavior behavior, int expected, int actual) {
+        return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
+            ErrorCode.NUM_TYPE_ARGUMENTS_MISMATCH,
+            NameHelper.getJavaMemberName(sourceInfo, behavior), expected, actual));
+    }
+
     public static MarkupException rootClassCannotBeFinal(SourceInfo sourceInfo, CtClass rootClass) {
         return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
             ErrorCode.ROOT_CLASS_CANNOT_BE_FINAL, NameHelper.getJavaClassName(sourceInfo, rootClass)));

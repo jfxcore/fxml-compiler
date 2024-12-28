@@ -163,7 +163,7 @@ public class PathExpressionNode extends AbstractNode implements ExpressionNode {
     }
 
     @Override
-    public BindingEmitterInfo toEmitter(BindingMode bindingMode, TypeInstance invokingType) {
+    public BindingEmitterInfo toEmitter(BindingMode bindingMode, TypeInstance invokingType, TypeInstance targetType) {
         boolean bidirectional = bindingMode == BindingMode.BIDIRECTIONAL;
 
         BindingEmitterInfo emitterInfo = bindingMode.isObservable() ?

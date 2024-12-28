@@ -1,4 +1,4 @@
-// Copyright (c) 2021, 2023, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2024, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.parse;
@@ -17,6 +17,8 @@ public enum CurlyTokenType implements TokenType {
     CLOSE_PAREN(")", CurlyTokenClass.DELIMITER),
     OPEN_BRACKET("[", CurlyTokenClass.NONE),
     CLOSE_BRACKET("]", CurlyTokenClass.NONE),
+    OPEN_ANGLE("<", CurlyTokenClass.NONE),
+    CLOSE_ANGLE(">", CurlyTokenClass.NONE),
     SEMICOLON(";", CurlyTokenClass.SEMI),
     NEWLINE("\\n", CurlyTokenClass.SEMI),
     DOT(".", CurlyTokenClass.NONE),

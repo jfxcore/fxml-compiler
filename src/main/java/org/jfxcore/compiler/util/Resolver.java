@@ -177,8 +177,17 @@ public class Resolver {
      * Returns the parameter types of the specified constructor or method.
      */
     public TypeInstance[] getParameterTypes(CtBehavior behavior, List<TypeInstance> invocationChain) {
+        return getParameterTypes(behavior, invocationChain, List.of());
+    }
+
+    /**
+     * Returns the parameter types of the specified constructor or method.
+     */
+    public TypeInstance[] getParameterTypes(CtBehavior behavior,
+                                            List<TypeInstance> invocationChain,
+                                            List<TypeInstance> providedArguments) {
         try {
-            CacheKey key = new CacheKey("getParameterTypes", behavior, invocationChain);
+            CacheKey key = new CacheKey("getParameterTypes", behavior, invocationChain, providedArguments);
             CacheEntry entry = getCache().get(key);
             if (entry.found() && cacheEnabled) {
                 return (TypeInstance[])entry.value();
@@ -199,6 +208,9 @@ public class Resolver {
                 SignatureAttribute.ClassSignature classSignature = getGenericClassSignature(behavior.getDeclaringClass());
                 result = new TypeInstance[methodSignature.getParameterTypes().length];
 
+                Map<String, TypeInstance> associatedTypeVariables = associateTypeVariables(
+                    behavior, methodSignature, invocationChain, providedArguments);
+
                 for (int i = 0; i < methodSignature.getParameterTypes().length; ++i) {
                     result[i] = Objects.requireNonNullElse(
                         invokeType(
@@ -208,7 +220,7 @@ public class Resolver {
                             classSignature != null ? classSignature.getParameters() : EMPTY_TYPE_PARAMS,
                             methodSignature.getTypeParameters(),
                             invocationChain,
-                            Map.of()),
+                            associatedTypeVariables),
                         TypeInstance.ObjectType());
                 }
             }
@@ -885,6 +897,10 @@ public class Resolver {
         try {
             SignatureAttribute.ClassSignature classSignature = getGenericClassSignature(clazz);
             if (classSignature == null) {
+                if (!arguments.isEmpty()) {
+                    throw GeneralErrors.numTypeArgumentsMismatch(sourceInfo, clazz, 0, arguments.size());
+                }
+
                 return getTypeInstance(clazz);
             }
 
@@ -958,6 +974,10 @@ public class Resolver {
             TypeInstance typeInstance;
 
             if (methodSignature == null) {
+                if (!providedArguments.isEmpty()) {
+                    throw GeneralErrors.numTypeArgumentsMismatch(sourceInfo, method, 0, providedArguments.size());
+                }
+
                 typeInstance = invokeType(method.getDeclaringClass(), method.getReturnType(), Map.of());
             } else {
                 SignatureAttribute.TypeParameter[] classTypeParams =
@@ -971,9 +991,8 @@ public class Resolver {
                     methodSignature.getTypeParameters(),
                     invocationChain,
                     associateProvidedArguments(
-                        method.getDeclaringClass(),
+                        method,
                         providedArguments,
-                        Modifier.isStatic(method.getModifiers()) ? EMPTY_TYPE_PARAMS : classTypeParams,
                         methodSignature.getTypeParameters()));
             }
 
@@ -1085,8 +1104,80 @@ public class Resolver {
         return signature != null ? SignatureAttribute.toMethodSignature(signature) : null;
     }
 
+    private Map<String, TypeInstance> associateTypeVariables(
+            CtBehavior behavior,
+            SignatureAttribute.MethodSignature methodSignature,
+            List<TypeInstance> invocationChain,
+            List<TypeInstance> providedArguments)
+                throws NotFoundException, BadBytecode {
+        class Algorithms {
+            static TypeInstance findTypeInstance(TypeInstance typeInstance, CtClass type) {
+                if (typeInstance.equals(type)) {
+                    return typeInstance;
+                }
+
+                for (TypeInstance superType : typeInstance.getSuperTypes()) {
+                    typeInstance = findTypeInstance(superType, type);
+                    if (typeInstance != null) {
+                        return typeInstance;
+                    }
+                }
+
+                return null;
+            }
+        }
+
+        Map<String, TypeInstance> result = new HashMap<>();
+        SignatureAttribute.TypeParameter[] methodTypeParams = methodSignature.getTypeParameters();
+
+        if (methodTypeParams.length != providedArguments.size()) {
+            throw GeneralErrors.numTypeArgumentsMismatch(
+                    sourceInfo, behavior, methodTypeParams.length, providedArguments.size());
+        }
+
+        for (int i = 0; i < methodTypeParams.length; ++i) {
+            result.put(methodTypeParams[i].getName(), providedArguments.get(i));
+        }
+
+        for (int i = 0; i < methodTypeParams.length; ++i) {
+            checkProvidedArgument(
+                providedArguments.get(i), methodTypeParams[i], EMPTY_TYPE_PARAMS, methodTypeParams, result);
+        }
+
+        CtClass declaringClass = behavior.getDeclaringClass();
+        SignatureAttribute.ClassSignature classSignature = getGenericClassSignature(declaringClass);
+        if (classSignature == null) {
+            return result;
+        }
+
+        for (SignatureAttribute.Type paramType : methodSignature.getParameterTypes()) {
+            if (!(paramType instanceof SignatureAttribute.TypeVariable typeVar)
+                    || result.containsKey(typeVar.getName())) {
+                continue;
+            }
+
+            for (int i = invocationChain.size() - 1; i >= 0; --i) {
+                TypeInstance invokingType = Algorithms.findTypeInstance(invocationChain.get(i), declaringClass);
+                if (invokingType == null) {
+                    continue;
+                }
+
+                for (int j = 0; j < classSignature.getParameters().length; ++j) {
+                    SignatureAttribute.TypeParameter typeParam = classSignature.getParameters()[j];
+                    if (!typeParam.getName().equals(typeVar.getName())) {
+                        continue;
+                    }
+
+                    result.put(typeVar.getName(), invokingType.getArguments().get(j));
+                }
+            }
+        }
+
+        return result;
+    }
+
     private Map<String, TypeInstance> associateProvidedArguments(
-            CtClass declaringType,
+            CtClass type,
             List<TypeInstance> providedArguments,
             SignatureAttribute.TypeParameter[] classTypeParams,
             SignatureAttribute.TypeParameter[] methodTypeParams)
@@ -1100,7 +1191,7 @@ public class Resolver {
 
         if (typeParams.length != providedArguments.size()) {
             throw GeneralErrors.numTypeArgumentsMismatch(
-                sourceInfo, declaringType, typeParams.length, providedArguments.size());
+                sourceInfo, type, typeParams.length, providedArguments.size());
         }
 
         Map<String, TypeInstance> result = new HashMap<>();
@@ -1111,6 +1202,34 @@ public class Resolver {
 
         for (int i = 0; i < typeParams.length; ++i) {
             checkProvidedArgument(providedArguments.get(i), typeParams[i], classTypeParams, methodTypeParams, result);
+        }
+
+        return result;
+    }
+
+    private Map<String, TypeInstance> associateProvidedArguments(
+            CtBehavior behavior,
+            List<TypeInstance> providedArguments,
+            SignatureAttribute.TypeParameter[] methodTypeParams)
+                throws NotFoundException, BadBytecode {
+        if (providedArguments.isEmpty()) {
+            return Map.of();
+        }
+
+        if (methodTypeParams.length != providedArguments.size()) {
+            throw GeneralErrors.numTypeArgumentsMismatch(
+                sourceInfo, behavior, methodTypeParams.length, providedArguments.size());
+        }
+
+        Map<String, TypeInstance> result = new HashMap<>();
+
+        for (int i = 0; i < methodTypeParams.length; ++i) {
+            result.put(methodTypeParams[i].getName(), providedArguments.get(i));
+        }
+
+        for (int i = 0; i < methodTypeParams.length; ++i) {
+            checkProvidedArgument(
+                providedArguments.get(i), methodTypeParams[i], EMPTY_TYPE_PARAMS, methodTypeParams, result);
         }
 
         return result;

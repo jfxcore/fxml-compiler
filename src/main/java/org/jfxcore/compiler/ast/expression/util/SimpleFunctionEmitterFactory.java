@@ -1,4 +1,4 @@
-// Copyright (c) 2022, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2024, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.expression.util;
@@ -20,8 +20,10 @@ public class SimpleFunctionEmitterFactory extends AbstractFunctionEmitterFactory
 
     private final FunctionExpressionNode functionExpression;
 
-    public SimpleFunctionEmitterFactory(FunctionExpressionNode functionExpression, TypeInstance invokingType) {
-        super(invokingType);
+    public SimpleFunctionEmitterFactory(FunctionExpressionNode functionExpression,
+                                        TypeInstance invokingType,
+                                        TypeInstance targetType) {
+        super(invokingType, targetType);
         this.functionExpression = functionExpression;
     }
 
@@ -46,8 +48,9 @@ public class SimpleFunctionEmitterFactory extends AbstractFunctionEmitterFactory
                 .create();
         } else {
             value = new EmitMethodCallNode(
-                (CtMethod)invocationInfo.function().getBehavior(), invocationInfo.function().getReceiver(),
-                invocationInfo.arguments(), functionExpression.getSourceInfo());
+                (CtMethod)invocationInfo.function().getBehavior(), invocationInfo.type(),
+                invocationInfo.function().getReceiver(), invocationInfo.arguments(),
+                functionExpression.getSourceInfo());
         }
 
         value = functionExpression.getPath().getOperator().toEmitter(value, BindingMode.ONCE);

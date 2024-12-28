@@ -1,4 +1,4 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2024, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.parse;
@@ -39,6 +39,10 @@ public class CurlyToken extends AbstractToken<CurlyTokenType> {
                 return CurlyTokenType.OPEN_BRACKET;
             case "]":
                 return CurlyTokenType.CLOSE_BRACKET;
+            case "<":
+                return CurlyTokenType.OPEN_ANGLE;
+            case ">":
+                return CurlyTokenType.CLOSE_ANGLE;
             case ".":
                 return CurlyTokenType.DOT;
             case ",":
