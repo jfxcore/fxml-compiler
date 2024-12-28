@@ -260,7 +260,7 @@ public class StaticPropertyBindingTest extends CompilerTestBase {
         """));
 
         assertEquals(ErrorCode.INVALID_EXPRESSION, ex.getDiagnostic().getCode());
-        assertCodeHighlight("TextSource.(TextSource.text)", ex);
+        assertCodeHighlight("(TextSource.(TextSource.text))", ex);
     }
 
     @SuppressWarnings("unused")

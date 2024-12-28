@@ -33,6 +33,11 @@ public class SubPathSegmentNode extends PathSegmentNode {
     }
 
     @Override
+    public List<PathNode> getWitnesses() {
+        return List.of();
+    }
+
+    @Override
     public void acceptChildren(Visitor visitor) {
         super.acceptChildren(visitor);
         acceptChildren(segments, visitor, PathSegmentNode.class);

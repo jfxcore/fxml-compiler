@@ -97,16 +97,9 @@ public class BindingSourceErrors {
             ErrorCode.METHOD_NOT_INVERTIBLE, NameHelper.getLongMethodSignature(method)));
     }
 
-    public static MarkupException invalidInverseMethod(
-            SourceInfo sourceInfo, CtBehavior method, Diagnostic[] causes) {
-        if (causes.length == 1) {
-            return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
-                ErrorCode.INVALID_INVERSE_METHOD, causes, method));
-        }
-
-        return new MarkupException(sourceInfo, Diagnostic.newDiagnosticVariant(
-            ErrorCode.INVALID_INVERSE_METHOD, "overloaded",
-            causes, NameHelper.getLongMethodSignature(method)));
+    public static MarkupException invalidInverseMethod(SourceInfo sourceInfo, CtBehavior method, Diagnostic[] causes) {
+        return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
+            ErrorCode.INVALID_INVERSE_METHOD, causes, NameHelper.getLongMethodSignature(method)));
     }
 
     public static MarkupException invalidInverseMethodAnnotationValue(SourceInfo sourceInfo, CtBehavior behavior) {

@@ -13,6 +13,7 @@ import org.jfxcore.compiler.ast.ObjectNode;
 import org.jfxcore.compiler.ast.text.NumberNode;
 import org.jfxcore.compiler.ast.text.PathNode;
 import org.jfxcore.compiler.ast.text.TextNode;
+import org.jfxcore.compiler.ast.text.TextSegmentNode;
 import org.jfxcore.compiler.diagnostic.ErrorCode;
 import org.jfxcore.compiler.diagnostic.MarkupException;
 import org.junit.jupiter.api.Test;
@@ -367,6 +368,69 @@ public class InlineParserTest extends TestBase {
     public void ListContent_With_Empty_Strings_Works_Correctly() {
         ObjectNode root = new InlineParser("{Foo '', 'baz', ''}", null).parseObject();
         assertEquals("baz", ((TextNode)root.getChildren().get(0)).getText());
+    }
+
+    @Test
+    public void TypeWitness_Is_Parsed_Correctly() {
+        ObjectNode root = new InlineParser("$<String>foo", null).parseObject();
+        var segment = (TextSegmentNode)((PathNode)root.getChildren().get(0)).getSegments().get(0);
+        assertEquals(1, segment.getWitnesses().size());
+        assertEquals("String", segment.getWitnesses().get(0).getText());
+        assertEquals("foo", segment.getValue().getText());
+    }
+
+    @Test
+    public void TypeWitnessList_Is_Parsed_Correctly() {
+        ObjectNode root = new InlineParser("$<j.l.String, Integer, j.l.Comparable<j.l.Double>>foo", null).parseObject();
+        PathNode path = (PathNode)root.getChildren().get(0);
+        assertEquals("foo", path.getText());
+        TextSegmentNode segment = (TextSegmentNode)path.getSegments().get(0);
+        assertEquals(3, segment.getWitnesses().size());
+        assertEquals("j.l.String", segment.getWitnesses().get(0).getText());
+        assertEquals("Integer", segment.getWitnesses().get(1).getText());
+        PathNode witnessPath = segment.getWitnesses().get(2);
+        assertEquals(3, witnessPath.getSegments().size());
+        assertEquals("j", witnessPath.getSegments().get(0).getText());
+        assertEquals("l", witnessPath.getSegments().get(1).getText());
+        assertEquals("Comparable", witnessPath.getSegments().get(2).getText());
+        assertEquals(1, witnessPath.getArguments().size());
+        PathNode argPath = witnessPath.getArguments().get(0);
+        assertEquals(3, argPath.getSegments().size());
+        assertEquals("j", argPath.getSegments().get(0).getText());
+        assertEquals("l", argPath.getSegments().get(1).getText());
+        assertEquals("Double", argPath.getSegments().get(2).getText());
+    }
+
+    @Test
+    public void MultiSegment_Path_With_TypeWitnesses_Is_Parsed_Correctly() {
+        ObjectNode root = new InlineParser("$<Foo>foo.<Bar>bar::<Baz<Double>>baz", null).parseObject();
+        var segments = ((PathNode)root.getChildren().get(0)).getSegments();
+        assertEquals(3, segments.size());
+        var segment1 = (TextSegmentNode)segments.get(0);
+        assertEquals(1, segment1.getWitnesses().size());
+        assertEquals("Foo", segment1.getWitnesses().get(0).getText());
+        assertEquals("foo", segment1.getValue().getText());
+        assertFalse(segment1.isObservableSelector());
+        var segment2 = (TextSegmentNode)segments.get(1);
+        assertEquals(1, segment2.getWitnesses().size());
+        assertEquals("Bar", segment2.getWitnesses().get(0).getText());
+        assertEquals("bar", segment2.getValue().getText());
+        assertFalse(segment2.isObservableSelector());
+        var segment3 = (TextSegmentNode)segments.get(2);
+        assertEquals(1, segment3.getWitnesses().size());
+        assertEquals("Baz", segment3.getWitnesses().get(0).getText());
+        assertEquals(1, segment3.getWitnesses().get(0).getArguments().size());
+        assertEquals("Double", segment3.getWitnesses().get(0).getArguments().get(0).getText());
+        assertEquals("baz", segment3.getValue().getText());
+        assertTrue(segment3.isObservableSelector());
+    }
+
+    @Test
+    public void Missing_Close_Angle_Bracket_Fails() {
+        MarkupException ex = assertThrows(MarkupException.class, () ->
+            new InlineParser("$<String", null).parseObject());
+        assertEquals(ErrorCode.EXPECTED_TOKEN, ex.getDiagnostic().getCode());
+        assertTrue(ex.getDiagnostic().getMessage().contains(">"));
     }
 
     @ParameterizedTest

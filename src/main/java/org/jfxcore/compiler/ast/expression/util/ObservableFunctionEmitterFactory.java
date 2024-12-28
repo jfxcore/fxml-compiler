@@ -1,4 +1,4 @@
-// Copyright (c) 2022, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2024, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.expression.util;
@@ -20,8 +20,10 @@ public class ObservableFunctionEmitterFactory
     private final FunctionExpressionNode functionExpression;
     private final Resolver resolver;
 
-    public ObservableFunctionEmitterFactory(FunctionExpressionNode functionExpression, TypeInstance invokingType) {
-        super(invokingType);
+    public ObservableFunctionEmitterFactory(FunctionExpressionNode functionExpression,
+                                            TypeInstance invokingType,
+                                            TypeInstance targetType) {
+        super(invokingType, targetType);
         this.functionExpression = functionExpression;
         this.resolver = new Resolver(functionExpression.getSourceInfo());
     }

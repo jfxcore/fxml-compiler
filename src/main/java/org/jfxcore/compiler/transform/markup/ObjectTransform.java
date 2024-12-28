@@ -232,7 +232,7 @@ public class ObjectTransform implements Transform {
                 throw GeneralErrors.expressionNotApplicable(bindingNode.getSourceInfo(), true);
             }
 
-            BindingEmitterInfo emitterInfo = bindingNode.toEmitter(nodeType);
+            BindingEmitterInfo emitterInfo = bindingNode.toEmitter(nodeType, null);
             argumentValue = emitterInfo.getObservableType() != null
                 ? new EmitUnwrapObservableNode(emitterInfo.getValue())
                 : emitterInfo.getValue();
@@ -249,7 +249,7 @@ public class ObjectTransform implements Transform {
 
         List<DiagnosticInfo> diagnostics = new ArrayList<>();
         CtMethod valueOfMethod = new MethodFinder(nodeType, nodeType.jvmType())
-            .findMethod("valueOf", true, nodeType, List.of(TypeHelper.getTypeInstance(argumentValue)),
+            .findMethod("valueOf", true, nodeType, List.of(), List.of(TypeHelper.getTypeInstance(argumentValue)),
                         List.of(propertyNode.getSourceInfo()), diagnostics, propertyNode.getSourceInfo());
 
         if (valueOfMethod == null) {

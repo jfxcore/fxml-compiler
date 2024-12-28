@@ -14,6 +14,7 @@ import org.jfxcore.compiler.ast.AbstractNode;
 import org.jfxcore.compiler.ast.Node;
 import org.jfxcore.compiler.ast.ResolvedTypeNode;
 import org.jfxcore.compiler.ast.emit.BytecodeEmitContext;
+import org.jfxcore.compiler.ast.text.PathNode;
 import org.jfxcore.compiler.util.Callable;
 import org.jfxcore.compiler.ast.emit.EmitLiteralNode;
 import org.jfxcore.compiler.ast.emit.EmitMethodArgumentNode;
@@ -58,10 +59,12 @@ import java.util.stream.Collectors;
 abstract class AbstractFunctionEmitterFactory {
 
     private final TypeInstance invokingType;
+    private final TypeInstance targetType;
     private final Map<InvocationInfoKey, InvocationInfo> invocationCache = new HashMap<>();
 
-    protected AbstractFunctionEmitterFactory(TypeInstance invokingType) {
+    protected AbstractFunctionEmitterFactory(TypeInstance invokingType, @Nullable TypeInstance targetType) {
         this.invokingType = invokingType;
+        this.targetType = targetType;
     }
 
     protected InvocationInfo createInvocation(
@@ -73,14 +76,21 @@ abstract class AbstractFunctionEmitterFactory {
         }
 
         PathExpressionNode methodPath = functionExpression.getPath();
+        List<TypeInstance> witnesses = methodPath.getSegments()
+            .get(methodPath.getSegments().size() - 1)
+            .getWitnesses()
+            .stream()
+            .map(PathNode::resolve)
+            .toList();
+
         Queue<Node> methodArguments = new ArrayDeque<>(functionExpression.getArguments());
-        Callable function = findFunction(methodPath, null, methodArguments, preferObservable);
+        Callable function = findFunction(methodPath, targetType, witnesses, methodArguments, preferObservable);
         Callable inverseFunction = null;
 
         Resolver resolver = new Resolver(functionExpression.getSourceInfo());
         boolean isVarArgs = Modifier.isVarArgs(function.getBehavior().getModifiers());
-        TypeInstance[] paramTypes = resolver.getParameterTypes(function.getBehavior(), List.of(invokingType));
-        TypeInstance returnType = resolver.getTypeInstance(function.getBehavior(), List.of(invokingType));
+        TypeInstance[] paramTypes = resolver.getParameterTypes(function.getBehavior(), List.of(invokingType), witnesses);
+        TypeInstance returnType = resolver.getTypeInstance(function.getBehavior(), List.of(invokingType), witnesses);
         List<EmitMethodArgumentNode> argumentValues = new ArrayList<>();
         boolean observableFunction = false;
 
@@ -147,17 +157,15 @@ abstract class AbstractFunctionEmitterFactory {
                 }
 
                 inverseFunction = findFunction(
-                    inversePath, paramTypes[0], List.of(new ReturnValueNode()), preferObservable);
+                    inversePath, paramTypes[0], witnesses, List.of(new ReturnValueNode()), preferObservable);
             } else {
                 inverseFunction = findInverseFunctionViaAnnotation(
-                        function, paramTypes[0], returnType, methodPath.getSourceInfo());
+                    function, paramTypes[0], returnType, methodPath.getSourceInfo());
             }
         }
 
-        TypeInstance valueType = resolver.getTypeInstance(function.getBehavior(), List.of(invokingType));
-
         var result = new InvocationInfo(
-            observableFunction, valueType, function, inverseFunction, argumentValues);
+            observableFunction, returnType, function, inverseFunction, argumentValues);
 
         invocationCache.put(key, result);
 
@@ -242,9 +250,9 @@ abstract class AbstractFunctionEmitterFactory {
                     funcExpressionArg, false, preferObservable);
 
                 if (invocationInfo.observable()) {
-                    factory = new ObservableFunctionEmitterFactory(funcExpressionArg, invokingType);
+                    factory = new ObservableFunctionEmitterFactory(funcExpressionArg, invokingType, paramType);
                 } else {
-                    factory = new SimpleFunctionEmitterFactory(funcExpressionArg, invokingType);
+                    factory = new SimpleFunctionEmitterFactory(funcExpressionArg, invokingType, paramType);
                 }
             } else if (argument instanceof PathExpressionNode pathExpressionArg) {
                 ResolvedPath path = pathExpressionArg.resolvePath(preferObservable);
@@ -279,14 +287,16 @@ abstract class AbstractFunctionEmitterFactory {
     private Callable findFunction(
             PathExpressionNode pathExpression,
             @Nullable TypeInstance returnType,
+            List<TypeInstance> typeWitnesses,
             Collection<Node> arguments,
             boolean preferObservable) {
-        return findFunction(pathExpression, returnType, arguments, preferObservable, true);
+        return findFunction(pathExpression, returnType, typeWitnesses, arguments, preferObservable, true);
     }
 
     private Callable findFunction(
             PathExpressionNode pathExpression,
             @Nullable TypeInstance returnType,
+            List<TypeInstance> typeWitnesses,
             Collection<Node> arguments,
             boolean preferObservable,
             boolean maybeInstanceMethod) {
@@ -358,14 +368,18 @@ abstract class AbstractFunctionEmitterFactory {
         // First we try to match the identifier against methods.
         // If applicable methods are found, we choose the most specific method.
         if (!isConstructor) {
-            CtMethod method = new MethodFinder(invokingType, declaringClass).findMethod(
-                methodName,
-                false,
-                returnType,
-                argumentTypes,
-                argumentsSourceInfo,
-                diagnostics,
-                pathExpression.getSourceInfo());
+            var methodFinder = new MethodFinder(invokingType, declaringClass);
+            CtMethod method = methodFinder.findMethod(
+                methodName, false, returnType, typeWitnesses, argumentTypes,
+                argumentsSourceInfo, diagnostics, pathExpression.getSourceInfo());
+
+            // If we didn't find a method with the specified return type, relax the search to
+            // include any return type if the path has a boolean operator.
+            if (method == null && returnType != null && pathExpression.getOperator().isBoolean()) {
+                method = methodFinder.findMethod(
+                    methodName, false, null, typeWitnesses, argumentTypes,
+                    argumentsSourceInfo, diagnostics, pathExpression.getSourceInfo());
+            }
 
             if (method != null) {
                 if (!maybeInstanceMethod && !Modifier.isStatic(method.getModifiers())) {
@@ -389,6 +403,7 @@ abstract class AbstractFunctionEmitterFactory {
 
         if (ctorClass != null) {
             CtConstructor constructor = new MethodFinder(invokingType, ctorClass).findConstructor(
+                typeWitnesses,
                 argumentTypes,
                 argumentsSourceInfo,
                 diagnostics,
@@ -408,7 +423,7 @@ abstract class AbstractFunctionEmitterFactory {
         // At this point, we've tried to find a method that is applicable for the arguments and failed.
         // If we were looking for an instance method, we try again, but only look for static methods.
         if (maybeInstanceMethod) {
-            return findFunction(pathExpression, returnType, arguments, preferObservable, false);
+            return findFunction(pathExpression, returnType, typeWitnesses, arguments, preferObservable, false);
         }
 
         if (diagnostics.size() == 1) {
@@ -484,8 +499,9 @@ abstract class AbstractFunctionEmitterFactory {
         CtClass declaringClass = method.getBehavior().getDeclaringClass();
         List<DiagnosticInfo> diagnostics = new ArrayList<>();
 
+        // TODO: Do we need a way to specify type witnesses for inverse methods?
         CtMethod jvmMethod = new MethodFinder(invokingType, declaringClass).findMethod(
-            methodName, false, argumentType, List.of(returnType), List.of(sourceInfo), diagnostics, sourceInfo);
+            methodName, false, argumentType, List.of(), List.of(returnType), List.of(sourceInfo), diagnostics, sourceInfo);
 
         if (!diagnostics.isEmpty()) {
             throw BindingSourceErrors.invalidInverseMethod(

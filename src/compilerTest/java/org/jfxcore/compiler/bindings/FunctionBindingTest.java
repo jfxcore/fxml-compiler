@@ -119,8 +119,11 @@ public class FunctionBindingTest extends CompilerTestBase {
                       prefWidth="$String.format('foo-%s', invariantDoubleVal)"/>
         """));
 
-        assertEquals(ErrorCode.CANNOT_CONVERT_SOURCE_TYPE, ex.getDiagnostic().getCode());
-        assertCodeHighlight("$String.format('foo-%s', invariantDoubleVal)", ex);
+        assertEquals(ErrorCode.CANNOT_BIND_FUNCTION, ex.getDiagnostic().getCode());
+        assertEquals(2, ex.getDiagnostic().getCauses().length);
+        assertEquals(ErrorCode.NUM_FUNCTION_ARGUMENTS_MISMATCH, ex.getDiagnostic().getCauses()[0].getCode());
+        assertEquals(ErrorCode.INCOMPATIBLE_RETURN_VALUE, ex.getDiagnostic().getCauses()[1].getCode());
+        assertCodeHighlight("String.format", ex);
     }
 
     @Test
@@ -467,8 +470,11 @@ public class FunctionBindingTest extends CompilerTestBase {
                       prefWidth="${String.format('foo-%s', invariantDoubleVal)}"/>
         """));
 
-        assertEquals(ErrorCode.CANNOT_CONVERT_SOURCE_TYPE, ex.getDiagnostic().getCode());
-        assertCodeHighlight("${String.format('foo-%s', invariantDoubleVal)}", ex);
+        assertEquals(ErrorCode.CANNOT_BIND_FUNCTION, ex.getDiagnostic().getCode());
+        assertEquals(2, ex.getDiagnostic().getCauses().length);
+        assertEquals(ErrorCode.NUM_FUNCTION_ARGUMENTS_MISMATCH, ex.getDiagnostic().getCauses()[0].getCode());
+        assertEquals(ErrorCode.INCOMPATIBLE_RETURN_VALUE, ex.getDiagnostic().getCauses()[1].getCode());
+        assertCodeHighlight("String.format", ex);
     }
 
     @Test
@@ -957,8 +963,11 @@ public class FunctionBindingTest extends CompilerTestBase {
                       prefWidth="#{String.format('%s', doubleProp)}"/>
         """));
 
-        assertEquals(ErrorCode.INVALID_BIDIRECTIONAL_METHOD_PARAM_COUNT, ex.getDiagnostic().getCode());
-        assertCodeHighlight("String.format('%s', doubleProp)", ex);
+        assertEquals(ErrorCode.CANNOT_BIND_FUNCTION, ex.getDiagnostic().getCode());
+        assertEquals(2, ex.getDiagnostic().getCauses().length);
+        assertEquals(ErrorCode.NUM_FUNCTION_ARGUMENTS_MISMATCH, ex.getDiagnostic().getCauses()[0].getCode());
+        assertEquals(ErrorCode.INCOMPATIBLE_RETURN_VALUE, ex.getDiagnostic().getCauses()[1].getCode());
+        assertCodeHighlight("String.format", ex);
     }
 
     @Test
@@ -1232,7 +1241,7 @@ public class FunctionBindingTest extends CompilerTestBase {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.fxml.*?>
             <BidirectionalTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                                   id="#{instanceNot(readOnlyObservableBool)}"/>
+                                   managed="#{instanceNot(readOnlyObservableBool)}"/>
         """));
 
         assertEquals(ErrorCode.INVALID_BIDIRECTIONAL_BINDING_SOURCE, ex.getDiagnostic().getCode());
@@ -1244,7 +1253,7 @@ public class FunctionBindingTest extends CompilerTestBase {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.fxml.*?>
             <BidirectionalTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                                   id="#{instanceNot(instanceNot(boolProp))}"/>
+                                   managed="#{instanceNot(instanceNot(boolProp))}"/>
         """));
 
         assertEquals(ErrorCode.INVALID_BIDIRECTIONAL_METHOD_PARAM_KIND, ex.getDiagnostic().getCode());
@@ -1314,16 +1323,34 @@ public class FunctionBindingTest extends CompilerTestBase {
     public static class GenericTestPane<T> extends Pane {
         public GenericTestPane() { setPrefWidth(123); }
 
-        public String stringify(T value) {
+        public String m1(T value) {
             return value.toString();
+        }
+
+        public <S> S m2(S value) {
+            return value;
+        }
+
+        @SuppressWarnings("TypeParameterHidesVisibleType")
+        public <T extends Double> T m3_overloaded(T value) {
+            return value;
+        }
+
+        public String m3_overloaded(T value) {
+            return (String)value;
+        }
+
+        @SuppressWarnings("unchecked")
+        public T m4(double v) {
+            return (T)Double.toString(v);
         }
     }
 
     @Test
-    public void Bind_Once_To_Generic_Method_Of_Raw_Type_Works() {
+    public void Bind_Once_To_Generic_Method_Of_Raw_Type() {
         GenericTestPane<?> root = compileAndRun("""
             <GenericTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                             id="$stringify(prefWidth)"/>
+                             id="$m1(prefWidth)"/>
         """);
 
         assertEquals("123.0", root.getId());
@@ -1333,7 +1360,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     public void Bind_Once_To_Generic_Method_Argument_Out_Of_Bound_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <GenericTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                             fx:typeArguments="java.lang.String" id="$stringify(prefWidth)"/>
+                             fx:typeArguments="java.lang.String" id="$m1(prefWidth)"/>
         """));
 
         assertEquals(ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT, ex.getDiagnostic().getCode());
@@ -1341,10 +1368,10 @@ public class FunctionBindingTest extends CompilerTestBase {
     }
 
     @Test
-    public void Bind_Unidirectional_To_Generic_Method_Of_Raw_Type_Works() {
+    public void Bind_Unidirectional_To_Generic_Method_Of_Raw_Type() {
         GenericTestPane<?> root = compileAndRun("""
                 <GenericTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                                 id="${stringify(prefWidth)}"/>
+                                 id="${m1(prefWidth)}"/>
             """);
 
         assertEquals("123.0", root.getId());
@@ -1354,11 +1381,100 @@ public class FunctionBindingTest extends CompilerTestBase {
     public void Bind_Unidirectional_To_Generic_Method_Argument_Out_Of_Bound_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <GenericTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                             fx:typeArguments="java.lang.String" id="${stringify(prefWidth)}"/>
+                             fx:typeArguments="java.lang.String" id="${m1(prefWidth)}"/>
         """));
 
         assertEquals(ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT, ex.getDiagnostic().getCode());
         assertCodeHighlight("prefWidth", ex);
     }
 
+    @Test
+    public void Generic_Method_Is_Not_Callable_Without_TypeWitness() {
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+                <GenericTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                                 id="${m2(prefWidth)}"/>
+            """));
+
+        assertEquals(ErrorCode.NUM_TYPE_ARGUMENTS_MISMATCH, ex.getDiagnostic().getCode());
+        assertCodeHighlight("m2", ex);
+    }
+
+    @Test
+    public void Generic_Method_Is_Not_Callable_With_Incompatible_TypeWitness() {
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+                <GenericTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                                 id="${<String>m2(prefWidth)}"/>
+            """));
+
+        assertEquals(ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT, ex.getDiagnostic().getCode());
+        assertTrue(ex.getDiagnostic().getMessage().contains("double"));
+        assertCodeHighlight("prefWidth", ex);
+    }
+
+    @Test
+    public void Generic_Method_Is_Not_Assignable_With_Incompatible_TypeWitness() {
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+                <GenericTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                                 id="${<Double>m2(prefWidth)}"/>
+            """));
+
+        assertEquals(ErrorCode.INCOMPATIBLE_RETURN_VALUE, ex.getDiagnostic().getCode());
+        assertCodeHighlight("<Double>m2", ex);
+    }
+
+    @Test
+    public void Generic_Method_Wrong_Number_Of_TypeWitnesses() {
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+                <GenericTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                                 id="${<Object, String>m2(prefWidth)}"/>
+            """));
+
+        assertEquals(ErrorCode.NUM_TYPE_ARGUMENTS_MISMATCH, ex.getDiagnostic().getCode());
+        assertCodeHighlight("<Object, String>m2", ex);
+    }
+
+    @Test
+    public void Bind_Once_To_Overloaded_Generic_Method() {
+        GenericTestPane<?> root = compileAndRun("""
+                <GenericTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                                 prefWidth="$<Double>m3_overloaded(123d)"
+                                 id="$m3_overloaded('foo')"/>
+            """);
+
+        assertEquals("foo", root.getId());
+        assertEquals(123.0, root.getPrefWidth());
+    }
+
+    @Test
+    public void Bind_Unidirectional_To_Overloaded_Generic_Method() {
+        GenericTestPane<?> root = compileAndRun("""
+                <GenericTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                                 prefWidth="${<Double>m3_overloaded(123d)}"
+                                 id="${m3_overloaded('foo')}"/>
+            """);
+
+        assertEquals("foo", root.getId());
+        assertEquals(123.0, root.getPrefWidth());
+    }
+
+    @Test
+    public void Generic_Return_Type_Of_Untyped_Class_Is_Not_Assignable() {
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+                <GenericTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                                 id="$m4(123d)"/>
+            """));
+
+        assertEquals(ErrorCode.INCOMPATIBLE_RETURN_VALUE, ex.getDiagnostic().getCode());
+        assertCodeHighlight("m4", ex);
+    }
+
+    @Test
+    public void Generic_Return_Type_Of_Typed_Class_Is_Assignable() {
+        GenericTestPane<?> root = compileAndRun("""
+                <GenericTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                                 fx:typeArguments="String" id="$m4(123d)"/>
+            """);
+
+        assertEquals("123.0", root.getId());
+    }
 }

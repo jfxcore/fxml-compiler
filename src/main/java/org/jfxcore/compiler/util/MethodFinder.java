@@ -12,6 +12,7 @@ import org.jetbrains.annotations.Nullable;
 import org.jfxcore.compiler.diagnostic.Diagnostic;
 import org.jfxcore.compiler.diagnostic.DiagnosticInfo;
 import org.jfxcore.compiler.diagnostic.ErrorCode;
+import org.jfxcore.compiler.diagnostic.MarkupException;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -20,6 +21,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import static org.jfxcore.compiler.util.ExceptionHelper.unchecked;
 import static org.jfxcore.compiler.util.TypeInstance.*;
 import static org.jfxcore.compiler.util.TypeInstance.AssignmentContext.*;
 
@@ -41,6 +43,7 @@ public class MethodFinder {
     }
 
     public @Nullable CtConstructor findConstructor(
+            List<TypeInstance> typeWitnesses,
             List<TypeInstance> argumentTypes,
             List<SourceInfo> argumentSourceInfo,
             @Nullable List<DiagnosticInfo> diagnostics,
@@ -49,6 +52,7 @@ public class MethodFinder {
             List.of(declaringType.getConstructors()),
             false,
             null,
+            typeWitnesses,
             argumentTypes,
             argumentSourceInfo,
             diagnostics,
@@ -59,6 +63,7 @@ public class MethodFinder {
             String methodName,
             boolean staticInvocation,
             @Nullable TypeInstance returnType,
+            List<TypeInstance> typeWitnesses,
             List<TypeInstance> argumentTypes,
             List<SourceInfo> argumentSourceInfo,
             @Nullable List<DiagnosticInfo> diagnostics,
@@ -67,6 +72,7 @@ public class MethodFinder {
             findOverloadedMethods(methodName),
             staticInvocation,
             returnType,
+            typeWitnesses,
             argumentTypes,
             argumentSourceInfo,
             diagnostics,
@@ -77,25 +83,29 @@ public class MethodFinder {
             List<T> methods,
             boolean staticInvocation,
             @Nullable TypeInstance returnType,
+            List<TypeInstance> typeWitnesses,
             List<TypeInstance> argumentTypes,
             List<SourceInfo> argumentSourceInfo,
             @Nullable List<DiagnosticInfo> diagnostics,
             SourceInfo sourceInfo) {
         List<T> applicableMethods;
 
-        var phase1 = new InvocationContext(STRICT, staticInvocation, false, returnType, argumentTypes, argumentSourceInfo);
+        var phase1 = new InvocationContext(
+            STRICT, staticInvocation, false, returnType, typeWitnesses, argumentTypes, argumentSourceInfo);
         applicableMethods = methods.stream().filter(method -> evaluateApplicability(method, phase1, null, sourceInfo)).toList();
         if (!applicableMethods.isEmpty()) {
             return findMostSpecificMethod(applicableMethods, argumentTypes, diagnostics, sourceInfo);
         }
 
-        var phase2 = new InvocationContext(LOOSE, staticInvocation, false, returnType, argumentTypes, argumentSourceInfo);
+        var phase2 = new InvocationContext(
+            LOOSE, staticInvocation, false, returnType, typeWitnesses, argumentTypes, argumentSourceInfo);
         applicableMethods = methods.stream().filter(method -> evaluateApplicability(method, phase2, null, sourceInfo)).toList();
         if (!applicableMethods.isEmpty()) {
             return findMostSpecificMethod(applicableMethods, argumentTypes, diagnostics, sourceInfo);
         }
 
-        var phase3 = new InvocationContext(LOOSE, staticInvocation, true, returnType, argumentTypes, argumentSourceInfo);
+        var phase3 = new InvocationContext(
+            LOOSE, staticInvocation, true, returnType, typeWitnesses, argumentTypes, argumentSourceInfo);
         applicableMethods = methods.stream().filter(method -> evaluateApplicability(method, phase3, diagnostics, sourceInfo)).toList();
         if (!applicableMethods.isEmpty()) {
             return findMostSpecificMethod(applicableMethods, argumentTypes, diagnostics, sourceInfo);
@@ -127,7 +137,7 @@ public class MethodFinder {
             }
 
             Resolver resolver = new Resolver(sourceInfo);
-            TypeInstance[] paramTypes = resolver.getParameterTypes(method, List.of(invokingType));
+            TypeInstance[] paramTypes = resolver.getParameterTypes(method, List.of(invokingType), context.typeWitnesses());
             int numParams = paramTypes.length;
             int numArgs = context.arguments().size();
             boolean isVarArgs = context.allowVarargInvocation() && Modifier.isVarArgs(method.getModifiers());
@@ -172,10 +182,20 @@ public class MethodFinder {
 
                     if (!valid) {
                         if (diagnostics != null) {
+                            int argIndex = i;
                             String argName = argumentType.getJavaName();
-                            diagnostics.add(new DiagnosticInfo(Diagnostic.newDiagnostic(
-                                ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT,
-                                NameHelper.getLongMethodSignature(method), i + 1, argName), argSourceInfo));
+                            CtClass paramType = unchecked(argSourceInfo, () -> method.getParameterTypes()[argIndex]);
+
+                            if (parameterType.equals(paramType)) {
+                                diagnostics.add(new DiagnosticInfo(Diagnostic.newDiagnostic(
+                                    ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT,
+                                    NameHelper.getLongMethodSignature(method), argIndex + 1, argName), argSourceInfo));
+                            } else {
+                                diagnostics.add(new DiagnosticInfo(Diagnostic.newDiagnosticVariant(
+                                    ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT, "expected",
+                                    NameHelper.getLongMethodSignature(method), argIndex + 1, argName,
+                                    parameterType.getJavaName()), argSourceInfo));
+                            }
                         }
 
                         return false;
@@ -184,7 +204,7 @@ public class MethodFinder {
             }
 
             if (context.returnType() != null) {
-                TypeInstance returnType = resolver.getTypeInstance(method, List.of(invokingType));
+                TypeInstance returnType = resolver.getTypeInstance(method, List.of(invokingType), context.typeWitnesses());
                 if (!context.returnType().isAssignableFrom(returnType)) {
                     if (diagnostics != null) {
                         diagnostics.add(new DiagnosticInfo(
@@ -199,9 +219,14 @@ public class MethodFinder {
             }
 
             return true;
-        } catch (RuntimeException ex) {
-            return false;
+        } catch (MarkupException ex) {
+            if (diagnostics != null) {
+                diagnostics.add(new DiagnosticInfo(ex.getDiagnostic(), ex.getSourceInfo()));
+            }
+        } catch (RuntimeException ignored) {
         }
+
+        return false;
     }
 
     /**
@@ -372,6 +397,7 @@ public class MethodFinder {
         boolean staticInvocation,
         boolean allowVarargInvocation,
         @Nullable TypeInstance returnType,
+        List<TypeInstance> typeWitnesses,
         List<TypeInstance> arguments,
         List<SourceInfo> argumentSourceInfo) {}
 

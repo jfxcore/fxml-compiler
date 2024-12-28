@@ -155,8 +155,8 @@ public class InlineParser {
                 yield TextNode.createRawUnresolved(string.getValue(), string.getSourceInfo());
             }
 
-            case IDENTIFIER -> {
-                PathNode path = parsePath(tokenizer, true);
+            case IDENTIFIER, OPEN_ANGLE -> {
+                PathNode path = parsePath(tokenizer, true, true, false);
                 InlineToken token = tokenizer.peek();
                 yield token != null && token.getType() == OPEN_PAREN ? parseFunctionExpression(tokenizer, path) : path;
             }
@@ -165,7 +165,7 @@ public class InlineParser {
 
             default -> {
                 if (tokenizer.containsAhead(COLON, COLON)) {
-                    PathNode path = parsePath(tokenizer, true);
+                    PathNode path = parsePath(tokenizer, true, true, false);
                     yield tokenizer.peekNotNull().getType() == OPEN_PAREN ? parseFunctionExpression(tokenizer, path) : path;
                 }
 
@@ -311,9 +311,12 @@ public class InlineParser {
         return new TextNode(text.toString(), SourceInfo.span(start, end));
     }
 
-    private PathNode parsePath(InlineTokenizer tokenizer, boolean allowContextSelector) {
+    private PathNode parsePath(InlineTokenizer tokenizer,
+                               boolean allowContextSelector,
+                               boolean allowTypeWitnesses,
+                               boolean allowTypeArguments) {
         var segments = new ArrayList<PathSegmentNode>();
-        SourceInfo start = tokenizer.peekNotNull().getSourceInfo(), end;
+        SourceInfo startSourceInfo = tokenizer.peekNotNull().getSourceInfo();
         ContextSelectorNode bindingContextSelector = null;
 
         if (allowContextSelector) {
@@ -330,19 +333,51 @@ public class InlineParser {
                 tokenizer.remove(DOT);
             }
 
-            if (tokenizer.poll(OPEN_PAREN) != null) {
-                PathNode path = parsePath(tokenizer, false);
-                segments.add(new SubPathSegmentNode(colonSelector, path.getSegments(), path.getSourceInfo()));
-                end = tokenizer.remove(CLOSE_PAREN).getSourceInfo();
+            if (tokenizer.peek(OPEN_PAREN) != null) {
+                SourceInfo start = tokenizer.remove(OPEN_PAREN).getSourceInfo();
+                PathNode path = parsePath(tokenizer, false, false, false);
+                SourceInfo end = tokenizer.remove(CLOSE_PAREN).getSourceInfo();
+                segments.add(new SubPathSegmentNode(colonSelector, path.getSegments(), SourceInfo.span(start, end)));
             } else {
-                var identifier = tokenizer.remove(IDENTIFIER);
-                end = identifier.getSourceInfo();
+                SourceInfo start = tokenizer.peekNotNull().getSourceInfo();
+                PathInfo typeWitnesses = allowTypeWitnesses ? parseAngleBracketPath(tokenizer) : null;
+                InlineToken identifier = tokenizer.remove(IDENTIFIER);
+
                 segments.add(new TextSegmentNode(
-                    colonSelector, new TextNode(identifier.getValue(), identifier.getSourceInfo())));
+                    colonSelector,
+                    new TextNode(identifier.getValue(), identifier.getSourceInfo()),
+                    typeWitnesses != null ? typeWitnesses.paths() : List.of(),
+                    SourceInfo.span(start, identifier.getSourceInfo())));
             }
         } while (tokenizer.peek(DOT) != null || tokenizer.containsAhead(COLON, COLON));
 
-        return new PathNode(bindingContextSelector, segments, SourceInfo.span(start, end));
+        PathInfo typeArguments = allowTypeArguments ? parseAngleBracketPath(tokenizer) : null;
+
+        return new PathNode(
+            bindingContextSelector,
+            segments,
+            typeArguments != null ? typeArguments.paths() : List.of(),
+            typeArguments != null
+                ? SourceInfo.span(startSourceInfo, typeArguments.sourceInfo())
+                : SourceInfo.span(startSourceInfo, segments.get(segments.size() - 1).getSourceInfo()));
+    }
+
+    private record PathInfo(List<PathNode> paths, SourceInfo sourceInfo) {}
+
+    private PathInfo parseAngleBracketPath(InlineTokenizer tokenizer) {
+        if (tokenizer.peek(OPEN_ANGLE) != null) {
+            SourceInfo start = tokenizer.remove(OPEN_ANGLE).getSourceInfo();
+            var result = new ArrayList<PathNode>();
+
+            do {
+                result.add(parsePath(tokenizer, false, false, true));
+            } while (tokenizer.poll(COMMA) != null);
+
+            SourceInfo end = tokenizer.remove(CLOSE_ANGLE).getSourceInfo();
+            return new PathInfo(result, SourceInfo.span(start, end));
+        }
+
+        return null;
     }
 
     private ContextSelectorNode tryParseContextSelector(InlineTokenizer tokenizer) {

@@ -1,4 +1,4 @@
-// Copyright (c) 2021, 2023, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2024, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.expression.path;
@@ -8,9 +8,12 @@ import javafx.beans.property.Property;
 import javafx.beans.property.StringProperty;
 import javafx.collections.ObservableList;
 import org.jfxcore.compiler.TestBase;
+import org.jfxcore.compiler.ast.text.PathNode;
 import org.jfxcore.compiler.ast.text.PathSegmentNode;
 import org.jfxcore.compiler.ast.text.TextNode;
 import org.jfxcore.compiler.ast.text.TextSegmentNode;
+import org.jfxcore.compiler.diagnostic.ErrorCode;
+import org.jfxcore.compiler.diagnostic.MarkupException;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.util.Resolver;
 import org.jfxcore.compiler.util.TypeInstance;
@@ -23,6 +26,20 @@ import static org.junit.jupiter.api.Assertions.*;
 
 @SuppressWarnings("unused")
 public class PathTest extends TestBase {
+
+    private static List<PathSegmentNode> segments(String... segments) {
+        return Arrays.stream(segments)
+            .map(s -> (PathSegmentNode)new TextSegmentNode(false, new TextNode(s, SourceInfo.none()), List.of(), SourceInfo.none()))
+            .toList();
+    }
+
+    private static PathSegmentNode segment(String value, List<PathNode> witnesses) {
+        return new TextSegmentNode(false, new TextNode(value, SourceInfo.none()), witnesses, SourceInfo.none());
+    }
+
+    private static PathNode pathFromSegments(String... segments) {
+        return new PathNode(null, segments(segments), List.of(), SourceInfo.none());
+    }
 
     public static class Baz1<T> {
         public T quxField;
@@ -40,12 +57,6 @@ public class PathTest extends TestBase {
         public Bar1<String> barField;
         public Bar1<String> barGetter() { return null;}
         public Property<Bar1<String>> barProperty() { return null;}
-    }
-    
-    private static List<PathSegmentNode> segments(String... segments) {
-        return Arrays.stream(segments)
-            .map(s -> (PathSegmentNode)new TextSegmentNode(false, new TextNode(s, SourceInfo.none())))
-            .toList();
     }
 
     @Test
@@ -165,13 +176,29 @@ public class PathTest extends TestBase {
         assertEquals("Comparable<String>", path.get(1).getTypeInstance().toString());
     }
 
+    @Test
+    public void ClassBound_In_MethodSignature_Invalid_Parameterization() {
+        Resolver resolver = new Resolver(SourceInfo.none());
+        Segment firstSegment = new ParentSegment(TypeInstance.of(resolver.resolveClass(ClassBoundInMethodSignature.class.getName())), -1);
+        var witnesses = List.of(new PathNode(null, segments("Double"), List.of(), SourceInfo.none()));
+
+        MarkupException ex = assertThrows(MarkupException.class, () ->
+            ResolvedPath.parse(firstSegment, List.of(segment("testGetter_Property", witnesses)), true, SourceInfo.none()));
+
+        assertEquals(ErrorCode.TYPE_ARGUMENT_OUT_OF_BOUND, ex.getDiagnostic().getCode());
+    }
+
     public static class InterfaceBoundInMethodSignature {
         public <S extends AutoCloseable> Property<S> testGetter_Property() { return null; }
         public <S extends AutoCloseable> Comparable<S> testGetter_NonProperty() { return null; }
+
+        public static class SImpl implements AutoCloseable {
+            @Override public void close() {}
+        }
     }
 
     @Test
-    public void InterfaceBound_Is_Identified_In_MethodSignature() {
+    public void InterfaceBound_Is_Identified_In_MethodSignature_NoTypeWitness() {
         Resolver resolver = new Resolver(SourceInfo.none());
         Segment firstSegment = new ParentSegment(TypeInstance.of(resolver.resolveClass(InterfaceBoundInMethodSignature.class.getName())), -1);
 
@@ -183,6 +210,22 @@ public class PathTest extends TestBase {
         path = ResolvedPath.parse(firstSegment, segments("testGetter_NonProperty"), true, SourceInfo.none());
         assertEquals("PathTest$InterfaceBoundInMethodSignature", path.get(0).getTypeInstance().toString());
         assertEquals("Comparable<AutoCloseable>", path.get(1).getTypeInstance().toString());
+    }
+
+    @Test
+    public void InterfaceBound_Is_Identified_In_MethodSignature_WithTypeWitness() {
+        Resolver resolver = new Resolver(SourceInfo.none());
+        Segment firstSegment = new ParentSegment(TypeInstance.of(resolver.resolveClass(InterfaceBoundInMethodSignature.class.getName())), -1);
+        var witnesses = List.of(pathFromSegments("PathTest", "InterfaceBoundInMethodSignature", "SImpl"));
+
+        ResolvedPath path = ResolvedPath.parse(firstSegment, List.of(segment("testGetter_Property", witnesses)), true, SourceInfo.none());
+        assertEquals("PathTest$InterfaceBoundInMethodSignature", path.get(0).getTypeInstance().toString());
+        assertEquals("Property<PathTest$InterfaceBoundInMethodSignature$SImpl>", path.get(1).getTypeInstance().toString());
+        assertEquals("PathTest$InterfaceBoundInMethodSignature$SImpl", path.get(1).getValueTypeInstance().toString());
+
+        path = ResolvedPath.parse(firstSegment, List.of(segment("testGetter_NonProperty", witnesses)), true, SourceInfo.none());
+        assertEquals("PathTest$InterfaceBoundInMethodSignature", path.get(0).getTypeInstance().toString());
+        assertEquals("Comparable<PathTest$InterfaceBoundInMethodSignature$SImpl>", path.get(1).getTypeInstance().toString());
     }
 
     public static class Type1<A> {}

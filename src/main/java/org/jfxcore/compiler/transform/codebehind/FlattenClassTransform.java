@@ -127,6 +127,7 @@ public class FlattenClassTransform implements Transform {
             var methodFinder = new MethodFinder(rootType, rootType.jvmType());
 
             CtConstructor constructor = methodFinder.findConstructor(
+                List.of(),
                 params,
                 params.stream().map(x -> paramsNode.getSourceInfo()).toList(),
                 null,

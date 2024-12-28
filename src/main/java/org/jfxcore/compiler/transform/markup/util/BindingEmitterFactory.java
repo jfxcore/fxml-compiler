@@ -50,7 +50,7 @@ public class BindingEmitterFactory {
         SourceInfo sourceInfo = bindingNode.getSourceInfo();
         BindingMode bindingMode = bindingNode.getMode();
         TypeInstance targetType = propertyInfo.getType();
-        BindingEmitterInfo result = bindingNode.toEmitter(propertyInfo.getDeclaringType());
+        BindingEmitterInfo result = bindingNode.toEmitter(propertyInfo.getDeclaringType(), propertyInfo.getType());
         ValueEmitterNode value = null;
 
         if (bindingMode.isContent()) {
@@ -111,7 +111,7 @@ public class BindingEmitterFactory {
         BindingEmitterInfo result;
 
         try {
-            result = bindingNode.toEmitter(propertyInfo.getDeclaringType());
+            result = bindingNode.toEmitter(propertyInfo.getDeclaringType(), propertyInfo.getType());
         } catch (MarkupException ex) {
             TypeInstance sourceType = (TypeInstance)ex.getProperties().get("sourceType");
 
@@ -166,7 +166,7 @@ public class BindingEmitterFactory {
             if (converterNode instanceof ValueEmitterNode c) {
                 converter = c;
             } else if (converterNode instanceof BindingNode binding) {
-                converter = binding.toEmitter(propertyInfo.getDeclaringType()).getValue();
+                converter = binding.toEmitter(propertyInfo.getDeclaringType(), propertyInfo.getType()).getValue();
             }
 
             if (converter != null) {
@@ -187,7 +187,7 @@ public class BindingEmitterFactory {
             if (formatNode instanceof ValueEmitterNode f) {
                 format = f;
             } else if (formatNode instanceof BindingNode binding) {
-                format = binding.toEmitter(propertyInfo.getDeclaringType()).getValue();
+                format = binding.toEmitter(propertyInfo.getDeclaringType(), propertyInfo.getType()).getValue();
             }
 
             if (format != null && !format.getType().getTypeInstance().subtypeOf(Classes.FormatType())) {
