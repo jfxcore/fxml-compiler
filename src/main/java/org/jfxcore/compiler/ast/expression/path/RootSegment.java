@@ -1,9 +1,12 @@
-// Copyright (c) 2023, JFXcore. All rights reserved.
+// Copyright (c) 2023, 2024, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.expression.path;
 
 import javassist.CtClass;
+import javassist.CtField;
+import org.jetbrains.annotations.Nullable;
+import org.jfxcore.compiler.ast.emit.EmitGetFieldNode;
 import org.jfxcore.compiler.ast.emit.EmitGetRootNode;
 import org.jfxcore.compiler.ast.emit.ValueEmitterNode;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
@@ -13,8 +16,11 @@ import org.jfxcore.compiler.util.TypeInstance;
 
 public class RootSegment extends Segment {
 
-    public RootSegment(TypeInstance type) {
+    private final CtField rootField;
+
+    public RootSegment(TypeInstance type, @Nullable CtField rootField) {
         super("<root>", "<root>", type, type, ObservableKind.NONE);
+        this.rootField = rootField;
     }
 
     @Override
@@ -24,7 +30,9 @@ public class RootSegment extends Segment {
 
     @Override
     public ValueEmitterNode toEmitter(boolean requireNonNull, SourceInfo sourceInfo) {
-        return new EmitGetRootNode(getTypeInstance(), sourceInfo);
+        return rootField != null
+            ? new EmitGetFieldNode(rootField, getTypeInstance(), false, true, sourceInfo)
+            : new EmitGetRootNode(getTypeInstance(), sourceInfo);
     }
 
 }

@@ -328,4 +328,87 @@ public class BindingSourceTest extends CompilerTestBase {
         assertCodeHighlight("2", ex);
     }
 
+    @SuppressWarnings("unused")
+    public static class BindingContextTestPane extends Pane {
+        public final Button button = new Button("foo") {{
+            setId("btn");
+        }};
+    }
+
+    @Test
+    public void BindingContext_Accepts_OnceExpression() {
+        Pane root = compileAndRun("""
+            <?import javafx.scene.layout.*?>
+            <BindingContextTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                                    fx:context="$button">
+                <Pane id="$text"/>
+            </BindingContextTestPane>
+        """);
+
+        Pane pane = (Pane)root.getChildren().get(0);
+        assertEquals("foo", pane.getId());
+    }
+
+    @Test
+    public void BindingContext_Does_Not_Accept_ObservableExpression() {
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <BindingContextTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                                    fx:context="${button}"/>
+        """));
+
+        assertEquals(ErrorCode.EXPRESSION_NOT_APPLICABLE, ex.getDiagnostic().getCode());
+        assertCodeHighlight("${button}", ex);
+    }
+
+    @Test
+    public void BindingContext_Accepts_ElementNode() {
+        Pane root = compileAndRun("""
+            <?import javafx.scene.layout.*?>
+            <?import javafx.scene.control.*?>
+            <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
+                <fx:context>
+                    <Button text="foo"/>
+                </fx:context>
+                <Pane id="$text"/>
+                <Pane id="$text"/>
+            </Pane>
+        """);
+
+        Pane pane1 = (Pane)root.getChildren().get(0);
+        Pane pane2 = (Pane)root.getChildren().get(1);
+        assertEquals("foo", pane1.getId());
+        assertEquals("foo", pane2.getId());
+    }
+
+    @Test
+    public void BindingContext_Cannot_Contain_Multiple_Values() {
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <?import javafx.scene.layout.*?>
+            <?import javafx.scene.control.*?>
+            <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
+                <fx:context>
+                    <Button/>
+                    <Button/>
+                </fx:context>
+            </Pane>
+        """));
+
+        assertEquals(ErrorCode.PROPERTY_CANNOT_HAVE_MULTIPLE_VALUES, ex.getDiagnostic().getCode());
+        assertCodeHighlight("<fx:context>", ex);
+    }
+
+    @Test
+    public void Root_Selector_Overrides_BindingContext() {
+        Pane root = compileAndRun("""
+            <?import javafx.scene.layout.*?>
+            <BindingContextTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                                    fx:context="$button" id="baz">
+                <Pane id="${id}"/>
+                <Pane id="${root/id}"/>
+            </BindingContextTestPane>
+        """);
+
+        assertEquals("btn", root.getChildren().get(0).getId());
+        assertEquals("baz", root.getChildren().get(1).getId());
+    }
 }

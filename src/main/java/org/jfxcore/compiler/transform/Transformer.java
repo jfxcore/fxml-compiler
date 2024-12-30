@@ -19,6 +19,7 @@ import org.jfxcore.compiler.transform.common.DefaultPropertyTransform;
 import org.jfxcore.compiler.transform.common.IntrinsicsTransform;
 import org.jfxcore.compiler.transform.common.ResolveTypeTransform;
 import org.jfxcore.compiler.transform.markup.AddTemplateIdFields;
+import org.jfxcore.compiler.transform.markup.BindingContextTransform;
 import org.jfxcore.compiler.transform.markup.BindingTransform;
 import org.jfxcore.compiler.transform.markup.ConstantTransform;
 import org.jfxcore.compiler.transform.markup.DefineBlockTransform;
@@ -88,6 +89,7 @@ public class Transformer {
             new StylesheetTransform(),
             new DocumentTransform(),
             new IdPropertyTransform(),
+            new BindingContextTransform(),
             new BindingTransform(),
             new DefineBlockTransform(),
             new ResourceIntrinsicTransform(),

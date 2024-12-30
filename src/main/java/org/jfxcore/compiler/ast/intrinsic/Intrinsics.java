@@ -26,6 +26,9 @@ public class Intrinsics {
     public static final Intrinsic MARKUP_CLASS_NAME = new Intrinsic(
         "markupClassName", Kind.PROPERTY, Placement.ROOT, Classes::StringType);
 
+    public static final Intrinsic CONTEXT = new Intrinsic(
+        "context", Kind.PROPERTY, Placement.ROOT, Classes::ObjectType);
+
     public static final Intrinsic ID = new Intrinsic(
         "id", Kind.PROPERTY, Placement.ANY, Classes::StringType);
 
@@ -86,9 +89,9 @@ public class Intrinsics {
         new IntrinsicProperty("path", Classes::StringType, true));
 
     private static final List<Intrinsic> NODES = List.of(
-        NULL, CLASS, CLASS_MODIFIER, CLASS_PARAMETERS, MARKUP_CLASS_NAME, ID, VALUE, CONSTANT, FACTORY,
-        TYPE_ARGUMENTS, ITEM_TYPE, DEFINE, STYLESHEET, TYPE, RESOURCE, ONCE, CONTENT, BIND, BIND_CONTENT,
-        BIND_BIDIRECTIONAL, BIND_CONTENT_BIDIRECTIONAL);
+        NULL, CLASS, CLASS_MODIFIER, CLASS_PARAMETERS, MARKUP_CLASS_NAME, CONTEXT, ID, VALUE, CONSTANT,
+        FACTORY, TYPE_ARGUMENTS, ITEM_TYPE, DEFINE, STYLESHEET, TYPE, RESOURCE, ONCE, CONTENT, BIND,
+        BIND_CONTENT, BIND_BIDIRECTIONAL, BIND_CONTENT_BIDIRECTIONAL);
 
     public static Intrinsic find(ObjectNode node) {
         if (node.getType().isIntrinsic()){
