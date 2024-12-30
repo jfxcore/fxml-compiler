@@ -181,13 +181,13 @@ public class BindingTransform implements Transform {
         if (contextSelectorNode == null) {
             ValueNode value = context.getBindingContext();
             if (value != null) {
-                CtField rootField = ExceptionHelper.unchecked(pathNode.getSourceInfo(),
-                    () -> context.getMarkupClass().getField(NameHelper.getMangledFieldName("root")));
+                CtField contextField = ExceptionHelper.unchecked(pathNode.getSourceInfo(),
+                    () -> context.getMarkupClass().getField(NameHelper.getMangledFieldName("context")));
 
                 return new BindingContextNode(
                     BindingContextSelector.CONTEXT,
                     TypeHelper.getTypeInstance(value),
-                    rootField, 0, pathNode.getSourceInfo());
+                    contextField, 0, pathNode.getSourceInfo());
             }
         }
 

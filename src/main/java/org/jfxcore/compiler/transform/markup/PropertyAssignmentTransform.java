@@ -69,11 +69,11 @@ public class PropertyAssignmentTransform implements Transform {
                 throw ParserErrors.invalidExpression(propertyNode.getSingleValue(context).getSourceInfo());
             }
 
-            CtField rootField = unchecked(
+            CtField contextField = unchecked(
                 propertyNode.getSourceInfo(),
-                () -> context.getMarkupClass().getField(NameHelper.getMangledFieldName("root")));
+                () -> context.getMarkupClass().getField(NameHelper.getMangledFieldName("context")));
 
-            return new EmitSetFieldNode(rootField, value, value.getSourceInfo());
+            return new EmitSetFieldNode(contextField, value, value.getSourceInfo());
         }
 
         if (propertyNode.isIntrinsic()) {

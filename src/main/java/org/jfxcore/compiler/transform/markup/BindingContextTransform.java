@@ -57,13 +57,13 @@ public class BindingContextTransform implements Transform {
         }
 
         ExceptionHelper.unchecked(value.getSourceInfo(), () -> {
-            var rootField = new CtField(
+            var contextField = new CtField(
                 type.jvmType(),
-                NameHelper.getMangledFieldName("root"),
+                NameHelper.getMangledFieldName("context"),
                 context.getMarkupClass());
 
-            rootField.setModifiers(Modifier.PRIVATE);
-            context.getMarkupClass().addField(rootField);
+            contextField.setModifiers(Modifier.PRIVATE);
+            context.getMarkupClass().addField(contextField);
         });
 
         return node;
