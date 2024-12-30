@@ -327,7 +327,7 @@ abstract class AbstractFunctionEmitterFactory {
                 // check that only the default binding context selector is used.
                 className = pathExpression.getSimplePath(limit);
                 BindingContextSelector selector = pathExpression.getBindingContext().getSelector();
-                if (selector != BindingContextSelector.DEFAULT && selector != BindingContextSelector.TEMPLATED_ITEM) {
+                if (selector != BindingContextSelector.ROOT && selector != BindingContextSelector.TEMPLATED_ITEM) {
                     throw BindingSourceErrors.bindingContextNotApplicable(pathExpression.getBindingContext().getSourceInfo());
                 }
             }

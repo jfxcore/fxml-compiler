@@ -4,6 +4,7 @@
 package org.jfxcore.compiler.transform.markup;
 
 import javassist.CtClass;
+import javassist.CtField;
 import org.jetbrains.annotations.Nullable;
 import org.jfxcore.compiler.ast.BindingNode;
 import org.jfxcore.compiler.ast.Node;
@@ -18,14 +19,17 @@ import org.jfxcore.compiler.ast.emit.EmitObjectNode;
 import org.jfxcore.compiler.ast.emit.EmitPropertyAdderNode;
 import org.jfxcore.compiler.ast.emit.EmitPropertyPathNode;
 import org.jfxcore.compiler.ast.emit.EmitPropertySetterNode;
+import org.jfxcore.compiler.ast.emit.EmitSetFieldNode;
 import org.jfxcore.compiler.ast.emit.EmitStaticPropertySetterNode;
 import org.jfxcore.compiler.ast.emit.EmitTemplateContentNode;
 import org.jfxcore.compiler.ast.emit.EmitUnwrapObservableNode;
 import org.jfxcore.compiler.ast.emit.ReferenceableNode;
 import org.jfxcore.compiler.ast.emit.ValueEmitterNode;
+import org.jfxcore.compiler.ast.intrinsic.Intrinsics;
 import org.jfxcore.compiler.ast.text.TextNode;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.diagnostic.errors.GeneralErrors;
+import org.jfxcore.compiler.diagnostic.errors.ParserErrors;
 import org.jfxcore.compiler.diagnostic.errors.PropertyAssignmentErrors;
 import org.jfxcore.compiler.diagnostic.errors.SymbolResolutionErrors;
 import org.jfxcore.compiler.transform.Transform;
@@ -57,6 +61,19 @@ public class PropertyAssignmentTransform implements Transform {
     public Node transform(TransformContext context, Node node) {
         if (!(node instanceof PropertyNode propertyNode)) {
             return node;
+        }
+
+        if (propertyNode.isIntrinsic(Intrinsics.CONTEXT)) {
+            ValueEmitterNode value = propertyNode.getSingleValue(context).as(ValueEmitterNode.class);
+            if (value == null) {
+                throw ParserErrors.invalidExpression(propertyNode.getSingleValue(context).getSourceInfo());
+            }
+
+            CtField contextField = unchecked(
+                propertyNode.getSourceInfo(),
+                () -> context.getMarkupClass().getField(NameHelper.getMangledFieldName("context")));
+
+            return new EmitSetFieldNode(contextField, value, value.getSourceInfo());
         }
 
         if (propertyNode.isIntrinsic()) {
@@ -353,7 +370,7 @@ public class PropertyAssignmentTransform implements Transform {
             }
 
             return new EmitEventHandlerNode(
-                context.getBindingContextClass(),
+                context.getCodeBehindOrMarkupClass(),
                 targetType.getArguments().get(0).jvmType(),
                 textNode.getText().trim().substring(1),
                 node.getSourceInfo());
