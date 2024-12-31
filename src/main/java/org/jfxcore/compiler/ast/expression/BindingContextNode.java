@@ -18,21 +18,49 @@ import org.jfxcore.compiler.util.TypeHelper;
 import org.jfxcore.compiler.util.TypeInstance;
 import java.util.Objects;
 
+import static org.jfxcore.compiler.util.ObservableKind.*;
+
 public class BindingContextNode extends AbstractNode {
 
     private final BindingContextSelector selector;
     private final int bindingDistance;
     private final CtField contextField;
-    private ResolvedTypeNode type;
+    private final TypeInstance type;
+    private final TypeInstance valueType;
+    private final TypeInstance observableType;
+    private ResolvedTypeNode typeNode;
 
     public BindingContextNode(
             BindingContextSelector selector,
             TypeInstance type,
+            int bindingDistance,
+            SourceInfo sourceInfo) {
+        this(selector, type, type, null, null, bindingDistance, sourceInfo);
+    }
+
+    public BindingContextNode(
+            BindingContextSelector selector,
+            TypeInstance type,
+            TypeInstance valueType,
+            @Nullable TypeInstance observableType,
+            CtField contextField,
+            SourceInfo sourceInfo) {
+        this(selector, type, valueType, observableType, checkNotNull(contextField), 0, sourceInfo);
+    }
+
+    private BindingContextNode(
+            BindingContextSelector selector,
+            TypeInstance type,
+            TypeInstance valueType,
+            @Nullable TypeInstance observableType,
             @Nullable CtField contextField,
             int bindingDistance,
             SourceInfo sourceInfo) {
         super(sourceInfo);
-        this.type = new ResolvedTypeNode(checkNotNull(type), sourceInfo);
+        this.typeNode = new ResolvedTypeNode(checkNotNull(type), sourceInfo);
+        this.type = checkNotNull(type);
+        this.valueType = checkNotNull(valueType);
+        this.observableType = observableType;
         this.contextField = contextField;
         this.selector = checkNotNull(selector);
         this.bindingDistance = bindingDistance;
@@ -47,7 +75,7 @@ public class BindingContextNode extends AbstractNode {
     }
 
     public ResolvedTypeNode getType() {
-        return type;
+        return typeNode;
     }
 
     /**
@@ -59,24 +87,25 @@ public class BindingContextNode extends AbstractNode {
 
     public Segment toSegment() {
         return switch (selector) {
-            case STATIC -> new NopSegment(type.getTypeInstance());
-            case CONTEXT -> new RootSegment(type.getTypeInstance(), contextField);
-            case ROOT -> new RootSegment(type.getTypeInstance(), null);
-            case SELF -> new ParentSegment(type.getTypeInstance(), 0);
-            case PARENT -> new ParentSegment(type.getTypeInstance(), bindingDistance);
-            case TEMPLATED_ITEM -> new ParamSegment(type.getTypeInstance());
+            case STATIC -> new NopSegment(type);
+            case CONTEXT -> new RootSegment(type, valueType, observableType != null ? FX_OBSERVABLE : NONE, contextField);
+            case ROOT -> new RootSegment(type, type, NONE, null);
+            case SELF -> new ParentSegment(type, 0);
+            case PARENT -> new ParentSegment(type, bindingDistance);
+            case TEMPLATED_ITEM -> new ParamSegment(type);
         };
     }
 
     @Override
     public void acceptChildren(Visitor visitor) {
         super.acceptChildren(visitor);
-        type = (ResolvedTypeNode)type.accept(visitor);
+        typeNode = (ResolvedTypeNode)typeNode.accept(visitor);
     }
 
     @Override
     public BindingContextNode deepClone() {
-        return new BindingContextNode(selector, type.getTypeInstance(), contextField, bindingDistance, getSourceInfo());
+        return new BindingContextNode(
+            selector, type, valueType, observableType, contextField, bindingDistance, getSourceInfo());
     }
 
     @Override
@@ -87,12 +116,15 @@ public class BindingContextNode extends AbstractNode {
         return selector == that.selector &&
             bindingDistance == that.bindingDistance &&
             TypeHelper.equals(contextField, that.contextField) &&
-            type.equals(that.type);
+            type.equals(that.type) &&
+            valueType.equals(that.valueType) &&
+            Objects.equals(observableType, that.observableType);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(selector, bindingDistance, TypeHelper.hashCode(contextField), type);
+        return Objects.hash(
+            selector, bindingDistance, TypeHelper.hashCode(contextField), type, valueType, observableType);
     }
 
 }

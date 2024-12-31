@@ -20,7 +20,6 @@ import org.jfxcore.compiler.ast.emit.EmitLiteralNode;
 import org.jfxcore.compiler.ast.emit.EmitMethodArgumentNode;
 import org.jfxcore.compiler.ast.emit.ValueEmitterNode;
 import org.jfxcore.compiler.ast.expression.BindingContextNode;
-import org.jfxcore.compiler.ast.expression.BindingContextSelector;
 import org.jfxcore.compiler.ast.expression.BindingEmitterInfo;
 import org.jfxcore.compiler.ast.expression.ExpressionNode;
 import org.jfxcore.compiler.ast.expression.FunctionExpressionNode;
@@ -322,12 +321,12 @@ abstract class AbstractFunctionEmitterFactory {
             }
 
             if (!maybeInstanceMethod) {
+                className = pathExpression.getSimplePath(limit);
+
                 // If we don't have a valid path expression, the only other possible interpretation would be
                 // a static method call. Since a static method call is not resolved by a path expression, we
                 // check that only the default binding context selector is used.
-                className = pathExpression.getSimplePath(limit);
-                BindingContextSelector selector = pathExpression.getBindingContext().getSelector();
-                if (selector != BindingContextSelector.ROOT && selector != BindingContextSelector.TEMPLATED_ITEM) {
+                if (!pathExpression.getBindingContext().getSelector().isDefault()) {
                     throw BindingSourceErrors.bindingContextNotApplicable(pathExpression.getBindingContext().getSourceInfo());
                 }
             }

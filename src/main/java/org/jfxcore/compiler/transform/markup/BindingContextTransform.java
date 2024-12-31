@@ -10,6 +10,7 @@ import org.jfxcore.compiler.ast.BindingNode;
 import org.jfxcore.compiler.ast.Node;
 import org.jfxcore.compiler.ast.PropertyNode;
 import org.jfxcore.compiler.ast.ValueNode;
+import org.jfxcore.compiler.ast.ContextNode;
 import org.jfxcore.compiler.ast.intrinsic.Intrinsics;
 import org.jfxcore.compiler.diagnostic.errors.GeneralErrors;
 import org.jfxcore.compiler.diagnostic.errors.ParserErrors;
@@ -20,6 +21,7 @@ import org.jfxcore.compiler.util.NameHelper;
 import org.jfxcore.compiler.util.Resolver;
 import org.jfxcore.compiler.util.TypeHelper;
 import org.jfxcore.compiler.util.TypeInstance;
+import java.util.function.Function;
 
 public class BindingContextTransform implements Transform {
 
@@ -30,41 +32,42 @@ public class BindingContextTransform implements Transform {
         }
 
         Node value = propertyNode.getSingleValue(context);
-        BindingNode bindingNode;
-        TypeInstance type;
-
-        try {
-            context.setBindingContextEnabled(false);
-            bindingNode = new BindingTransform().transform(context, value).as(BindingNode.class);
-        } finally {
-            context.setBindingContextEnabled(true);
-        }
-
-        if (bindingNode != null) {
-            if (bindingNode.getMode() != BindingMode.ONCE) {
-                throw GeneralErrors.expressionNotApplicable(bindingNode.getSourceInfo(), true);
-            }
-
-            var resolver = new Resolver(propertyNode.getSourceInfo());
-            var invokingType = resolver.getTypeInstance(context.getBindingContextClass());
-            var emitter = bindingNode.toEmitter(invokingType, null);
-            propertyNode.getValues().set(0, emitter.getValue());
-            type = emitter.getValueType();
-        } else if (value instanceof ValueNode valueNode) {
-            type = TypeHelper.getTypeInstance(valueNode);
-        } else {
-            throw ParserErrors.invalidExpression(value.getSourceInfo());
-        }
-
-        ExceptionHelper.unchecked(value.getSourceInfo(), () -> {
+        Function<TypeInstance, CtField> createField = t -> ExceptionHelper.unchecked(value.getSourceInfo(), () -> {
             var contextField = new CtField(
-                type.jvmType(),
+                t.jvmType(),
                 NameHelper.getMangledFieldName("context"),
                 context.getMarkupClass());
 
-            contextField.setModifiers(Modifier.PRIVATE);
             context.getMarkupClass().addField(contextField);
+            return contextField;
         });
+
+        BindingNode bindingNode = new BindingTransform(false).transform(context, value).as(BindingNode.class);
+        if (bindingNode != null) {
+            if (bindingNode.getMode() != BindingMode.ONCE && bindingNode.getMode() != BindingMode.UNIDIRECTIONAL) {
+                throw GeneralErrors.expressionNotApplicable(bindingNode.getSourceInfo(), false);
+            }
+
+            var resolver = new Resolver(propertyNode.getSourceInfo());
+            var invokingType = resolver.getTypeInstance(context.getCodeBehindOrMarkupClass());
+            var emitter = bindingNode.toEmitter(invokingType, null);
+            var contextNode = new ContextNode(
+                createField.apply(emitter.getType()),
+                emitter.getType(),
+                emitter.getValueType(),
+                emitter.getObservableType(),
+                emitter.getValue(),
+                bindingNode.getSourceInfo());
+
+            propertyNode.getValues().set(0, contextNode);
+        } else if (value instanceof ValueNode valueNode) {
+            TypeInstance type = TypeHelper.getTypeInstance(valueNode);
+            var contextNode = new ContextNode(
+                createField.apply(type), type, type, null, valueNode, valueNode.getSourceInfo());
+            propertyNode.getValues().set(0, contextNode);
+        } else {
+            throw ParserErrors.invalidExpression(value.getSourceInfo());
+        }
 
         return node;
     }

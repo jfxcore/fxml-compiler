@@ -447,6 +447,18 @@ public class InlineParserTest extends TestBase {
 
     @ParameterizedTest
     @CsvSource({
+        "$::foo::bar::baz,once",
+        "${::foo::bar::baz},bind",
+        "#{::foo::bar::baz},bindBidirectional"
+    })
+    public void Compact_Syntax_With_ObservableSelector_Is_Expanded(String compactIntrinsic, String intrinsicName) {
+        ObjectNode objectNode = new InlineParser(compactIntrinsic, "fx").parseObject();
+        assertEquals(intrinsicName, objectNode.getType().getName());
+        assertTrue(objectNode.getChildren().get(0) instanceof PathNode n && n.getText().equals("foo::bar::baz"));
+    }
+
+    @ParameterizedTest
+    @CsvSource({
         "$..foo.bar.baz,once",
         "${..foo.bar.baz},bind",
         "#{..foo.bar.baz},bindBidirectional"

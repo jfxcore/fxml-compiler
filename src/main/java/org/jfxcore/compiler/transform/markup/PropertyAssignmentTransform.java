@@ -4,9 +4,9 @@
 package org.jfxcore.compiler.transform.markup;
 
 import javassist.CtClass;
-import javassist.CtField;
 import org.jetbrains.annotations.Nullable;
 import org.jfxcore.compiler.ast.BindingNode;
+import org.jfxcore.compiler.ast.ContextNode;
 import org.jfxcore.compiler.ast.Node;
 import org.jfxcore.compiler.ast.PropertyNode;
 import org.jfxcore.compiler.ast.TemplateContentNode;
@@ -64,16 +64,15 @@ public class PropertyAssignmentTransform implements Transform {
         }
 
         if (propertyNode.isIntrinsic(Intrinsics.CONTEXT)) {
-            ValueEmitterNode value = propertyNode.getSingleValue(context).as(ValueEmitterNode.class);
-            if (value == null) {
+            ContextNode contextNode = propertyNode.getSingleValue(context).as(ContextNode.class);
+            if (contextNode == null) {
                 throw ParserErrors.invalidExpression(propertyNode.getSingleValue(context).getSourceInfo());
             }
 
-            CtField contextField = unchecked(
-                propertyNode.getSourceInfo(),
-                () -> context.getMarkupClass().getField(NameHelper.getMangledFieldName("context")));
-
-            return new EmitSetFieldNode(contextField, value, value.getSourceInfo());
+            return new EmitSetFieldNode(
+                contextNode.getField(),
+                (ValueEmitterNode)contextNode.getValue(),
+                contextNode.getSourceInfo());
         }
 
         if (propertyNode.isIntrinsic()) {

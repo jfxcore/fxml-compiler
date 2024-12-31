@@ -21,6 +21,10 @@ public enum BindingContextSelector {
         return name;
     }
 
+    public boolean isDefault() {
+        return this == CONTEXT || this == ROOT || this == TEMPLATED_ITEM;
+    }
+
     public static BindingContextSelector parse(String name) {
         for (BindingContextSelector selector : values()) {
             if (selector.name != null && selector.name.equals(name)) {

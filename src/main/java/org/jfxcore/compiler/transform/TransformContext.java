@@ -8,22 +8,15 @@ import javassist.CtClass;
 import org.jetbrains.annotations.Nullable;
 import org.jfxcore.compiler.ast.DocumentNode;
 import org.jfxcore.compiler.ast.Node;
-import org.jfxcore.compiler.ast.ObjectNode;
-import org.jfxcore.compiler.ast.PropertyNode;
 import org.jfxcore.compiler.ast.TemplateContentNode;
-import org.jfxcore.compiler.ast.ValueNode;
 import org.jfxcore.compiler.ast.Visitor;
-import org.jfxcore.compiler.ast.emit.ValueEmitterNode;
-import org.jfxcore.compiler.ast.intrinsic.Intrinsics;
 import org.jfxcore.compiler.util.ArrayStack;
 import org.jfxcore.compiler.util.CompilationContext;
-import org.jfxcore.compiler.util.TypeHelper;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
 import java.util.List;
 import java.util.ListIterator;
-import java.util.Objects;
 import java.util.function.Predicate;
 
 public class TransformContext {
@@ -32,7 +25,6 @@ public class TransformContext {
     private final List<String> ids = new ArrayList<>();
     private final CtClass markupClass;
     private final CtClass codeBehindClass;
-    private boolean bindingContextEnabled = true;
 
     public TransformContext(
             List<String> imports,
@@ -54,55 +46,8 @@ public class TransformContext {
         return markupClass;
     }
 
-    public void setBindingContextEnabled(boolean value) {
-        bindingContextEnabled = value;
-    }
-
-    public @Nullable ValueNode getBindingContext() {
-        if (!bindingContextEnabled) {
-            return null;
-        }
-
-        ListIterator<Node> it = parents.listIterator(parents.size());
-
-        while (it.hasPrevious()) {
-            if (it.previous() instanceof ObjectNode objectNode) {
-                for (PropertyNode propertyNode : objectNode.getProperties()) {
-                    if (propertyNode.isIntrinsic(Intrinsics.CONTEXT)
-                            && propertyNode.getSingleValue(this) instanceof ValueNode value) {
-                        return value;
-                    }
-                }
-            }
-        }
-
-        return null;
-    }
-
-    public @Nullable CtClass getBindingContextClass() {
-        ListIterator<Node> it = parents.listIterator(parents.size());
-
-        while (it.hasPrevious()) {
-            Node node = it.previous();
-
-            if (node instanceof ObjectNode objectNode) {
-                for (PropertyNode propertyNode : objectNode.getProperties()) {
-                    if (propertyNode.isIntrinsic(Intrinsics.CONTEXT)
-                            && propertyNode.getValues().size() == 1
-                            && propertyNode.getValues().get(0) instanceof ValueEmitterNode value) {
-                        return TypeHelper.getJvmType(value);
-                    }
-                }
-            } else if (node instanceof TemplateContentNode templateContentNode) {
-                return templateContentNode.getBindingContextClass().jvmType();
-            }
-        }
-
+    public @Nullable CtClass getCodeBehindOrMarkupClass() {
         return codeBehindClass != null ? codeBehindClass : markupClass;
-    }
-
-    public CtClass getCodeBehindOrMarkupClass() {
-        return Objects.requireNonNull(codeBehindClass != null ? codeBehindClass : markupClass);
     }
 
     public boolean isTemplate() {
