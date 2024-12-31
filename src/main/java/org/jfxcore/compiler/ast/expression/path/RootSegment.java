@@ -18,8 +18,11 @@ public class RootSegment extends Segment {
 
     private final CtField rootField;
 
-    public RootSegment(TypeInstance type, @Nullable CtField rootField) {
-        super("<root>", "<root>", type, type, ObservableKind.NONE);
+    public RootSegment(TypeInstance type,
+                       TypeInstance valueType,
+                       ObservableKind observableKind,
+                       @Nullable CtField rootField) {
+        super(rootField != null ? rootField.getName() : "<root>", "<root>", type, valueType, observableKind);
         this.rootField = rootField;
     }
 

@@ -90,7 +90,7 @@ public class Transformer {
             new DocumentTransform(),
             new IdPropertyTransform(),
             new BindingContextTransform(),
-            new BindingTransform(),
+            new BindingTransform(true),
             new DefineBlockTransform(),
             new ResourceIntrinsicTransform(),
             new NullIntrinsicTransform(),

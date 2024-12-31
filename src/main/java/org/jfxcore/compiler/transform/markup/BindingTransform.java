@@ -4,7 +4,6 @@
 package org.jfxcore.compiler.transform.markup;
 
 import javassist.CtClass;
-import javassist.CtField;
 import org.jetbrains.annotations.Nullable;
 import org.jfxcore.compiler.ast.BindingMode;
 import org.jfxcore.compiler.ast.BindingNode;
@@ -13,6 +12,7 @@ import org.jfxcore.compiler.ast.ObjectNode;
 import org.jfxcore.compiler.ast.PropertyNode;
 import org.jfxcore.compiler.ast.TemplateContentNode;
 import org.jfxcore.compiler.ast.ValueNode;
+import org.jfxcore.compiler.ast.ContextNode;
 import org.jfxcore.compiler.ast.expression.BindingContextNode;
 import org.jfxcore.compiler.ast.expression.BindingContextSelector;
 import org.jfxcore.compiler.ast.expression.ExpressionNode;
@@ -33,8 +33,6 @@ import org.jfxcore.compiler.diagnostic.errors.GeneralErrors;
 import org.jfxcore.compiler.diagnostic.errors.ParserErrors;
 import org.jfxcore.compiler.transform.Transform;
 import org.jfxcore.compiler.transform.TransformContext;
-import org.jfxcore.compiler.util.ExceptionHelper;
-import org.jfxcore.compiler.util.NameHelper;
 import org.jfxcore.compiler.util.Resolver;
 import org.jfxcore.compiler.util.TypeHelper;
 import org.jfxcore.compiler.util.TypeInstance;
@@ -42,14 +40,23 @@ import java.util.List;
 
 public class BindingTransform implements Transform {
 
+    private final boolean allowContextSelector;
+
+    public BindingTransform(boolean allowContextSelector) {
+        this.allowContextSelector = allowContextSelector;
+    }
+
     @Override
     public Node transform(TransformContext context, Node node) {
         if (!(node instanceof ObjectNode objectNode)) {
             return node;
         }
 
-        BindingMode bindingMode = getBindingMode(objectNode);
+        if (context.getParent() instanceof PropertyNode propertyNode && propertyNode.isIntrinsic(Intrinsics.CONTEXT)) {
+            return node;
+        }
 
+        BindingMode bindingMode = getBindingMode(objectNode);
         if (bindingMode == null) {
             return node;
         }
@@ -178,16 +185,24 @@ public class BindingTransform implements Transform {
 
     private BindingContextNode parseBindingContext(TransformContext context, PathNode pathNode) {
         ContextSelectorNode contextSelectorNode = pathNode.getContextSelector();
-        if (contextSelectorNode == null) {
-            ValueNode value = context.getBindingContext();
-            if (value != null) {
-                CtField contextField = ExceptionHelper.unchecked(pathNode.getSourceInfo(),
-                    () -> context.getMarkupClass().getField(NameHelper.getMangledFieldName("context")));
+        if (contextSelectorNode == null && allowContextSelector) {
+            List<Node> parents = context.getParents().stream()
+                .filter(node -> node instanceof ObjectNode)
+                .toList();
 
-                return new BindingContextNode(
-                    BindingContextSelector.CONTEXT,
-                    TypeHelper.getTypeInstance(value),
-                    contextField, 0, pathNode.getSourceInfo());
+            for (int i = parents.size() - 1; i >= 0; --i) {
+                for (PropertyNode propertyNode : ((ObjectNode)parents.get(i)).getProperties()) {
+                    if (propertyNode.isIntrinsic(Intrinsics.CONTEXT)
+                            && propertyNode.getSingleValue(context) instanceof ContextNode contextNode) {
+                        return new BindingContextNode(
+                            BindingContextSelector.CONTEXT,
+                            contextNode.getType().getTypeInstance(),
+                            contextNode.getValueType(),
+                            contextNode.getObservableType(),
+                            contextNode.getField(),
+                            pathNode.getSourceInfo());
+                    }
+                }
             }
         }
 
@@ -217,7 +232,7 @@ public class BindingTransform implements Transform {
                     TypeInstance type = TypeHelper.getTypeInstance(parents.get(i));
                     if (type.subtypeOf(context.getCodeBehindOrMarkupClass())) {
                         yield new BindingContextNode(
-                            BindingContextSelector.ROOT, type, null,
+                            BindingContextSelector.ROOT, type,
                             parents.size() - i - 1, pathNode.getSourceInfo());
                     }
                 }
@@ -233,7 +248,8 @@ public class BindingTransform implements Transform {
                 yield new BindingContextNode(
                     bindingContextSelector,
                     TypeHelper.getTypeInstance(parents.get(parents.size() - 1)),
-                    null, 0, contextSelectorNode.getSourceInfo());
+                    0,
+                    contextSelectorNode.getSourceInfo());
             }
 
             case PARENT -> {
@@ -257,7 +273,7 @@ public class BindingTransform implements Transform {
 
                 yield new BindingContextNode(
                     bindingContextSelector,
-                    parentInfo.type(), null,
+                    parentInfo.type(),
                     parents.size() - parentInfo.parentStackIndex() - 1,
                     contextSelectorNode.getSourceInfo());
             }
@@ -268,7 +284,8 @@ public class BindingTransform implements Transform {
                     yield new BindingContextNode(
                         BindingContextSelector.TEMPLATED_ITEM,
                         templateContentNode.getItemType(),
-                        null, 0, contextSelectorNode.getSourceInfo());
+                        0,
+                        contextSelectorNode.getSourceInfo());
                 }
 
                 throw BindingSourceErrors.bindingContextNotApplicable(contextSelectorNode.getSourceInfo());

@@ -1,4 +1,4 @@
-// Copyright (c) 2021, 2023, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2024, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.emit;
@@ -140,9 +140,11 @@ public class EmitObservablePathNode
             mayReturnNull = bidirectional;
         }
 
-        context.emit(invariantPath);
+        if (invariantPath != null) {
+            context.emit(invariantPath);
+        }
 
-        if (leadingInvariantSegments > 1 && invariantPath.isNullable()) {
+        if (leadingInvariantSegments > 1 && invariantPath != null && invariantPath.isNullable()) {
             Local local = code.acquireLocal(false);
 
             code.astore(local)

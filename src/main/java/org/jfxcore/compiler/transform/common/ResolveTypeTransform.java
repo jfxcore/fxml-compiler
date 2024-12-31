@@ -1,4 +1,4 @@
-// Copyright (c) 2022, 2023, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2024, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.transform.common;
@@ -156,9 +156,9 @@ public class ResolveTypeTransform implements Transform {
             }
         }
 
-        CtClass bindingContextType = context.getBindingContextClass();
-        if (bindingContextType != null && parentIsDocument) {
-            type = TypeInstance.of(bindingContextType);
+        CtClass classType = context.getCodeBehindOrMarkupClass();
+        if (classType != null && parentIsDocument) {
+            type = TypeInstance.of(classType);
         }
 
         return new ResolvedTypeNode(

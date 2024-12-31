@@ -166,7 +166,7 @@ public class InlineParser {
             default -> {
                 if (tokenizer.containsAhead(COLON, COLON)) {
                     PathNode path = parsePath(tokenizer, true, true, false);
-                    yield tokenizer.peekNotNull().getType() == OPEN_PAREN ? parseFunctionExpression(tokenizer, path) : path;
+                    yield tokenizer.peek(OPEN_PAREN) != null ? parseFunctionExpression(tokenizer, path) : path;
                 }
 
                 InlineToken token = tokenizer.remove();
