@@ -1,4 +1,4 @@
-// Copyright (c) 2022, 2024, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2025, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.transform.common;
@@ -13,7 +13,6 @@ import org.jfxcore.compiler.diagnostic.errors.GeneralErrors;
 import org.jfxcore.compiler.diagnostic.errors.ObjectInitializationErrors;
 import org.jfxcore.compiler.diagnostic.errors.ParserErrors;
 import org.jfxcore.compiler.diagnostic.errors.SymbolResolutionErrors;
-import org.jfxcore.compiler.parse.InlineParser;
 import org.jfxcore.compiler.transform.Transform;
 import org.jfxcore.compiler.transform.TransformContext;
 import org.jfxcore.compiler.util.NameHelper;
@@ -44,16 +43,6 @@ public class IntrinsicsTransform implements Transform {
 
     private static final Map<Intrinsic, Set<String>> CONFLICTING_PROPERTIES = Map.of(
         Intrinsics.BIND_BIDIRECTIONAL, Set.of("converter", "format", "inverseMethod"));
-
-    private static final Set<Intrinsic> EXPR_INTRINSICS = Set.of(
-        Intrinsics.ONCE, Intrinsics.CONTENT, Intrinsics.BIND, Intrinsics.BIND_CONTENT,
-        Intrinsics.BIND_BIDIRECTIONAL, Intrinsics.BIND_CONTENT_BIDIRECTIONAL);
-
-    private static final Set<String> EXPR_PREFIXES = Set.of(
-        InlineParser.ONCE_EXPR_PREFIX,
-        InlineParser.BIND_EXPR_PREFIX,
-        InlineParser.BIND_BIDIRECTIONAL_EXPR_PREFIX
-    );
 
     @Override
     public Node transform(TransformContext context, Node node) {
@@ -101,10 +90,6 @@ public class IntrinsicsTransform implements Transform {
     private Node processIntrinsicObject(TransformContext context, ObjectNode objectNode) {
         Intrinsic intrinsic = Intrinsics.find(objectNode.getType().getName());
         if (intrinsic == null) {
-            throw GeneralErrors.unknownIntrinsic(objectNode.getSourceInfo(), objectNode.getType().getMarkupName());
-        }
-
-        if (EXPR_INTRINSICS.contains(intrinsic) && !EXPR_PREFIXES.contains(objectNode.getType().getMarkupName())) {
             throw GeneralErrors.unknownIntrinsic(objectNode.getSourceInfo(), objectNode.getType().getMarkupName());
         }
 
