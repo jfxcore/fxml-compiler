@@ -1,4 +1,4 @@
-// Copyright (c) 2022, 2024, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2025, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler;
@@ -177,6 +177,36 @@ public class InstantiationTest extends CompilerTestBase {
             assertEquals(1, ex.getDiagnostic().getCauses().length);
             assertEquals(ErrorCode.NUM_FUNCTION_ARGUMENTS_MISMATCH, ex.getDiagnostic().getCauses()[0].getCode());
             assertCodeHighlight("<MultiArgCtorObject>", ex);
+        }
+
+        @SuppressWarnings("unused")
+        public static class ContextTestPane extends GridPane {
+            public static class TestContext {
+                public final StringProperty stringValue = new SimpleStringProperty("foo");
+            }
+
+            public final TestContext testContext = new TestContext();
+        }
+
+        @SuppressWarnings("unused")
+        public static class TestPaneWithArg extends GridPane {
+            public final String arg;
+
+            public TestPaneWithArg(@NamedArg("arg") String arg) {
+                this.arg = arg;
+            }
+        }
+
+        @Test
+        public void NamedArg_Instantiation_With_Context_Selector() {
+            GridPane root = compileAndRun("""
+                <ContextTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                          fx:context="$testContext">
+                    <TestPaneWithArg arg="$stringValue"/>
+                </ContextTestPane>
+            """);
+
+            assertEquals("foo", ((TestPaneWithArg)root.getChildren().get(0)).arg);
         }
 
         @SuppressWarnings("unused")

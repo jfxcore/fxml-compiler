@@ -1,4 +1,4 @@
-// Copyright (c) 2021, 2024, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2025, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.expression;
@@ -44,16 +44,6 @@ public class BindingContextNode extends AbstractNode {
             TypeInstance valueType,
             @Nullable TypeInstance observableType,
             CtField contextField,
-            SourceInfo sourceInfo) {
-        this(selector, type, valueType, observableType, checkNotNull(contextField), 0, sourceInfo);
-    }
-
-    private BindingContextNode(
-            BindingContextSelector selector,
-            TypeInstance type,
-            TypeInstance valueType,
-            @Nullable TypeInstance observableType,
-            @Nullable CtField contextField,
             int bindingDistance,
             SourceInfo sourceInfo) {
         super(sourceInfo);
