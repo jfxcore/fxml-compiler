@@ -1,4 +1,4 @@
-// Copyright (c) 2021, 2024, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2025, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.bindings;
@@ -123,6 +123,59 @@ public class BindingPathTest extends CompilerTestBase {
         public record NestedClass(String value) {
             public static final NestedClass INSTANCE = new NestedClass("testValue");
         }
+    }
+
+    @Test
+    public void Bindings_With_Explicit_Intrinsic_Syntax() {
+        TestPane root = compileAndRun("""
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                      managed="{fx:once context.boolVal}"
+                      prefWidth="{fx:bind context.doubleVal}"
+                      prefHeight="{fx:bindBidirectional context.doubleVal}"/>
+        """);
+
+        assertFalse(root.managedProperty().isBound());
+        assertTrue(root.isManaged());
+
+        assertTrue(root.prefWidthProperty().isBound());
+        assertEquals(123.0, root.getPrefWidth(), 0.001);
+
+        assertFalse(root.prefHeightProperty().isBound());
+        assertEquals(123.0, root.getPrefHeight(), 0.001);
+    }
+
+    @Test
+    public void Bindings_With_Element_Syntax() {
+        TestPane root = compileAndRun("""
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
+                <managed><fx:once path="context.boolVal"/></managed>
+                <prefWidth><fx:bind path="context.doubleVal"/></prefWidth>
+                <prefHeight><fx:bindBidirectional path="context.doubleVal"/></prefHeight>
+            </TestPane>
+        """);
+
+        assertFalse(root.managedProperty().isBound());
+        assertTrue(root.isManaged());
+
+        assertTrue(root.prefWidthProperty().isBound());
+        assertEquals(123.0, root.getPrefWidth(), 0.001);
+
+        assertFalse(root.prefHeightProperty().isBound());
+        assertEquals(123.0, root.getPrefHeight(), 0.001);
+    }
+
+    @Test
+    public void PathExpression_Not_Supported_In_Element_Content() {
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
+                <managed>
+                    <fx:once>context.boolVal</fx:once>
+                </managed>
+            </TestPane>
+        """));
+
+        assertEquals(ErrorCode.INVALID_EXPRESSION, ex.getDiagnostic().getCode());
+        assertCodeHighlight("context.boolVal", ex);
     }
 
     @Test

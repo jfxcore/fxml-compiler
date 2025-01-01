@@ -1,8 +1,9 @@
-// Copyright (c) 2022, 2024, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2025, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.parse;
 
+import org.jfxcore.compiler.ast.intrinsic.IntrinsicProperty;
 import org.jfxcore.compiler.diagnostic.Diagnostic;
 import org.jfxcore.compiler.diagnostic.ErrorCode;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
@@ -32,6 +33,16 @@ import java.util.List;
 import java.util.Map;
 
 public class FxmlParser {
+
+    // Intrinsic properties that are always interpreted as paths.
+    private static final IntrinsicProperty[] PATH_INTRINSICS = new IntrinsicProperty[] {
+        Intrinsics.ONCE.findProperty("path"),
+        Intrinsics.CONTENT.findProperty("path"),
+        Intrinsics.BIND.findProperty("path"),
+        Intrinsics.BIND_CONTENT.findProperty("path"),
+        Intrinsics.BIND_BIDIRECTIONAL.findProperty("path"),
+        Intrinsics.BIND_CONTENT_BIDIRECTIONAL.findProperty("path")
+    };
 
     // Intrinsics that are not interpreted by the inline parser.
     private static final Intrinsic[] VERBATIM_INTRINSICS = new Intrinsic[] {
@@ -161,8 +172,24 @@ public class FxmlParser {
             }
         }
 
-        if (node instanceof Attr) {
+        if (node instanceof Attr attr) {
             sourceInfo = (SourceInfo)node.getUserData(XmlReader.ATTR_VALUE_SOURCE_INFO_KEY);
+            boolean parseAsPath = false;
+
+            if (FxmlNamespace.FXML.equalsIgnoreCase(attr.getOwnerElement().getNamespaceURI())) {
+                for (IntrinsicProperty intrinsicProperty : PATH_INTRINSICS) {
+                    if (intrinsicProperty.getIntrinsic().getName().equals(attr.getOwnerElement().getLocalName())
+                            && intrinsicProperty.getName().equals(attr.getLocalName())) {
+                        parseAsPath = true;
+                        break;
+                    }
+                }
+            }
+
+            if (parseAsPath) {
+                return new InlineParser(text, getFxmlNamespacePrefix(node), sourceInfo.getStart()).parsePath();
+            }
+
             String trimmed = text.trim();
             if (isInlineExpression(trimmed)) {
                 if (trimmed.startsWith("{}")) {
