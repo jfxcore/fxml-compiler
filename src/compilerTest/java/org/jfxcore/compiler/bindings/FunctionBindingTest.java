@@ -1,4 +1,4 @@
-// Copyright (c) 2022, 2024, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2025, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.bindings;
@@ -814,6 +814,17 @@ public class FunctionBindingTest extends CompilerTestBase {
             <?import javafx.fxml.*?>
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                       id="${defaultMethod('foo-%s', {Double fx:constant=POSITIVE_INFINITY})}"/>
+        """);
+
+        assertEquals("foo-Infinity", root.getId());
+    }
+
+    @Test
+    public void Bind_Unidirectional_With_ConstantLiteral_Param() {
+        TestPane root = compileAndRun("""
+            <?import javafx.fxml.*?>
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                      id="${defaultMethod('foo-%s', Double.POSITIVE_INFINITY)}"/>
         """);
 
         assertEquals("foo-Infinity", root.getId());
