@@ -108,7 +108,9 @@ public class PropertyNode extends AbstractNode {
     /**
      * Gets the trimmed text value of this property.
      *
-     * @throws MarkupException if the property is empty, if it has multiple values, or if it doesn't contain text
+     * @throws MarkupException if the property is empty or blank,
+     *                         if it has multiple values,
+     *                         or if it doesn't contain text
      */
     public String getTrimmedTextValue(TransformContext context) {
         String text = getTextNode(context).getText();
@@ -126,7 +128,9 @@ public class PropertyNode extends AbstractNode {
     /**
      * Gets the {@code SourceInfo} of the trimmed text value of this property.
      *
-     * @throws MarkupException if the property is empty, if it has multiple values, or if it doesn't contain text
+     * @throws MarkupException if the property is empty or blank,
+     *                         if it has multiple values,
+     *                         or if it doesn't contain text
      */
     public SourceInfo getTrimmedTextSourceInfo(TransformContext context) {
         return getTextNode(context).getSourceInfo().getTrimmed();
