@@ -1,8 +1,9 @@
-// Copyright (c) 2023, 2024, JFXcore. All rights reserved.
+// Copyright (c) 2023, 2025, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.transform.markup;
 
+import javassist.CtClass;
 import javassist.CtField;
 import javassist.Modifier;
 import org.jfxcore.compiler.ast.Node;
@@ -18,7 +19,6 @@ import org.jfxcore.compiler.transform.Transform;
 import org.jfxcore.compiler.transform.TransformContext;
 import org.jfxcore.compiler.util.AccessVerifier;
 import org.jfxcore.compiler.util.Resolver;
-import org.jfxcore.compiler.util.TypeHelper;
 import java.util.List;
 
 /**
@@ -47,7 +47,8 @@ public class ConstantTransform implements Transform {
         String fieldName = constantProperty.getTextValueNotEmpty(context);
         SourceInfo sourceInfo = SourceInfo.span(constantProperty.getValues());
         Resolver resolver = new Resolver(sourceInfo);
-        CtField field = resolver.resolveField(TypeHelper.getJvmType(objectNode), fieldName, false);
+        CtClass declaringType = (CtClass)objectNode.getType().getNodeData(NodeDataKey.CONSTANT_DECLARING_TYPE);
+        CtField field = resolver.resolveField(declaringType, fieldName, false);
         AccessVerifier.verifyAccessible(field, context.getMarkupClass(), sourceInfo);
 
         if (!Modifier.isStatic(field.getModifiers())) {
@@ -56,7 +57,7 @@ public class ConstantTransform implements Transform {
 
         if (objectNode.getChildren().size() > 0) {
             throw ObjectInitializationErrors.objectCannotHaveContent(
-                objectNode.getSourceInfo(), TypeHelper.getJvmType(objectNode), constantProperty.getMarkupName());
+                objectNode.getSourceInfo(), declaringType, constantProperty.getMarkupName());
         }
 
         String conflictingProperty = objectNode.getProperties().stream()
@@ -74,7 +75,7 @@ public class ConstantTransform implements Transform {
             new ResolvedTypeNode(resolver.getTypeInstance(field, List.of()), objectNode.getSourceInfo()),
             objectNode.getProperties(), List.of(), objectNode.getSourceInfo());
 
-        result.setNodeData(NodeDataKey.CONSTANT_DECLARING_TYPE, TypeHelper.getJvmType(objectNode));
+        result.setNodeData(NodeDataKey.CONSTANT_DECLARING_TYPE, declaringType);
         return result;
     }
 

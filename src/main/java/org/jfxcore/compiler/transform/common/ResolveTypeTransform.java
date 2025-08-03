@@ -1,9 +1,10 @@
-// Copyright (c) 2022, 2024, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2025, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.transform.common;
 
 import javassist.CtClass;
+import javassist.CtField;
 import org.jfxcore.compiler.ast.DocumentNode;
 import org.jfxcore.compiler.ast.Node;
 import org.jfxcore.compiler.ast.NodeDataKey;
@@ -16,6 +17,7 @@ import org.jfxcore.compiler.ast.intrinsic.Intrinsics;
 import org.jfxcore.compiler.ast.text.TextNode;
 import org.jfxcore.compiler.diagnostic.ErrorCode;
 import org.jfxcore.compiler.diagnostic.MarkupException;
+import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.diagnostic.errors.ObjectInitializationErrors;
 import org.jfxcore.compiler.diagnostic.errors.PropertyAssignmentErrors;
 import org.jfxcore.compiler.parse.TypeFormatter;
@@ -67,6 +69,26 @@ public class ResolveTypeTransform implements Transform {
         CtClass objectTypeClass = resolver.tryResolveClassAgainstImports(typeNode.getName());
         if (objectTypeClass == null) {
             return typeNode;
+        }
+
+        PropertyNode constantProperty = objectNode != null
+            ? objectNode.findIntrinsicProperty(Intrinsics.CONSTANT)
+            : null;
+
+        if (constantProperty != null) {
+            Node fieldName = constantProperty.getSingleValue(context);
+            SourceInfo sourceInfo = fieldName.getSourceInfo();
+
+            if (!(fieldName instanceof TextNode fieldNameTextNode)) {
+                throw PropertyAssignmentErrors.propertyMustContainText(
+                    sourceInfo, objectTypeClass, constantProperty.getMarkupName());
+            }
+
+            CtField field = resolver.resolveField(objectTypeClass, fieldNameTextNode.getText(), false);
+            TypeInstance fieldType = resolver.getTypeInstance(field, List.of());
+            var resolvedType = new ResolvedTypeNode(fieldType, fieldType.getName(), fieldType.getName(), false, sourceInfo);
+            resolvedType.setNodeData(NodeDataKey.CONSTANT_DECLARING_TYPE, objectTypeClass);
+            return resolvedType;
         }
 
         CtClass markupClass = context.getMarkupClass();
