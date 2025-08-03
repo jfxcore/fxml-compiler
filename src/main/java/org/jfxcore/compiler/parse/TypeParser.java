@@ -1,4 +1,4 @@
-// Copyright (c) 2021, 2024, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2025, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.parse;
@@ -13,6 +13,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class TypeParser {
+
+    public record MethodInfo(
+            List<TypeInstance> typeWitnesses,
+            String methodName,
+            SourceInfo sourceInfo) {}
 
     private final String text;
     private final Location sourceOffset;
@@ -34,8 +39,35 @@ public class TypeParser {
     }
 
     public List<TypeInstance> parse() {
+        return parseText(text, 0);
+    }
+
+    public MethodInfo parseMethod() {
+        int start = text.length() - text.stripLeading().length();
+        var sourceInfo = new SourceInfo(
+            sourceOffset.getLine(), sourceOffset.getColumn() + start,
+            sourceOffset.getLine(), sourceOffset.getColumn() + start + text.trim().length());
+
+        int closingAngleIndex = text.lastIndexOf('>');
+        if (closingAngleIndex <= 0) {
+            return new MethodInfo(List.of(), text.trim(), sourceInfo);
+        }
+
+        if (text.charAt(start) != '<') {
+            throw ParserErrors.invalidExpression(sourceInfo);
+        }
+
+        return new MethodInfo(
+            parseText(text.substring(start + 1, closingAngleIndex), start + 1),
+            text.substring(closingAngleIndex + 1).trim(),
+            sourceInfo);
+    }
+
+    private List<TypeInstance> parseText(String text, int offset) {
         List<TypeInstance> result = new ArrayList<>();
-        TypeTokenizer tokenizer = new TypeTokenizer(sourceOffset, text, TypeToken.class);
+        TypeTokenizer tokenizer = new TypeTokenizer(
+            new Location(this.sourceOffset.getLine(), this.sourceOffset.getColumn() + offset),
+            text, TypeToken.class);
 
         do {
             result.add(parseType(tokenizer));
@@ -90,8 +122,7 @@ public class TypeParser {
         }
 
         return resolver.getTypeInstance(
-            resolver.resolveClassAgainstImports(typeName + array.toString()),
+            resolver.resolveClassAgainstImports(typeName + array),
             arguments);
     }
-
 }

@@ -5,6 +5,7 @@ package org.jfxcore.compiler.transform.common;
 
 import javassist.CtClass;
 import javassist.CtField;
+import javassist.CtMethod;
 import org.jfxcore.compiler.ast.DocumentNode;
 import org.jfxcore.compiler.ast.Node;
 import org.jfxcore.compiler.ast.NodeDataKey;
@@ -71,24 +72,16 @@ public class ResolveTypeTransform implements Transform {
             return typeNode;
         }
 
-        PropertyNode constantProperty = objectNode != null
-            ? objectNode.findIntrinsicProperty(Intrinsics.CONSTANT)
-            : null;
-
-        if (constantProperty != null) {
-            Node fieldName = constantProperty.getSingleValue(context);
-            SourceInfo sourceInfo = fieldName.getSourceInfo();
-
-            if (!(fieldName instanceof TextNode fieldNameTextNode)) {
-                throw PropertyAssignmentErrors.propertyMustContainText(
-                    sourceInfo, objectTypeClass, constantProperty.getMarkupName());
+        if (objectNode != null) {
+            PropertyNode constantProperty = objectNode.findIntrinsicProperty(Intrinsics.CONSTANT);
+            if (constantProperty != null) {
+                return resolveConstantType(context, constantProperty, objectTypeClass);
             }
 
-            CtField field = resolver.resolveField(objectTypeClass, fieldNameTextNode.getText(), false);
-            TypeInstance fieldType = resolver.getTypeInstance(field, List.of());
-            var resolvedType = new ResolvedTypeNode(fieldType, fieldType.getName(), fieldType.getName(), false, sourceInfo);
-            resolvedType.setNodeData(NodeDataKey.CONSTANT_DECLARING_TYPE, objectTypeClass);
-            return resolvedType;
+            PropertyNode factoryProperty = objectNode.findIntrinsicProperty(Intrinsics.FACTORY);
+            if (factoryProperty != null) {
+                return resolveFactoryType(context, factoryProperty, objectTypeClass);
+            }
         }
 
         CtClass markupClass = context.getMarkupClass();
@@ -191,4 +184,44 @@ public class ResolveTypeTransform implements Transform {
             node.getSourceInfo());
     }
 
+    private ResolvedTypeNode resolveConstantType(
+            TransformContext context, PropertyNode constantProperty, CtClass objectTypeClass) {
+        Node fieldNameNode = constantProperty.getSingleValue(context);
+        SourceInfo sourceInfo = fieldNameNode.getSourceInfo();
+
+        if (!(fieldNameNode instanceof TextNode fieldNameTextNode)) {
+            throw PropertyAssignmentErrors.propertyMustContainText(
+                sourceInfo, objectTypeClass, constantProperty.getMarkupName());
+        }
+
+        var resolver = new Resolver(sourceInfo);
+        CtField field = resolver.resolveField(objectTypeClass, fieldNameTextNode.getText().trim(), false);
+        TypeInstance fieldType = resolver.getTypeInstance(field, List.of());
+        var resolvedType = new ResolvedTypeNode(
+            fieldType, fieldType.getName(), fieldType.getName(), false, sourceInfo);
+        resolvedType.setNodeData(NodeDataKey.CONSTANT_DECLARING_TYPE, objectTypeClass);
+        return resolvedType;
+    }
+
+    private ResolvedTypeNode resolveFactoryType(
+            TransformContext context, PropertyNode factoryProperty, CtClass objectTypeClass) {
+        Node methodNameNode = factoryProperty.getSingleValue(context);
+        SourceInfo sourceInfo = methodNameNode.getSourceInfo();
+
+        if (!(methodNameNode instanceof TextNode methodNameTextNode)) {
+            throw PropertyAssignmentErrors.propertyMustContainText(
+                sourceInfo, objectTypeClass, factoryProperty.getMarkupName());
+        }
+
+        TypeParser.MethodInfo methodInfo =
+            new TypeParser(methodNameTextNode.getText(), sourceInfo.getStart()).parseMethod();
+
+        var resolver = new Resolver(methodInfo.sourceInfo());
+        CtMethod method = resolver.resolveGetter(objectTypeClass, methodInfo.methodName(), true, null);
+        TypeInstance returnType = resolver.getTypeInstance(method, List.of(), methodInfo.typeWitnesses());
+        var resolvedType = new ResolvedTypeNode(
+            returnType, returnType.getName(), returnType.getName(), false, sourceInfo);
+        resolvedType.setNodeData(NodeDataKey.FACTORY_DECLARING_TYPE, objectTypeClass);
+        return resolvedType;
+    }
 }
