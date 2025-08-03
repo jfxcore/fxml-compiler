@@ -1,4 +1,4 @@
-// Copyright (c) 2021, 2023, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2025, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.parse;
@@ -173,24 +173,22 @@ public class XmlReader {
             null);
 
         for (Attribute attribute : attributes) {
-            if (attribute.name.prefix != null) {
-                String uri = namespaceStack.getFirst().get(attribute.name.prefix);
-                if (uri == null) {
-                    throw ParserErrors.unknownNamespace(attribute.sourceInfo, attribute.name.prefix);
-                }
-
-                Attr attr = element.getAttributeNodeNS(uri, attribute.name.toString());
-                if (attr != null) {
-                    throw PropertyAssignmentErrors.duplicateProperty(
-                        attribute.sourceInfo, name.toString(), attribute.name.toString());
-                }
-
-                element.setAttributeNS(uri, attribute.name.toString(), attribute.value);
-
-                attr = element.getAttributeNodeNS(uri, attribute.name.localName);
-                attr.setUserData(SOURCE_INFO_KEY, attribute.sourceInfo, null);
-                attr.setUserData(ATTR_VALUE_SOURCE_INFO_KEY, attribute.valueSourceInfo, null);
+            String uri = namespaceStack.getFirst().get(attribute.name.prefix);
+            if (uri == null && !attribute.name.prefix.isEmpty()) {
+                throw ParserErrors.unknownNamespace(attribute.sourceInfo, attribute.name.prefix);
             }
+
+            Attr attr = element.getAttributeNodeNS(uri, attribute.name.toString());
+            if (attr != null) {
+                throw PropertyAssignmentErrors.duplicateProperty(
+                    attribute.sourceInfo, name.toString(), attribute.name.toString());
+            }
+
+            element.setAttributeNS(uri, attribute.name.toString(), attribute.value);
+
+            attr = element.getAttributeNodeNS(uri, attribute.name.localName);
+            attr.setUserData(SOURCE_INFO_KEY, attribute.sourceInfo, null);
+            attr.setUserData(ATTR_VALUE_SOURCE_INFO_KEY, attribute.valueSourceInfo, null);
         }
 
         XmlToken token = tokenizer.peekNotNullSkipWS();
