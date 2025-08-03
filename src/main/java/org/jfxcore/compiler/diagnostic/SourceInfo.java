@@ -131,7 +131,7 @@ public final class SourceInfo {
             startColumn = 0;
         }
 
-        for (int i = startLine; i < sourceLines.length; i++) {
+        for (int i = startLine; i < endLine; i++) {
             if (sourceLines[i].isBlank()) {
                 startLine = i + 1;
             } else {
@@ -139,17 +139,19 @@ public final class SourceInfo {
             }
         }
 
-        if (isSubstringBlank(sourceLines[endLine], 0, end.getColumn())) {
-            endLine--;
-            endColumn = sourceLines[endLine].length();
-        }
+        if (endLine > startLine) {
+            if (isSubstringBlank(sourceLines[endLine], 0, end.getColumn())) {
+                endLine--;
+                endColumn = sourceLines[endLine].length();
+            }
 
-        for (int i = endLine; i >= startLine; i--) {
-            if (sourceLines[i].isBlank()) {
-                endLine = i - 1;
-                endColumn = sourceLines[i - 1].length();
-            } else {
-                break;
+            for (int i = endLine; i >= startLine; i--) {
+                if (sourceLines[i].isBlank()) {
+                    endLine = i - 1;
+                    endColumn = sourceLines[i - 1].length();
+                } else {
+                    break;
+                }
             }
         }
 
@@ -169,7 +171,10 @@ public final class SourceInfo {
             }
         }
 
-        trimmed = new SourceInfo(startLine, startColumn, endLine, endColumn);
+        trimmed = startLine != endLine || startColumn < endColumn
+            ? new SourceInfo(startLine, startColumn, endLine, endColumn)
+            : new SourceInfo(start.getLine(), start.getColumn());
+
         trimmed.trimmed = trimmed; // no need to compute the trimmed version again
         return trimmed;
     }

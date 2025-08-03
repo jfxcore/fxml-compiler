@@ -51,7 +51,7 @@ public class FlattenClassTransform implements Transform {
 
         PropertyNode classModifierNode = root.findIntrinsicProperty(Intrinsics.CLASS_MODIFIER);
         if (classModifierNode != null) {
-            String value = classModifierNode.getTrimmedTextValue(context);
+            String value = classModifierNode.getNonEmptyTrimmedText(context);
 
             classModifiers = switch (value) {
                 case "public" -> Modifier.PUBLIC;
@@ -64,11 +64,11 @@ public class FlattenClassTransform implements Transform {
 
         PropertyNode paramsNode = root.findIntrinsicProperty(Intrinsics.CLASS_PARAMETERS);
         List<TypeInstance> params = paramsNode != null
-            ? new TypeParser(paramsNode.getTrimmedTextValue(context)).parse()
+            ? new TypeParser(paramsNode.getNonEmptyTrimmedText(context)).parse()
             : List.of();
 
         if (codeBehindClass != null) {
-            String[] parts = codeBehindClass.getTrimmedTextValue(context).split("\\.");
+            String[] parts = codeBehindClass.getNonEmptyTrimmedText(context).split("\\.");
             packageName = Arrays.stream(parts).limit(parts.length - 1).collect(Collectors.joining("."));
             className = parts[parts.length - 1];
             classModifiers |= Modifier.ABSTRACT;
@@ -108,14 +108,14 @@ public class FlattenClassTransform implements Transform {
                     markupClassNameNode.getSourceInfo(), markupClassNameNode.getMarkupName());
             }
 
-            if (!NameHelper.isJavaIdentifier(markupClassNameNode.getTrimmedTextValue(context))) {
+            if (!NameHelper.isJavaIdentifier(markupClassNameNode.getNonEmptyTrimmedText(context))) {
                 throw PropertyAssignmentErrors.cannotCoercePropertyValue(
                     markupClassNameNode.getTrimmedTextSourceInfo(context),
                     markupClassNameNode.getMarkupName(),
-                    markupClassNameNode.getTrimmedTextValue(context));
+                    markupClassNameNode.getNonEmptyTrimmedText(context));
             }
 
-            markupClassName = markupClassNameNode.getTrimmedTextValue(context);
+            markupClassName = markupClassNameNode.getNonEmptyTrimmedText(context);
         } else {
             markupClassName = NameHelper.getDefaultMarkupClassName(className);
         }

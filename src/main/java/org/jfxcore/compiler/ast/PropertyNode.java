@@ -3,7 +3,6 @@
 
 package org.jfxcore.compiler.ast;
 
-import org.jfxcore.compiler.diagnostic.MarkupException;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.ast.intrinsic.Intrinsic;
 import org.jfxcore.compiler.ast.text.TextNode;
@@ -80,11 +79,6 @@ public class PropertyNode extends AbstractNode {
         return allowQualifiedName;
     }
 
-    /**
-     * Gets the single {@link Node} value of this property.
-     *
-     * @throws MarkupException if the property is empty or if it has multiple values
-     */
     public Node getSingleValue(TransformContext context) {
         if (values.size() == 0) {
             CtClass declaringType = tryGetJvmType(context.getParent(this));
@@ -105,14 +99,7 @@ public class PropertyNode extends AbstractNode {
         return values.get(0);
     }
 
-    /**
-     * Gets the trimmed text value of this property.
-     *
-     * @throws MarkupException if the property is empty or blank,
-     *                         if it has multiple values,
-     *                         or if it doesn't contain text
-     */
-    public String getTrimmedTextValue(TransformContext context) {
+    public String getNonEmptyTrimmedText(TransformContext context) {
         String text = getTextNode(context).getText();
         if (text.isBlank()) {
             CtClass declaringType = tryGetJvmType(context.getParent(this));
@@ -125,13 +112,6 @@ public class PropertyNode extends AbstractNode {
         return text.trim();
     }
 
-    /**
-     * Gets the {@code SourceInfo} of the trimmed text value of this property.
-     *
-     * @throws MarkupException if the property is empty or blank,
-     *                         if it has multiple values,
-     *                         or if it doesn't contain text
-     */
     public SourceInfo getTrimmedTextSourceInfo(TransformContext context) {
         return getTextNode(context).getSourceInfo().getTrimmed();
     }

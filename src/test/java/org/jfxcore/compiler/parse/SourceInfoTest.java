@@ -17,6 +17,44 @@ import static org.junit.jupiter.api.Assertions.*;
 public class SourceInfoTest {
 
     @Test
+    public void Trimmed_Source_Info_Blank_Single_Line_Text() {
+        String sourceText = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Label xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                       text="    ">
+                </Label>
+           """;
+
+        var context = new CompilationContext(new CompilationSource.InMemory(sourceText));
+        try (var ignored = new CompilationScope(context)) {
+            DocumentNode document = new FxmlParser(sourceText).parseDocument();
+            var textNode = (TextNode)document.getRoot().as(ObjectNode.class).getProperty("text").getValues().get(0);
+            var sourceInfo = textNode.getSourceInfo().getTrimmed();
+            assertEquals(new SourceInfo(2, 18), sourceInfo);
+        }
+    }
+
+    @Test
+    public void Trimmed_Source_Info_Blank_Multi_Line_Text() {
+        String sourceText = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Label xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                       text="    \s
+                          \s
+                       ">
+                </Label>
+           """;
+
+        var context = new CompilationContext(new CompilationSource.InMemory(sourceText));
+        try (var ignored = new CompilationScope(context)) {
+            DocumentNode document = new FxmlParser(sourceText).parseDocument();
+            var textNode = (TextNode)document.getRoot().as(ObjectNode.class).getProperty("text").getValues().get(0);
+            var sourceInfo = textNode.getSourceInfo().getTrimmed();
+            assertEquals(new SourceInfo(2, 18), sourceInfo);
+        }
+    }
+
+    @Test
     public void Trimmed_Source_Info_Without_Whitespace() {
         String sourceText = """
                 <?xml version="1.0" encoding="UTF-8"?>

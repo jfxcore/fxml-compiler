@@ -36,7 +36,7 @@ public class AddTemplateIdFields implements Transform {
             throw GeneralErrors.unexpectedIntrinsic(idNode.getSourceInfo(), idNode.getMarkupName());
         }
 
-        String id = idNode.getTrimmedTextValue(context);
+        String id = idNode.getNonEmptyTrimmedText(context);
 
         if (context.getIds().contains(id)) {
             throw GeneralErrors.duplicateId(idNode.getTrimmedTextSourceInfo(context), id);

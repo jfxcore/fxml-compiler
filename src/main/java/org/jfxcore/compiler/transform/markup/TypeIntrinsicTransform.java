@@ -29,7 +29,7 @@ public class TypeIntrinsicTransform implements Transform {
 
         PropertyNode propertyNode = ((ObjectNode)node).getProperty("name");
         Resolver resolver = new Resolver(propertyNode.getTrimmedTextSourceInfo(context));
-        CtClass clazz = resolver.resolveClassAgainstImports(propertyNode.getTrimmedTextValue(context));
+        CtClass clazz = resolver.resolveClassAgainstImports(propertyNode.getNonEmptyTrimmedText(context));
         TypeInstance typeInstance = resolver.getTypeInstance(clazz);
 
         return new EmitLiteralNode(
