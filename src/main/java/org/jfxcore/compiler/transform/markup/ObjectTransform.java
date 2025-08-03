@@ -271,9 +271,9 @@ public class ObjectTransform implements Transform {
 
     private ValueNode createConstantNode(
             TransformContext context, ObjectNode objectNode, PropertyNode constantProperty) {
-        SourceInfo valueSourceInfo = constantProperty.getSingleValue(context).getSourceInfo();
+        String fieldName = constantProperty.getTrimmedTextNotEmpty(context);
+        SourceInfo valueSourceInfo = constantProperty.getTrimmedTextSourceInfo(context);
         CtClass declaringType = (CtClass)objectNode.getNodeData(NodeDataKey.CONSTANT_DECLARING_TYPE);
-        String fieldName = constantProperty.getTextValueNotEmpty(context);
 
         try {
             CtField field = declaringType.getField(fieldName);
@@ -292,9 +292,8 @@ public class ObjectTransform implements Transform {
 
     private ValueNode createFactoryNode(
             TransformContext context, ObjectNode objectNode, PropertyNode factoryProperty) {
-        Node factoryMethodNode = factoryProperty.getSingleValue(context);
-        String factoryMethodName = factoryProperty.getTextValueNotEmpty(context);
-        TypeParser typeParser = new TypeParser(factoryMethodName, factoryMethodNode.getSourceInfo().getStart());
+        String factoryMethodName = factoryProperty.getTrimmedTextNotEmpty(context);
+        TypeParser typeParser = new TypeParser(factoryMethodName, factoryProperty.getTrimmedTextSourceInfo(context).getStart());
         TypeParser.MethodInfo methodInfo = typeParser.parseMethod();
         CtClass declaringClass = (CtClass)objectNode.getType().getNodeData(NodeDataKey.FACTORY_DECLARING_TYPE);
         CtMethod factoryMethod = new Resolver(methodInfo.sourceInfo()).tryResolveMethod(declaringClass, m ->
@@ -327,7 +326,7 @@ public class ObjectTransform implements Transform {
         PropertyNode propertyNode = node.findIntrinsicProperty(Intrinsics.ID);
         if (propertyNode != null) {
             propertyNode.remove();
-            return propertyNode.getTextValue(context);
+            return propertyNode.getTrimmedTextNotEmpty(context);
         }
 
         return null;

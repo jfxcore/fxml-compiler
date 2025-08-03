@@ -1,4 +1,4 @@
-// Copyright (c) 2021, 2022, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2025, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.transform.markup;
@@ -28,14 +28,14 @@ public class TypeIntrinsicTransform implements Transform {
         }
 
         PropertyNode propertyNode = ((ObjectNode)node).getProperty("name");
-        Resolver resolver = new Resolver(propertyNode.getSourceInfo());
-        CtClass clazz = resolver.resolveClassAgainstImports(propertyNode.getTextValue(context));
+        Resolver resolver = new Resolver(propertyNode.getTrimmedTextSourceInfo(context));
+        CtClass clazz = resolver.resolveClassAgainstImports(propertyNode.getTrimmedTextNotEmpty(context));
         TypeInstance typeInstance = resolver.getTypeInstance(clazz);
 
         return new EmitLiteralNode(
             resolver.getTypeInstance(Classes.ClassType(), List.of(typeInstance)),
             clazz.getName(),
-            propertyNode.getSourceInfo());
+            node.getSourceInfo());
     }
 
 }

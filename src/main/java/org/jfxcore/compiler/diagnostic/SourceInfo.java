@@ -1,4 +1,4 @@
-// Copyright (c) 2022, 2023, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2025, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.diagnostic;
@@ -82,6 +82,7 @@ public final class SourceInfo {
     private final Location end;
     private final String[] sourceLines;
     private final String lineText;
+    private SourceInfo trimmed;
 
     public SourceInfo(int line, int column) {
         start = end = new Location(line, column);
@@ -110,6 +111,82 @@ public final class SourceInfo {
             sourceLines = null;
             lineText = null;
         }
+    }
+
+    /**
+     * Returns a {@code SourceInfo} without leading and trailing whitespace.
+     */
+    public SourceInfo getTrimmed() {
+        if (trimmed != null) {
+            return trimmed;
+        }
+
+        int startLine = start.getLine();
+        int startColumn = start.getColumn();
+        int endLine = end.getLine();
+        int endColumn = end.getColumn();
+
+        if (isSubstringBlank(sourceLines[startLine], start.getColumn(), sourceLines[startLine].length())) {
+            startLine++;
+            startColumn = 0;
+        }
+
+        for (int i = startLine; i < endLine; i++) {
+            if (sourceLines[i].isBlank()) {
+                startLine = i + 1;
+            } else {
+                break;
+            }
+        }
+
+        if (endLine > startLine) {
+            if (isSubstringBlank(sourceLines[endLine], 0, end.getColumn())) {
+                endLine--;
+                endColumn = sourceLines[endLine].length();
+            }
+
+            for (int i = endLine; i >= startLine; i--) {
+                if (sourceLines[i].isBlank()) {
+                    endLine = i - 1;
+                    endColumn = sourceLines[i - 1].length();
+                } else {
+                    break;
+                }
+            }
+        }
+
+        for (int i = startColumn; i < sourceLines[startLine].length(); i++) {
+            if (Character.isWhitespace(sourceLines[startLine].charAt(i))) {
+                startColumn++;
+            } else {
+                break;
+            }
+        }
+
+        for (int i = endColumn - 1; i >= 0; i--) {
+            if (Character.isWhitespace(sourceLines[endLine].charAt(i))) {
+                endColumn--;
+            } else {
+                break;
+            }
+        }
+
+        trimmed = startLine != endLine || startColumn < endColumn
+            ? new SourceInfo(startLine, startColumn, endLine, endColumn)
+            : new SourceInfo(start.getLine(), start.getColumn());
+
+        trimmed.trimmed = trimmed; // no need to compute the trimmed version again
+        return trimmed;
+    }
+
+    private boolean isSubstringBlank(String str, int start, int end) {
+        for (int i = start; i < end; i++) {
+            if (!Character.isWhitespace(str.charAt(i))) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /**

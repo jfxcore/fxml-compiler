@@ -1,4 +1,4 @@
-// Copyright (c) 2021, 2024, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2025, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.transform.markup;
@@ -36,10 +36,10 @@ public class AddTemplateIdFields implements Transform {
             throw GeneralErrors.unexpectedIntrinsic(idNode.getSourceInfo(), idNode.getMarkupName());
         }
 
-        String id = idNode.getTextValueNotEmpty(context);
+        String id = idNode.getTrimmedTextNotEmpty(context);
 
         if (context.getIds().contains(id)) {
-            throw GeneralErrors.duplicateId(idNode.getSingleValue(context).getSourceInfo(), id);
+            throw GeneralErrors.duplicateId(idNode.getTrimmedTextSourceInfo(context), id);
         }
 
         context.getIds().add(id);
