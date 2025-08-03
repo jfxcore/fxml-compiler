@@ -1,4 +1,4 @@
-// Copyright (c) 2022, 2023, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2025, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.diagnostic.errors;
@@ -58,6 +58,11 @@ public class PropertyAssignmentErrors {
             ErrorCode.CANNOT_COERCE_PROPERTY_VALUE, propertyName, value));
     }
 
+    public static MarkupException propertyCannotBeEmpty(SourceInfo sourceInfo, String propertyName) {
+        return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
+            ErrorCode.PROPERTY_CANNOT_BE_EMPTY, propertyName));
+    }
+
     public static MarkupException propertyCannotBeEmpty(SourceInfo sourceInfo, CtClass declaringType, String propertyName) {
         return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
             ErrorCode.PROPERTY_CANNOT_BE_EMPTY, formatPropertyName(declaringType, propertyName)));
@@ -68,6 +73,11 @@ public class PropertyAssignmentErrors {
             ErrorCode.PROPERTY_CANNOT_BE_EMPTY, formatPropertyName(declaringType, propertyName)));
     }
 
+    public static MarkupException propertyMustContainText(SourceInfo sourceInfo, String propertyName) {
+        return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
+            ErrorCode.PROPERTY_MUST_CONTAIN_TEXT, propertyName));
+    }
+
     public static MarkupException propertyMustContainText(SourceInfo sourceInfo, CtClass declaringType, String propertyName) {
         return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
             ErrorCode.PROPERTY_MUST_CONTAIN_TEXT, formatPropertyName(declaringType, propertyName)));
@@ -76,6 +86,11 @@ public class PropertyAssignmentErrors {
     public static MarkupException propertyMustContainText(SourceInfo sourceInfo, String declaringType, String propertyName) {
         return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
             ErrorCode.PROPERTY_MUST_CONTAIN_TEXT, formatPropertyName(declaringType, propertyName)));
+    }
+
+    public static MarkupException propertyCannotHaveMultipleValues(SourceInfo sourceInfo, String propertyName) {
+        return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
+            ErrorCode.PROPERTY_CANNOT_HAVE_MULTIPLE_VALUES, propertyName));
     }
 
     public static MarkupException propertyCannotHaveMultipleValues(SourceInfo sourceInfo, CtClass declaringType, String propertyName) {

@@ -108,8 +108,8 @@ public class ResolveTypeTransform implements Transform {
 
             if (parentIsDocument) {
                 String formattedTypeArgs = new TypeFormatter(
-                    typeArgsNode.getTextValueNotEmpty(context),
-                    typeArgsNode.getSourceInfo().getStart()).format();
+                    typeArgsNode.getTextValue(context),
+                    typeArgsNode.getTextSourceInfo(context).getStart()).format();
 
                 objectNode.setNodeData(NodeDataKey.FORMATTED_TYPE_ARGUMENTS, formattedTypeArgs);
             }
@@ -146,7 +146,7 @@ public class ResolveTypeTransform implements Transform {
 
                 List<TypeInstance> typeArguments = new TypeParser(
                     typeArgsNode.getTextValue(context),
-                    typeArgsNode.getValues().get(0).getSourceInfo().getStart()).parse();
+                    typeArgsNode.getTextSourceInfo(context).getStart()).parse();
 
                 type = resolver.getTypeInstance(objectTypeClass, typeArguments);
 

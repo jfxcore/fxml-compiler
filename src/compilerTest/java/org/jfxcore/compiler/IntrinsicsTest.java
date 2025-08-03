@@ -1,4 +1,4 @@
-// Copyright (c) 2021, 2024, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2025, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler;
@@ -147,6 +147,18 @@ public class IntrinsicsTest extends CompilerTestBase {
 
     @Nested
     public class IdIntrinsicTest extends CompilerTestBase {
+        @Test
+        public void Empty_FxId_Is_Invalid() {
+            MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+                    <?import javafx.scene.layout.*?>
+                    <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
+                        <GridPane fx:id="  "/>
+                    </GridPane>
+                """));
+
+            assertEquals(ErrorCode.PROPERTY_CANNOT_BE_EMPTY, ex.getDiagnostic().getCode());
+            assertCodeHighlight("fx:id=\"  \"", ex);
+        }
         @Test
         public void Duplicate_FxId_Is_Invalid() {
             MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""

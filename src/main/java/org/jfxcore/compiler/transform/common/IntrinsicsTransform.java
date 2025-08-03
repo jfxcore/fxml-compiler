@@ -172,9 +172,9 @@ public class IntrinsicsTransform implements Transform {
         }
 
         if (propertyNode.isIntrinsic(Intrinsics.ID)) {
-            String value = propertyNode.getTextValueNotEmpty(context);
+            String value = propertyNode.getTextValue(context);
             if (!NameHelper.isJavaIdentifier(value)) {
-                throw GeneralErrors.invalidId(propertyNode.getSingleValue(context).getSourceInfo(), value);
+                throw GeneralErrors.invalidId(propertyNode.getTextSourceInfo(context), value);
             }
         }
 

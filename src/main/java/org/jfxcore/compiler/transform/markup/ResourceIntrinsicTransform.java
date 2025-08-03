@@ -1,4 +1,4 @@
-// Copyright (c) 2022, 2024, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2025, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.transform.markup;
@@ -32,7 +32,7 @@ public class ResourceIntrinsicTransform implements Transform {
         PropertyNode property = context.getParent().as(PropertyNode.class);
         if (property == null || property.isIntrinsic()) {
             return new EmitResourceNode(
-                name.getTextValueNotEmpty(context),
+                name.getTextValue(context),
                 resolver.getTypeInstance(Classes.URLType()),
                 node.getSourceInfo());
         }
@@ -61,7 +61,7 @@ public class ResourceIntrinsicTransform implements Transform {
                 node.getSourceInfo(), propertyInfo, resolver.getTypeInstance(Classes.URLType()));
         }
 
-        return new EmitResourceNode(name.getTextValueNotEmpty(context), targetType, node.getSourceInfo());
+        return new EmitResourceNode(name.getTextValue(context), targetType, node.getSourceInfo());
     }
 
 }

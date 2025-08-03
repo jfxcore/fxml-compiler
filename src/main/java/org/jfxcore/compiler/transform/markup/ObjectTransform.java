@@ -271,9 +271,9 @@ public class ObjectTransform implements Transform {
 
     private ValueNode createConstantNode(
             TransformContext context, ObjectNode objectNode, PropertyNode constantProperty) {
-        SourceInfo valueSourceInfo = constantProperty.getSingleValue(context).getSourceInfo();
+        String fieldName = constantProperty.getTextValue(context);
+        SourceInfo valueSourceInfo = constantProperty.getTextSourceInfo(context);
         CtClass declaringType = (CtClass)objectNode.getNodeData(NodeDataKey.CONSTANT_DECLARING_TYPE);
-        String fieldName = constantProperty.getTextValueNotEmpty(context);
 
         try {
             CtField field = declaringType.getField(fieldName);
@@ -292,9 +292,8 @@ public class ObjectTransform implements Transform {
 
     private ValueNode createFactoryNode(
             TransformContext context, ObjectNode objectNode, PropertyNode factoryProperty) {
-        Node factoryMethodNode = factoryProperty.getSingleValue(context);
-        String factoryMethodName = factoryProperty.getTextValueNotEmpty(context);
-        TypeParser typeParser = new TypeParser(factoryMethodName, factoryMethodNode.getSourceInfo().getStart());
+        String factoryMethodName = factoryProperty.getTextValue(context);
+        TypeParser typeParser = new TypeParser(factoryMethodName, factoryProperty.getTextSourceInfo(context).getStart());
         TypeParser.MethodInfo methodInfo = typeParser.parseMethod();
         CtClass declaringClass = (CtClass)objectNode.getType().getNodeData(NodeDataKey.FACTORY_DECLARING_TYPE);
         CtMethod factoryMethod = new Resolver(methodInfo.sourceInfo()).tryResolveMethod(declaringClass, m ->
