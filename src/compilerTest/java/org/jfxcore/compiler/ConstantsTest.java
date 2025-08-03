@@ -1,13 +1,15 @@
-// Copyright (c) 2022, 2023, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2025, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler;
 
 import javafx.scene.Node;
 import javafx.scene.control.TableView;
+import javafx.scene.layout.Pane;
 import org.jfxcore.compiler.diagnostic.ErrorCode;
 import org.jfxcore.compiler.diagnostic.MarkupException;
 import org.jfxcore.compiler.util.CompilerTestBase;
+import org.jfxcore.compiler.util.Reflection;
 import org.jfxcore.compiler.util.TestExtension;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -120,7 +122,29 @@ public class ConstantsTest extends CompilerTestBase {
             "javafx.scene.control.TableView",
             "CONSTRAINED_RESIZE_POLICY",
             "Ljavafx/util/Callback;");
-        assertSame(tableView.getColumnResizePolicy(), TableView.CONSTRAINED_RESIZE_POLICY);
+        assertSame(TableView.CONSTRAINED_RESIZE_POLICY, tableView.getColumnResizePolicy());
     }
 
+    @Test
+    public void FxConstant_With_Id_Can_Be_Referenced() {
+        Pane pane = compileAndRun("""
+            <?import javafx.scene.control.*?>
+            <?import javafx.scene.layout.*?>
+            <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
+                <fx:define>
+                    <TableView fx:id="resizePolicy1" fx:constant="CONSTRAINED_RESIZE_POLICY"/>
+                </fx:define>
+                <TableView columnResizePolicy="$resizePolicy1"/>
+            </GridPane>
+        """);
+
+        TableView<?> tableView = (TableView<?>)pane.getChildrenUnmodifiable().get(0);
+        assertFieldAccess(
+            pane,
+            "javafx.scene.control.TableView",
+            "CONSTRAINED_RESIZE_POLICY",
+            "Ljavafx/util/Callback;");
+        assertSame(TableView.CONSTRAINED_RESIZE_POLICY, tableView.getColumnResizePolicy());
+        assertSame(tableView.getColumnResizePolicy(), Reflection.getFieldValue(pane, "resizePolicy1"));
+    }
 }
