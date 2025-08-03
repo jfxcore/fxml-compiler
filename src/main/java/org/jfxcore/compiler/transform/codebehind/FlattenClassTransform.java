@@ -51,38 +51,38 @@ public class FlattenClassTransform implements Transform {
 
         PropertyNode classModifierNode = root.findIntrinsicProperty(Intrinsics.CLASS_MODIFIER);
         if (classModifierNode != null) {
-            String value = classModifierNode.getTextValue(context);
+            String value = classModifierNode.getTrimmedTextValue(context);
 
             classModifiers = switch (value) {
                 case "public" -> Modifier.PUBLIC;
                 case "protected" -> Modifier.PROTECTED;
                 case "package" -> 0;
                 default -> throw PropertyAssignmentErrors.cannotCoercePropertyValue(
-                    classModifierNode.getTextSourceInfo(context), classModifierNode.getMarkupName(), value);
+                    classModifierNode.getTrimmedTextSourceInfo(context), classModifierNode.getMarkupName(), value);
             };
         }
 
         PropertyNode paramsNode = root.findIntrinsicProperty(Intrinsics.CLASS_PARAMETERS);
         List<TypeInstance> params = paramsNode != null
-            ? new TypeParser(paramsNode.getTextValue(context)).parse()
+            ? new TypeParser(paramsNode.getTrimmedTextValue(context)).parse()
             : List.of();
 
         if (codeBehindClass != null) {
-            String[] parts = codeBehindClass.getTextValue(context).split("\\.");
+            String[] parts = codeBehindClass.getTrimmedTextValue(context).split("\\.");
             packageName = Arrays.stream(parts).limit(parts.length - 1).collect(Collectors.joining("."));
             className = parts[parts.length - 1];
             classModifiers |= Modifier.ABSTRACT;
 
             if (packageName.isEmpty()) {
                 throw SymbolResolutionErrors.unnamedPackageNotSupported(
-                    codeBehindClass.getTextSourceInfo(context), codeBehindClass.getMarkupName());
+                    codeBehindClass.getTrimmedTextSourceInfo(context), codeBehindClass.getMarkupName());
             }
 
             String fileName = FileUtil.getFileNameWithoutExtension(
                 context.getDocument().getSourceFile().getFileName().toString());
 
             if (!className.equals(fileName)) {
-                throw GeneralErrors.codeBehindClassNameMismatch(codeBehindClass.getTextSourceInfo(context));
+                throw GeneralErrors.codeBehindClassNameMismatch(codeBehindClass.getTrimmedTextSourceInfo(context));
             }
         } else {
             Path sourceFile = context.getParent(DocumentNode.class).getSourceFile();
@@ -108,14 +108,14 @@ public class FlattenClassTransform implements Transform {
                     markupClassNameNode.getSourceInfo(), markupClassNameNode.getMarkupName());
             }
 
-            if (!NameHelper.isJavaIdentifier(markupClassNameNode.getTextValue(context))) {
+            if (!NameHelper.isJavaIdentifier(markupClassNameNode.getTrimmedTextValue(context))) {
                 throw PropertyAssignmentErrors.cannotCoercePropertyValue(
-                    markupClassNameNode.getTextSourceInfo(context),
+                    markupClassNameNode.getTrimmedTextSourceInfo(context),
                     markupClassNameNode.getMarkupName(),
-                    markupClassNameNode.getTextValue(context));
+                    markupClassNameNode.getTrimmedTextValue(context));
             }
 
-            markupClassName = markupClassNameNode.getTextValue(context);
+            markupClassName = markupClassNameNode.getTrimmedTextValue(context);
         } else {
             markupClassName = NameHelper.getDefaultMarkupClassName(className);
         }

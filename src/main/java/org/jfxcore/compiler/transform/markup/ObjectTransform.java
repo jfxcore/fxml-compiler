@@ -271,8 +271,8 @@ public class ObjectTransform implements Transform {
 
     private ValueNode createConstantNode(
             TransformContext context, ObjectNode objectNode, PropertyNode constantProperty) {
-        String fieldName = constantProperty.getTextValue(context);
-        SourceInfo valueSourceInfo = constantProperty.getTextSourceInfo(context);
+        String fieldName = constantProperty.getTrimmedTextValue(context);
+        SourceInfo valueSourceInfo = constantProperty.getTrimmedTextSourceInfo(context);
         CtClass declaringType = (CtClass)objectNode.getNodeData(NodeDataKey.CONSTANT_DECLARING_TYPE);
 
         try {
@@ -292,8 +292,8 @@ public class ObjectTransform implements Transform {
 
     private ValueNode createFactoryNode(
             TransformContext context, ObjectNode objectNode, PropertyNode factoryProperty) {
-        String factoryMethodName = factoryProperty.getTextValue(context);
-        TypeParser typeParser = new TypeParser(factoryMethodName, factoryProperty.getTextSourceInfo(context).getStart());
+        String factoryMethodName = factoryProperty.getTrimmedTextValue(context);
+        TypeParser typeParser = new TypeParser(factoryMethodName, factoryProperty.getTrimmedTextSourceInfo(context).getStart());
         TypeParser.MethodInfo methodInfo = typeParser.parseMethod();
         CtClass declaringClass = (CtClass)objectNode.getType().getNodeData(NodeDataKey.FACTORY_DECLARING_TYPE);
         CtMethod factoryMethod = new Resolver(methodInfo.sourceInfo()).tryResolveMethod(declaringClass, m ->
@@ -326,7 +326,7 @@ public class ObjectTransform implements Transform {
         PropertyNode propertyNode = node.findIntrinsicProperty(Intrinsics.ID);
         if (propertyNode != null) {
             propertyNode.remove();
-            return propertyNode.getTextValue(context);
+            return propertyNode.getTrimmedTextValue(context);
         }
 
         return null;

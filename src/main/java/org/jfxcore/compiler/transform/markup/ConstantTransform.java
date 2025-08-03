@@ -44,8 +44,8 @@ public class ConstantTransform implements Transform {
             return node;
         }
 
-        String fieldName = constantProperty.getTextValue(context);
-        SourceInfo sourceInfo = constantProperty.getTextSourceInfo(context);
+        String fieldName = constantProperty.getTrimmedTextValue(context);
+        SourceInfo sourceInfo = constantProperty.getTrimmedTextSourceInfo(context);
         Resolver resolver = new Resolver(sourceInfo);
         CtClass declaringType = (CtClass)objectNode.getType().getNodeData(NodeDataKey.CONSTANT_DECLARING_TYPE);
         CtField field = resolver.resolveField(declaringType, fieldName, false);
