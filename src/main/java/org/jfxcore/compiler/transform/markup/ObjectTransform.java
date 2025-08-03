@@ -1,4 +1,4 @@
-// Copyright (c) 2022, 2024, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2025, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.transform.markup;
@@ -29,10 +29,10 @@ import org.jfxcore.compiler.diagnostic.Diagnostic;
 import org.jfxcore.compiler.diagnostic.ErrorCode;
 import org.jfxcore.compiler.diagnostic.MarkupException;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
-import org.jfxcore.compiler.diagnostic.errors.BindingSourceErrors;
 import org.jfxcore.compiler.diagnostic.errors.GeneralErrors;
 import org.jfxcore.compiler.diagnostic.errors.ObjectInitializationErrors;
 import org.jfxcore.compiler.diagnostic.errors.SymbolResolutionErrors;
+import org.jfxcore.compiler.parse.TypeParser;
 import org.jfxcore.compiler.transform.Transform;
 import org.jfxcore.compiler.transform.TransformContext;
 import org.jfxcore.compiler.transform.markup.util.AdderFactory;
@@ -46,7 +46,6 @@ import org.jfxcore.compiler.util.Resolver;
 import org.jfxcore.compiler.util.TypeHelper;
 import org.jfxcore.compiler.util.TypeInstance;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.stream.Collectors;
@@ -293,38 +292,32 @@ public class ObjectTransform implements Transform {
 
     private ValueNode createFactoryNode(
             TransformContext context, ObjectNode objectNode, PropertyNode factoryProperty) {
+        Node factoryMethodNode = factoryProperty.getSingleValue(context);
         String factoryMethodName = factoryProperty.getTextValueNotEmpty(context);
-        Resolver resolver = new Resolver(factoryProperty.getSourceInfo());
-        CtClass declaringClass;
-        String methodName;
-
-        String[] path = factoryMethodName.split("\\.");
-        if (path.length == 1) {
-            declaringClass = TypeHelper.getJvmType(objectNode);
-            methodName = factoryMethodName;
-        } else {
-            String className = String.join(".", Arrays.copyOf(path, path.length - 1));
-            declaringClass = resolver.resolveClassAgainstImports(className);
-            methodName = path[path.length - 1];
-        }
-
-        CtMethod factoryMethod = resolver.tryResolveMethod(declaringClass, m -> {
-            int modifiers = m.getModifiers();
-            return Modifier.isStatic(modifiers)
-                && Modifier.isPublic(modifiers)
-                && m.getName().equals(methodName)
-                && unchecked(factoryProperty.getSourceInfo(), m::getParameterTypes).length == 0;
-        });
+        TypeParser typeParser = new TypeParser(factoryMethodName, factoryMethodNode.getSourceInfo().getStart());
+        TypeParser.MethodInfo methodInfo = typeParser.parseMethod();
+        CtClass declaringClass = (CtClass)objectNode.getType().getNodeData(NodeDataKey.FACTORY_DECLARING_TYPE);
+        CtMethod factoryMethod = new Resolver(methodInfo.sourceInfo()).tryResolveMethod(declaringClass, m ->
+            m.getName().equals(methodInfo.methodName())
+            && unchecked(methodInfo.sourceInfo(), m::getParameterTypes).length == 0);
 
         if (factoryMethod == null) {
-            throw SymbolResolutionErrors.memberNotFound(factoryProperty.getSourceInfo(), declaringClass, methodName);
+            throw SymbolResolutionErrors.memberNotFound(
+                factoryProperty.getSourceInfo(), declaringClass, methodInfo.methodName());
         }
+
+        if (!Modifier.isStatic(factoryMethod.getModifiers())) {
+            throw SymbolResolutionErrors.instanceMemberReferencedFromStaticContext(
+                methodInfo.sourceInfo(), factoryMethod);
+        }
+
+        AccessVerifier.verifyAccessible(factoryMethod, context.getMarkupClass(), methodInfo.sourceInfo());
 
         return EmitObjectNode
             .factory(
                 TypeHelper.getTypeInstance(objectNode),
                 factoryMethod,
-                factoryProperty.getSourceInfo())
+                methodInfo.sourceInfo())
             .children(objectNode.getProperties().stream().filter(p -> !p.isIntrinsic(Intrinsics.FACTORY)).toList())
             .backingField(findAndRemoveId(context, objectNode))
             .create();

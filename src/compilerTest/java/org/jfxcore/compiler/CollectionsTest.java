@@ -1,4 +1,4 @@
-// Copyright (c) 2022, 2023, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2025, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler;
@@ -123,13 +123,12 @@ public class CollectionsTest {
                             <String>foo</String>
                             <Double fx:value="123.5"/>
                         </HashMap>
-                    
-                        <Map fx:typeArguments="String,Object" fx:id="map1"
-                             fx:factory="FXCollections.observableHashMap">
+
+                        <FXCollections fx:id="map1" fx:factory="<String,Object>observableHashMap">
                             <String fx:id="str0">foo</String>
                             <Double fx:id="val0" fx:value="123.5"/>
                             <String>baz</String>
-                        </Map>
+                        </FXCollections>
                     </properties>
                 </GridPane>
             """);

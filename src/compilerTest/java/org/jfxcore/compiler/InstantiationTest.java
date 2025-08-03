@@ -25,8 +25,6 @@ import org.jfxcore.compiler.util.TestExtension;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import java.util.ArrayList;
-import java.util.List;
 
 import static org.jfxcore.compiler.util.MoreAssertions.*;
 import static org.junit.jupiter.api.Assertions.*;
@@ -755,11 +753,11 @@ public class InstantiationTest extends CompilerTestBase {
                 <?import javafx.scene.layout.*?>
                 <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                     <fx:define>
-                        <ObservableList fx:id="list" fx:factory="FXCollections.observableArrayList">
+                        <FXCollections fx:id="list" fx:factory="   <String> observableArrayList ">
                             <String>foo</String>
                             <String>bar</String>
                             <String>baz</String>
-                        </ObservableList>
+                        </FXCollections>
                     </fx:define>
                 </GridPane>
             """);
@@ -773,54 +771,61 @@ public class InstantiationTest extends CompilerTestBase {
         }
 
         @Test
-        public void Unqualified_Factory_Method_Cannot_Be_Found() {
+        public void ObservableArrayList_With_Incompatible_TypeArguments() {
             MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
                 <?import javafx.collections.*?>
                 <?import javafx.scene.layout.*?>
                 <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                     <fx:define>
-                        <ObservableList fx:factory="observableArrayList">
+                        <FXCollections fx:factory="<Double>observableArrayList">
                             <String>foo</String>
-                        </ObservableList>
+                        </FXCollections>
+                    </fx:define>
+                </GridPane>
+            """));
+
+            assertEquals(ErrorCode.CANNOT_ADD_ITEM_INCOMPATIBLE_TYPE, ex.getDiagnostic().getCode());
+            assertCodeHighlight("<String>foo</String>", ex);
+        }
+
+        @SuppressWarnings("unused")
+        public static class TestListFactory {
+            public <T> ObservableList<T> newListInstance() { return null; }
+            private <T> ObservableList<T> newListPrivate() { return null; }
+        }
+
+        @Test
+        public void Inaccessible_Factory_Method_Not_Found() {
+            MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+                <?import javafx.scene.layout.*?>
+                <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
+                    <fx:define>
+                        <TestListFactory fx:id="list" fx:factory="   newListPrivate  ">
+                            <String>foo</String>
+                        </TestListFactory>
                     </fx:define>
                 </GridPane>
             """));
 
             assertEquals(ErrorCode.MEMBER_NOT_FOUND, ex.getDiagnostic().getCode());
-            assertCodeHighlight("fx:factory=\"observableArrayList\"", ex);
-        }
-
-        @SuppressWarnings("unused")
-        public static class TestList extends javafx.collections.ObservableListBase<String> {
-            private final List<String> backingList = new ArrayList<>();
-            private TestList() {}
-            @Override public String get(int index) { return backingList.get(index); }
-            @Override public int size() { return backingList.size(); }
-            @Override public boolean add(String s) { return backingList.add(s); }
-            public static TestList newInstance() { return new TestList(); }
+            assertCodeHighlight("newListPrivate", ex);
         }
 
         @Test
-        public void List_Is_Instantiated_With_Unqualified_Factory_Method() {
-            GridPane root = compileAndRun("""
+        public void Factory_Method_Must_Be_Static() {
+            MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
                 <?import javafx.scene.layout.*?>
                 <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                     <fx:define>
-                        <TestList fx:id="list" fx:factory="newInstance">
+                        <TestListFactory fx:id="list" fx:factory="   newListInstance  ">
                             <String>foo</String>
-                            <String>bar</String>
-                            <String>baz</String>
-                        </TestList>
+                        </TestListFactory>
                     </fx:define>
                 </GridPane>
-            """);
+            """));
 
-            TestList list = (TestList)root.getProperties().get("list");
-            assertNotNull(list);
-            assertEquals(3, list.size());
-            assertEquals("foo", list.get(0));
-            assertEquals("bar", list.get(1));
-            assertEquals("baz", list.get(2));
+            assertEquals(ErrorCode.INSTANCE_MEMBER_REFERENCED_FROM_STATIC_CONTEXT, ex.getDiagnostic().getCode());
+            assertCodeHighlight("newListInstance", ex);
         }
     }
 
