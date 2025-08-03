@@ -99,7 +99,7 @@ public class PropertyNode extends AbstractNode {
         return values.get(0);
     }
 
-    public String getNonEmptyTrimmedText(TransformContext context) {
+    public String getTrimmedTextNotEmpty(TransformContext context) {
         String text = getTextNode(context).getText();
         if (text.isBlank()) {
             CtClass declaringType = tryGetJvmType(context.getParent(this));

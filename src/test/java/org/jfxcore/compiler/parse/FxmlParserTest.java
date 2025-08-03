@@ -61,7 +61,7 @@ public class FxmlParserTest extends TestBase {
             """).parseDocument();
 
         //noinspection ConstantConditions
-        assertEquals("10", ((ObjectNode)document.getRoot()).findProperty("prefWidth").getNonEmptyTrimmedText(null));
+        assertEquals("10", ((ObjectNode)document.getRoot()).findProperty("prefWidth").getTrimmedTextNotEmpty(null));
     }
 
     @Test

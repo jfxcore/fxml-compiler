@@ -271,7 +271,7 @@ public class ObjectTransform implements Transform {
 
     private ValueNode createConstantNode(
             TransformContext context, ObjectNode objectNode, PropertyNode constantProperty) {
-        String fieldName = constantProperty.getNonEmptyTrimmedText(context);
+        String fieldName = constantProperty.getTrimmedTextNotEmpty(context);
         SourceInfo valueSourceInfo = constantProperty.getTrimmedTextSourceInfo(context);
         CtClass declaringType = (CtClass)objectNode.getNodeData(NodeDataKey.CONSTANT_DECLARING_TYPE);
 
@@ -292,7 +292,7 @@ public class ObjectTransform implements Transform {
 
     private ValueNode createFactoryNode(
             TransformContext context, ObjectNode objectNode, PropertyNode factoryProperty) {
-        String factoryMethodName = factoryProperty.getNonEmptyTrimmedText(context);
+        String factoryMethodName = factoryProperty.getTrimmedTextNotEmpty(context);
         TypeParser typeParser = new TypeParser(factoryMethodName, factoryProperty.getTrimmedTextSourceInfo(context).getStart());
         TypeParser.MethodInfo methodInfo = typeParser.parseMethod();
         CtClass declaringClass = (CtClass)objectNode.getType().getNodeData(NodeDataKey.FACTORY_DECLARING_TYPE);
@@ -326,7 +326,7 @@ public class ObjectTransform implements Transform {
         PropertyNode propertyNode = node.findIntrinsicProperty(Intrinsics.ID);
         if (propertyNode != null) {
             propertyNode.remove();
-            return propertyNode.getNonEmptyTrimmedText(context);
+            return propertyNode.getTrimmedTextNotEmpty(context);
         }
 
         return null;

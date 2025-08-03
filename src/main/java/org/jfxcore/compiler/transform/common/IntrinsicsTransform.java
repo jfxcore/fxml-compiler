@@ -172,7 +172,7 @@ public class IntrinsicsTransform implements Transform {
         }
 
         if (propertyNode.isIntrinsic(Intrinsics.ID)) {
-            String value = propertyNode.getNonEmptyTrimmedText(context);
+            String value = propertyNode.getTrimmedTextNotEmpty(context);
             if (!NameHelper.isJavaIdentifier(value)) {
                 throw GeneralErrors.invalidId(propertyNode.getTrimmedTextSourceInfo(context), value);
             }
