@@ -1,0 +1,18 @@
+title: FXML 2.0
+
+color_scheme: light
+
+plugins:
+  - jekyll-remote-theme
+
+callouts:
+  note:
+    title: Note
+    color: purple
+  highlight:
+    color: yellow
+  warning:
+    title: Warning
+    color: red
+
+remote_theme: pmarsceill/just-the-docs
