@@ -1,4 +1,4 @@
-// Copyright (c) 2022, 2024, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2025, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.transform.markup;
@@ -364,15 +364,16 @@ public class PropertyAssignmentTransform implements Transform {
 
     private ValueEmitterNode createEventHandlerNode(TransformContext context, ValueNode node, TypeInstance targetType) {
         if (targetType.subtypeOf(EventHandlerType()) && node instanceof TextNode textNode) {
-            if (!textNode.getText().trim().startsWith("#")) {
+            String text = textNode.getText().trim();
+            if (!text.startsWith("#")) {
                 return null;
             }
 
             return new EmitEventHandlerNode(
                 context.getCodeBehindOrMarkupClass(),
-                targetType.getArguments().get(0).jvmType(),
-                textNode.getText().trim().substring(1),
-                node.getSourceInfo());
+                targetType.getArguments().get(0),
+                text.substring(1),
+                textNode.getSourceInfo().getTrimmed());
         }
 
         return null;

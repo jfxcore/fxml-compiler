@@ -1,4 +1,4 @@
-// Copyright (c) 2021, 2023, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2025, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.emit;
@@ -13,6 +13,8 @@ import org.jfxcore.compiler.generate.EventHandlerGenerator;
 import org.jfxcore.compiler.util.Bytecode;
 import org.jfxcore.compiler.util.Resolver;
 import org.jfxcore.compiler.util.TypeHelper;
+import org.jfxcore.compiler.util.TypeInstance;
+import java.util.List;
 import java.util.Objects;
 
 import static org.jfxcore.compiler.util.Classes.*;
@@ -21,16 +23,21 @@ import static org.jfxcore.compiler.util.Descriptors.*;
 public class EmitEventHandlerNode extends AbstractNode implements ValueEmitterNode {
 
     private final CtClass declaringClass;
-    private final CtClass eventType;
+    private final TypeInstance eventType;
     private final String eventHandlerName;
     private final ResolvedTypeNode type;
 
-    public EmitEventHandlerNode(CtClass declaringClass, CtClass eventType, String eventHandlerName, SourceInfo sourceInfo) {
+    public EmitEventHandlerNode(CtClass declaringClass,
+                                TypeInstance eventType,
+                                String eventHandlerName,
+                                SourceInfo sourceInfo) {
         super(sourceInfo);
         this.declaringClass = checkNotNull(declaringClass);
         this.eventType = checkNotNull(eventType);
         this.eventHandlerName = checkNotNull(eventHandlerName);
-        this.type = new ResolvedTypeNode(new Resolver(sourceInfo).getTypeInstance(EventHandlerType()), sourceInfo);
+        this.type = new ResolvedTypeNode(
+            new Resolver(sourceInfo).getTypeInstance(EventHandlerType(), List.of(eventType)),
+            sourceInfo);
     }
 
     @Override
@@ -43,7 +50,7 @@ public class EmitEventHandlerNode extends AbstractNode implements ValueEmitterNo
         Bytecode code = context.getOutput();
 
         var generator = new EventHandlerGenerator(
-            context.getBindingContextClass(), eventType, eventHandlerName);
+            context.getBindingContextClass(), eventType.jvmType(), eventHandlerName);
 
         CtClass handlerClass = ClassGenerator.emit(context, generator);
 
@@ -65,7 +72,7 @@ public class EmitEventHandlerNode extends AbstractNode implements ValueEmitterNo
         if (o == null || getClass() != o.getClass()) return false;
         EmitEventHandlerNode that = (EmitEventHandlerNode)o;
         return TypeHelper.equals(declaringClass, that.declaringClass) &&
-            TypeHelper.equals(eventType, that.eventType) &&
+            eventType.equals(that.eventType) &&
             eventHandlerName.equals(that.eventHandlerName) &&
             type.equals(that.type);
     }
@@ -73,7 +80,6 @@ public class EmitEventHandlerNode extends AbstractNode implements ValueEmitterNo
     @Override
     public int hashCode() {
         return Objects.hash(
-            TypeHelper.hashCode(declaringClass), TypeHelper.hashCode(eventType), eventHandlerName, type);
+            TypeHelper.hashCode(declaringClass), eventType.hashCode(), eventHandlerName, type);
     }
-
 }

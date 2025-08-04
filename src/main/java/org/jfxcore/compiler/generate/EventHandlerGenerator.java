@@ -1,4 +1,4 @@
-// Copyright (c) 2022, 2024, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2025, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.generate;
@@ -121,7 +121,7 @@ public class EventHandlerGenerator extends ClassGenerator {
     }
 
     private CtMethod findMethod(BytecodeEmitContext context) {
-        SourceInfo sourceInfo = context.getParent().getSourceInfo();
+        SourceInfo sourceInfo = context.getCurrent().getSourceInfo();
         Resolver resolver = new Resolver(sourceInfo);
         boolean[] matchesByName = new boolean[1];
 
