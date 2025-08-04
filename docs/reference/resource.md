@@ -23,7 +23,7 @@ The `fx:resource` element is applicable to properties of type `URL`, `URI`, and 
 
 | Property | Description |
 |:-|:-|
-| `name` | A string that specifies the resource name, which will be passed to the `Class.getResource(String)` method. This is the [default property](../compact-element-notation.html#default-property). |
+| `name` | A string that specifies the resource name, which will be passed to the `Class.getResource(String)` method. This is the [default property](../compact-notation.html#default-property). |
 
 ## Usage
 

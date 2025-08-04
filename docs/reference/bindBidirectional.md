@@ -12,7 +12,7 @@ The `fx:bindBidirectional` element establishes a bidirectional binding. It can b
 
 | Property | Description |
 |:-|:-|
-| `path` | A string that specifies the [binding path](../binding/binding-path.html). This is the [default property](../compact-element-notation.html#default-property). |
+| `path` | A string that specifies the [binding path](../binding/binding-path.html). This is the [default property](../compact-notation.html#default-property). |
 | `format` | The path to a `java.text.Format` instance.<br>This property is only applicable to `StringProperty` bindings. |
 | `converter` | The path to a `javafx.util.StringConverter` instance.<br>This property is only applicable to `StringProperty` bindings. |
 | `inverseMethod` | The path to an inverse method for the method referenced in `path`.<br>This can also be the name of a constructor. |
