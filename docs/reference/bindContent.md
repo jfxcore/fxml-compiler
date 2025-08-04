@@ -12,7 +12,7 @@ The `fx:bindContent` element establishes a content binding. It can be set on any
 
 | Property | Description |
 |:-|:-|
-| `path` | A string that specifies the [binding path](../binding/binding-path.html). This is the [default property](../compact-element-notation.html#default-property). |
+| `path` | A string that specifies the [binding path](../binding/binding-path.html). This is the [default property](../compact-notation.html#default-property). |
 
 ## Usage
 

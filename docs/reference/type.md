@@ -12,7 +12,7 @@ The `fx:type` element resolves a name to a class literal.
 
 | Property | Description |
 |:-|:-|
-| `name` | A string that specifies the class name. This is the [default property](../compact-element-notation.html#default-property). |
+| `name` | A string that specifies the class name. This is the [default property](../compact-notation.html#default-property). |
 
 ## Usage
 

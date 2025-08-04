@@ -6,7 +6,7 @@ nav_order: 1
 ---
 
 # Types of bindings
-Binding expressions in FXML 2.0 are implemented using intrinsic elements that can be used in either element notation or [attribute notation](../compact-element-notation.html). An additional short notation is supported for brevity.
+Binding expressions in FXML 2.0 are implemented using intrinsic elements that can be used in either element notation or [attribute notation](../compact-notation.html). An additional short notation is supported for brevity.
 
 The following table lists all binding types, as well as the corresponding JavaFX methods:
 
@@ -20,7 +20,7 @@ The following table lists all binding types, as well as the corresponding JavaFX
 | `{fx:bindContentBidirectional path=source}` | `#{..source}` | `ListProperty.bindContentBidirectional(source)`<br>`SetProperty.bindContentBidirectional(source)`<br>`MapProperty.bindContentBidirectional(source)` |
 
 {: .note }
-Since `path` is the [default property](../compact-element-notation.html#default-property) of all binding intrinsics, it doesn't need to be explicitly specified. For example, `{fx:bind path=source}` and `{fx:bind source}` are equivalent.
+Since `path` is the [default property](../compact-notation.html#default-property) of all binding intrinsics, it doesn't need to be explicitly specified. For example, `{fx:bind path=source}` and `{fx:bind source}` are equivalent.
 
 {: .note }
 This documentation will use the short notation in most code samples.
