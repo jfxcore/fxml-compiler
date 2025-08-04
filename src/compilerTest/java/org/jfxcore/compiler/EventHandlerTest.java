@@ -160,4 +160,16 @@ public class EventHandlerTest extends CompilerTestBase {
         assertCodeHighlight("#packagePrivateHandler", ex);
     }
 
+    @Test
+    public void EventHandler_SourceInfo_With_Whitespace() {
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <?import javafx.scene.control.*?>
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
+                <Button onAction="   #packagePrivateHandler   "/>
+            </TestPane>
+        """));
+
+        assertEquals(ErrorCode.MEMBER_NOT_ACCESSIBLE, ex.getDiagnostic().getCode());
+        assertCodeHighlight("#packagePrivateHandler", ex);
+    }
 }
