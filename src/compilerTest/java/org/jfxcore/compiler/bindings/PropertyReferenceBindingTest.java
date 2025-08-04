@@ -1,4 +1,4 @@
-// Copyright (c) 2021, 2024, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2025, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.bindings;
@@ -117,7 +117,6 @@ public class PropertyReferenceBindingTest extends CompilerTestBase {
     }
 
     @Test
-    @Disabled
     public void Bind_Unidirectional_To_Property_Of_Property() {
         TestPane root = compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
@@ -125,6 +124,8 @@ public class PropertyReferenceBindingTest extends CompilerTestBase {
         """);
 
         assertTrue(root.isVisible());
+        root.invariantContext.doublePropEx.subProp.set(null);
+        assertFalse(root.isVisible());
     }
 
     @Test
@@ -148,5 +149,4 @@ public class PropertyReferenceBindingTest extends CompilerTestBase {
 
         assertEquals("context", root.getId());
     }
-
 }
