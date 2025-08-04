@@ -1,6 +1,6 @@
 title: FXML 2.0
 
-color_scheme: light
+color_scheme: custom-scheme
 
 plugins:
   - jekyll-remote-theme

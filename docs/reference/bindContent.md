@@ -1,12 +1,14 @@
 ---
 layout: default
-title: fx:bindContent
+title: fx:bindContent, <span class="nav-inline-code">${..x}</span>
 parent: FXML 2.0 language reference
 nav_order: 3
 ---
 
-# fx:bindContent element
+# fx:bindContent element, ${..x}
 The `fx:bindContent` element establishes a content binding. It can be set on any `ReadOnlyListProperty`, `ReadOnlySetProperty`, or `ReadOnlyMapProperty` instance, and is equivalent to invoking the `ReadOnly{List/Set/Map}Property.bindContent(Observable{List/Set/Map})` API in Java code.
+
+Its short notation is `${..x}`, where <span class="inline-code">x</span> is the [binding path](../binding/binding-path.html).
 
 ## Properties
 

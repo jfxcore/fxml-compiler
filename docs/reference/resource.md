@@ -1,14 +1,14 @@
 ---
 layout: default
-title: fx:resource
+title: fx:resource, <span class="nav-inline-code">@x</span>
 parent: FXML 2.0 language reference
 nav_order: 17
 ---
 
-# fx:resource element
+# fx:resource element, @x
 The `fx:resource` element resolves a resource as if by calling `Class.getResource(String)` on the root class. 
 
-Its short notation is the resource resolution operator `@`.
+Its short notation is `@x`, where <span class="inline-code">x</span> is the resource name.
 
 ## Applicability
 The `fx:resource` element is applicable to properties of type `URL`, `URI`, and `String`.
