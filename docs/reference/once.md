@@ -1,12 +1,14 @@
 ---
 layout: default
-title: fx:once
+title: fx:once, <span class="nav-inline-code">$x</span>
 parent: FXML 2.0 language reference
 nav_order: 16
 ---
 
-# fx:once element
+# fx:once element, $x
 The `fx:once` element resolves a value and assigns it to a property. Even if the source is an `ObservableValue`, no binding is established and the value is not updated after the initial assignment.
+
+Its short notation is `$x`, where <span class="inline-code">x</span> is the [binding path](../binding/binding-path.html).
 
 ## Properties
 

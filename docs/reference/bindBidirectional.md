@@ -1,12 +1,14 @@
 ---
 layout: default
-title: fx:bindBidirectional
+title: fx:bindBidirectional, <span class="nav-inline-code">#{x}</span>
 parent: FXML 2.0 language reference
 nav_order: 2
 ---
 
-# fx:bindBidirectional element
+# fx:bindBidirectional element, #{x}
 The `fx:bindBidirectional` element establishes a bidirectional binding. It can be set on any `javafx.beans.property.Property` instance, and is equivalent to invoking the `Property.bindBidirectional(Property)` API in Java code.
+
+Its short notation is `#{x}`, where <span class="inline-code">x</span> is the [binding path](../binding/binding-path.html).
 
 ## Properties
 
