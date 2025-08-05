@@ -1,4 +1,4 @@
-// Copyright (c) 2021, 2024, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2025, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.bindings;
@@ -25,7 +25,6 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
@@ -73,28 +72,6 @@ public class ListBindingTest extends CompilerTestBase {
         public Collection<String> getTargetCollection() { return targetObservableList; }
         public List<String> getTargetList() { return targetObservableList; }
         public ObservableList<String> getTargetObservableList() { return targetObservableList; }
-    }
-
-    private void assertMethodCall(Object root, String... methodNames) {
-        List<String> methodNameList = Arrays.asList(methodNames);
-        assertMethodCall(root, list -> list.stream().anyMatch(m -> methodNameList.contains(m.getName())));
-    }
-
-    private void assertNotMethodCall(Object root, String... methodNames) {
-        List<String> methodNameList = Arrays.asList(methodNames);
-        assertMethodCall(root, list -> list.stream().noneMatch(m -> methodNameList.contains(m.getName())));
-    }
-
-    private void assertNewExpr(Object root, String... classNameFragments) {
-        assertNewExpr(root, ctors -> ctors.stream().anyMatch(
-            ctor -> Arrays.stream(classNameFragments).anyMatch(
-                cn -> ctor.getDeclaringClass().getSimpleName().contains(cn))));
-    }
-
-    private void assertNotNewExpr(Object root, String... classNameFragments) {
-        assertNewExpr(root, ctors -> ctors.stream().noneMatch(
-            ctor -> Arrays.stream(classNameFragments).anyMatch(
-                cn -> ctor.getDeclaringClass().getSimpleName().contains(cn))));
     }
 
     private static String LIST_WRAPPER;
