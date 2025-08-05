@@ -1,4 +1,4 @@
-// Copyright (c) 2023, 2024, JFXcore. All rights reserved.
+// Copyright (c) 2023, 2025, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.bindings;
@@ -24,7 +24,6 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableSet;
 import javafx.collections.SetChangeListener;
 import javafx.scene.layout.Pane;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
@@ -71,28 +70,6 @@ public class SetBindingTest extends CompilerTestBase {
         public Collection<String> getTargetCollection() { return targetObservableSet; }
         public Set<String> getTargetSet() { return targetObservableSet; }
         public ObservableSet<String> getTargetObservableSet() { return targetObservableSet; }
-    }
-
-    private void assertMethodCall(Object root, String... methodNames) {
-        List<String> methodNameList = Arrays.asList(methodNames);
-        assertMethodCall(root, list -> list.stream().anyMatch(m -> methodNameList.contains(m.getName())));
-    }
-
-    private void assertNotMethodCall(Object root, String... methodNames) {
-        List<String> methodNameList = Arrays.asList(methodNames);
-        assertMethodCall(root, list -> list.stream().noneMatch(m -> methodNameList.contains(m.getName())));
-    }
-
-    private void assertNewExpr(Object root, String... classNames) {
-        assertNewExpr(root, ctors -> ctors.stream().anyMatch(
-            ctor -> Arrays.stream(classNames).anyMatch(
-                cn -> ctor.getDeclaringClass().getSimpleName().endsWith(cn))));
-    }
-
-    private void assertNotNewExpr(Object root, String... classNames) {
-        assertNewExpr(root, ctors -> ctors.stream().noneMatch(
-            ctor -> Arrays.stream(classNames).anyMatch(
-                cn -> ctor.getDeclaringClass().getSimpleName().endsWith(cn))));
     }
 
     private static String SET_WRAPPER;

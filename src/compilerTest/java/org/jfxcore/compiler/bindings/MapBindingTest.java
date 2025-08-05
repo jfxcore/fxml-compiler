@@ -1,4 +1,4 @@
-// Copyright (c) 2023, 2024, JFXcore. All rights reserved.
+// Copyright (c) 2023, 2025, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.bindings;
@@ -24,9 +24,7 @@ import javafx.collections.FXCollections;
 import javafx.collections.MapChangeListener;
 import javafx.collections.ObservableMap;
 import javafx.scene.layout.Pane;
-import java.util.Arrays;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import static org.jfxcore.compiler.util.MoreAssertions.*;
@@ -69,28 +67,6 @@ public class MapBindingTest extends CompilerTestBase {
         private final ObservableMap<Integer, String> targetObservableMap = FXCollections.observableMap(new HashMap<>());
         public Map<Integer, String> getTargetMap() { return targetObservableMap; }
         public ObservableMap<Integer, String> getTargetObservableMap() { return targetObservableMap; }
-    }
-
-    private void assertMethodCall(Object root, String... methodNames) {
-        List<String> methodNameList = Arrays.asList(methodNames);
-        assertMethodCall(root, list -> list.stream().anyMatch(m -> methodNameList.contains(m.getName())));
-    }
-
-    private void assertNotMethodCall(Object root, String... methodNames) {
-        List<String> methodNameList = Arrays.asList(methodNames);
-        assertMethodCall(root, list -> list.stream().noneMatch(m -> methodNameList.contains(m.getName())));
-    }
-
-    private void assertNewExpr(Object root, String... classNames) {
-        assertNewExpr(root, ctors -> ctors.stream().anyMatch(
-            ctor -> Arrays.stream(classNames).anyMatch(
-                cn -> ctor.getDeclaringClass().getSimpleName().endsWith(cn))));
-    }
-
-    private void assertNotNewExpr(Object root, String... classNames) {
-        assertNewExpr(root, ctors -> ctors.stream().noneMatch(
-            ctor -> Arrays.stream(classNames).anyMatch(
-                cn -> ctor.getDeclaringClass().getSimpleName().endsWith(cn))));
     }
 
     private static String MAP_WRAPPER;

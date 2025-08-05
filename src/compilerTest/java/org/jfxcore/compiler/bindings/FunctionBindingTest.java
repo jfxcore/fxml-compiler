@@ -21,6 +21,7 @@ import org.jfxcore.compiler.diagnostic.ErrorCode;
 import org.jfxcore.compiler.diagnostic.MarkupException;
 import org.jfxcore.compiler.util.CompilerTestBase;
 import org.jfxcore.compiler.util.InverseMethod;
+import org.jfxcore.compiler.util.NameHelper;
 import org.jfxcore.compiler.util.TestExtension;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -32,6 +33,14 @@ import static org.junit.jupiter.api.Assertions.*;
 @SuppressWarnings("HttpUrlsUsage")
 @ExtendWith(TestExtension.class)
 public class FunctionBindingTest extends CompilerTestBase {
+
+    private void assertNewFunctionExpr(Object root, int num) {
+        for (int i = 0; i < num; ++i) {
+            assertNewExpr(root, NameHelper.getMangledClassName("Function$") + i);
+        }
+
+        assertNotNewExpr(root, NameHelper.getMangledClassName("Function$") + num);
+    }
 
     @SuppressWarnings("unused")
     public interface TestDefaultMethod {
@@ -155,6 +164,7 @@ public class FunctionBindingTest extends CompilerTestBase {
                       id="$String.format('foo-%s', invariantDoubleVal)"/>
         """);
 
+        assertNewFunctionExpr(root, 0);
         assertFalse(root.idProperty().isBound());
         assertEquals("foo-1.0", root.getId());
     }
@@ -166,6 +176,7 @@ public class FunctionBindingTest extends CompilerTestBase {
                       id="$String.format('foo-%s', doubleProp)"/>
         """);
 
+        assertNewFunctionExpr(root, 0);
         assertFalse(root.idProperty().isBound());
         assertEquals("foo-1.0", root.getId());
 
@@ -183,6 +194,7 @@ public class FunctionBindingTest extends CompilerTestBase {
                       id="$String.format('foo-%s-%s', invariantDoubleVal, invariantStringVal)"/>
         """);
 
+        assertNewFunctionExpr(root, 0);
         assertFalse(root.idProperty().isBound());
         assertEquals("foo-1.0-bar", root.getId());
 
@@ -197,6 +209,7 @@ public class FunctionBindingTest extends CompilerTestBase {
                       id="$String.format('foo-%s-%s', doubleProp, stringProp)"/>
         """);
 
+        assertNewFunctionExpr(root, 0);
         assertFalse(root.idProperty().isBound());
         assertEquals("foo-1.0-bar", root.getId());
 
@@ -216,6 +229,7 @@ public class FunctionBindingTest extends CompilerTestBase {
                       id="$Double.toString(doubleProp)"/>
         """);
 
+        assertNewFunctionExpr(root, 0);
         assertFalse(root.idProperty().isBound());
         assertEquals("1.0", root.getId());
     }
@@ -227,6 +241,7 @@ public class FunctionBindingTest extends CompilerTestBase {
                       prefWidth="$add(10, 20)"/>
         """);
 
+        assertNewFunctionExpr(root, 0);
         assertFalse(root.prefWidthProperty().isBound());
         assertEquals(30.0, root.getPrefWidth(), 0.001);
     }
@@ -238,6 +253,7 @@ public class FunctionBindingTest extends CompilerTestBase {
                       prefWidth="$staticAdd(10, 20)"/>
         """);
 
+        assertNewFunctionExpr(root, 0);
         assertFalse(root.prefWidthProperty().isBound());
         assertEquals(30.0, root.getPrefWidth(), 0.001);
     }
@@ -250,9 +266,9 @@ public class FunctionBindingTest extends CompilerTestBase {
                       prefHeight="$boxedAdd(boxedAdd(1.0, 2.0), add(3, 4))"/>
         """);
 
+        assertNewFunctionExpr(root, 0);
         assertFalse(root.prefWidthProperty().isBound());
         assertEquals(10.0, root.getPrefWidth(), 0.001);
-
         assertFalse(root.prefHeightProperty().isBound());
         assertEquals(10.0, root.getPrefHeight(), 0.001);
     }
@@ -265,9 +281,9 @@ public class FunctionBindingTest extends CompilerTestBase {
                       prefHeight="$boxedAdd(invariantDoubleVal, doubleProp)"/>
         """);
 
+        assertNewFunctionExpr(root, 0);
         assertFalse(root.prefWidthProperty().isBound());
         assertEquals(2.0, root.getPrefWidth(), 0.001);
-
         assertFalse(root.prefHeightProperty().isBound());
         assertEquals(2.0, root.getPrefHeight(), 0.001);
     }
@@ -284,6 +300,7 @@ public class FunctionBindingTest extends CompilerTestBase {
             </TestPane>
         """);
 
+        assertNewFunctionExpr(root, 0);
         Label label = (Label)root.getChildren().get(0);
         assertEquals("007", label.getText());
     }
@@ -297,6 +314,7 @@ public class FunctionBindingTest extends CompilerTestBase {
             </TestPane>
         """);
 
+        assertNewFunctionExpr(root, 0);
         Label label = (Label)root.getChildren().get(0);
         assertEquals("007", label.getText());
     }
@@ -308,6 +326,7 @@ public class FunctionBindingTest extends CompilerTestBase {
                       id="$String('foo')"/>
         """);
 
+        assertNewFunctionExpr(root, 0);
         assertFalse(root.idProperty().isBound());
         assertEquals("foo", root.getId());
     }
@@ -319,6 +338,7 @@ public class FunctionBindingTest extends CompilerTestBase {
                       id="$java.lang.String('foo')"/>
         """);
 
+        assertNewFunctionExpr(root, 0);
         assertFalse(root.idProperty().isBound());
         assertEquals("foo", root.getId());
     }
@@ -345,6 +365,7 @@ public class FunctionBindingTest extends CompilerTestBase {
                       objProp="$Stringifier('foo')"/>
         """);
 
+        assertNewFunctionExpr(root, 0);
         assertEquals("foo", root.objProp.get().value);
     }
 
@@ -359,6 +380,7 @@ public class FunctionBindingTest extends CompilerTestBase {
             </TestPane>
         """);
 
+        assertNewFunctionExpr(root, 0);
         Pane pane = (Pane)((Pane)root.getChildren().get(0)).getChildren().get(0);
         assertEquals("foo-1.0", pane.getId());
     }
@@ -375,6 +397,7 @@ public class FunctionBindingTest extends CompilerTestBase {
             </TestPane>
         """);
 
+        assertNewFunctionExpr(root, 0);
         Pane pane = (Pane)((Pane)root.getChildren().get(0)).getChildren().get(0);
         assertEquals(-2, pane.getPrefWidth(), 0.001);
     }
@@ -415,6 +438,7 @@ public class FunctionBindingTest extends CompilerTestBase {
                       id="$defaultMethod('foo-%s', invariantDoubleVal)"/>
         """);
 
+        assertNewFunctionExpr(root, 0);
         assertEquals("foo-1.0", root.getId());
     }
 
@@ -438,6 +462,7 @@ public class FunctionBindingTest extends CompilerTestBase {
                       id="$defaultMethod('foo-%s', {Double fx:constant=POSITIVE_INFINITY})"/>
         """);
 
+        assertNewFunctionExpr(root, 0);
         assertEquals("foo-Infinity", root.getId());
     }
 
@@ -495,6 +520,7 @@ public class FunctionBindingTest extends CompilerTestBase {
                       id="${String.format('foo-%s', invariantDoubleVal)}"/>
         """);
 
+        assertNewFunctionExpr(root, 0);
         assertTrue(root.idProperty().isBound());
         assertEquals("foo-1.0", root.getId());
     }
@@ -506,6 +532,7 @@ public class FunctionBindingTest extends CompilerTestBase {
                       id="${String.format('foo-%s', doubleProp)}"/>
         """);
 
+        assertNewFunctionExpr(root, 1);
         assertTrue(root.idProperty().isBound());
         assertEquals("foo-1.0", root.getId());
 
@@ -520,6 +547,7 @@ public class FunctionBindingTest extends CompilerTestBase {
                       id="${String.format('foo-%s-%s', doubleProp, stringProp)}"/>
         """);
 
+        assertNewFunctionExpr(root, 1);
         assertTrue(root.idProperty().isBound());
         assertEquals("foo-1.0-bar", root.getId());
 
@@ -537,6 +565,7 @@ public class FunctionBindingTest extends CompilerTestBase {
                       id="${Double.toString(doubleProp)}"/>
         """);
 
+        assertNewFunctionExpr(root, 1);
         assertTrue(root.idProperty().isBound());
         assertEquals("1.0", root.getId());
     }
@@ -548,6 +577,7 @@ public class FunctionBindingTest extends CompilerTestBase {
                       id="${Integer.toString(listProp.size)}"/>
         """);
 
+        assertNewFunctionExpr(root, 1);
         assertTrue(root.idProperty().isBound());
         assertEquals("3", root.getId());
     }
@@ -559,6 +589,7 @@ public class FunctionBindingTest extends CompilerTestBase {
                       prefWidth="${add(invariantDoubleVal, doubleProp)}"/>
         """);
 
+        assertNewFunctionExpr(root, 1);
         assertTrue(root.prefWidthProperty().isBound());
         assertEquals(2.0, root.getPrefWidth(), 0.001);
 
@@ -575,6 +606,7 @@ public class FunctionBindingTest extends CompilerTestBase {
             </TestPane>
         """);
 
+        assertNewFunctionExpr(root, 1);
         Label label = (Label)root.getChildren().get(0);
         assertEquals("007", label.getText());
         label.setPrefWidth(10);
@@ -590,6 +622,7 @@ public class FunctionBindingTest extends CompilerTestBase {
             </TestPane>
         """);
 
+        assertNewFunctionExpr(root, 1);
         Label label = (Label)root.getChildren().get(0);
         assertEquals("007", label.getText());
         label.setPrefWidth(10);
@@ -603,6 +636,7 @@ public class FunctionBindingTest extends CompilerTestBase {
                       prefWidth="${add(add(invariantDoubleVal, doubleProp), add(invariantDoubleVal, doubleProp))}"/>
         """);
 
+        assertNewFunctionExpr(root, 1);
         assertTrue(root.prefWidthProperty().isBound());
         assertEquals(4.0, root.getPrefWidth(), 0.001);
 
@@ -630,6 +664,7 @@ public class FunctionBindingTest extends CompilerTestBase {
                       prefWidth="${sum(invariantDoubleVal, doubleProp, doubleProp)}"/>
         """);
 
+        assertNewFunctionExpr(root, 1);
         assertTrue(root.prefWidthProperty().isBound());
         assertEquals(3.0, root.getPrefWidth(), 0.001);
 
@@ -644,6 +679,7 @@ public class FunctionBindingTest extends CompilerTestBase {
                       id="${String.format('%s-%s-%s', context.invariantDoubleVal, context.doubleVal, context.doubleVal)}"/>
         """);
 
+        assertNewFunctionExpr(root, 1);
         assertTrue(root.idProperty().isBound());
         assertEquals("234.0-123.0-123.0", root.getId());
 
@@ -664,6 +700,7 @@ public class FunctionBindingTest extends CompilerTestBase {
                       id="${String('foo')}"/>
         """);
 
+        assertNewFunctionExpr(root, 0);
         assertTrue(root.idProperty().isBound());
         assertEquals("foo", root.getId());
     }
@@ -690,6 +727,7 @@ public class FunctionBindingTest extends CompilerTestBase {
                       objProp="${Stringifier('foo')}"/>
         """);
 
+        assertNewFunctionExpr(root, 0);
         assertEquals("foo", root.objProp.get().value);
     }
 
@@ -715,6 +753,7 @@ public class FunctionBindingTest extends CompilerTestBase {
             </TestPane>
         """);
 
+        assertNewFunctionExpr(root, 1);
         Pane pane = (Pane)((Pane)root.getChildren().get(0)).getChildren().get(0);
         assertEquals("foo-123.0-1.0", pane.getId());
     }
@@ -730,6 +769,7 @@ public class FunctionBindingTest extends CompilerTestBase {
             </TestPane>
         """);
 
+        assertNewFunctionExpr(root, 0);
         Pane pane = (Pane)((Pane)root.getChildren().get(0)).getChildren().get(0);
         assertTrue(pane.getId().startsWith("foo-FunctionBindingTest_Bind_Unidirectional_With_This_Argument"));
     }
@@ -745,6 +785,7 @@ public class FunctionBindingTest extends CompilerTestBase {
             </TestPane>
         """);
 
+        assertNewFunctionExpr(root, 0);
         Pane pane = (Pane)((Pane)root.getChildren().get(0)).getChildren().get(0);
         assertTrue(pane.getId().startsWith("foo-VBox"));
     }
@@ -760,6 +801,7 @@ public class FunctionBindingTest extends CompilerTestBase {
             </TestPane>
         """);
 
+        assertNewFunctionExpr(root, 0);
         Pane pane = (Pane)((Pane)root.getChildren().get(0)).getChildren().get(0);
         assertEquals(3, pane.getPrefWidth(), 0.001);
     }
@@ -776,6 +818,7 @@ public class FunctionBindingTest extends CompilerTestBase {
             </TestPane>
         """);
 
+        assertNewFunctionExpr(root, 1);
         Pane pane = (Pane)((Pane)root.getChildren().get(0)).getChildren().get(0);
         assertEquals(3, pane.getPrefWidth(), 0.001);
     }
@@ -816,6 +859,7 @@ public class FunctionBindingTest extends CompilerTestBase {
                       id="${defaultMethod('foo-%s', {Double fx:constant=POSITIVE_INFINITY})}"/>
         """);
 
+        assertNewFunctionExpr(root, 0);
         assertEquals("foo-Infinity", root.getId());
     }
 
@@ -827,6 +871,7 @@ public class FunctionBindingTest extends CompilerTestBase {
                       id="${defaultMethod('foo-%s', Double.POSITIVE_INFINITY)}"/>
         """);
 
+        assertNewFunctionExpr(root, 0);
         assertEquals("foo-Infinity", root.getId());
     }
 
@@ -951,6 +996,7 @@ public class FunctionBindingTest extends CompilerTestBase {
             this.value = value;
         }
 
+        @SuppressWarnings("unused")
         public static double doubleContainerToDouble(DoubleContainer ds) {
             return ds.value;
         }
@@ -999,6 +1045,7 @@ public class FunctionBindingTest extends CompilerTestBase {
                                    id="#{doubleToString(indirect.doubleProp)}"/>
         """);
 
+        assertNewFunctionExpr(root, 1);
         assertEquals("1.0", root.getId());
     }
 
@@ -1009,6 +1056,7 @@ public class FunctionBindingTest extends CompilerTestBase {
                                    prefWidth="#{stringToDouble(indirect.stringProp)}"/>
         """);
 
+        assertNewFunctionExpr(root, 1);
         assertEquals(1.0, root.getPrefWidth(), 0.001);
     }
 
@@ -1041,6 +1089,7 @@ public class FunctionBindingTest extends CompilerTestBase {
                                    visible="#{instanceNot(boolProp)}"/>
         """);
 
+        assertNewFunctionExpr(root, 3);
         assertEquals(1, root.doubleToStringCalls);
         assertEquals(1, root.stringToDoubleCalls);
         assertEquals("1.0", root.getId());
@@ -1083,6 +1132,7 @@ public class FunctionBindingTest extends CompilerTestBase {
                                    visible="#{BidirectionalTestPane.staticNot(boolProp)}"/>
         """);
 
+        assertNewFunctionExpr(root, 1);
         assertTrue(root.isVisible());
         assertFalse(root.boolProp.get());
         root.setVisible(false);
@@ -1096,6 +1146,7 @@ public class FunctionBindingTest extends CompilerTestBase {
                                    visible="#{instanceNot2(boolProp)}"/>
         """);
 
+        assertNewFunctionExpr(root, 1);
         assertTrue(root.isVisible());
         assertFalse(root.boolProp.get());
         root.setVisible(false);
@@ -1109,6 +1160,7 @@ public class FunctionBindingTest extends CompilerTestBase {
                                    visible="#{instanceNot(boolProp); inverseMethod=customInverseMethod}"/>
         """);
 
+        assertNewFunctionExpr(root, 1);
         assertTrue(root.isVisible());
         root.setVisible(false);
         assertTrue(root.boolProp.get());
@@ -1121,6 +1173,7 @@ public class FunctionBindingTest extends CompilerTestBase {
                                    visible="#{c1.c2.instanceNot(boolProp); inverseMethod=c1.c2.customInverseMethodIndirect}"/>
         """);
 
+        assertNewFunctionExpr(root, 1);
         assertTrue(root.isVisible());
         root.setVisible(false);
         assertTrue(root.boolProp.get());
@@ -1133,6 +1186,7 @@ public class FunctionBindingTest extends CompilerTestBase {
                                    visible="#{static_c1.c2.instanceNot(boolProp); inverseMethod=static_c1.c2.customInverseMethodIndirect}"/>
         """);
 
+        assertNewFunctionExpr(root, 1);
         assertTrue(root.isVisible());
         root.setVisible(false);
         assertTrue(root.boolProp.get());
@@ -1145,6 +1199,7 @@ public class FunctionBindingTest extends CompilerTestBase {
                                    prefWidth="#{doubleContainerToDouble(doubleContainer); inverseMethod=DoubleContainer}"/>
         """);
 
+        assertNewFunctionExpr(root, 1);
         assertEquals(5, root.getPrefWidth(), 0.001);
         root.setPrefWidth(4);
         assertEquals(4, root.doubleContainer.get().value, 0.001);
@@ -1157,6 +1212,7 @@ public class FunctionBindingTest extends CompilerTestBase {
                                    prefWidth="#{doubleContainerToDouble(doubleContainer); inverseMethod=BidirectionalTestPane.DoubleContainer}"/>
         """);
 
+        assertNewFunctionExpr(root, 1);
         assertEquals(5, root.getPrefWidth(), 0.001);
         root.setPrefWidth(4);
         assertEquals(4, root.doubleContainer.get().value, 0.001);
@@ -1169,6 +1225,7 @@ public class FunctionBindingTest extends CompilerTestBase {
                                    doubleContainer="#{DoubleContainer(doubleProp); inverseMethod=doubleContainerToDouble}"/>
         """);
 
+        assertNewFunctionExpr(root, 1);
         assertEquals(1, root.doubleProp.get(), 0.001);
         assertEquals(1, root.doubleContainer.get().value, 0.001);
         
@@ -1186,6 +1243,7 @@ public class FunctionBindingTest extends CompilerTestBase {
                                    doubleContainer="#{DoubleContainer(doubleProp); inverseMethod=DoubleContainer.doubleContainerToDouble}"/>
         """);
 
+        assertNewFunctionExpr(root, 1);
         assertEquals(1, root.doubleProp.get(), 0.001);
         assertEquals(1, root.doubleContainer.get().value, 0.001);
 

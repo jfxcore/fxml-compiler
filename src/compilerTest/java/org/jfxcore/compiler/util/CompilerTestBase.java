@@ -1,4 +1,4 @@
-// Copyright (c) 2022, 2023, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2025, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.util;
@@ -18,6 +18,7 @@ import java.lang.ref.WeakReference;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.function.Predicate;
@@ -131,8 +132,30 @@ public class CompilerTestBase {
         assertTrue(testMethodExpr(root, predicate), "MethodCall assertion failed");
     }
 
+    public void assertMethodCall(Object root, String... methodNames) {
+        List<String> methodNameList = Arrays.asList(methodNames);
+        assertMethodCall(root, list -> list.stream().anyMatch(m -> methodNameList.contains(m.getName())));
+    }
+
+    public void assertNotMethodCall(Object root, String... methodNames) {
+        List<String> methodNameList = Arrays.asList(methodNames);
+        assertMethodCall(root, list -> list.stream().noneMatch(m -> methodNameList.contains(m.getName())));
+    }
+
     public void assertNewExpr(Object root, Predicate<List<CtConstructor>> predicate) {
         assertTrue(testNewExpr(root, predicate), "NewExpr assertion failed");
+    }
+
+    public void assertNewExpr(Object root, String... classNameFragments) {
+        assertNewExpr(root, ctors -> ctors.stream().anyMatch(
+            ctor -> Arrays.stream(classNameFragments).anyMatch(
+                cn -> ctor.getDeclaringClass().getSimpleName().contains(cn))));
+    }
+
+    public void assertNotNewExpr(Object root, String... classNameFragments) {
+        assertNewExpr(root, ctors -> ctors.stream().noneMatch(
+            ctor -> Arrays.stream(classNameFragments).anyMatch(
+                cn -> ctor.getDeclaringClass().getSimpleName().contains(cn))));
     }
 
     public void assertFieldAccess(Object root, String className, String fieldName, String signature) {
