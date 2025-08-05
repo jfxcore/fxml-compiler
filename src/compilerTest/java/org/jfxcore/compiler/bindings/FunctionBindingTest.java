@@ -907,6 +907,8 @@ public class FunctionBindingTest extends CompilerTestBase {
     public static class BidirectionalTestPane extends Pane {
         public BidirectionalIndirect indirect = new BidirectionalIndirect();
         public BidirectionalIndirect nullIndirect;
+        public ObjectProperty<BidirectionalIndirect> observableIndirect =
+            new SimpleObjectProperty<>(new BidirectionalIndirect());
 
         public DoubleProperty doubleProp = new SimpleDoubleProperty(1);
         public StringProperty stringProp = new SimpleStringProperty("5");
@@ -1047,6 +1049,34 @@ public class FunctionBindingTest extends CompilerTestBase {
 
         assertNewFunctionExpr(root, 1);
         assertEquals("1.0", root.getId());
+
+        root.indirect.doubleProp.set(2);
+        assertEquals("2.0", root.getId());
+
+        root.setId("3.0");
+        assertEquals(3.0, root.indirect.doubleProp.get(), 0.001);
+
+        root.setId(null);
+        assertEquals(0.0, root.indirect.doubleProp.get(), 0.001);
+    }
+
+    @Test
+    public void Bind_Bidirectional_To_ObservableIndirect_DoubleProperty() {
+        BidirectionalTestPane root = compileAndRun("""
+            <BidirectionalTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                                   id="#{doubleToString(observableIndirect.doubleProp)}"/>
+        """);
+
+        assertNewFunctionExpr(root, 1);
+        assertEquals("1.0", root.getId());
+
+        root.observableIndirect.set(null);
+        assertEquals("0.0", root.getId());
+
+        var newIndirect = new BidirectionalIndirect();
+        newIndirect.doubleProp.set(2);
+        root.observableIndirect.set(newIndirect);
+        assertEquals("2.0", root.getId());
     }
 
     @Test
@@ -1058,6 +1088,34 @@ public class FunctionBindingTest extends CompilerTestBase {
 
         assertNewFunctionExpr(root, 1);
         assertEquals(1.0, root.getPrefWidth(), 0.001);
+
+        root.indirect.stringProp.set(null);
+        assertEquals(0.0, root.getPrefWidth(), 0.001);
+
+        root.indirect.stringProp.set("2.0");
+        assertEquals(2.0, root.getPrefWidth(), 0.001);
+
+        root.setPrefWidth(3);
+        assertEquals("3.0", root.indirect.stringProp.get());
+    }
+
+    @Test
+    public void Bind_Bidirectional_To_ObservableIndirect_StringProperty() {
+        BidirectionalTestPane root = compileAndRun("""
+            <BidirectionalTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                                   prefWidth="#{stringToDouble(observableIndirect.stringProp)}"/>
+        """);
+
+        assertNewFunctionExpr(root, 1);
+        assertEquals(1.0, root.getPrefWidth(), 0.001);
+
+        root.observableIndirect.set(null);
+        assertEquals(0.0, root.getPrefWidth(), 0.001);
+
+        var newIndirect = new BidirectionalIndirect();
+        newIndirect.stringProp.set("2.0");
+        root.observableIndirect.set(newIndirect);
+        assertEquals(2.0, root.getPrefWidth(), 0.001);
     }
 
     @Test
