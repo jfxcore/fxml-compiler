@@ -1,4 +1,4 @@
-// Copyright (c) 2021, 2023, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2025, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.generate;
@@ -47,13 +47,13 @@ abstract class PropertySegmentGeneratorBase extends SegmentGeneratorBase {
     private CtMethod bindBidirectionalMethod;
     private CtMethod unbindBidirectionalMethod;
     private final TypeInstance type;
+    private final CtClass superClass;
     private final List<CtClass> interfaces;
 
     PropertySegmentGeneratorBase(SourceInfo sourceInfo, FoldedGroup[] groups, int segment) {
         super(sourceInfo, groups, segment);
 
         interfaces = new ArrayList<>();
-        interfaces.add(PropertyType());
 
         CtClass type = groups[groups.length - 1].getObservableType();
         if (type == null) {
@@ -61,47 +61,49 @@ abstract class PropertySegmentGeneratorBase extends SegmentGeneratorBase {
         }
 
         CtClass finalType = type;
-        
+
         if (type == CtClass.booleanType
                 || unchecked(sourceInfo, () -> finalType.subtypeOf(ObservableBooleanValueType()))) {
-            interfaces.add(ObservableBooleanValueType());
-            interfaces.add(WritableBooleanValueType());
+            superClass = BooleanPropertyType();
             valueClass = CtClass.booleanType;
         } else if (finalType == CtClass.intType
                 || finalType == CtClass.shortType
                 || finalType == CtClass.byteType
                 || finalType == CtClass.charType
                 || unchecked(sourceInfo, () -> finalType.subtypeOf(ObservableIntegerValueType()))) {
-            interfaces.add(ObservableIntegerValueType());
-            interfaces.add(WritableIntegerValueType());
+            superClass = IntegerPropertyType();
             valueClass = unchecked(sourceInfo, () ->
                 finalType.subtypeOf(ObservableIntegerValueType())) ? CtClass.intType : finalType;
             isNumeric = true;
         } else if (finalType == CtClass.longType
                 || unchecked(sourceInfo, () -> finalType.subtypeOf(ObservableLongValueType()))) {
-            interfaces.add(ObservableLongValueType());
-            interfaces.add(WritableLongValueType());
+            superClass = LongPropertyType();
             valueClass = CtClass.longType;
             isNumeric = true;
         } else if (finalType == CtClass.floatType
                 || unchecked(sourceInfo, () -> finalType.subtypeOf(ObservableFloatValueType()))) {
-            interfaces.add(ObservableFloatValueType());
-            interfaces.add(WritableFloatValueType());
+            superClass = FloatPropertyType();
             valueClass = CtClass.floatType;
             isNumeric = true;
         } else if (finalType == CtClass.doubleType
                 || unchecked(sourceInfo, () -> finalType.subtypeOf(ObservableDoubleValueType()))) {
-            interfaces.add(ObservableDoubleValueType());
-            interfaces.add(WritableDoubleValueType());
+            superClass = DoublePropertyType();
             valueClass = CtClass.doubleType;
             isNumeric = true;
         } else {
+            superClass = ObjectType();
+            interfaces.add(PropertyType());
             valueClass = groups[groups.length - 1].getValueType();
         }
 
-        Resolver resolver = new Resolver(SourceInfo.none());
-        this.type = resolver.getTypeInstance(
-            PropertyType(), List.of(resolver.getTypeInstance(TypeHelper.getBoxedType(valueClass))));
+        if (!TypeHelper.equals(superClass, ObjectType())) {
+            this.type = TypeInstance.of(superClass);
+        } else {
+            Resolver resolver = new Resolver(SourceInfo.none());
+            this.type = resolver.getTypeInstance(
+                PropertyType(),
+                List.of(resolver.getTypeInstance(TypeHelper.getBoxedType(valueClass))));
+        }
     }
 
     @Override
@@ -117,6 +119,7 @@ abstract class PropertySegmentGeneratorBase extends SegmentGeneratorBase {
     @Override
     public void emitClass(BytecodeEmitContext context) throws Exception {
         generatedClass = context.getNestedClasses().create(getClassName());
+        generatedClass.setSuperclass(superClass);
         generatedClass.setModifiers(Modifier.PRIVATE | Modifier.FINAL);
         interfaces.forEach(itf -> generatedClass.addInterface(itf));
         groups[segment].setCompiledClass(generatedClass);
@@ -247,5 +250,4 @@ abstract class PropertySegmentGeneratorBase extends SegmentGeneratorBase {
         method.getMethodInfo().setCodeAttribute(code.toCodeAttribute());
         method.getMethodInfo().rebuildStackMap(method.getDeclaringClass().getClassPool());
     }
-
 }
