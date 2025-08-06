@@ -35,11 +35,12 @@ public class FileUtilTest {
         var document = new DocumentNode(
             Path.of("foo", "bar", "MyCustomNode"), List.of(),
             new ObjectNode(
-                new TypeNode("TestNode", SourceInfo.none()), List.of(new PropertyNode(
+                new TypeNode("TestNode", SourceInfo.none()),
+                List.of(new PropertyNode(
                     new String[] {"class"}, "fx:class",
                     TextNode.createRawUnresolved("foo.bar.MyCustomNode", SourceInfo.none()),
                     true, false, SourceInfo.none())),
-                    List.of(), false, SourceInfo.none()));
+                List.of(), false, SourceInfo.none()));
 
         assertEquals(Path.of("foo", "bar", "MyCustomNodeBase.java"), FileUtil.getMarkupJavaFile(document));
     }
