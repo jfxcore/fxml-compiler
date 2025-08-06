@@ -73,10 +73,9 @@ public class ConstantTransform implements Transform {
 
         ObjectNode result = new ObjectNode(
             new ResolvedTypeNode(resolver.getTypeInstance(field, List.of()), objectNode.getSourceInfo()),
-            objectNode.getProperties(), List.of(), objectNode.getSourceInfo());
+            objectNode.getProperties(), List.of(), false, objectNode.getSourceInfo());
 
         result.setNodeData(NodeDataKey.CONSTANT_DECLARING_TYPE, declaringType);
         return result;
     }
-
 }

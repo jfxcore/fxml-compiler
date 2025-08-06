@@ -1,4 +1,4 @@
-// Copyright (c) 2023, JFXcore. All rights reserved.
+// Copyright (c) 2023, 2025, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.util;
@@ -25,7 +25,7 @@ public class FileUtilTest {
             Path.of("foo", "bar", "MyCustomNode"), List.of(),
             new ObjectNode(
                 new TypeNode("TestNode", SourceInfo.none()),
-                List.of(), List.of(), SourceInfo.none()));
+                List.of(), List.of(), false, SourceInfo.none()));
 
         assertEquals(Path.of("foo", "bar", "MyCustomNode.java"), FileUtil.getMarkupJavaFile(document));
     }
@@ -35,11 +35,12 @@ public class FileUtilTest {
         var document = new DocumentNode(
             Path.of("foo", "bar", "MyCustomNode"), List.of(),
             new ObjectNode(
-                new TypeNode("TestNode", SourceInfo.none()), List.of(new PropertyNode(
+                new TypeNode("TestNode", SourceInfo.none()),
+                List.of(new PropertyNode(
                     new String[] {"class"}, "fx:class",
                     TextNode.createRawUnresolved("foo.bar.MyCustomNode", SourceInfo.none()),
                     true, false, SourceInfo.none())),
-                    List.of(), SourceInfo.none()));
+                List.of(), false, SourceInfo.none()));
 
         assertEquals(Path.of("foo", "bar", "MyCustomNodeBase.java"), FileUtil.getMarkupJavaFile(document));
     }
@@ -49,11 +50,12 @@ public class FileUtilTest {
         var document = new DocumentNode(
             Path.of("foo", "bar", "MyCustomNode"), List.of(),
             new ObjectNode(
-                new TypeNode("TestNode", SourceInfo.none()), List.of(new PropertyNode(
-                new String[] {"class"}, "fx:class",
-                TextNode.createRawUnresolved("foo.bar.AnotherName", SourceInfo.none()),
-                true, false, SourceInfo.none())),
-                List.of(), SourceInfo.none()));
+                new TypeNode("TestNode", SourceInfo.none()),
+                List.of(new PropertyNode(
+                    new String[] {"class"}, "fx:class",
+                    TextNode.createRawUnresolved("foo.bar.AnotherName", SourceInfo.none()),
+                    true, false, SourceInfo.none())),
+                List.of(), false, SourceInfo.none()));
 
         MarkupException ex = assertThrows(MarkupException.class, () -> FileUtil.getMarkupJavaFile(document));
         assertEquals(ErrorCode.CODEBEHIND_CLASS_NAME_MISMATCH, ex.getDiagnostic().getCode());
@@ -64,11 +66,12 @@ public class FileUtilTest {
         var document = new DocumentNode(
             Path.of("foo", "bar", "MyCustomNode"), List.of(),
             new ObjectNode(
-                new TypeNode("TestNode", SourceInfo.none()), List.of(new PropertyNode(
-                new String[] {"class"}, "fx:class",
-                TextNode.createRawUnresolved("MyCustomNode", SourceInfo.none()),
-                true, false, SourceInfo.none())),
-                List.of(), SourceInfo.none()));
+                new TypeNode("TestNode", SourceInfo.none()),
+                List.of(new PropertyNode(
+                    new String[] {"class"}, "fx:class",
+                    TextNode.createRawUnresolved("MyCustomNode", SourceInfo.none()),
+                    true, false, SourceInfo.none())),
+                List.of(), false, SourceInfo.none()));
 
         MarkupException ex = assertThrows(MarkupException.class, () -> FileUtil.getMarkupJavaFile(document));
         assertEquals(ErrorCode.UNNAMED_PACKAGE_NOT_SUPPORTED, ex.getDiagnostic().getCode());
@@ -79,11 +82,12 @@ public class FileUtilTest {
         var document = new DocumentNode(
             Path.of("foo", "bar", "MyCustomNode"), List.of(),
             new ObjectNode(
-                new TypeNode("TestNode", SourceInfo.none()), List.of(new PropertyNode(
-                new String[] {"markupClassName"}, "fx:markupClassName",
-                TextNode.createRawUnresolved("MyCustomFileName", SourceInfo.none()),
-                true, false, SourceInfo.none())),
-                List.of(), SourceInfo.none()));
+                new TypeNode("TestNode", SourceInfo.none()),
+                List.of(new PropertyNode(
+                    new String[] {"markupClassName"}, "fx:markupClassName",
+                    TextNode.createRawUnresolved("MyCustomFileName", SourceInfo.none()),
+                    true, false, SourceInfo.none())),
+                List.of(), false, SourceInfo.none()));
 
         assertEquals(Path.of("foo", "bar", "MyCustomFileName.java"), FileUtil.getMarkupJavaFile(document));
     }
@@ -93,14 +97,14 @@ public class FileUtilTest {
         var document = new DocumentNode(
             Path.of("foo", "bar", "MyCustomNode"), List.of(),
             new ObjectNode(
-                new TypeNode("TestNode", SourceInfo.none()), List.of(new PropertyNode(
-                new String[] {"markupClassName"}, "fx:markupClassName",
-                TextNode.createRawUnresolved("foo.bar.MyCustomFileName", SourceInfo.none()),
-                true, false, SourceInfo.none())),
-                List.of(), SourceInfo.none()));
+                new TypeNode("TestNode", SourceInfo.none()),
+                List.of(new PropertyNode(
+                    new String[] {"markupClassName"}, "fx:markupClassName",
+                    TextNode.createRawUnresolved("foo.bar.MyCustomFileName", SourceInfo.none()),
+                    true, false, SourceInfo.none())),
+                List.of(), false, SourceInfo.none()));
 
         MarkupException ex = assertThrows(MarkupException.class, () -> FileUtil.getMarkupJavaFile(document));
         assertEquals(ErrorCode.CANNOT_COERCE_PROPERTY_VALUE, ex.getDiagnostic().getCode());
     }
-
 }

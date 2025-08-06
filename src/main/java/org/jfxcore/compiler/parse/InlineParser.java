@@ -267,7 +267,7 @@ public class InlineParser {
 
         return new ObjectNode(
             new TypeNode(cleanName, name.getText(), !cleanName.equals(name.getText()), name.getSourceInfo()),
-            properties, children, SourceInfo.span(sourceStart, sourceEnd));
+            properties, children, true, SourceInfo.span(sourceStart, sourceEnd));
     }
 
     private PropertyNode parsePropertyExpression(InlineTokenizer tokenizer) {

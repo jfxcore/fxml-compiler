@@ -5,16 +5,16 @@ parent: FXML 2.0 language reference
 nav_order: 9
 ---
 
-# fx:content element, $..x
-The `fx:content` element assigns the content of a collection. It can be set on any `List`, `Set`, or `Map` property, and is equivalent to invoking the `List.addAll(Collection)`, `Set.addAll(Collection)`, or `Map.putAll(Map)` API in Java code.
+# fx:content markup extension, $..x
+The `fx:content` markup extension assigns the content of a collection. It can be set on any `List`, `Set`, or `Map` property, and is equivalent to invoking the `List.addAll(Collection)`, `Set.addAll(Collection)`, or `Map.putAll(Map)` API in Java code.
 
-Its short notation is `$..x`, where <span class="inline-code">x</span> is the [binding path](../binding/binding-path.html).
+Its compact notation is `$..x`, where <span class="inline-code">x</span> is the [binding path](../binding/binding-path.html).
 
 ## Properties
 
 | Property | Description |
 |:-|:-|
-| `path` | A string that specifies the [binding path](../binding/binding-path.html). This is the [default property](../compact-notation.html#default-property). |
+| `path` | A string that specifies the [binding path](../binding/binding-path.html). This is the [default property](../property-notation.html#default-property). |
 
 ## Usage
 
@@ -32,6 +32,6 @@ Its short notation is `$..x`, where <span class="inline-code">x</span> is the [b
 <!-- Attribute notation with omitted "path" -->
 <object property="{fx:content myPath}"/>
 
-<!-- Short notation -->
+<!-- Compact notation -->
 <object property="$..myPath"/>
 ```

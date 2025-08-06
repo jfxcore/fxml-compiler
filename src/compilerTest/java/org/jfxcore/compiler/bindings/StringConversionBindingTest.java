@@ -1,4 +1,4 @@
-// Copyright (c) 2024, JFXcore. All rights reserved.
+// Copyright (c) 2024, 2025, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.bindings;
@@ -31,37 +31,6 @@ public class StringConversionBindingTest extends CompilerTestBase {
     }
 
     @Test
-    public void Compatible_StringConverter_Inline() {
-        Pane root = compileAndRun("""
-            <?import javafx.util.converter.*?>
-            <?import javafx.scene.control.*?>
-            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0" prefWidth="10">
-                <Label text="#{prefWidth; converter={DoubleStringConverter}}"/>
-            </TestPane>
-        """);
-
-        var label = (Label)root.getChildren().get(0);
-        assertEquals("10.0", label.getText());
-
-        label.setText("5");
-        assertEquals(5.0, root.getPrefWidth(), 0.001);
-    }
-
-    @Test
-    public void Incompatible_StringConverter_Inline() {
-        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
-            <?import javafx.util.converter.*?>
-            <?import javafx.scene.control.*?>
-            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0" prefWidth="10">
-                <Label text="#{prefWidth; converter={IntegerStringConverter}}"/>
-            </TestPane>
-        """));
-
-        assertEquals(ErrorCode.CANNOT_CONVERT_SOURCE_TYPE, ex.getDiagnostic().getCode());
-        assertCodeHighlight("{IntegerStringConverter}", ex);
-    }
-
-    @Test
     public void Compatible_StringConverter_Binding() {
         Pane root = compileAndRun("""
             <?import javafx.util.converter.*?>
@@ -90,37 +59,6 @@ public class StringConversionBindingTest extends CompilerTestBase {
 
         assertEquals(ErrorCode.CANNOT_CONVERT_SOURCE_TYPE, ex.getDiagnostic().getCode());
         assertCodeHighlight("INT_CONVERTER", ex);
-    }
-
-    @Test
-    public void Compatible_Format_Inline() {
-        Pane root = compileAndRun("""
-            <?import java.text.*?>
-            <?import javafx.scene.control.*?>
-            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0" prefWidth="10">
-                <Label text="#{prefWidth; format={DecimalFormat}}"/>
-            </TestPane>
-        """);
-
-        var label = (Label)root.getChildren().get(0);
-        assertEquals("10", label.getText());
-
-        label.setText("5");
-        assertEquals(5.0, root.getPrefWidth(), 0.001);
-    }
-
-    @Test
-    public void Incompatible_Format_Inline() {
-        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
-            <?import javafx.util.*?>
-            <?import javafx.scene.control.*?>
-            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0" prefWidth="10">
-                <Label text="#{prefWidth; format={StringConverter}}"/>
-            </TestPane>
-        """));
-
-        assertEquals(ErrorCode.CANNOT_CONVERT_SOURCE_TYPE, ex.getDiagnostic().getCode());
-        assertCodeHighlight("{StringConverter}", ex);
     }
 
     @Test
@@ -160,12 +98,12 @@ public class StringConversionBindingTest extends CompilerTestBase {
             <?import javafx.util.converter.*?>
             <?import javafx.scene.control.*?>
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0" prefWidth="10">
-                <Label text="#{prefWidth; converter={DoubleStringConverter}; format={MessageFormat}}"/>
+                <Label text="#{prefWidth; converter=$DBL_CONVERTER; format=$FMT}"/>
             </TestPane>
         """));
 
         assertEquals(ErrorCode.CONFLICTING_PROPERTIES, ex.getDiagnostic().getCode());
-        assertCodeHighlight("format={MessageFormat}", ex);
+        assertCodeHighlight("format=$FMT", ex);
     }
 
     @Test
@@ -175,7 +113,7 @@ public class StringConversionBindingTest extends CompilerTestBase {
             <?import javafx.util.converter.*?>
             <?import javafx.scene.control.*?>
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0" prefWidth="10">
-                <Label text="#{prefWidth; converter={DoubleStringConverter}; inverseMethod=foo}"/>
+                <Label text="#{prefWidth; converter=$DBL_CONVERTER; inverseMethod=foo}"/>
             </TestPane>
         """));
 
@@ -189,12 +127,12 @@ public class StringConversionBindingTest extends CompilerTestBase {
             <?import javafx.util.converter.*?>
             <?import javafx.scene.control.*?>
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0" prefWidth="10">
-                <Label prefWidth="#{prefWidth; converter={DoubleStringConverter}}"/>
+                <Label prefWidth="#{prefWidth; converter=$DBL_CONVERTER}"/>
             </TestPane>
         """));
 
         assertEquals(ErrorCode.STRING_CONVERSION_NOT_APPLICABLE, ex.getDiagnostic().getCode());
-        assertCodeHighlight("converter={DoubleStringConverter}", ex);
+        assertCodeHighlight("converter=$DBL_CONVERTER", ex);
     }
 
     @Test
@@ -203,11 +141,11 @@ public class StringConversionBindingTest extends CompilerTestBase {
             <?import java.text.*?>
             <?import javafx.scene.control.*?>
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0" prefWidth="10">
-                <Label prefWidth="#{prefWidth; format={DecimalFormat}}"/>
+                <Label prefWidth="#{prefWidth; format=$FMT}"/>
             </TestPane>
         """));
 
         assertEquals(ErrorCode.STRING_CONVERSION_NOT_APPLICABLE, ex.getDiagnostic().getCode());
-        assertCodeHighlight("format={DecimalFormat}", ex);
+        assertCodeHighlight("format=$FMT", ex);
     }
 }

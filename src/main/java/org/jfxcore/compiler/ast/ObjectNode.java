@@ -1,4 +1,4 @@
-// Copyright (c) 2022, 2024, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2025, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast;
@@ -27,17 +27,24 @@ public class ObjectNode extends AbstractNode implements ValueNode {
     private TypeNode type;
     private final List<PropertyNode> properties;
     private final List<Node> children;
+    private final boolean markupExtension;
 
     public ObjectNode(
             TypeNode type,
             Collection<? extends PropertyNode> properties,
             Collection<? extends Node> children,
+            boolean markupExtension,
             SourceInfo sourceInfo) {
         super(sourceInfo);
         this.type = checkNotNull(type);
         this.properties = new PropertyList();
         this.properties.addAll(checkNotNull(properties));
         this.children = new ArrayList<>(checkNotNull(children));
+        this.markupExtension = markupExtension;
+    }
+
+    public boolean isMarkupExtension() {
+        return markupExtension;
     }
 
     public boolean isIntrinsic(Intrinsic node) {
@@ -148,6 +155,7 @@ public class ObjectNode extends AbstractNode implements ValueNode {
             type.deepClone(),
             deepClone(properties),
             deepClone(children),
+            markupExtension,
             getSourceInfo());
     }
 
@@ -195,5 +203,4 @@ public class ObjectNode extends AbstractNode implements ValueNode {
             return list.remove(index);
         }
     }
-
 }

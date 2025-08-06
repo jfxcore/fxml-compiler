@@ -1,4 +1,4 @@
-// Copyright (c) 2022, 2024, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2025, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler;
@@ -68,19 +68,6 @@ public class GenericsTest extends CompilerTestBase {
             <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <GenericObject fx:typeArguments="java.lang.String" fx:id="obj" prop="foo" prop2="foo"/>
             </GridPane>
-        """);
-
-        assertEquals("foo", ((GenericObject)Reflection.getFieldValue(root, "obj")).getProp());
-        assertEquals("foo", ((GenericObject)Reflection.getFieldValue(root, "obj")).getProp2());
-    }
-
-    @Test
-    @SuppressWarnings("rawtypes")
-    public void CurlySyntax_GenericObject_With_TypeArguments_Is_Instantiated() {
-        GridPane root = compileAndRun("""
-            <?import javafx.scene.layout.*?>
-            <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                      children="{GenericObject fx:typeArguments=String; fx:id=obj; prop=foo; prop2=foo}"/>
         """);
 
         assertEquals("foo", ((GenericObject)Reflection.getFieldValue(root, "obj")).getProp());

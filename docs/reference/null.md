@@ -5,8 +5,8 @@ parent: FXML 2.0 language reference
 nav_order: 15
 ---
 
-# fx:null element
-The `fx:null` element specifies a `null` value for a property.
+# fx:null markup extension
+The `fx:null` markup extension specifies a `null` value for a property.
 
 ## Usage
 

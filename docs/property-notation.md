@@ -6,6 +6,7 @@ nav_order: 5
 
 # Properties
 The FXML 2.0 property syntax is similar to FXML 1.0, and most of the time the notations look identical. However, FXML 2.0 relaxes the restriction that property names must be lower-cased, and allows a qualified notation to resolve ambiguities.
+
 ## Instance property notation
 Properties of scene graph elements can either be specified using attribute notation or element notation:
 ```xml
@@ -22,6 +23,7 @@ Properties of scene graph elements can either be specified using attribute notat
     <text>My button 3</text>
 </Button>
 ```
+
 ## Static property notation
 Static properties can be specified using the following notation, where the static property name is prefixed with the declaring class:
 ```xml
@@ -33,6 +35,17 @@ Static properties can be specified using the following notation, where the stati
     <VBox.margin>10</VBox.margin>
 </Button>
 ```
+
+## Default property
+The default property name can be omitted when the value is instead provided as the element's content:
+```xml
+<!-- Omitted default property "text" -->
+<Button>Hello</Button>
+
+<!-- This corresponds to -->
+<Button text="Hello"/>
+```
+
 ## Resolving ambiguities
 In the short element notation example, the `text` element can be unambiguously resolved to the `Button.text` property. 
 However, if a class named `text` was imported into the document, the meaning would change: a `text` element would then create a new instance of this class.

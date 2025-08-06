@@ -1,4 +1,4 @@
-// Copyright (c) 2022, 2024, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2025, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.codebehind;
@@ -37,7 +37,7 @@ public class ClassNode extends ObjectNode implements JavaEmitterNode {
             TypeNode type,
             Collection<PropertyNode> properties,
             SourceInfo sourceInfo) {
-        super(type, properties, Collections.emptyList(), sourceInfo);
+        super(type, properties, Collections.emptyList(), false, sourceInfo);
         this.packageName = packageName;
         this.className = checkNotNull(className);
         this.markupClassName = markupClassName;
@@ -178,5 +178,4 @@ public class ClassNode extends ObjectNode implements JavaEmitterNode {
         result = 31 * result + Arrays.deepHashCode(parameterAnnotations);
         return result;
     }
-
 }

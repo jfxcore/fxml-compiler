@@ -397,4 +397,127 @@ public class IntrinsicsTest extends CompilerTestBase {
             assertTrue(ex.getMessage().startsWith("Resource not found"));
         }
     }
+
+    @Nested
+    public class BindingIntrinsicsTest extends CompilerTestBase {
+        @Test
+        public void FxOnce_Compact_Syntax_Has_Correct_CodeHighlight() {
+            MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+                <?import javafx.scene.control.*?>
+                <Button xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                        prefHeight="$foo.bar"/>
+            """));
+
+            assertEquals(ErrorCode.MEMBER_NOT_FOUND, ex.getDiagnostic().getCode());
+            assertCodeHighlight("foo", ex);
+        }
+
+        @Test
+        public void FxBind_Compact_Syntax_Has_Correct_CodeHighlight() {
+            MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+                <?import javafx.scene.control.*?>
+                <Button xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                        prefHeight="${foo.bar}"/>
+            """));
+
+            assertEquals(ErrorCode.MEMBER_NOT_FOUND, ex.getDiagnostic().getCode());
+            assertCodeHighlight("foo", ex);
+        }
+
+        @Test
+        public void FxBindBidirectional_Compact_Syntax_Has_Correct_CodeHighlight() {
+            MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+                <?import javafx.scene.control.*?>
+                <Button xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                        prefHeight="#{foo.bar}"/>
+            """));
+
+            assertEquals(ErrorCode.MEMBER_NOT_FOUND, ex.getDiagnostic().getCode());
+            assertCodeHighlight("foo", ex);
+        }
+
+        @Test
+        public void FxContent_Compact_Syntax_Has_Correct_CodeHighlight() {
+            MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+                <?import javafx.scene.control.*?>
+                <Button xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                        styleClass="$..foo.bar"/>
+            """));
+
+            assertEquals(ErrorCode.MEMBER_NOT_FOUND, ex.getDiagnostic().getCode());
+            assertCodeHighlight("foo", ex);
+        }
+
+        @Test
+        public void FxContent_Compact_Syntax_WithPathProperty_Has_Correct_CodeHighlight() {
+            MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+                <?import javafx.scene.control.*?>
+                <Button xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                        styleClass="$path=..foo.bar"/>
+            """));
+
+            assertEquals(ErrorCode.MEMBER_NOT_FOUND, ex.getDiagnostic().getCode());
+            assertCodeHighlight("foo", ex);
+        }
+
+        @Test
+        public void FxBindContent_Compact_Syntax_Has_Correct_CodeHighlight() {
+            MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+                <?import javafx.scene.control.*?>
+                <Button xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                        styleClass="${..foo.bar}"/>
+            """));
+
+            assertEquals(ErrorCode.MEMBER_NOT_FOUND, ex.getDiagnostic().getCode());
+            assertCodeHighlight("foo", ex);
+        }
+
+        @Test
+        public void FxBindContentBidirectional_Compact_Syntax_Has_Correct_CodeHighlight() {
+            MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+                <?import javafx.scene.control.*?>
+                <Button xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                        styleClass="#{..foo.bar}"/>
+            """));
+
+            assertEquals(ErrorCode.MEMBER_NOT_FOUND, ex.getDiagnostic().getCode());
+            assertCodeHighlight("foo", ex);
+        }
+
+        @Test
+        public void FxContent_Element_Syntax_With_Expansion_Operator_Has_Correct_CodeHighlight() {
+            MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+                <?import javafx.scene.control.*?>
+                <Button xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                        styleClass="{fx:content path=..foo.bar}"/>
+            """));
+
+            assertEquals(ErrorCode.UNEXPECTED_TOKEN, ex.getDiagnostic().getCode());
+            assertCodeHighlight(".", ex);
+        }
+
+        @Test
+        public void FxBindContent_Element_Syntax_With_Expansion_Operator_Has_Correct_CodeHighlight() {
+            MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+                <?import javafx.scene.control.*?>
+                <Button xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                        styleClass="{fx:bindContent path=..foo.bar}"/>
+            """));
+
+            assertEquals(ErrorCode.UNEXPECTED_TOKEN, ex.getDiagnostic().getCode());
+            assertCodeHighlight(".", ex);
+        }
+
+        @Test
+        public void FxBindContentBidirectional_Element_Syntax_With_Expansion_Operator_Has_Correct_CodeHighlight() {
+            MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+                <?import javafx.scene.control.*?>
+                <Button xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                        styleClass="{fx:bindContent path=..foo.bar}"/>
+            """));
+
+            assertEquals(ErrorCode.UNEXPECTED_TOKEN, ex.getDiagnostic().getCode());
+            assertCodeHighlight(".", ex);
+        }
+    }
 }
