@@ -6,7 +6,7 @@ nav_order: 6
 ---
 
 # Boolean operators
-A binding path expression can be prefixed with a boolean operator, which causes the expression to evaluate to a boolean value. Boolean operators are applicable to any expression type, not just boolean expressions.
+A binding path expression can be prefixed with a boolean operator, which causes the expression to evaluate to a boolean value.
 
 | Operator | Description |
 |:-|:-|
@@ -22,3 +22,15 @@ In the following example, the controls are disabled or hidden when the bound lis
 <!-- visible=false when size=0 -->
 <MyAddressControl visible="${!!user::addresses.size}"/>
 ```
+
+## Applicability
+A boolean operator is applicable to any expression type, not just boolean expressions. However, restrictions apply for some binding modes.
+
+| Binding mode | Applicable |
+|:-|:-|
+| [`fx:once`](../reference/once.html) | yes, all expression types |
+| [`fx:bind`](../reference/bind.html) | yes, all expression types |
+| [`fx:bindBidirectional`](../reference/bindBidirectional.html) | only if the binding source implements `WritableValue<Boolean>` (e.g. `DoubleProperty`) |
+| [`fx:content`](../reference/content.html) | no |
+| [`fx:bindContent`](../reference/bindContent.html) | no |
+| [`fx:bindContentBidirectional`](../reference/bindContentBidirectional.html) | no |

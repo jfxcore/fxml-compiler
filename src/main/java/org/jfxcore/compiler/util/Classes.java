@@ -1,4 +1,4 @@
-// Copyright (c) 2021, 2024, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2025, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.util;
@@ -103,6 +103,7 @@ public final class Classes {
     public static CtClass ObservableType() { return get("javafx.beans.Observable"); }
     public static CtClass InvalidationListenerType() { return get("javafx.beans.InvalidationListener"); }
     public static CtClass WeakInvalidationListenerType() { return get("javafx.beans.WeakInvalidationListener"); }
+    public static CtClass WeakListenerType() { return get("javafx.beans.WeakListener"); }
 
     // javafx.beans.value
     public static CtClass ObservableValueType() { return get("javafx.beans.value.ObservableValue"); }

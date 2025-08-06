@@ -1,4 +1,4 @@
-// Copyright (c) 2021, 2024, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2025, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.bindings;
@@ -9,15 +9,16 @@ import org.jfxcore.compiler.util.CompilerTestBase;
 import org.jfxcore.compiler.util.InverseMethod;
 import org.jfxcore.compiler.util.NameHelper;
 import org.jfxcore.compiler.util.TestExtension;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import javafx.beans.InvalidationListener;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
+import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleDoubleProperty;
+import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.scene.layout.Pane;
@@ -53,6 +54,14 @@ public class OperatorTest extends CompilerTestBase {
     public static class TestPane extends Pane {
         public final DoubleProperty doubleProp = new SimpleDoubleProperty(123);
         public final BooleanProperty booleanProp = new SimpleBooleanProperty(true);
+        public final BooleanProperty failingBooleanProp = new SimpleBooleanProperty(true) {
+            @Override
+            public void set(boolean newValue) {
+                throw new RuntimeException();
+            }
+        };
+
+        public final ObjectProperty<IndirectContext> indirectContext = new SimpleObjectProperty<>(new IndirectContext());
 
         public final ObservableValue<Boolean> observableBool = new ObservableValue<>() {
             @Override public void addListener(ChangeListener<? super Boolean> changeListener) {}
@@ -61,6 +70,10 @@ public class OperatorTest extends CompilerTestBase {
             @Override public void removeListener(InvalidationListener invalidationListener) {}
             @Override public Boolean getValue() { return true; }
         };
+    }
+
+    public static class IndirectContext {
+        public final BooleanProperty booleanProp = new SimpleBooleanProperty(false);
     }
 
     @Test
@@ -281,7 +294,6 @@ public class OperatorTest extends CompilerTestBase {
     }
 
     @Test
-    @Disabled("Disabled until support for invertible bidirectional boolean bindings is available")
     public void Bind_Bidirectional_With_NotOperator_Succeeds_For_BooleanProperty() {
         TestPane root = compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
@@ -301,6 +313,76 @@ public class OperatorTest extends CompilerTestBase {
         assertTrue(root.booleanProp.get());
     }
 
+    @Test
+    public void Bind_Bidirectional_With_BoolifyOperator_Succeeds_For_BooleanProperty() {
+        TestPane root = compileAndRun("""
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                      visible="#{!!booleanProp}"/>
+        """);
 
+        root.booleanProp.set(true);
+        assertTrue(root.isVisible());
 
+        root.booleanProp.set(false);
+        assertFalse(root.isVisible());
+
+        root.setVisible(true);
+        assertTrue(root.booleanProp.get());
+
+        root.setVisible(false);
+        assertFalse(root.booleanProp.get());
+    }
+
+    @Test
+    public void Bind_Bidirectional_With_NotOperator_Succeeds_For_Indirect_BooleanProperty() {
+        TestPane root = compileAndRun("""
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                      visible="#{!indirectContext.booleanProp}"/>
+        """);
+
+        var context = root.indirectContext.get();
+        context.booleanProp.set(false);
+        assertTrue(root.isVisible());
+
+        context.booleanProp.set(true);
+        assertFalse(root.isVisible());
+
+        root.setVisible(true);
+        assertFalse(context.booleanProp.get());
+
+        root.setVisible(false);
+        assertTrue(context.booleanProp.get());
+
+        root.indirectContext.set(context = new IndirectContext());
+        context.booleanProp.set(true);
+        assertFalse(root.isVisible());
+
+        context.booleanProp.set(false);
+        assertTrue(root.isVisible());
+
+        root.setVisible(false);
+        assertTrue(context.booleanProp.get());
+
+        root.setVisible(true);
+        assertFalse(context.booleanProp.get());
+    }
+
+    @Test
+    public void Bind_Bidirectional_With_NotOperator_Failing_Property() {
+        TestPane root = compileAndRun("""
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                      visible="#{!failingBooleanProp}"/>
+        """);
+
+        var uncaughtExceptionHandler = Thread.currentThread().getUncaughtExceptionHandler();
+        var exception = new Throwable[1];
+        Thread.currentThread().setUncaughtExceptionHandler((t, e) -> exception[0] = e);
+        boolean oldValue = root.failingBooleanProp.get();
+        root.setVisible(true);
+        Thread.currentThread().setUncaughtExceptionHandler(uncaughtExceptionHandler);
+
+        assertTrue(oldValue);
+        assertInstanceOf(RuntimeException.class, exception[0]);
+        assertTrue(exception[0].getMessage().contains("Bidirectional binding failed"));
+    }
 }

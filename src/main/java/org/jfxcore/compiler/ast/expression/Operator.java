@@ -1,4 +1,4 @@
-// Copyright (c) 2021, 2024, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2025, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.expression;
@@ -39,9 +39,7 @@ public enum Operator {
     public boolean isInvertible(TypeInstance operandType) {
         return switch (this) {
             case IDENTITY -> true;
-            // Disabled until support for negated bidirectional boolean bindings is available
-            // case NOT -> operandType.equals(CtClass.booleanType) || operandType.equals(Classes.BooleanType());
-            default -> false;
+            case NOT, BOOLIFY -> operandType.equals(CtClass.booleanType) || operandType.equals(BooleanType());
         };
     }
 
@@ -70,12 +68,14 @@ public enum Operator {
             }
 
             case BIDIRECTIONAL -> {
-                child.setNodeData(NodeDataKey.BIND_BIDIRECTIONAL_NEGATED, Boolean.TRUE);
+                if (this == NOT) {
+                    child.setNodeData(NodeDataKey.BIND_BIDIRECTIONAL_INVERT_BOOLEAN, Boolean.TRUE);
+                }
+
                 yield child;
             }
 
             default -> throw new IllegalArgumentException("bindingMode");
         };
     }
-
 }
