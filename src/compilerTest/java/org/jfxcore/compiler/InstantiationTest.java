@@ -371,18 +371,6 @@ public class InstantiationTest extends CompilerTestBase {
         }
 
         @Test
-        public void TypedData_Can_Be_Assigned_To_Raw_Element_With_CurlySyntax() {
-            GridPane root = compileAndRun("""
-                <?import javafx.scene.layout.*?>
-                <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
-                    <MyGenericButton data="{MyDerivedData value=foo}"/>
-                </GridPane>
-            """);
-
-            assertEquals(((MyGenericButton<?>)root.getChildren().get(0)).data.value, "foo");
-        }
-
-        @Test
         public void Incompatible_GenericType_Cannot_Be_Assigned_To_Typed_Element() {
             MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
                 <?import javafx.scene.layout.*?>
@@ -917,5 +905,4 @@ public class InstantiationTest extends CompilerTestBase {
         assertEquals(ErrorCode.OBJECT_CANNOT_HAVE_CONTENT, ex.getDiagnostic().getCode());
         assertCodeHighlight("<ComboBox>", ex);
     }
-
 }

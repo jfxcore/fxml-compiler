@@ -154,7 +154,7 @@ public class FxmlParser {
                 element.getNodeName(),
                 FxmlNamespace.FXML.equalsIgnoreCase(namespace),
                 (SourceInfo)element.getUserData(XmlReader.ELEMENT_NAME_SOURCE_INFO_KEY)),
-            properties, children, getSourceInfo(element));
+            properties, children, false, getSourceInfo(element));
     }
 
     private SourceInfo getSourceInfo(Node node) {
@@ -248,5 +248,4 @@ public class FxmlParser {
             false,
             sourceInfo);
     }
-
 }

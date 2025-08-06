@@ -1,4 +1,4 @@
-// Copyright (c) 2024, JFXcore. All rights reserved.
+// Copyright (c) 2024, 2025, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.transform.common;
@@ -75,6 +75,8 @@ public class ContentExpressionTransform implements Transform {
         pathProperty.getValues().clear();
         pathProperty.getValues().addAll(newValues);
 
-        return new ObjectNode(type, expression.getProperties(), expression.getChildren(), expression.getSourceInfo());
+        return new ObjectNode(
+            type, expression.getProperties(), expression.getChildren(),
+            expression.isMarkupExtension(), expression.getSourceInfo());
     }
 }

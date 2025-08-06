@@ -31,6 +31,7 @@ import org.jfxcore.compiler.diagnostic.MarkupException;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.diagnostic.errors.GeneralErrors;
 import org.jfxcore.compiler.diagnostic.errors.ObjectInitializationErrors;
+import org.jfxcore.compiler.diagnostic.errors.ParserErrors;
 import org.jfxcore.compiler.diagnostic.errors.SymbolResolutionErrors;
 import org.jfxcore.compiler.parse.TypeParser;
 import org.jfxcore.compiler.transform.Transform;
@@ -68,6 +69,10 @@ public class ObjectTransform implements Transform {
 
         if (objectNode.getType().isIntrinsic()) {
             throw GeneralErrors.unexpectedIntrinsic(node.getSourceInfo(), objectNode.getType().getMarkupName());
+        }
+
+        if (objectNode.isMarkupExtension()) {
+            throw ParserErrors.unexpectedMarkupExtension(node.getSourceInfo(), objectNode.getType().getName());
         }
 
         Node parentNode = context.getParent(0);
@@ -331,5 +336,4 @@ public class ObjectTransform implements Transform {
 
         return null;
     }
-
 }
