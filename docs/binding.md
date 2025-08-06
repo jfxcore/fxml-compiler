@@ -1,7 +1,7 @@
 ---
 layout: default
 title: Compiled bindings
-nav_order: 9
+nav_order: 8
 has_children: true
 ---
 
@@ -14,13 +14,13 @@ Here's how a simple binding is specified in FXML 2.0, using different (but equiv
 ```xml
 <VBox xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
       fx:class="com.sample.MyControl">
-    <!-- fx:bind element with binding source path -->
+    <!-- fx:bind markup extension with binding source path -->
     <Button text="{fx:bind path=caption}"/>
 
-    <!-- 'path' is the default property of the fx:bind element, so it can be omitted -->
+    <!-- 'path' is the default property of the fx:bind markup extension, so it can be omitted -->
     <Button text="{fx:bind caption}"/>
 
-    <!-- Short notation, similar to FXML 1.0 -->
+    <!-- Compact notation, similar to FXML 1.0 -->
     <Button text="${caption}"/>
 </VBox>
 ```
@@ -40,4 +40,4 @@ public class MyControl extends MyControlBase {
 }
 ```
 
-`fx:bind` is an intrinsic element of the FMXL 2.0 language, which corresponds to calling the `Property.bind(ObservableValue)` method with the `caption` argument, which is the binding source path.
+`fx:bind` is an intrinsic markup extension of the FMXL 2.0 language. It corresponds to calling the `Property.bind(ObservableValue)` method with the `caption` argument, which is the binding source path.

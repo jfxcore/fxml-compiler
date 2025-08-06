@@ -5,16 +5,16 @@ parent: FXML 2.0 language reference
 nav_order: 4
 ---
 
-# fx:bindContentBidirectional element, #{..x}
-The `fx:bindContentBidirectional` element establishes a bidirectional content binding. It can be set on any `ReadOnlyListProperty`, `ReadOnlySetProperty`, or `ReadOnlyMapProperty` instance, and is equivalent to invoking the `ReadOnly{List/Set/Map}Property.bindContentBidirectional(Observable{List/Set/Map})` API in Java code.
+# fx:bindContentBidirectional markup extension, #{..x}
+The `fx:bindContentBidirectional` markup extension establishes a bidirectional content binding. It can be set on any `ReadOnlyListProperty`, `ReadOnlySetProperty`, or `ReadOnlyMapProperty` instance, and is equivalent to invoking the `ReadOnly{List/Set/Map}Property.bindContentBidirectional(Observable{List/Set/Map})` API in Java code.
 
-Its short notation is `#{..x}`, where <span class="inline-code">x</span> is the [binding path](../binding/binding-path.html).
+Its compact notation is `#{..x}`, where <span class="inline-code">x</span> is the [binding path](../binding/binding-path.html).
 
 ## Properties
 
 | Property | Description |
 |:-|:-|
-| `path` | A string that specifies the [binding path](../binding/binding-path.html). This is the [default property](../compact-notation.html#default-property). |
+| `path` | A string that specifies the [binding path](../binding/binding-path.html). This is the [default property](../property-notation.html#default-property). |
 
 ## Usage
 
@@ -32,6 +32,6 @@ Its short notation is `#{..x}`, where <span class="inline-code">x</span> is the 
 <!-- Attribute notation with omitted "path" -->
 <object property="{fx:bindContentBidirectional myPath}"/>
 
-<!-- Short notation -->
+<!-- Compact notation -->
 <object property="#{..myPath}"/>
 ```
