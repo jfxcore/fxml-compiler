@@ -1,4 +1,4 @@
-// Copyright (c) 2022, 2024, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2025, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.transform.markup.util;
@@ -452,7 +452,7 @@ public class ValueEmitterFactory {
                 if (bindingNode.getBindingDistance() <= parentsUnderInitializationCount) {
                     return AcceptArgumentResult.error(null, ErrorCode.CANNOT_REFERENCE_NODE_UNDER_INITIALIZATION);
                 } else {
-                    value = bindingNode.toEmitter(invokingType, targetType).getValue();
+                    value = bindingNode.toPathEmitter(invokingType, targetType).getValue();
                     adjustParentIndex(value, parentsUnderInitializationCount + 1);
                 }
             } else {
@@ -769,5 +769,4 @@ public class ValueEmitterFactory {
 
         return ((TextNode)propertyNode.getValues().get(0)).getText();
     }
-
 }

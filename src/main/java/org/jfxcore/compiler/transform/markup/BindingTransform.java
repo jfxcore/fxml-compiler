@@ -71,9 +71,16 @@ public class BindingTransform implements Transform {
             throw ParserErrors.invalidExpression(pathNode.getSourceInfo());
         }
 
+        PropertyNode converter = objectNode.findProperty("converter");
+        PathNode converterPath = converter != null ? converter.getSingleValue(context).as(PathNode.class) : null;
+
+        PropertyNode format = objectNode.findProperty("format");
+        PathNode formatPath = format != null ? format.getSingleValue(context).as(PathNode.class) : null;
+
         return new BindingNode(
-            pathExpression, bindingMode,
-            objectNode.findProperty("converter"), objectNode.findProperty("format"),
+            bindingMode, pathExpression,
+            converterPath != null ? parsePathNode(context, Operator.IDENTITY, converterPath) : null,
+            formatPath != null ? parsePathNode(context, Operator.IDENTITY, formatPath) : null,
             node.getSourceInfo());
     }
 
@@ -351,5 +358,4 @@ public class BindingTransform implements Transform {
 
         return new ParentInfo(parentType, parentIndex);
     }
-
 }
