@@ -10,6 +10,7 @@ The binding source in the expression `<Label text="${path.to.userName}"/>` may b
 * a plain field or method with the name `userName`, returning a `String`
 * a Java Beans-style method with the name `getUserName`, returning a `String` (optionally with the `is` prefix if the type is `boolean`)
 * a JavaFX Beans-style method with the name `userNameProperty`, returning an `ObservableValue<String>` (or `Property` in case of bidirectional bindings)
+* an attached property like `BorderPane.getAlignment(Node)` or `VBox.getMargin(Node)`
 
 {: .note }
 The binding path is resolved by evaluating it against the [binding context](binding-context.html).
@@ -49,6 +50,19 @@ In this case, `.size` will select the `ListProperty.sizeProperty()` method, whic
 {: .note }
 Unlike the member selection operator, the observable selection operator can also be placed in front of the first path segment.
 For example, `${::addresses.size}` is a valid expression if `addresses` is an `ObservableValue`.
+
+## Attached properties
+
+An attached property can be selected by wrapping the qualified attached property name in parentheses. The qualified attached property name consists of the name of the declaring class and the name of the property:
+
+```xml
+<VBox>
+    <Label VBox.margin="10" fx:id="myLabel"/>
+    
+    <!-- Selects VBox.getMargin(myLabel) -->
+    <Label VBox.margin="$myLabel.(VBox.margin)"/>
+</VBox>
+```
 
 ## Generic type witness
 When a generic method is selected, it can sometimes be necessary to specify a type witness in order to preserve type information. Similar to the Java language, a generic type witness is specified in angle brackets in front of the method name:

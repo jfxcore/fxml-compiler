@@ -36,6 +36,14 @@ Static properties can be specified using the following notation, where the stati
 </Button>
 ```
 
+## Chained property notation
+Properties can be chained using the dot operator. This is equivalent to following the chain of properties, and then assigning the attribute value to the last property.
+
+```xml
+<!-- equivalent to getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE) -->
+<ListView selectionModel.selectionMode="MULTIPLE"/>
+```
+
 ## Default property
 The default property name can be omitted when the value is instead provided as the element's content:
 ```xml
