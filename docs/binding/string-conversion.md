@@ -20,4 +20,4 @@ The `converter` parameter of a bidirectional binding expression specifies the [p
 ```xml
 <TextField text="#{path.to.value; converter=path.to.converter}"/>
 ```
-This corresponds to a bidirectional binding that is established with the `StringProperty.bindBidirectional(Property<T>, StringConverter<T>converter)` method.
+This corresponds to a bidirectional binding that is established with the `StringProperty.bindBidirectional(Property<T>, StringConverter<T>)` method.

@@ -14,9 +14,9 @@ import javassist.expr.NewExpr;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
 import java.lang.ref.WeakReference;
 import java.lang.reflect.Field;
-import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedList;
@@ -88,26 +88,22 @@ public class CompilerTestBase {
     }
 
     private String getMethodName() {
-        String methodName = null;
-
         for (StackTraceElement element : Thread.currentThread().getStackTrace()) {
             try {
                 Class<?> declaringClass = Class.forName(element.getClassName());
-                Method method = declaringClass.getMethod(element.getMethodName());
-
-                if (method.getAnnotation(Test.class) != null || method.getAnnotation(BeforeAll.class) != null) {
-                    methodName = method.getName();
-                    break;
+                if (Arrays.stream(declaringClass.getMethods()).anyMatch(m ->
+                        m.getName().equals(element.getMethodName())
+                        && (m.getAnnotation(Test.class) != null
+                            || m.getAnnotation(ParameterizedTest.class) != null
+                            || m.getAnnotation(BeforeAll.class) != null))) {
+                    return element.getMethodName();
                 }
-            } catch (ClassNotFoundException | NoSuchMethodException ignored) {
+            } catch (ClassNotFoundException ex) {
+                throw new RuntimeException(ex);
             }
         }
 
-        if (methodName == null) {
-            throw new RuntimeException("No test method found.");
-        }
-
-        return methodName;
+        throw new RuntimeException("No test method found.");
     }
 
     private String getFileName() {

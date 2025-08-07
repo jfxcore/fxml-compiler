@@ -1,10 +1,9 @@
-// Copyright (c) 2024, JFXcore. All rights reserved.
+// Copyright (c) 2025, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.transform.markup;
 
 import javassist.CtField;
-import javassist.Modifier;
 import org.jfxcore.compiler.ast.BindingMode;
 import org.jfxcore.compiler.ast.BindingNode;
 import org.jfxcore.compiler.ast.Node;
@@ -50,7 +49,7 @@ public class BindingContextTransform implements Transform {
 
             var resolver = new Resolver(propertyNode.getSourceInfo());
             var invokingType = resolver.getTypeInstance(context.getCodeBehindOrMarkupClass());
-            var emitter = bindingNode.toEmitter(invokingType, null);
+            var emitter = bindingNode.toPathEmitter(invokingType, null);
             var contextNode = new ContextNode(
                 createField.apply(emitter.getType()),
                 emitter.getType(),

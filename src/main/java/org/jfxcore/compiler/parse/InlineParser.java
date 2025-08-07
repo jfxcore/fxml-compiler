@@ -203,7 +203,11 @@ public class InlineParser {
                 sourceStart.getStart().getLine(),
                 sourceStart.getStart().getColumn() + mapping.compact().length());
 
-            name = new TextNode(mapping.compact(), SourceInfo.span(sourceStart, sourceEnd));
+            name = new TextNode(
+                intrinsicPrefix != null
+                    ? intrinsicPrefix + ":" + mapping.intrinsic().getName()
+                    : mapping.intrinsic().getName(),
+                SourceInfo.span(sourceStart, sourceEnd));
         } else {
             sourceStart = sourceEnd = tokenizer.remove(OPEN_CURLY).getSourceInfo();
             name = parseIdentifier(tokenizer);
@@ -509,5 +513,4 @@ public class InlineParser {
         return new CompositeNode(
             values, SourceInfo.span(values.get(0).getSourceInfo(), values.get(values.size() - 1).getSourceInfo()));
     }
-
 }

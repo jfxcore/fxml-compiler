@@ -236,7 +236,7 @@ public class ObjectTransform implements Transform {
                 throw GeneralErrors.expressionNotApplicable(bindingNode.getSourceInfo(), true);
             }
 
-            BindingEmitterInfo emitterInfo = bindingNode.toEmitter(nodeType, null);
+            BindingEmitterInfo emitterInfo = bindingNode.toPathEmitter(nodeType, null);
             argumentValue = emitterInfo.getObservableType() != null
                 ? new EmitUnwrapObservableNode(emitterInfo.getValue())
                 : emitterInfo.getValue();

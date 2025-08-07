@@ -1,4 +1,4 @@
-// Copyright (c) 2022, 2024, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2025, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.transform.markup.util;
@@ -6,7 +6,6 @@ package org.jfxcore.compiler.transform.markup.util;
 import org.jetbrains.annotations.Nullable;
 import org.jfxcore.compiler.ast.BindingMode;
 import org.jfxcore.compiler.ast.BindingNode;
-import org.jfxcore.compiler.ast.Node;
 import org.jfxcore.compiler.ast.PropertyNode;
 import org.jfxcore.compiler.ast.emit.EmitCollectionWrapperNode;
 import org.jfxcore.compiler.ast.emit.EmitPropertyBindingNode;
@@ -40,7 +39,7 @@ public class BindingEmitterFactory {
         checkPreconditions(context, propertyNode, propertyInfo, bindingNode);
 
         if (bindingNode.getMode().isObservable()) {
-            return createPropertyBindingEmitter(context, bindingNode, propertyInfo);
+            return createPropertyBindingEmitter(bindingNode, propertyInfo);
         }
 
         return createPropertyAssignmentEmitter(bindingNode, propertyInfo);
@@ -50,7 +49,7 @@ public class BindingEmitterFactory {
         SourceInfo sourceInfo = bindingNode.getSourceInfo();
         BindingMode bindingMode = bindingNode.getMode();
         TypeInstance targetType = propertyInfo.getType();
-        BindingEmitterInfo result = bindingNode.toEmitter(propertyInfo.getDeclaringType(), propertyInfo.getType());
+        BindingEmitterInfo result = bindingNode.toPathEmitter(propertyInfo.getDeclaringType(), propertyInfo.getType());
         ValueEmitterNode value = null;
 
         if (bindingMode.isContent()) {
@@ -103,15 +102,14 @@ public class BindingEmitterFactory {
         return new EmitPropertySetterNode(propertyInfo, value, bindingMode.isContent(), sourceInfo);
     }
 
-    private static EmitterNode createPropertyBindingEmitter(
-            TransformContext context, BindingNode bindingNode, PropertyInfo propertyInfo) {
+    private static EmitterNode createPropertyBindingEmitter(BindingNode bindingNode, PropertyInfo propertyInfo) {
         BindingMode bindingMode = bindingNode.getMode();
         TypeInstance targetType = propertyInfo.getType();
         ValueEmitterNode value, format = null, converter = null;
         BindingEmitterInfo result;
 
         try {
-            result = bindingNode.toEmitter(propertyInfo.getDeclaringType(), propertyInfo.getType());
+            result = bindingNode.toPathEmitter(propertyInfo.getDeclaringType(), propertyInfo.getType());
         } catch (MarkupException ex) {
             TypeInstance sourceType = (TypeInstance)ex.getProperties().get("sourceType");
 
@@ -148,25 +146,20 @@ public class BindingEmitterFactory {
                     bindingNode.getSourceInfo(), result.getValueType().getJavaName(), targetType.getJavaName());
             }
         } else if (bindingMode.isBidirectional()) {
+            BindingEmitterInfo converterEmitterInfo = bindingNode.toConverterEmitter(propertyInfo.getDeclaringType());
+            converter = converterEmitterInfo != null ? converterEmitterInfo.getValue() : null;
+
+            BindingEmitterInfo formatEmitterInfo = bindingNode.toFormatEmitter(propertyInfo.getDeclaringType());
+            format = formatEmitterInfo != null ? formatEmitterInfo.getValue() : null;
+
             if (!propertyInfo.getObservableType().subtypeOf(Classes.StringPropertyType())) {
-                if (bindingNode.getConverter() != null) {
-                    throw BindingSourceErrors.stringConversionNotApplicable(
-                        bindingNode.getConverter().getSourceInfo(), "converter");
+                if (converterEmitterInfo != null) {
+                    throw BindingSourceErrors.stringConversionNotApplicable(bindingNode.getSourceInfo(), "converter");
                 }
 
-                if (bindingNode.getFormat() != null) {
-                    throw BindingSourceErrors.stringConversionNotApplicable(
-                        bindingNode.getFormat().getSourceInfo(), "format");
+                if (formatEmitterInfo != null) {
+                    throw BindingSourceErrors.stringConversionNotApplicable(bindingNode.getSourceInfo(), "format");
                 }
-            }
-
-            PropertyNode converterProperty = bindingNode.getConverter();
-            Node converterNode = converterProperty != null ? converterProperty.getSingleValue(context) : null;
-
-            if (converterNode instanceof ValueEmitterNode c) {
-                converter = c;
-            } else if (converterNode instanceof BindingNode binding) {
-                converter = binding.toEmitter(propertyInfo.getDeclaringType(), propertyInfo.getType()).getValue();
             }
 
             if (converter != null) {
@@ -179,15 +172,6 @@ public class BindingEmitterFactory {
                         converter.getType().getTypeInstance().getJavaName(),
                         type.getJavaName());
                 }
-            }
-
-            PropertyNode formatProperty = bindingNode.getFormat();
-            Node formatNode = formatProperty != null ? formatProperty.getSingleValue(context) : null;
-
-            if (formatNode instanceof ValueEmitterNode f) {
-                format = f;
-            } else if (formatNode instanceof BindingNode binding) {
-                format = binding.toEmitter(propertyInfo.getDeclaringType(), propertyInfo.getType()).getValue();
             }
 
             if (format != null && !format.getType().getTypeInstance().subtypeOf(Classes.FormatType())) {
@@ -330,5 +314,4 @@ public class BindingEmitterFactory {
                 return false;
         }
     }
-
 }
