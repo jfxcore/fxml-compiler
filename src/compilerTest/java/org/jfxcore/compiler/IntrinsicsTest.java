@@ -70,7 +70,7 @@ public class IntrinsicsTest extends CompilerTestBase {
     @Nested
     public class NullIntrinsicTest extends CompilerTestBase {
         @Test
-        public void Null_Can_Be_Assigned_To_ReferenceType() {
+        public void Null_Can_Be_Assigned_To_Property_With_ReferenceType() {
             Label root = compileAndRun("""
                 <?import javafx.scene.control.*?>
                 <Label xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
@@ -81,7 +81,7 @@ public class IntrinsicsTest extends CompilerTestBase {
         }
 
         @Test
-        public void Null_Cannot_Be_Assigned_To_PrimitiveType() {
+        public void Null_Cannot_Be_Assigned_To_Property_With_PrimitiveType() {
             MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
                 <?import javafx.scene.control.*?>
                 <Label xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
@@ -89,6 +89,50 @@ public class IntrinsicsTest extends CompilerTestBase {
             """));
 
             assertEquals(ErrorCode.INCOMPATIBLE_PROPERTY_TYPE, ex.getDiagnostic().getCode());
+            assertCodeHighlight("{fx:null}", ex);
+        }
+
+        public static class ReferenceTypeTestPane extends Pane {
+            private final String text;
+
+            public ReferenceTypeTestPane(@NamedArg("text") String text) {
+                this.text = text;
+            }
+
+            // Don't add a getter here; we specifically test for named arguments, not properties
+            // public String getText()
+        }
+
+        @Test
+        public void Null_Can_Be_Assigned_To_ConstructorArgument_With_ReferenceType() {
+            Pane root = compileAndRun("""
+                <?import javafx.scene.layout.*?>
+                <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
+                    <ReferenceTypeTestPane text="{fx:null}"/>
+                </Pane>
+            """);
+
+            assertNull(((ReferenceTypeTestPane)root.getChildrenUnmodifiable().get(0)).text);
+        }
+
+        @SuppressWarnings("unused")
+        public static class PrimitiveTypeTestPane extends Pane {
+            public PrimitiveTypeTestPane(@NamedArg("value") double value) {}
+
+            // Don't add a getter here; we specifically test for named arguments, not properties
+            // public double getValue()
+        }
+
+        @Test
+        public void Null_Cannot_Be_Assigned_To_ConstructorArgument_With_PrimitiveType() {
+            MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+                <?import javafx.scene.layout.*?>
+                <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
+                    <PrimitiveTypeTestPane value="{fx:null}"/>
+                </Pane>
+            """));
+
+            assertEquals(ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT, ex.getDiagnostic().getCode());
             assertCodeHighlight("{fx:null}", ex);
         }
     }
