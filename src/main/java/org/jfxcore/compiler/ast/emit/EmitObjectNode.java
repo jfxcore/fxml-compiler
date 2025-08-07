@@ -1,4 +1,4 @@
-// Copyright (c) 2022, 2024, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2025, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.emit;
@@ -439,16 +439,16 @@ public class EmitObjectNode extends ReferenceableNode {
 
                         context.emit(arguments.get(j));
 
-                        code.ext_autoconv(arguments.get(i).getSourceInfo(), argType.jvmType(), componentType.jvmType())
+                        code.ext_castconv(arguments.get(i).getSourceInfo(), argType.jvmType(), componentType.jvmType())
                             .ext_arraystore(argType.jvmType());
                     }
                 } else {
                     context.emit(arguments.get(i));
-                    code.ext_autoconv(arguments.get(i).getSourceInfo(), argType.jvmType(), componentType.jvmType());
+                    code.ext_castconv(arguments.get(i).getSourceInfo(), argType.jvmType(), componentType.jvmType());
                 }
             } else {
                 context.emit(arguments.get(i));
-                code.ext_autoconv(arguments.get(i).getSourceInfo(), TypeHelper.getJvmType(arguments.get(i)),
+                code.ext_castconv(arguments.get(i).getSourceInfo(), TypeHelper.getJvmType(arguments.get(i)),
                                   paramTypes[i].jvmType());
             }
         }
@@ -460,7 +460,7 @@ public class EmitObjectNode extends ReferenceableNode {
         CtClass argType = unchecked(() -> constructorOrFactoryMethod.getParameterTypes()[0]);
         context.emit(arguments.get(0));
         context.getOutput()
-            .ext_autoconv(getSourceInfo(), TypeHelper.getJvmType(arguments.get(0)), argType)
+            .ext_castconv(getSourceInfo(), TypeHelper.getJvmType(arguments.get(0)), argType)
             .invokestatic(type, constructorOrFactoryMethod.getName(), function(type, argType));
     }
 
@@ -510,5 +510,4 @@ public class EmitObjectNode extends ReferenceableNode {
         return Objects.hash(
             getId(), TypeHelper.hashCode(constructorOrFactoryMethod), arguments, children, createKind, type);
     }
-
 }

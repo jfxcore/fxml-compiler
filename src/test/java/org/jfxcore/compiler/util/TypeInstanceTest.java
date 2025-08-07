@@ -1,4 +1,4 @@
-// Copyright (c) 2022, 2023, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2025, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.util;
@@ -574,6 +574,21 @@ public class TypeInstanceTest extends TestBase {
         assertTrue(t1.isAssignableFrom(t0));
     }
 
+    @Test
+    public void ReferenceType_Is_Assignable_From_NullType() {
+        TypeInstance t0 = new TypeParser("java.lang.String").parse().get(0);
+        assertTrue(t0.isAssignableFrom(TypeInstance.nullType()));
+        assertTrue(TypeInstance.nullType().isAssignableFrom(TypeInstance.nullType()));
+        assertFalse(TypeInstance.nullType().isAssignableFrom(t0));
+    }
+
+    @Test
+    public void PrimitiveType_Is_Not_Assignable_From_NullType() {
+        TypeInstance t0 = new TypeParser("double").parse().get(0);
+        assertFalse(t0.isAssignableFrom(TypeInstance.nullType()));
+        assertFalse(TypeInstance.nullType().isAssignableFrom(t0));
+    }
+
     public static class Type1<A> {}
     public static class Type2<B> extends Type1<B> {}
     public static class Type3 extends Type2<String> {}
@@ -926,5 +941,4 @@ public class TypeInstanceTest extends TestBase {
         assertEquals("java.lang.String[][]", jvmType.getName());
         assertEquals("java.lang.String[]", jvmType.getComponentType().getName());
     }
-
 }

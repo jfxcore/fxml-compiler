@@ -1,4 +1,4 @@
-// Copyright (c) 2022, 2024, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2025, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.util;
@@ -33,6 +33,22 @@ public class TypeInstance {
         }
     }
 
+    private static class NullTypeInstance extends TypeInstance {
+        NullTypeInstance() {
+            super(Classes.ObjectType(), 0, List.of(), List.of(), WildcardType.NONE);
+        }
+
+        @Override
+        protected String toString(boolean simpleNames, boolean javaNames) {
+            return "<null>";
+        }
+
+        @Override
+        public boolean isAssignableFrom(TypeInstance from, AssignmentContext context) {
+            return from instanceof NullTypeInstance;
+        }
+    }
+
     public static TypeInstance booleanType() { return resolveTypeInstance(CtClass.booleanType); }
     public static TypeInstance charType() { return resolveTypeInstance(CtClass.charType); }
     public static TypeInstance byteType() { return resolveTypeInstance(CtClass.byteType); }
@@ -52,7 +68,18 @@ public class TypeInstance {
     public static TypeInstance StringType() { return resolveTypeInstance(Classes.StringType()); }
     public static TypeInstance ObjectType() { return resolveTypeInstance(Classes.ObjectType()); }
 
+    public static TypeInstance nullType() {
+        TypeInstance typeInstance = getClassCache().get(null);
+        if (typeInstance == null) {
+            typeInstance = new NullTypeInstance();
+            getClassCache().put(null, typeInstance);
+        }
+
+        return typeInstance;
+    }
+
     private static TypeInstance resolveTypeInstance(CtClass clazz) {
+        Objects.requireNonNull(clazz);
         TypeInstance typeInstance = getClassCache().get(clazz);
         if (typeInstance == null) {
             typeInstance = new Resolver(SourceInfo.none()).getTypeInstance(clazz);
@@ -240,7 +267,7 @@ public class TypeInstance {
      */
     public boolean isAssignableFrom(TypeInstance from, AssignmentContext context) {
         // Identity conversion
-        if (equals(from)) {
+        if (equals(from) || !isPrimitive() && from instanceof NullTypeInstance) {
             return true;
         }
 
@@ -491,5 +518,4 @@ public class TypeInstance {
     public String toString() {
         return getSimpleName();
     }
-
 }
