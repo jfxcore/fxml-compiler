@@ -81,11 +81,11 @@ final class CacheKey {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         CacheKey tuple = (CacheKey)o;
-        return equals(item1, tuple.item1) &&
-                equals(item2, tuple.item2) &&
-                equals(item3, tuple.item3) &&
-                equals(item4, tuple.item4) &&
-                equals(item5, tuple.item5);
+        return equals(item1, tuple.item1)
+            && equals(item2, tuple.item2)
+            && equals(item3, tuple.item3)
+            && equals(item4, tuple.item4)
+            && equals(item5, tuple.item5);
     }
 
     @Override
