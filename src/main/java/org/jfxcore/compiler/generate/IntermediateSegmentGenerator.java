@@ -1,4 +1,4 @@
-// Copyright (c) 2021, 2023, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2025, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.generate;
@@ -19,6 +19,7 @@ import org.jfxcore.compiler.util.Label;
 import org.jfxcore.compiler.util.NameHelper;
 import org.jfxcore.compiler.util.Resolver;
 import org.jfxcore.compiler.util.TypeInstance;
+import org.jfxcore.compiler.util.TypeInvoker;
 
 import static org.jfxcore.compiler.util.Classes.*;
 import static org.jfxcore.compiler.util.Descriptors.*;
@@ -28,6 +29,7 @@ public class IntermediateSegmentGenerator extends SegmentGeneratorBase {
     public static final String OBSERVABLE_FIELD = "observable";
 
     private final Resolver resolver;
+    private final TypeInvoker invoker;
     private CtClass observableType;
     private CtConstructor constructor;
     private CtMethod updateMethod;
@@ -36,11 +38,12 @@ public class IntermediateSegmentGenerator extends SegmentGeneratorBase {
     public IntermediateSegmentGenerator(SourceInfo sourceInfo, FoldedGroup[] path, int segment) {
         super(sourceInfo, path, segment);
         this.resolver = new Resolver(sourceInfo);
+        this.invoker = new TypeInvoker(sourceInfo);
     }
 
     @Override
     public TypeInstance getTypeInstance() {
-        return resolver.getTypeInstance(ChangeListenerType());
+        return invoker.invokeType(ChangeListenerType());
     }
 
     @Override
@@ -217,5 +220,4 @@ public class IntermediateSegmentGenerator extends SegmentGeneratorBase {
         method.getMethodInfo().setCodeAttribute(code.toCodeAttribute());
         method.getMethodInfo().rebuildStackMap(method.getDeclaringClass().getClassPool());
     }
-
 }

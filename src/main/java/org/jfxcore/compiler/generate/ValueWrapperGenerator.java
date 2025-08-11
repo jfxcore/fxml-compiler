@@ -1,4 +1,4 @@
-// Copyright (c) 2023, JFXcore. All rights reserved.
+// Copyright (c) 2023, 2025, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.generate;
@@ -14,9 +14,9 @@ import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.util.Bytecode;
 import org.jfxcore.compiler.util.Descriptors;
 import org.jfxcore.compiler.util.NameHelper;
-import org.jfxcore.compiler.util.Resolver;
 import org.jfxcore.compiler.util.TypeHelper;
 import org.jfxcore.compiler.util.TypeInstance;
+import org.jfxcore.compiler.util.TypeInvoker;
 
 import static org.jfxcore.compiler.generate.SharedMethodImpls.*;
 import static org.jfxcore.compiler.util.Classes.*;
@@ -24,40 +24,40 @@ import static org.jfxcore.compiler.util.Classes.*;
 public abstract class ValueWrapperGenerator extends ClassGenerator {
 
     public static ClassGenerator newInstance(CtClass valueType) {
-        Resolver resolver = new Resolver(SourceInfo.none());
+        TypeInvoker invoker = new TypeInvoker(SourceInfo.none());
         CtClass primitiveType = TypeHelper.getPrimitiveType(valueType);
 
         if (primitiveType == CtClass.booleanType) {
             return new ValueWrapperGenerator(
-                    resolver.getTypeInstance(ObservableBooleanValueType()), CtClass.booleanType, BooleanType()) {
+                    invoker.invokeType(ObservableBooleanValueType()), CtClass.booleanType, BooleanType()) {
                 @Override public String getClassName() {
                     return NameHelper.getMangledClassName("BooleanConstant");
                 }
             };
         } else if (primitiveType == CtClass.intType) {
             return new ValueWrapperGenerator(
-                    resolver.getTypeInstance(ObservableIntegerValueType()), CtClass.intType, IntegerType()) {
+                    invoker.invokeType(ObservableIntegerValueType()), CtClass.intType, IntegerType()) {
                 @Override public String getClassName() {
                     return NameHelper.getMangledClassName("IntegerConstant");
                 }
             };
         } else if (primitiveType == CtClass.longType) {
             return new ValueWrapperGenerator(
-                    resolver.getTypeInstance(ObservableLongValueType()), CtClass.longType, LongType()) {
+                    invoker.invokeType(ObservableLongValueType()), CtClass.longType, LongType()) {
                 @Override public String getClassName() {
                     return NameHelper.getMangledClassName("LongConstant");
                 }
             };
         } else if (primitiveType == CtClass.floatType) {
             return new ValueWrapperGenerator(
-                    resolver.getTypeInstance(ObservableFloatValueType()), CtClass.floatType, FloatType()) {
+                    invoker.invokeType(ObservableFloatValueType()), CtClass.floatType, FloatType()) {
                 @Override public String getClassName() {
                     return NameHelper.getMangledClassName("FloatConstant");
                 }
             };
         } else if (primitiveType == CtClass.doubleType) {
             return new ValueWrapperGenerator(
-                    resolver.getTypeInstance(ObservableDoubleValueType()), CtClass.doubleType, DoubleType()) {
+                    invoker.invokeType(ObservableDoubleValueType()), CtClass.doubleType, DoubleType()) {
                 @Override public String getClassName() {
                     return NameHelper.getMangledClassName("DoubleConstant");
                 }
@@ -65,7 +65,7 @@ public abstract class ValueWrapperGenerator extends ClassGenerator {
         }
 
         return new ValueWrapperGenerator(
-                resolver.getTypeInstance(ObservableObjectValueType()), null, ObjectType()) {
+                invoker.invokeType(ObservableObjectValueType()), null, ObjectType()) {
             @Override public String getClassName() {
                 return NameHelper.getMangledClassName("ObjectConstant");
             }
@@ -296,5 +296,4 @@ public abstract class ValueWrapperGenerator extends ClassGenerator {
         doubleValueMethod.getMethodInfo().setCodeAttribute(context.getOutput().toCodeAttribute());
         doubleValueMethod.getMethodInfo().rebuildStackMap(generatedClass.getClassPool());
     }
-
 }

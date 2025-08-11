@@ -1,4 +1,4 @@
-// Copyright (c) 2023, JFXcore. All rights reserved.
+// Copyright (c) 2023, 2025, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.generate;
@@ -12,9 +12,9 @@ import javassist.bytecode.MethodInfo;
 import org.jfxcore.compiler.ast.emit.BytecodeEmitContext;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.util.NameHelper;
-import org.jfxcore.compiler.util.Resolver;
 import org.jfxcore.compiler.util.TypeHelper;
 import org.jfxcore.compiler.util.TypeInstance;
+import org.jfxcore.compiler.util.TypeInvoker;
 import java.util.function.BiConsumer;
 
 import static org.jfxcore.compiler.util.Classes.*;
@@ -24,7 +24,7 @@ import static org.jfxcore.compiler.util.ExceptionHelper.*;
 public class BooleanMapperGenerator extends ClassGenerator {
 
     private final TypeInstance typeInstance =
-        new Resolver(SourceInfo.none()).getTypeInstance(BooleanBindingType());
+        new TypeInvoker(SourceInfo.none()).invokeType(BooleanBindingType());
 
     private final String className;
     private final CtClass valueType;
@@ -140,5 +140,4 @@ public class BooleanMapperGenerator extends ClassGenerator {
             code.ireturn();
         });
     }
-
 }

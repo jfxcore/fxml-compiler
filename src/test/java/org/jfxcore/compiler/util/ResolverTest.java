@@ -39,10 +39,14 @@ import static org.junit.jupiter.api.Assertions.*;
 public class ResolverTest extends TestBase {
 
     private List<String> imports;
+    private Resolver resolver;
+    private TypeInvoker invoker;
 
     @BeforeEach
     public void setup() {
         imports = CompilationContext.getCurrent().getImports();
+        resolver = new Resolver(SourceInfo.none());
+        invoker = new TypeInvoker(SourceInfo.none());
     }
 
     @AfterEach
@@ -52,7 +56,6 @@ public class ResolverTest extends TestBase {
 
     @Test
     public void Resolve_Array_Types() {
-        Resolver resolver = new Resolver(SourceInfo.none());
         assertEquals("java.lang.Double[]", resolver.resolveClassAgainstImports("Double[]").getName());
         assertEquals("java.lang.Double[][]", resolver.resolveClassAgainstImports("Double[][]").getName());
         assertEquals("java.lang.Double[][][]", resolver.resolveClassAgainstImports("Double[][][]").getName());
@@ -60,7 +63,6 @@ public class ResolverTest extends TestBase {
 
     @Test
     public void Resolve_Generic_Array_Types() {
-        Resolver resolver = new Resolver(SourceInfo.none());
         assertEquals("java.lang.Comparable[]", resolver.resolveClassAgainstImports("Comparable<Double>[]").getName());
         assertEquals("java.lang.Comparable[][]", resolver.resolveClassAgainstImports("Comparable<Double>[][]").getName());
         assertEquals("java.lang.Comparable[][][]", resolver.resolveClassAgainstImports("Comparable<Double>[][][]").getName());
@@ -74,8 +76,7 @@ public class ResolverTest extends TestBase {
 
     @Test
     public void Resolve_Array_Return_Type() {
-        Resolver resolver = new Resolver(SourceInfo.none());
-        TypeInstance paneType = resolver.getTypeInstance(resolver.resolveClass(ArrayTest.class.getName()));
+        TypeInstance paneType = invoker.invokeType(resolver.resolveClass(ArrayTest.class.getName()));
 
         PropertyInfo propertyInfo = resolver.resolveProperty(paneType, false, "property1");
         assertEquals("Comparable<Object>[]", propertyInfo.getType().toString());
@@ -96,7 +97,6 @@ public class ResolverTest extends TestBase {
 
     @Test
     public void Resolve_Nested_Class() {
-        Resolver resolver = new Resolver(SourceInfo.none());
         CompilationContext.getCurrent().setImports(
             List.of(ResolverTest.class.getName() + ".*", Foo.class.getName() + ".*", Foo.Bar.class.getName() + ".*"));
 
@@ -113,7 +113,6 @@ public class ResolverTest extends TestBase {
 
     @Test
     public void Resolve_Nested_Class_With_JavaLang_SimpleName() {
-        Resolver resolver = new Resolver(SourceInfo.none());
         CompilationContext.getCurrent().setImports(
             List.of(ResolverTest.class.getName() + ".*", Foo.class.getName() + ".*"));
 
@@ -124,7 +123,6 @@ public class ResolverTest extends TestBase {
 
     @Test
     public void Resolve_Class_With_JavaLang_SimpleName() {
-        Resolver resolver = new Resolver(SourceInfo.none());
         assertEquals("java.lang.Double", resolver.resolveClassAgainstImports("Double").getName());
     }
 
@@ -133,9 +131,8 @@ public class ResolverTest extends TestBase {
 
     @Test
     public void GetParameterTypes_Of_NonGeneric_Method() throws Exception {
-        Resolver resolver = new Resolver(SourceInfo.none());
         CtMethod method = resolver.resolveClass(ResolverTest.class.getName()).getDeclaredMethod("nonGenericParamTypes");
-        TypeInstance[] paramTypes = resolver.getParameterTypes(method, Collections.emptyList());
+        TypeInstance[] paramTypes = invoker.invokeParameterTypes(method, Collections.emptyList());
 
         assertEquals(3, paramTypes.length);
         assertEquals("int", paramTypes[0].toString());
@@ -145,9 +142,8 @@ public class ResolverTest extends TestBase {
 
     @Test
     public void GetParameterTypes_Of_Generic_Method() throws Exception {
-        Resolver resolver = new Resolver(SourceInfo.none());
         CtMethod method = resolver.resolveClass(ResolverTest.class.getName()).getDeclaredMethod("genericParamTypes");
-        TypeInstance[] paramTypes = resolver.getParameterTypes(method, Collections.emptyList());
+        TypeInstance[] paramTypes = invoker.invokeParameterTypes(method, Collections.emptyList());
 
         assertEquals(4, paramTypes.length);
         assertEquals("int", paramTypes[0].toString());
@@ -166,9 +162,8 @@ public class ResolverTest extends TestBase {
 
     @Test
     public void GetParameterTypes_Of_NonGeneric_Constructor() {
-        Resolver resolver = new Resolver(SourceInfo.none());
         CtConstructor ctor = resolver.resolveClass(ParamsTestClass.class.getName()).getDeclaredConstructors()[0];
-        TypeInstance[] paramTypes = resolver.getParameterTypes(ctor, Collections.emptyList());
+        TypeInstance[] paramTypes = invoker.invokeParameterTypes(ctor, Collections.emptyList());
 
         assertEquals(3, paramTypes.length);
         assertEquals("int", paramTypes[0].toString());
@@ -178,9 +173,8 @@ public class ResolverTest extends TestBase {
 
     @Test
     public void GetParameterTypes_Of_Generic_Constructor() {
-        Resolver resolver = new Resolver(SourceInfo.none());
         CtConstructor ctor = resolver.resolveClass(GenericParamsTestClass.class.getName()).getDeclaredConstructors()[0];
-        TypeInstance[] paramTypes = resolver.getParameterTypes(ctor, Collections.emptyList());
+        TypeInstance[] paramTypes = invoker.invokeParameterTypes(ctor, Collections.emptyList());
 
         assertEquals(4, paramTypes.length);
         assertEquals("int", paramTypes[0].toString());
@@ -201,10 +195,9 @@ public class ResolverTest extends TestBase {
 
     @Test
     public void GetParameterTypes_Of_Generic_Constructor_With_RawUsage() {
-        Resolver resolver = new Resolver(SourceInfo.none());
         CtClass clazz = resolver.resolveClass(GenericConstructorWithRawUsage.class.getName());
         CtConstructor ctor = clazz.getDeclaredConstructors()[0];
-        TypeInstance[] paramTypes = resolver.getParameterTypes(ctor, List.of(TypeInstance.of(clazz)));
+        TypeInstance[] paramTypes = invoker.invokeParameterTypes(ctor, List.of(TypeInstance.of(clazz)));
 
         assertEquals(2, paramTypes.length);
         assertFalse(paramTypes[0].isRaw());
@@ -215,10 +208,9 @@ public class ResolverTest extends TestBase {
 
     @Test
     public void GetParameterTypes_Of_Generic_Varargs_Constructor_With_RawUsage() {
-        Resolver resolver = new Resolver(SourceInfo.none());
         CtClass clazz = resolver.resolveClass(GenericConstructorWithRawUsage.class.getName());
         CtConstructor ctor = clazz.getDeclaredConstructors()[1];
-        TypeInstance[] paramTypes = resolver.getParameterTypes(ctor, List.of(TypeInstance.of(clazz)));
+        TypeInstance[] paramTypes = invoker.invokeParameterTypes(ctor, List.of(TypeInstance.of(clazz)));
 
         assertEquals(2, paramTypes.length);
         assertFalse(paramTypes[0].isRaw());
@@ -229,10 +221,9 @@ public class ResolverTest extends TestBase {
 
     @Test
     public void GetParameterTypes_Of_LowerBound_Generic_Varargs_Constructor_With_RawUsage() {
-        Resolver resolver = new Resolver(SourceInfo.none());
         CtClass clazz = resolver.resolveClass(GenericConstructorWithRawUsage.class.getName());
         CtConstructor ctor = clazz.getDeclaredConstructors()[2];
-        TypeInstance[] paramTypes = resolver.getParameterTypes(ctor, List.of(TypeInstance.of(clazz)));
+        TypeInstance[] paramTypes = invoker.invokeParameterTypes(ctor, List.of(TypeInstance.of(clazz)));
 
         assertEquals(3, paramTypes.length);
         assertFalse(paramTypes[0].isRaw());
@@ -250,38 +241,34 @@ public class ResolverTest extends TestBase {
 
     @Test
     public void GetReturnType_Of_NonGeneric_Method() throws Exception {
-        Resolver resolver = new Resolver(SourceInfo.none());
         CtMethod method = resolver.resolveClass(ResolverTest.class.getName()).getDeclaredMethod("nonGenericReturnType");
-        TypeInstance returnType = resolver.getTypeInstance(method, List.of());
+        TypeInstance returnType = invoker.invokeReturnType(method, List.of());
 
         assertEquals("String", returnType.toString());
     }
 
     @Test
     public void GetReturnType_Of_Generic_Method() throws Exception {
-        Resolver resolver = new Resolver(SourceInfo.none());
         CtMethod method = resolver.resolveClass(ResolverTest.class.getName()).getDeclaredMethod("genericReturnType");
-        TypeInstance returnType = resolver.getTypeInstance(method, List.of());
+        TypeInstance returnType = invoker.invokeReturnType(method, List.of());
 
         assertEquals("ObservableValue<Comparable<String>>", returnType.toString());
     }
 
     @Test
     public void GetReturnType_Of_Generic_Method_With_Lower_Bound() throws Exception {
-        Resolver resolver = new Resolver(SourceInfo.none());
         CtMethod method = resolver.resolveClass(
             ResolverTest.class.getName()).getDeclaredMethod("genericReturnTypeWithLowerBound");
-        TypeInstance returnType = resolver.getTypeInstance(method, List.of());
+        TypeInstance returnType = invoker.invokeReturnType(method, List.of());
 
         assertEquals("ObservableValue<Comparable<? super String>>", returnType.toString());
     }
 
     @Test
     public void GetReturnType_Of_Generic_Method_With_Upper_Bound() throws Exception {
-        Resolver resolver = new Resolver(SourceInfo.none());
         CtMethod method = resolver.resolveClass(
             ResolverTest.class.getName()).getDeclaredMethod("genericReturnTypeWithUpperBound");
-        TypeInstance returnType = resolver.getTypeInstance(method, List.of());
+        TypeInstance returnType = invoker.invokeReturnType(method, List.of());
 
         assertEquals("ObservableValue<Comparable<? extends String>>", returnType.toString());
     }
@@ -298,40 +285,36 @@ public class ResolverTest extends TestBase {
 
     @Test
     public void GetReturnType_Of_NonGeneric_Constructor() {
-        Resolver resolver = new Resolver(SourceInfo.none());
         CtConstructor method = resolver.resolveClass(ReturnTypeTestClass.class.getName()).getDeclaredConstructors()[0];
-        TypeInstance returnType = resolver.getTypeInstance(method, List.of());
+        TypeInstance returnType = invoker.invokeReturnType(method, List.of());
 
         assertEquals("ResolverTest$ReturnTypeTestClass", returnType.toString());
     }
 
     @Test
     public void GetReturnType_Of_Generic_Constructor() {
-        Resolver resolver = new Resolver(SourceInfo.none());
         CtConstructor ctor = resolver.resolveClass(GenericReturnTypeTestClass.class.getName()).getConstructors()[0];
-        TypeInstance returnType = resolver.getTypeInstance(ctor, List.of());
+        TypeInstance returnType = invoker.invokeReturnType(ctor, List.of());
 
         assertEquals("ResolverTest$GenericReturnTypeTestClass", returnType.toString());
     }
 
     @Test
     public void GetReturnType_Of_Generic_Method_With_Lower_Bound_Of_Type_Parameter() throws Exception {
-        Resolver resolver = new Resolver(SourceInfo.none());
         CtClass clazz = resolver.resolveClass(GenericReturnTypeTestClass.class.getName());
         CtMethod method = clazz.getDeclaredMethod("methodWithLowerBound");
-        TypeInstance classTypeInst = resolver.getTypeInstance(clazz, List.of(TypeInstance.StringType()));
-        TypeInstance returnType = resolver.getTypeInstance(method, List.of(classTypeInst));
+        TypeInstance classTypeInst = invoker.invokeType(clazz, List.of(TypeInstance.StringType()));
+        TypeInstance returnType = invoker.invokeReturnType(method, List.of(classTypeInst));
 
         assertEquals("ObservableValue<? super String>", returnType.toString());
     }
 
     @Test
     public void GetReturnType_Of_Generic_Method_With_Upper_Bound_Of_Type_Parameter() throws Exception {
-        Resolver resolver = new Resolver(SourceInfo.none());
         CtClass clazz = resolver.resolveClass(GenericReturnTypeTestClass.class.getName());
         CtMethod method = clazz.getDeclaredMethod("methodWithUpperBound");
-        TypeInstance classTypeInst = resolver.getTypeInstance(clazz, List.of(TypeInstance.StringType()));
-        TypeInstance returnType = resolver.getTypeInstance(method, List.of(classTypeInst));
+        TypeInstance classTypeInst = invoker.invokeType(clazz, List.of(TypeInstance.StringType()));
+        TypeInstance returnType = invoker.invokeReturnType(method, List.of(classTypeInst));
 
         assertEquals("ObservableValue<? extends String>", returnType.toString());
     }
@@ -341,8 +324,7 @@ public class ResolverTest extends TestBase {
 
     @Test
     public void GetTypeInstance_With_Class_And_Arguments() {
-        Resolver resolver = new Resolver(SourceInfo.none());
-        TypeInstance typeInstance = resolver.getTypeInstance(
+        TypeInstance typeInstance = invoker.invokeType(
             resolver.resolveClass(GenericClass.class.getName()),
             List.of(TypeInstance.StringType()));
 
@@ -352,8 +334,7 @@ public class ResolverTest extends TestBase {
     @Test
     public void GetTypeInstance_With_Class_Fails_With_Incompatible_TypeArgument() {
         MarkupException ex = assertThrows(MarkupException.class, () -> {
-            Resolver resolver = new Resolver(SourceInfo.none());
-            resolver.getTypeInstance(
+            invoker.invokeType(
                 resolver.resolveClass(GenericClassWithStringBound.class.getName()),
                 List.of(TypeInstance.DoubleType()));
         });
@@ -372,8 +353,7 @@ public class ResolverTest extends TestBase {
 
     @Test
     public void GetTypeInstance_Of_Static_Property_With_Generic_Node() {
-        Resolver resolver = new Resolver(SourceInfo.none());
-        TypeInstance paneType = resolver.getTypeInstance(resolver.resolveClass(Pane.class.getName()));
+        TypeInstance paneType = invoker.invokeType(resolver.resolveClass(Pane.class.getName()));
         var names = new ArrayList<>(List.of(StaticPropertyWithGenericNode.class.getName().split("\\.")));
         names.add("list1");
         PropertyInfo propertyInfo = resolver.resolveProperty(paneType, true, names.toArray(String[]::new));
@@ -382,8 +362,7 @@ public class ResolverTest extends TestBase {
 
     @Test
     public void GetTypeInstance_Of_Static_Property_With_Generic_Node_2() {
-        Resolver resolver = new Resolver(SourceInfo.none());
-        TypeInstance paneType = resolver.getTypeInstance(resolver.resolveClass(Pane.class.getName()));
+        TypeInstance paneType = invoker.invokeType(resolver.resolveClass(Pane.class.getName()));
         var names = new ArrayList<>(List.of(StaticPropertyWithGenericNode.class.getName().split("\\.")));
         names.add("list1b");
         PropertyInfo propertyInfo = resolver.resolveProperty(paneType, true, names.toArray(String[]::new));
@@ -392,8 +371,7 @@ public class ResolverTest extends TestBase {
 
     @Test
     public void GetTypeInstance_Of_Static_ListProperty_With_Generic_Node() {
-        Resolver resolver = new Resolver(SourceInfo.none());
-        TypeInstance paneType = resolver.getTypeInstance(resolver.resolveClass(Pane.class.getName()));
+        TypeInstance paneType = invoker.invokeType(resolver.resolveClass(Pane.class.getName()));
         var names = new ArrayList<>(List.of(StaticPropertyWithGenericNode.class.getName().split("\\.")));
         names.add("list2");
         PropertyInfo propertyInfo = resolver.resolveProperty(paneType, true, names.toArray(String[]::new));
@@ -402,8 +380,7 @@ public class ResolverTest extends TestBase {
 
     @Test
     public void GetTypeInstance_Of_Static_Property_With_Generic_Node_Out_Of_Bounds() {
-        Resolver resolver = new Resolver(SourceInfo.none());
-        TypeInstance buttonType = resolver.getTypeInstance(resolver.resolveClass(Button.class.getName()));
+        TypeInstance buttonType = invoker.invokeType(resolver.resolveClass(Button.class.getName()));
         var names = new ArrayList<>(List.of(StaticPropertyWithGenericNode.class.getName().split("\\.")));
         names.add("list3");
 
@@ -415,8 +392,7 @@ public class ResolverTest extends TestBase {
 
     @Test
     public void GetTypeInstance_Of_Static_Property_With_Generic_Node_Out_Of_Bounds_For_TableView_Argument() {
-        Resolver resolver = new Resolver(SourceInfo.none());
-        TypeInstance tableViewType = resolver.getTypeInstance(
+        TypeInstance tableViewType = invoker.invokeType(
             resolver.resolveClass(TableView.class.getName()), List.of(TypeInstance.DoubleType()));
         var names = new ArrayList<>(List.of(StaticPropertyWithGenericNode.class.getName().split("\\.")));
         names.add("list4");
@@ -428,8 +404,7 @@ public class ResolverTest extends TestBase {
 
     @Test
     public void GetTypeInstance_Of_Static_Property_With_Wildcard_Argument() {
-        Resolver resolver = new Resolver(SourceInfo.none());
-        TypeInstance buttonType = resolver.getTypeInstance(resolver.resolveClass(Button.class.getName()));
+        TypeInstance buttonType = invoker.invokeType(resolver.resolveClass(Button.class.getName()));
         var names = new ArrayList<>(List.of(StaticPropertyWithGenericNode.class.getName().split("\\.")));
         names.add("list5");
 
@@ -449,8 +424,7 @@ public class ResolverTest extends TestBase {
 
     @Test
     public void GetTypeInstance_Of_Static_Property_In_Generic_Class() {
-        Resolver resolver = new Resolver(SourceInfo.none());
-        TypeInstance buttonType = resolver.getTypeInstance(resolver.resolveClass(Button.class.getName()));
+        TypeInstance buttonType = invoker.invokeType(resolver.resolveClass(Button.class.getName()));
         var names = new ArrayList<>(List.of(PropertyInGenericClass.class.getName().split("\\.")));
         names.add("list1");
 
@@ -460,8 +434,7 @@ public class ResolverTest extends TestBase {
 
     @Test
     public void GetTypeInstance_Of_Not_A_Static_Property_In_Generic_Class_Fails() {
-        Resolver resolver = new Resolver(SourceInfo.none());
-        TypeInstance buttonType = resolver.getTypeInstance(resolver.resolveClass(Button.class.getName()));
+        TypeInstance buttonType = invoker.invokeType(resolver.resolveClass(Button.class.getName()));
         var names = new ArrayList<>(List.of(PropertyInGenericClass.class.getName().split("\\.")));
         names.add("list2");
 
@@ -610,8 +583,7 @@ public class ResolverTest extends TestBase {
     @ParameterizedTest
     @ArgumentsSource(PropertyArgumentsProvider.class)
     public void Detect_Qualified_Property_Names_Test(PropertyTestRun testRun) {
-        var resolver = new Resolver(SourceInfo.none());
-        var declaringClass = resolver.getTypeInstance(resolver.resolveClass(PropertyHolder.class.getName()));
+        var declaringClass = invoker.invokeType(resolver.resolveClass(PropertyHolder.class.getName()));
         var property = resolver.resolveProperty(
             declaringClass, true, PropertyHolder.class.getName(), testRun.propertyName);
 
@@ -622,8 +594,7 @@ public class ResolverTest extends TestBase {
     @ParameterizedTest
     @ArgumentsSource(PropertyArgumentsProvider.class)
     public void Detect_Unqualified_Property_Names_Test(PropertyTestRun testRun) {
-        var resolver = new Resolver(SourceInfo.none());
-        var declaringClass = resolver.getTypeInstance(resolver.resolveClass(PropertyHolder.class.getName()));
+        var declaringClass = invoker.invokeType(resolver.resolveClass(PropertyHolder.class.getName()));
         var property = resolver.resolveProperty(declaringClass, true, testRun.propertyName);
 
         assertFalse(property.isStatic());
@@ -633,8 +604,7 @@ public class ResolverTest extends TestBase {
     @ParameterizedTest
     @ArgumentsSource(PropertyArgumentsProvider.class)
     public void Detect_Unqualified_Property_Names_With_Same_Name_As_Static_Properties_Test(PropertyTestRun testRun) {
-        var resolver = new Resolver(SourceInfo.none());
-        var declaringClass = resolver.getTypeInstance(resolver.resolveClass(MixedPropertyHolder.class.getName()));
+        var declaringClass = invoker.invokeType(resolver.resolveClass(MixedPropertyHolder.class.getName()));
         var property = resolver.resolveProperty(declaringClass, true, testRun.propertyName);
 
         assertFalse(property.isStatic());
@@ -644,8 +614,7 @@ public class ResolverTest extends TestBase {
     @ParameterizedTest
     @ArgumentsSource(PropertyArgumentsProvider.class)
     public void Detect_Static_Property_Names_Test(PropertyTestRun testRun) {
-        var resolver = new Resolver(SourceInfo.none());
-        var declaringClass = resolver.getTypeInstance(resolver.resolveClass(Node.class.getName()));
+        var declaringClass = invoker.invokeType(resolver.resolveClass(Node.class.getName()));
         var property = resolver.resolveProperty(
             declaringClass, true, StaticPropertyHolder.class.getName(), testRun.propertyName);
 
@@ -656,8 +625,7 @@ public class ResolverTest extends TestBase {
     @ParameterizedTest
     @ArgumentsSource(PropertyArgumentsProvider.class)
     public void Detect_Static_Property_Names_With_Same_Name_As_Local_Properties_Test(PropertyTestRun testRun) {
-        var resolver = new Resolver(SourceInfo.none());
-        var declaringClass = resolver.getTypeInstance(resolver.resolveClass(Node.class.getName()));
+        var declaringClass = invoker.invokeType(resolver.resolveClass(Node.class.getName()));
         var property = resolver.resolveProperty(
             declaringClass, true, MixedPropertyHolder.class.getName(), testRun.propertyName);
 
@@ -675,8 +643,7 @@ public class ResolverTest extends TestBase {
 
     @Test
     public void Detect_Contextual_Setter() {
-        var resolver = new Resolver(SourceInfo.none());
-        var declaringClass = resolver.getTypeInstance(resolver.resolveClass(Object.class.getName()));
+        var declaringClass = invoker.invokeType(resolver.resolveClass(Object.class.getName()));
         var property = resolver.resolveProperty(
             declaringClass, true, ContextualPropertyHolder.class.getName(), "prop1");
         assertTrue(property.isStatic());
@@ -686,7 +653,7 @@ public class ResolverTest extends TestBase {
         assertNotNull(property.getGetter());
         assertNull(property.getSetter());
 
-        declaringClass = resolver.getTypeInstance(resolver.resolveClass(Node.class.getName()));
+        declaringClass = invoker.invokeType(resolver.resolveClass(Node.class.getName()));
         property = resolver.resolveProperty(
             declaringClass, true, ContextualPropertyHolder.class.getName(), "prop1");
         assertTrue(property.isStatic());
@@ -699,8 +666,7 @@ public class ResolverTest extends TestBase {
 
     @Test
     public void Detect_Contextual_ObservableProperty() {
-        var resolver = new Resolver(SourceInfo.none());
-        var declaringClass = resolver.getTypeInstance(resolver.resolveClass(Object.class.getName()));
+        var declaringClass = invoker.invokeType(resolver.resolveClass(Object.class.getName()));
         var property = resolver.resolveProperty(
             declaringClass, true, ContextualPropertyHolder.class.getName(), "prop2");
         assertTrue(property.isStatic());
@@ -710,7 +676,7 @@ public class ResolverTest extends TestBase {
         assertNotNull(property.getGetter());
         assertNull(property.getSetter());
 
-        declaringClass = resolver.getTypeInstance(resolver.resolveClass(Node.class.getName()));
+        declaringClass = invoker.invokeType(resolver.resolveClass(Node.class.getName()));
         property = resolver.resolveProperty(
             declaringClass, true, ContextualPropertyHolder.class.getName(), "prop2");
         assertTrue(property.isStatic());

@@ -5,6 +5,7 @@ package org.jfxcore.compiler.util;
 
 import javassist.CtClass;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
+import org.jfxcore.compiler.diagnostic.errors.GeneralErrors;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -82,7 +83,7 @@ public class TypeInstance {
         Objects.requireNonNull(clazz);
         TypeInstance typeInstance = getClassCache().get(clazz);
         if (typeInstance == null) {
-            typeInstance = new Resolver(SourceInfo.none()).getTypeInstance(clazz);
+            typeInstance = new TypeInvoker(SourceInfo.none()).invokeType(clazz);
             getClassCache().put(clazz, typeInstance);
         }
 
@@ -118,10 +119,10 @@ public class TypeInstance {
     }
 
     private final CtClass type;
-    private final List<TypeInstance> arguments;
-    private final List<TypeInstance> superTypes;
     private final int dimensions;
     private final WildcardType wildcard;
+    private List<TypeInstance> arguments;
+    private List<TypeInstance> superTypes;
     private TypeInstance componentType;
 
     public static TypeInstance of(CtClass type) {
@@ -141,6 +142,10 @@ public class TypeInstance {
         this.arguments = arguments;
         this.superTypes = superTypes;
         this.wildcard = wildcard;
+
+        if (arguments.stream().anyMatch(TypeInstance::isPrimitive)) {
+            throw new IllegalArgumentException("arguments");
+        }
     }
 
     private TypeInstance(CtClass type,
@@ -153,6 +158,30 @@ public class TypeInstance {
         this.arguments = arguments;
         this.superTypes = superTypes;
         this.wildcard = wildcard;
+
+        if (arguments.stream().anyMatch(TypeInstance::isPrimitive)) {
+            throw new IllegalArgumentException("arguments");
+        }
+    }
+
+    TypeInstance freeze(SourceInfo sourceInfo) {
+        superTypes = List.copyOf(superTypes);
+
+        if (arguments != (arguments = List.copyOf(arguments))) {
+            for (TypeInstance argument : arguments) {
+                if (argument.isPrimitive()) {
+                    throw GeneralErrors.typeArgumentNotReference(sourceInfo, type, argument);
+                }
+
+                argument.freeze(sourceInfo);
+            }
+        }
+
+        for (TypeInstance superType : superTypes) {
+            superType.freeze(sourceInfo);
+        }
+
+        return this;
     }
 
     public TypeInstance withDimensions(int dimensions) {

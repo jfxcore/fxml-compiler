@@ -1,4 +1,4 @@
-// Copyright (c) 2023, 2024, JFXcore. All rights reserved.
+// Copyright (c) 2023, 2025, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.generate.collections;
@@ -17,8 +17,8 @@ import org.jfxcore.compiler.generate.ReferenceTrackerGenerator;
 import org.jfxcore.compiler.util.Bytecode;
 import org.jfxcore.compiler.util.Local;
 import org.jfxcore.compiler.util.NameHelper;
-import org.jfxcore.compiler.util.Resolver;
 import org.jfxcore.compiler.util.TypeInstance;
+import org.jfxcore.compiler.util.TypeInvoker;
 import javafx.beans.value.ObservableMapValue;
 import javafx.collections.ObservableMap;
 import java.util.List;
@@ -55,7 +55,7 @@ public class MapWrapperGenerator extends ClassGenerator {
     private final TypeInstance observableType;
 
     public MapWrapperGenerator() {
-        observableType = new Resolver(SourceInfo.none()).getTypeInstance(ObservableMapValueType());
+        observableType = new TypeInvoker(SourceInfo.none()).invokeType(ObservableMapValueType());
     }
 
     @Override
@@ -282,5 +282,4 @@ public class MapWrapperGenerator extends ClassGenerator {
         method.getMethodInfo().setCodeAttribute(code.toCodeAttribute());
         method.getMethodInfo().rebuildStackMap(generatedClass.getClassPool());
     }
-
 }

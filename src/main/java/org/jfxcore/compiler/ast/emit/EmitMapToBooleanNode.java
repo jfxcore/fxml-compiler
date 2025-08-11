@@ -1,4 +1,4 @@
-// Copyright (c) 2021, 2023, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2025, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.emit;
@@ -18,6 +18,7 @@ import org.jfxcore.compiler.util.Bytecode;
 import org.jfxcore.compiler.util.Resolver;
 import org.jfxcore.compiler.util.TypeHelper;
 import org.jfxcore.compiler.util.TypeInstance;
+import org.jfxcore.compiler.util.TypeInvoker;
 import java.util.List;
 import java.util.Objects;
 
@@ -47,7 +48,7 @@ public class EmitMapToBooleanNode extends AbstractNode
         this.child = checkNotNull(child);
         this.invert = invert;
         this.type = new ResolvedTypeNode(
-            resolver.getTypeInstance(ObservableValueType(), List.of(TypeInstance.BooleanType())),
+            new TypeInvoker(sourceInfo).invokeType(ObservableValueType(), List.of(TypeInstance.BooleanType())),
             sourceInfo);
     }
 
@@ -102,5 +103,4 @@ public class EmitMapToBooleanNode extends AbstractNode
     public int hashCode() {
         return Objects.hash(invert, type, child);
     }
-
 }

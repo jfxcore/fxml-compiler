@@ -1,4 +1,4 @@
-// Copyright (c) 2021, 2023, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2025, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.emit;
@@ -24,6 +24,7 @@ import org.jfxcore.compiler.util.Bytecode;
 import org.jfxcore.compiler.util.Local;
 import org.jfxcore.compiler.util.Resolver;
 import org.jfxcore.compiler.util.TypeInstance;
+import org.jfxcore.compiler.util.TypeInvoker;
 import java.util.List;
 import java.util.Objects;
 
@@ -78,16 +79,16 @@ public class EmitCollectionWrapperNode extends AbstractNode
         this.child = checkNotNull(child);
 
         TypeInstance type;
-        Resolver resolver = new Resolver(SourceInfo.none());
+        TypeInvoker invoker = new TypeInvoker(SourceInfo.none());
 
         if (sourceValueType.subtypeOf(ListType())) {
-            type = resolver.getTypeInstance(
+            type = invoker.invokeType(
                 emitObservableValue ? ObservableListValueType() : ObservableListType(), sourceValueType.getArguments());
         } else if (sourceValueType.subtypeOf(SetType())) {
-            type = resolver.getTypeInstance(
+            type = invoker.invokeType(
                 emitObservableValue ? ObservableSetValueType() : ObservableSetType(), sourceValueType.getArguments());
         } else if (sourceValueType.subtypeOf(MapType())) {
-            type = resolver.getTypeInstance(
+            type = invoker.invokeType(
                 emitObservableValue ? ObservableMapValueType() : ObservableMapType(), sourceValueType.getArguments());
         } else {
             throw new IllegalArgumentException("valueType");

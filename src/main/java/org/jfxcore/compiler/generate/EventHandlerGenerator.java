@@ -21,8 +21,7 @@ import org.jfxcore.compiler.util.NameHelper;
 import org.jfxcore.compiler.util.Resolver;
 import org.jfxcore.compiler.util.TypeHelper;
 import org.jfxcore.compiler.util.TypeInstance;
-
-import java.util.Collections;
+import org.jfxcore.compiler.util.TypeInvoker;
 import java.util.List;
 
 import static org.jfxcore.compiler.util.ExceptionHelper.*;
@@ -43,8 +42,8 @@ public class EventHandlerGenerator extends ClassGenerator {
         this.eventType = eventType;
         this.eventHandlerName = eventHandlerName;
 
-        Resolver resolver = new Resolver(SourceInfo.none());
-        this.type = resolver.getTypeInstance(Classes.EventHandlerType(), List.of(resolver.getTypeInstance(eventType)));
+        TypeInvoker invoker = new TypeInvoker(SourceInfo.none());
+        this.type = invoker.invokeType(Classes.EventHandlerType(), List.of(invoker.invokeType(eventType)));
     }
 
     @Override
@@ -123,6 +122,7 @@ public class EventHandlerGenerator extends ClassGenerator {
     private CtMethod findMethod(BytecodeEmitContext context) {
         SourceInfo sourceInfo = context.getCurrent().getSourceInfo();
         Resolver resolver = new Resolver(sourceInfo);
+        TypeInvoker invoker = new TypeInvoker(sourceInfo);
         boolean[] matchesByName = new boolean[1];
 
         CtMethod[] methods = resolver.resolveMethods(bindingContextClass, method -> {
@@ -136,7 +136,7 @@ public class EventHandlerGenerator extends ClassGenerator {
                 return false;
             }
 
-            TypeInstance[] paramTypes = resolver.getParameterTypes(method, Collections.emptyList());
+            TypeInstance[] paramTypes = invoker.invokeParameterTypes(method, List.of());
             if (paramTypes.length == 0) {
                 return true;
             }
@@ -155,7 +155,7 @@ public class EventHandlerGenerator extends ClassGenerator {
         CtMethod selectedMethod = methods[0];
 
         for (CtMethod method : methods) {
-            if (resolver.getParameterTypes(method, Collections.emptyList()).length > 0) {
+            if (invoker.invokeParameterTypes(method, List.of()).length > 0) {
                 selectedMethod = method;
                 break;
             }
@@ -165,5 +165,4 @@ public class EventHandlerGenerator extends ClassGenerator {
 
         return selectedMethod;
     }
-
 }

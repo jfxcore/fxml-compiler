@@ -1,4 +1,4 @@
-// Copyright (c) 2022, 2024, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2025, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.expression.path;
@@ -35,6 +35,7 @@ import org.jfxcore.compiler.util.ObservableKind;
 import org.jfxcore.compiler.util.Resolver;
 import org.jfxcore.compiler.util.TypeHelper;
 import org.jfxcore.compiler.util.TypeInstance;
+import org.jfxcore.compiler.util.TypeInvoker;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Iterator;
@@ -102,14 +103,16 @@ public class ResolvedPath {
         }
 
         Resolver resolver = new Resolver(sourceInfo);
+        TypeInvoker invoker = new TypeInvoker(sourceInfo);
         CtClass currentHostType = segments.get(0).getValueTypeInstance().jvmType();
 
         for (PathSegmentNode segment : path) {
-            Segment source = getValueSource(resolver, segment, currentHostType, staticContext, preferObservable, false);
+            Segment source = getValueSource(
+                resolver, invoker, segment, currentHostType, staticContext, preferObservable, false);
 
             if (source == null) {
                 if (segment.isObservableSelector() && getValueSource(
-                        resolver, segment, currentHostType, staticContext, preferObservable, true) != null) {
+                        resolver, invoker, segment, currentHostType, staticContext, preferObservable, true) != null) {
                     throw SymbolResolutionErrors.invalidInvariantReference(
                         segment.getSourceInfo(), currentHostType, segment.getText());
                 } else {
@@ -275,6 +278,7 @@ public class ResolvedPath {
 
     private Segment getValueSource(
             Resolver resolver,
+            TypeInvoker invoker,
             PathSegmentNode segment,
             CtClass declaringClass,
             boolean staticContext,
@@ -327,25 +331,25 @@ public class ResolvedPath {
         for (ResolveSegmentMethod method : methods) {
             segments.tryAdd(
                 method.resolve(
-                    resolver, propertyName, declaringClass, receiverClass, staticContext,
+                    resolver, invoker, propertyName, declaringClass, receiverClass, staticContext,
                     attachedProperty, selectObservable, providedArguments),
                 0, preferObservable, selectObservable);
 
             segments.tryAdd(
                 method.resolve(
-                    resolver, String.format("%sProperty", propertyName), declaringClass, receiverClass,
+                    resolver, invoker, String.format("%sProperty", propertyName), declaringClass, receiverClass,
                     staticContext, attachedProperty, selectObservable, providedArguments),
                 1, preferObservable, selectObservable);
 
             segments.tryAdd(
                 method.resolve(
-                    resolver, String.format("get%s", propertyNameUpper), declaringClass, receiverClass,
+                    resolver, invoker, String.format("get%s", propertyNameUpper), declaringClass, receiverClass,
                     staticContext, attachedProperty, selectObservable, providedArguments),
                 2, false, selectObservable);
 
             segments.tryAdd(
                 method.resolve(
-                    resolver, String.format("is%s", propertyNameUpper), declaringClass, receiverClass,
+                    resolver, invoker, String.format("is%s", propertyNameUpper), declaringClass, receiverClass,
                     staticContext, attachedProperty, selectObservable, providedArguments),
                 3, false, selectObservable);
         }
@@ -384,6 +388,7 @@ public class ResolvedPath {
      */
     private SegmentInfo getPathSegmentFromField(
             Resolver resolver,
+            TypeInvoker invoker,
             String propertyName,
             CtClass declaringClass,
             CtClass receiverClass,
@@ -413,7 +418,7 @@ public class ResolvedPath {
         }
 
         List<TypeInstance> invocationChain = segments.stream().map(Segment::getTypeInstance).collect(Collectors.toList());
-        TypeInstance type = resolver.getTypeInstance(field, invocationChain);
+        TypeInstance type = invoker.invokeFieldType(field, invocationChain);
 
         if (selectObservable) {
             return new SegmentInfo(
@@ -434,6 +439,7 @@ public class ResolvedPath {
      */
     private SegmentInfo getPathSegmentFromGetter(
             Resolver resolver,
+            TypeInvoker invoker,
             String propertyName,
             CtClass declaringClass,
             CtClass receiverClass,
@@ -473,7 +479,7 @@ public class ResolvedPath {
             return null;
         }
 
-        TypeInstance type = resolver.getTypeInstance(getter, invocationChain, providedArguments);
+        TypeInstance type = invoker.invokeReturnType(getter, invocationChain, providedArguments);
 
         if (selectObservable) {
             return new SegmentInfo(
@@ -491,6 +497,7 @@ public class ResolvedPath {
 
     private SegmentInfo getPathSegmentFromKotlinDelegate(
             Resolver resolver,
+            TypeInvoker invoker,
             String propertyName,
             CtClass declaringClass,
             CtClass receiverClass,
@@ -535,8 +542,8 @@ public class ResolvedPath {
             observableKind = observableKind.toReadOnly();
         }
 
-        TypeInstance valueType = resolver.getTypeInstance(delegateInfo.getter, invocationChain, providedArguments);
-        TypeInstance type = resolver.getTypeInstance(fieldType);
+        TypeInstance valueType = invoker.invokeReturnType(delegateInfo.getter, invocationChain, providedArguments);
+        TypeInstance type = invoker.invokeType(fieldType);
         TypeInstance argument = resolver.tryFindObservableArgument(type);
 
         CtClass returnType;
@@ -547,7 +554,7 @@ public class ResolvedPath {
         }
 
         if (argument == null || !returnType.equals(argument.jvmType())) {
-            type = resolver.getTypeInstance(type.jvmType(), List.of(valueType));
+            type = invoker.invokeType(type.jvmType(), List.of(valueType));
         }
 
         if (selectObservable) {
@@ -669,6 +676,7 @@ public class ResolvedPath {
     private interface ResolveSegmentMethod {
         SegmentInfo resolve(
             Resolver resolver,
+            TypeInvoker invoker,
             String propertyName,
             CtClass declaringClass,
             CtClass receiverClass,
@@ -712,5 +720,4 @@ public class ResolvedPath {
     }
 
     private record KotlinDelegateInfo(CtField delegateField, CtMethod getter, boolean publicSetter) {}
-
 }

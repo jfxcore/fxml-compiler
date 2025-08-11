@@ -1,4 +1,4 @@
-// Copyright (c) 2021, 2024, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2025, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.expression.path;
@@ -17,6 +17,7 @@ import org.jfxcore.compiler.diagnostic.MarkupException;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.util.Resolver;
 import org.jfxcore.compiler.util.TypeInstance;
+import org.jfxcore.compiler.util.TypeInvoker;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
@@ -351,7 +352,8 @@ public class PathTest extends TestBase {
     @Test
     public void Property_Of_RawType_Contains_No_TypeArguments() {
         Resolver resolver = new Resolver(SourceInfo.none());
-        Segment firstSegment = new ParentSegment(resolver.getTypeInstance(resolver.resolveClass(Type9.class.getName())), -1);
+        TypeInvoker invoker = new TypeInvoker(SourceInfo.none());
+        Segment firstSegment = new ParentSegment(invoker.invokeType(resolver.resolveClass(Type9.class.getName())), -1);
         ResolvedPath target = ResolvedPath.parse(firstSegment, segments("value"), true, SourceInfo.none());
         assertEquals("PathTest$Type9", target.get(0).getTypeInstance().toString());
         assertEquals("Comparable", target.get(1).getTypeInstance().toString());
@@ -360,7 +362,8 @@ public class PathTest extends TestBase {
     @Test
     public void Property_Of_RawType_Derived_Contains_No_TypeArguments() {
         Resolver resolver = new Resolver(SourceInfo.none());
-        Segment firstSegment = new ParentSegment(resolver.getTypeInstance(resolver.resolveClass(Type10.class.getName())), -1);
+        TypeInvoker invoker = new TypeInvoker(SourceInfo.none());
+        Segment firstSegment = new ParentSegment(invoker.invokeType(resolver.resolveClass(Type10.class.getName())), -1);
         ResolvedPath target = ResolvedPath.parse(firstSegment, segments("value"), true, SourceInfo.none());
         assertEquals("PathTest$Type10", target.get(0).getTypeInstance().toString());
         assertEquals("Comparable", target.get(1).getTypeInstance().toString());
@@ -382,5 +385,4 @@ public class PathTest extends TestBase {
         assertEquals("c", path.get(0).getName());
         assertEquals("d", path.get(1).getName());
     }
-
 }

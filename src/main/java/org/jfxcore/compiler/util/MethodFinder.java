@@ -1,4 +1,4 @@
-// Copyright (c) 2022, 2024, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2025, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.util;
@@ -136,8 +136,8 @@ public class MethodFinder {
                 return false;
             }
 
-            Resolver resolver = new Resolver(sourceInfo);
-            TypeInstance[] paramTypes = resolver.getParameterTypes(method, List.of(invokingType), context.typeWitnesses());
+            TypeInvoker invoker = new TypeInvoker(sourceInfo);
+            TypeInstance[] paramTypes = invoker.invokeParameterTypes(method, List.of(invokingType), context.typeWitnesses());
             int numParams = paramTypes.length;
             int numArgs = context.arguments().size();
             boolean isVarArgs = context.allowVarargInvocation() && Modifier.isVarArgs(method.getModifiers());
@@ -204,7 +204,7 @@ public class MethodFinder {
             }
 
             if (context.returnType() != null) {
-                TypeInstance returnType = resolver.getTypeInstance(method, List.of(invokingType), context.typeWitnesses());
+                TypeInstance returnType = invoker.invokeReturnType(method, List.of(invokingType), context.typeWitnesses());
                 if (!context.returnType().isAssignableFrom(returnType)) {
                     if (diagnostics != null) {
                         diagnostics.add(new DiagnosticInfo(
@@ -281,16 +281,16 @@ public class MethodFinder {
      *   2. there is no pair (a1_i, a2_i) for which a2_i is more specific than a1_i.
      */
     private boolean isMethodMoreSpecific(CtBehavior m1, CtBehavior m2, List<TypeInstance> argumentTypes) {
-        Resolver resolver = new Resolver(SourceInfo.none());
+        TypeInvoker invoker = new TypeInvoker(SourceInfo.none());
 
         TypeInstance[] params1 = parameterCache.get(m1);
         if (params1 == null) {
-            parameterCache.put(m1, params1 = resolver.getParameterTypes(m1, List.of(invokingType)));
+            parameterCache.put(m1, params1 = invoker.invokeParameterTypes(m1, List.of(invokingType)));
         }
 
         TypeInstance[] params2 = parameterCache.get(m2);
         if (params2 == null) {
-            parameterCache.put(m2, params2 = resolver.getParameterTypes(m2, List.of(invokingType)));
+            parameterCache.put(m2, params2 = invoker.invokeParameterTypes(m2, List.of(invokingType)));
         }
 
         if (params1.length != params2.length) {
@@ -400,5 +400,4 @@ public class MethodFinder {
         List<TypeInstance> typeWitnesses,
         List<TypeInstance> arguments,
         List<SourceInfo> argumentSourceInfo) {}
-
 }

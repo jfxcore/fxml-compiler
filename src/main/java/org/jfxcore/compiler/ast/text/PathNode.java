@@ -1,4 +1,4 @@
-// Copyright (c) 2021, 2024, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2025, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.text;
@@ -8,6 +8,7 @@ import org.jfxcore.compiler.ast.Visitor;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.util.Resolver;
 import org.jfxcore.compiler.util.TypeInstance;
+import org.jfxcore.compiler.util.TypeInvoker;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -45,13 +46,14 @@ public class PathNode extends TextNode {
     }
 
     public TypeInstance resolve() {
-        String typeName = segments.stream().map(PathSegmentNode::getText).collect(Collectors.joining("."));
-        Resolver resolver = new Resolver(SourceInfo.span(
+        SourceInfo sourceInfo = SourceInfo.span(
             segments.get(0).getSourceInfo(),
-            segments.get(segments.size() - 1).getSourceInfo()));
+            segments.get(segments.size() - 1).getSourceInfo());
 
-        return resolver.getTypeInstance(
-            resolver.resolveClassAgainstImports(typeName),
+        String typeName = segments.stream().map(PathSegmentNode::getText).collect(Collectors.joining("."));
+
+        return new TypeInvoker(sourceInfo).invokeType(
+            new Resolver(sourceInfo).resolveClassAgainstImports(typeName),
             arguments.stream()
                 .map(PathNode::resolve)
                 .collect(Collectors.toList()));
@@ -115,5 +117,4 @@ public class PathNode extends TextNode {
 
         return text.toString();
     }
-
 }

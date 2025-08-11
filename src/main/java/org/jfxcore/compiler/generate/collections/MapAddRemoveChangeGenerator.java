@@ -1,4 +1,4 @@
-// Copyright (c) 2023, JFXcore. All rights reserved.
+// Copyright (c) 2023, 2025, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.generate.collections;
@@ -13,8 +13,8 @@ import org.jfxcore.compiler.ast.emit.BytecodeEmitContext;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.generate.ClassGenerator;
 import org.jfxcore.compiler.util.NameHelper;
-import org.jfxcore.compiler.util.Resolver;
 import org.jfxcore.compiler.util.TypeInstance;
+import org.jfxcore.compiler.util.TypeInvoker;
 
 import static javassist.CtClass.*;
 import static org.jfxcore.compiler.generate.SharedMethodImpls.*;
@@ -43,7 +43,7 @@ public class MapAddRemoveChangeGenerator extends ClassGenerator {
 
     @Override
     public TypeInstance getTypeInstance() {
-        return new Resolver(SourceInfo.none()).getTypeInstance(MapChangeListenerChangeType());
+        return new TypeInvoker(SourceInfo.none()).invokeType(MapChangeListenerChangeType());
     }
 
     @Override
@@ -195,5 +195,4 @@ public class MapAddRemoveChangeGenerator extends ClassGenerator {
             .invokespecial(generatedClass.getSuperclass(), MethodInfo.nameInit, constructor(ObservableMapType()))
             .vreturn());
     }
-
 }

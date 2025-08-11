@@ -1,4 +1,4 @@
-// Copyright (c) 2022, 2024, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2025, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.diagnostic.errors;
@@ -110,6 +110,13 @@ public class GeneralErrors {
             ErrorCode.TYPE_ARGUMENT_OUT_OF_BOUND, typeArg.getJavaName(), requiredType.getJavaName()));
     }
 
+    public static MarkupException typeArgumentNotReference(SourceInfo sourceInfo, CtClass type, TypeInstance typeArg) {
+        return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
+            ErrorCode.TYPE_ARGUMENT_NOT_REFERENCE,
+            NameHelper.getJavaClassName(sourceInfo, type),
+            typeArg.getJavaName()));
+    }
+
     public static MarkupException numTypeArgumentsMismatch(
             SourceInfo sourceInfo, CtClass declaringType, int expected, int actual) {
         return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
@@ -154,5 +161,4 @@ public class GeneralErrors {
             Diagnostic.newDiagnosticVariant(ErrorCode.EXPRESSION_NOT_APPLICABLE, "assign") :
             Diagnostic.newDiagnostic(ErrorCode.EXPRESSION_NOT_APPLICABLE));
     }
-
 }

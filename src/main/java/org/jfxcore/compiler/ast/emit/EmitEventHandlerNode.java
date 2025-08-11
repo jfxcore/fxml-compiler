@@ -11,9 +11,9 @@ import org.jfxcore.compiler.ast.ResolvedTypeNode;
 import org.jfxcore.compiler.generate.ClassGenerator;
 import org.jfxcore.compiler.generate.EventHandlerGenerator;
 import org.jfxcore.compiler.util.Bytecode;
-import org.jfxcore.compiler.util.Resolver;
 import org.jfxcore.compiler.util.TypeHelper;
 import org.jfxcore.compiler.util.TypeInstance;
+import org.jfxcore.compiler.util.TypeInvoker;
 import java.util.List;
 import java.util.Objects;
 
@@ -36,7 +36,7 @@ public class EmitEventHandlerNode extends AbstractNode implements ValueEmitterNo
         this.eventType = checkNotNull(eventType);
         this.eventHandlerName = checkNotNull(eventHandlerName);
         this.type = new ResolvedTypeNode(
-            new Resolver(sourceInfo).getTypeInstance(EventHandlerType(), List.of(eventType)),
+            new TypeInvoker(sourceInfo).invokeType(EventHandlerType(), List.of(eventType)),
             sourceInfo);
     }
 
