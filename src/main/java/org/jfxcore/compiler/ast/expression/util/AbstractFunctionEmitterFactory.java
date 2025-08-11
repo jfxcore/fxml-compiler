@@ -1,4 +1,4 @@
-// Copyright (c) 2022, 2024, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2025, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.expression.util;
@@ -44,6 +44,7 @@ import org.jfxcore.compiler.util.NumberUtil;
 import org.jfxcore.compiler.util.Resolver;
 import org.jfxcore.compiler.util.TypeHelper;
 import org.jfxcore.compiler.util.TypeInstance;
+import org.jfxcore.compiler.util.TypeInvoker;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -86,10 +87,10 @@ abstract class AbstractFunctionEmitterFactory {
         Callable function = findFunction(methodPath, targetType, witnesses, methodArguments, preferObservable);
         Callable inverseFunction = null;
 
-        Resolver resolver = new Resolver(functionExpression.getSourceInfo());
+        TypeInvoker invoker = new TypeInvoker(functionExpression.getSourceInfo());
         boolean isVarArgs = Modifier.isVarArgs(function.getBehavior().getModifiers());
-        TypeInstance[] paramTypes = resolver.getParameterTypes(function.getBehavior(), List.of(invokingType), witnesses);
-        TypeInstance returnType = resolver.getTypeInstance(function.getBehavior(), List.of(invokingType), witnesses);
+        TypeInstance[] paramTypes = invoker.invokeParameterTypes(function.getBehavior(), List.of(invokingType), witnesses);
+        TypeInstance returnType = invoker.invokeReturnType(function.getBehavior(), List.of(invokingType), witnesses);
         List<EmitMethodArgumentNode> argumentValues = new ArrayList<>();
         boolean observableFunction = false;
 
@@ -409,7 +410,7 @@ abstract class AbstractFunctionEmitterFactory {
                 pathExpression.getSourceInfo());
 
             if (constructor != null) {
-                if (returnType != null && !resolver.getTypeInstance(
+                if (returnType != null && !new TypeInvoker(pathExpression.getSourceInfo()).invokeReturnType(
                         constructor, List.of(invokingType)).subtypeOf(returnType)) {
                     throw GeneralErrors.incompatibleReturnValue(
                         pathExpression.getSourceInfo(), constructor, returnType);
@@ -520,5 +521,4 @@ abstract class AbstractFunctionEmitterFactory {
         Callable function,
         Callable inverseFunction,
         List<EmitMethodArgumentNode> arguments) { }
-
 }

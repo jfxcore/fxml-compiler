@@ -9,6 +9,7 @@ import org.jfxcore.compiler.diagnostic.errors.ParserErrors;
 import org.jfxcore.compiler.util.Classes;
 import org.jfxcore.compiler.util.Resolver;
 import org.jfxcore.compiler.util.TypeInstance;
+import org.jfxcore.compiler.util.TypeInvoker;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -22,20 +23,24 @@ public class TypeParser {
     private final String text;
     private final Location sourceOffset;
     private final Resolver resolver;
+    private final TypeInvoker invoker;
 
     public TypeParser(String text) {
         this.text = text;
         this.sourceOffset = new Location(0, 0);
         this.resolver = new Resolver(SourceInfo.none());
+        this.invoker = new TypeInvoker(SourceInfo.none());
     }
 
     public TypeParser(String text, Location sourceOffset) {
         int line = sourceOffset.getLine();
         int column = sourceOffset.getColumn();
+        var sourceInfo = new SourceInfo(line, column, line, column + text.length());
 
         this.text = text;
         this.sourceOffset = sourceOffset;
-        this.resolver = new Resolver(new SourceInfo(line, column, line, column + text.length()));
+        this.resolver = new Resolver(sourceInfo);
+        this.invoker = new TypeInvoker(sourceInfo);
     }
 
     public List<TypeInstance> parse() {
@@ -95,7 +100,7 @@ public class TypeParser {
                 objectInst = parseType(tokenizer);
             } else {
                 wildcardType = TypeInstance.WildcardType.ANY;
-                objectInst = resolver.getTypeInstance(Classes.ObjectType());
+                objectInst = invoker.invokeType(Classes.ObjectType());
             }
 
             return objectInst.withWildcard(wildcardType);
@@ -105,11 +110,9 @@ public class TypeParser {
         List<TypeInstance> arguments = new ArrayList<>();
 
         if (tokenizer.poll(TypeTokenType.OPEN_ANGLE) != null) {
-            arguments.add(parseType(tokenizer));
-
-            while (tokenizer.poll(TypeTokenType.COMMA) != null) {
+            do {
                 arguments.add(parseType(tokenizer));
-            }
+            } while (tokenizer.poll(TypeTokenType.COMMA) != null);
 
             tokenizer.remove(TypeTokenType.CLOSE_ANGLE);
         }
@@ -121,7 +124,7 @@ public class TypeParser {
             array.append("[]");
         }
 
-        return resolver.getTypeInstance(
+        return invoker.invokeType(
             resolver.resolveClassAgainstImports(typeName + array),
             arguments);
     }

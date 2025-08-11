@@ -9,6 +9,7 @@ import org.jfxcore.compiler.diagnostic.ErrorCode;
 import org.jfxcore.compiler.diagnostic.MarkupException;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.parse.TypeParser;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.jfxcore.compiler.TestBase;
 import java.util.Collections;
@@ -18,6 +19,15 @@ import static org.junit.jupiter.api.Assertions.*;
 
 @SuppressWarnings("unused")
 public class TypeInstanceTest extends TestBase {
+
+    private Resolver resolver;
+    private TypeInvoker invoker;
+
+    @BeforeEach
+    public void setup() {
+        resolver = new Resolver(SourceInfo.none());
+        invoker = new TypeInvoker(SourceInfo.none());
+    }
 
     @Test
     public void PrimitiveType_IsAssignableFrom_PrimitiveType() {
@@ -589,14 +599,26 @@ public class TypeInstanceTest extends TestBase {
         assertFalse(TypeInstance.nullType().isAssignableFrom(t0));
     }
 
+    @Test
+    public void TypeArgument_Cannot_Be_PrimitiveType() {
+        MarkupException ex = assertThrows(MarkupException.class,
+            () -> new TypeParser("java.lang.Iterable<double>").parse());
+
+        assertEquals(ErrorCode.TYPE_ARGUMENT_NOT_REFERENCE, ex.getDiagnostic().getCode());
+
+        ex = assertThrows(MarkupException.class,
+            () -> new TypeParser("java.lang.Iterable<java.lang.Comparable<char>>").parse());
+
+        assertEquals(ErrorCode.TYPE_ARGUMENT_NOT_REFERENCE, ex.getDiagnostic().getCode());
+    }
+
     public static class Type1<A> {}
     public static class Type2<B> extends Type1<B> {}
     public static class Type3 extends Type2<String> {}
 
     @Test
     public void Generic_Invocation_Tree_Is_Resolved() {
-        Resolver resolver = new Resolver(SourceInfo.none());
-        TypeInstance typeInstance = resolver.getTypeInstance(resolver.resolveClass(Type3.class.getName()));
+        TypeInstance typeInstance = invoker.invokeType(resolver.resolveClass(Type3.class.getName()));
 
         assertEquals("TypeInstanceTest$Type3", typeInstance.toString());
         assertEquals("TypeInstanceTest$Type2<String>", typeInstance.getSuperTypes().get(0).toString());
@@ -612,8 +634,7 @@ public class TypeInstanceTest extends TestBase {
 
     @Test
     public void Recurring_Generic_Type_Is_Resolved() {
-        Resolver resolver = new Resolver(SourceInfo.none());
-        TypeInstance typeInstance = resolver.getTypeInstance(resolver.resolveClass(RecurringType.class.getName()));
+        TypeInstance typeInstance = invoker.invokeType(resolver.resolveClass(RecurringType.class.getName()));
 
         assertEquals("TypeInstanceTest$RecurringType", typeInstance.toString());
         assertEquals("Object", typeInstance.getSuperTypes().get(0).toString());
@@ -625,8 +646,7 @@ public class TypeInstanceTest extends TestBase {
 
     @Test
     public void Parameterize_Generic_Type() {
-        Resolver resolver = new Resolver(SourceInfo.none());
-        TypeInstance typeInstance = resolver.getTypeInstance(
+        TypeInstance typeInstance = invoker.invokeType(
             resolver.resolveClass(Type5.class.getName()),
             List.of(TypeInstance.StringType(), TypeInstance.DoubleType()));
 
@@ -640,10 +660,9 @@ public class TypeInstanceTest extends TestBase {
 
     @Test
     public void Parameterize_Generic_Type_With_Upper_Bound() {
-        Resolver resolver = new Resolver(SourceInfo.none());
-        TypeInstance arg0 = resolver.getTypeInstance(resolver.resolveClass(Type14.class.getName()));
-        TypeInstance arg1 = resolver.getTypeInstance(resolver.resolveClass(Boolean.class.getName()));
-        TypeInstance typeInstance = resolver.getTypeInstance(
+        TypeInstance arg0 = invoker.invokeType(resolver.resolveClass(Type14.class.getName()));
+        TypeInstance arg1 = invoker.invokeType(resolver.resolveClass(Boolean.class.getName()));
+        TypeInstance typeInstance = invoker.invokeType(
             resolver.resolveClass(Type13.class.getName()), List.of(arg0, arg1));
 
         assertEquals("TypeInstanceTest$Type13<TypeInstanceTest$Type14,Boolean>", typeInstance.toString());
@@ -651,10 +670,9 @@ public class TypeInstanceTest extends TestBase {
 
     @Test
     public void Parameterize_Generic_Type_With_Upper_Bound_Out_Of_Bound() {
-        Resolver resolver = new Resolver(SourceInfo.none());
-        TypeInstance arg0 = resolver.getTypeInstance(resolver.resolveClass(Type14.class.getName()));
-        TypeInstance arg1 = resolver.getTypeInstance(resolver.resolveClass(Integer.class.getName()));
-        MarkupException ex = assertThrows(MarkupException.class, () -> resolver.getTypeInstance(
+        TypeInstance arg0 = invoker.invokeType(resolver.resolveClass(Type14.class.getName()));
+        TypeInstance arg1 = invoker.invokeType(resolver.resolveClass(Integer.class.getName()));
+        MarkupException ex = assertThrows(MarkupException.class, () -> invoker.invokeType(
             resolver.resolveClass(Type13.class.getName()), List.of(arg0, arg1)));
 
         assertEquals(ErrorCode.TYPE_ARGUMENT_OUT_OF_BOUND, ex.getDiagnostic().getCode());
@@ -825,18 +843,16 @@ public class TypeInstanceTest extends TestBase {
 
     @Test
     public void IsAssignableFrom_Subtype() {
-        Resolver resolver = new Resolver(SourceInfo.none());
-        TypeInstance t6 = resolver.getTypeInstance(
+        TypeInstance t6 = invoker.invokeType(
             resolver.resolveClass(Type6.class.getName()), List.of(TypeInstance.StringType()));
-        TypeInstance t7 = resolver.getTypeInstance(resolver.resolveClass(Type7.class.getName()));
+        TypeInstance t7 = invoker.invokeType(resolver.resolveClass(Type7.class.getName()));
         assertTrue(t6.isAssignableFrom(t7));
     }
 
     @Test
     public void IsAssignableFrom_Subtype_ArgUpperBound() {
-        Resolver resolver = new Resolver(SourceInfo.none());
         CtMethod method = resolver.tryResolveMethod(Classes.ParentType(), m -> m.getName().equals("getChildrenUnmodifiable"));
-        TypeInstance t0 = resolver.getTypeInstance(method, Collections.emptyList()).getArguments().get(0);
+        TypeInstance t0 = invoker.invokeReturnType(method, Collections.emptyList()).getArguments().get(0);
         TypeInstance t1 = new TypeParser("javafx.scene.Parent").parse().get(0);
         assertTrue(t0.isAssignableFrom(t1));
     }
@@ -846,11 +862,10 @@ public class TypeInstanceTest extends TestBase {
 
     @Test
     public void IsAssignableFrom_Supertype_With_Equal_Number_Of_Type_Arguments() {
-        Resolver resolver = new Resolver(SourceInfo.none());
-        TypeInstance t16 = resolver.getTypeInstance(
+        TypeInstance t16 = invoker.invokeType(
             resolver.resolveClass(Type16.class.getName()),
             List.of(TypeInstance.BooleanType(), TypeInstance.DoubleType()));
-        TypeInstance t15 = resolver.getTypeInstance(
+        TypeInstance t15 = invoker.invokeType(
             resolver.resolveClass(Type15.class.getName()),
             List.of(TypeInstance.StringType().withWildcard(TypeInstance.WildcardType.LOWER),
                     TypeInstance.BooleanType().withWildcard(TypeInstance.WildcardType.LOWER)));
@@ -860,9 +875,8 @@ public class TypeInstanceTest extends TestBase {
 
     @Test
     public void Scalar_Not_SubtypeOf_Array() {
-        Resolver resolver = new Resolver(SourceInfo.none());
         TypeInstance t0 = new TypeParser("java.lang.Object[]").parse().get(0);
-        TypeInstance t1 = resolver.getTypeInstance(Classes.NodeType());
+        TypeInstance t1 = invoker.invokeType(Classes.NodeType());
         assertFalse(t1.subtypeOf(t0));
     }
 
@@ -870,19 +884,17 @@ public class TypeInstanceTest extends TestBase {
 
     @Test
     public void TypeArgument_Out_Of_Bounds_Throws() {
-        Resolver resolver = new Resolver(SourceInfo.none());
-        MarkupException ex = assertThrows(MarkupException.class, () -> resolver.getTypeInstance(
+        MarkupException ex = assertThrows(MarkupException.class, () -> invoker.invokeType(
             resolver.resolveClass(Type8.class.getName()), List.of(TypeInstance.DoubleType())));
         assertEquals(ErrorCode.TYPE_ARGUMENT_OUT_OF_BOUND, ex.getDiagnostic().getCode());
     }
 
     @Test
     public void IsAssignable_With_RawUsage() {
-        var resolver = new Resolver(SourceInfo.none());
         var clazz = resolver.resolveClass(Type5.class.getName());
         var args = List.of(TypeInstance.DoubleType(), TypeInstance.StringType());
-        var type1 = resolver.getTypeInstance(clazz, args);
-        var type2 = resolver.getTypeInstance(clazz, Collections.emptyList());
+        var type1 = invoker.invokeType(clazz, args);
+        var type2 = invoker.invokeType(clazz, Collections.emptyList());
 
         assertTrue(type1.isAssignableFrom(type2));
         assertTrue(type2.isAssignableFrom(type1));
@@ -894,9 +906,9 @@ public class TypeInstanceTest extends TestBase {
 
     @Test
     public void RawBaseType_IsAssignable_From_DerivedType() {
-        var resolver = new Resolver(SourceInfo.none());
-        var type1Raw = resolver.getTypeInstance(resolver.resolveClass(Type9.class.getName()), Collections.emptyList());
-        var type2 = resolver.getTypeInstance(resolver.resolveClass(Type11.class.getName()));
+        TypeInvoker invoker = new TypeInvoker(SourceInfo.none());
+        var type1Raw = invoker.invokeType(resolver.resolveClass(Type9.class.getName()), Collections.emptyList());
+        var type2 = invoker.invokeType(resolver.resolveClass(Type11.class.getName()));
 
         assertTrue(type1Raw.isAssignableFrom(type2));
     }
@@ -905,8 +917,7 @@ public class TypeInstanceTest extends TestBase {
 
     @Test
     public void TypeArgument_Is_Erased_To_UpperBound() {
-        var resolver = new Resolver(SourceInfo.none());
-        var rawType = resolver.getTypeInstance(resolver.resolveClass(Type12.class.getName()), Collections.emptyList());
+        var rawType = invoker.invokeType(resolver.resolveClass(Type12.class.getName()), Collections.emptyList());
         var stringType = TypeInstance.StringType();
 
         assertTrue(rawType.isRaw());
@@ -915,10 +926,9 @@ public class TypeInstanceTest extends TestBase {
 
     @Test
     public void Types_With_Different_Bounds_Are_Not_Equal() {
-        var resolver = new Resolver(SourceInfo.none());
-        var inst1 = resolver.getTypeInstance(
+        var inst1 = invoker.invokeType(
             resolver.resolveClass(Comparable.class.getName()), List.of(TypeInstance.DoubleType()));
-        var inst2 = resolver.getTypeInstance(
+        var inst2 = invoker.invokeType(
             resolver.resolveClass(Comparable.class.getName()),
             List.of(TypeInstance.DoubleType().withWildcard(TypeInstance.WildcardType.LOWER)));
 

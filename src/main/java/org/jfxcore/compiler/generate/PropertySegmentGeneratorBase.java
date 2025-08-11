@@ -13,9 +13,9 @@ import org.jfxcore.compiler.ast.expression.path.FoldedGroup;
 import org.jfxcore.compiler.util.Bytecode;
 import org.jfxcore.compiler.util.Descriptors;
 import org.jfxcore.compiler.util.NameHelper;
-import org.jfxcore.compiler.util.Resolver;
 import org.jfxcore.compiler.util.TypeHelper;
 import org.jfxcore.compiler.util.TypeInstance;
+import org.jfxcore.compiler.util.TypeInvoker;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -99,10 +99,10 @@ abstract class PropertySegmentGeneratorBase extends SegmentGeneratorBase {
         if (!TypeHelper.equals(superClass, ObjectType())) {
             this.type = TypeInstance.of(superClass);
         } else {
-            Resolver resolver = new Resolver(SourceInfo.none());
-            this.type = resolver.getTypeInstance(
+            TypeInvoker invoker = new TypeInvoker(sourceInfo);
+            this.type = invoker.invokeType(
                 PropertyType(),
-                List.of(resolver.getTypeInstance(TypeHelper.getBoxedType(valueClass))));
+                List.of(invoker.invokeType(TypeHelper.getBoxedType(valueClass))));
         }
     }
 

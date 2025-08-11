@@ -9,11 +9,13 @@ import org.jfxcore.compiler.ast.ObjectNode;
 import org.jfxcore.compiler.ast.PropertyNode;
 import org.jfxcore.compiler.ast.emit.EmitLiteralNode;
 import org.jfxcore.compiler.ast.intrinsic.Intrinsics;
+import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.transform.Transform;
 import org.jfxcore.compiler.transform.TransformContext;
 import org.jfxcore.compiler.util.Classes;
 import org.jfxcore.compiler.util.Resolver;
 import org.jfxcore.compiler.util.TypeInstance;
+import org.jfxcore.compiler.util.TypeInvoker;
 import java.util.List;
 
 /**
@@ -28,14 +30,15 @@ public class TypeIntrinsicTransform implements Transform {
         }
 
         PropertyNode propertyNode = ((ObjectNode)node).getProperty("name");
-        Resolver resolver = new Resolver(propertyNode.getTrimmedTextSourceInfo(context));
+        SourceInfo sourceInfo = propertyNode.getTrimmedTextSourceInfo(context);
+        Resolver resolver = new Resolver(sourceInfo);
+        TypeInvoker invoker = new TypeInvoker(sourceInfo);
         CtClass clazz = resolver.resolveClassAgainstImports(propertyNode.getTrimmedTextNotEmpty(context));
-        TypeInstance typeInstance = resolver.getTypeInstance(clazz);
+        TypeInstance typeInstance = invoker.invokeType(clazz);
 
         return new EmitLiteralNode(
-            resolver.getTypeInstance(Classes.ClassType(), List.of(typeInstance)),
+            invoker.invokeType(Classes.ClassType(), List.of(typeInstance)),
             clazz.getName(),
             node.getSourceInfo());
     }
-
 }

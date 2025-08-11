@@ -1,4 +1,4 @@
-// Copyright (c) 2022, 2024, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2025, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.generate;
@@ -27,6 +27,7 @@ import org.jfxcore.compiler.util.NameHelper;
 import org.jfxcore.compiler.util.Resolver;
 import org.jfxcore.compiler.util.TypeHelper;
 import org.jfxcore.compiler.util.TypeInstance;
+import org.jfxcore.compiler.util.TypeInvoker;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -109,36 +110,36 @@ public class ObservableFunctionGenerator extends ClassGenerator {
         this.paramFields = new ArrayList<>();
         this.paramTypes = new ArrayList<>();
 
-        Resolver resolver = new Resolver(SourceInfo.none());
+        TypeInvoker invoker = new TypeInvoker(SourceInfo.none());
         CtClass returnType = function.getBehavior() instanceof CtConstructor ?
             function.getBehavior().getDeclaringClass() :
             unchecked(SourceInfo.none(), ((CtMethod) function.getBehavior())::getReturnType);
 
         if (returnType == CtClass.booleanType || returnType == BooleanType()) {
-            this.superType = resolver.getTypeInstance(
+            this.superType = invoker.invokeType(
                 bidirectional ? BooleanPropertyType() : ObservableBooleanValueType());
         } else if (returnType == CtClass.byteType || returnType == ByteType()
             || returnType == CtClass.charType || returnType == CharacterType()
             || returnType == CtClass.shortType || returnType == ShortType()
             || returnType == CtClass.intType || returnType == IntegerType()) {
-            this.superType = resolver.getTypeInstance(
+            this.superType = invoker.invokeType(
                 bidirectional ? IntegerPropertyType() : ObservableIntegerValueType());
         } else if (returnType == CtClass.longType || returnType == LongType()) {
-            this.superType = resolver.getTypeInstance(
+            this.superType = invoker.invokeType(
                 bidirectional ? LongPropertyType() : ObservableLongValueType());
         } else if (returnType == CtClass.floatType || returnType == FloatType()) {
-            this.superType = resolver.getTypeInstance(
+            this.superType = invoker.invokeType(
                 bidirectional ? FloatPropertyType() : ObservableFloatValueType());
         } else if (returnType == CtClass.doubleType || returnType == DoubleType()) {
-            this.superType = resolver.getTypeInstance(
+            this.superType = invoker.invokeType(
                 bidirectional ? DoublePropertyType() : ObservableDoubleValueType());
         } else {
-            this.superType = resolver.getTypeInstance(
+            this.superType = invoker.invokeType(
                 bidirectional ? PropertyType() : ObservableValueType(),
-                List.of(resolver.getTypeInstance(returnType)));
+                List.of(invoker.invokeType(returnType)));
         }
 
-        this.returnType = resolver.findObservableArgument(superType).jvmType();
+        this.returnType = new Resolver(SourceInfo.none()).findObservableArgument(superType).jvmType();
         this.isNumeric = TypeHelper.isNumeric(returnType);
     }
 
@@ -717,8 +718,8 @@ public class ObservableFunctionGenerator extends ClassGenerator {
         CtClass paramType = method.getParameterTypes()[0];
 
         Resolver resolver = new Resolver(SourceInfo.none());
-        CtClass sourceValueType = resolver.findWritableArgument(
-            resolver.getTypeInstance(sourceObservableType)).jvmType();
+        TypeInvoker invoker = new TypeInvoker(SourceInfo.none());
+        CtClass sourceValueType = resolver.findWritableArgument(invoker.invokeType(sourceObservableType)).jvmType();
 
         code.aload(0)
             .iconst(0)
@@ -1086,5 +1087,4 @@ public class ObservableFunctionGenerator extends ClassGenerator {
     boolean isObservableArgument(ValueNode node) {
         return node instanceof EmitObservablePathNode || node instanceof EmitObservableFunctionNode;
     }
-
 }

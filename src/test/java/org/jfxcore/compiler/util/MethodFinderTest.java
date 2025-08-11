@@ -1,4 +1,4 @@
-// Copyright (c) 2022, 2024, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2025, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.util;
@@ -198,10 +198,11 @@ public class MethodFinderTest extends TestBase {
     @MethodSource("params")
     public void PrimitiveOverloadTest(Execution execution) throws Exception {
         var resolver = new Resolver(SourceInfo.none());
+        var invoker = new TypeInvoker(SourceInfo.none());
         var declaringClass = resolver.resolveClass(MethodFinderTest.class.getName());
-        var invokingClass = resolver.getTypeInstance(declaringClass);
+        var invokingClass = invoker.invokeType(declaringClass);
         var method = new MethodFinder(invokingClass, declaringClass).findMethod(
-            execution.methodName(), false, null, List.of(), List.of(resolver.getTypeInstance(execution.argType())),
+            execution.methodName(), false, null, List.of(), List.of(invoker.invokeType(execution.argType())),
             List.of(SourceInfo.none()), null, SourceInfo.none());
 
         if (execution.selectedParamType() == CtClass.voidType) {
@@ -212,5 +213,4 @@ public class MethodFinderTest extends TestBase {
             assertEquals(execution.selectedParamType().getName(), paramTypes[0].getName());
         }
     }
-
 }

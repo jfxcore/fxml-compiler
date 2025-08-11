@@ -1,4 +1,4 @@
-// Copyright (c) 2021, 2022, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2025, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.transform.markup;
@@ -21,6 +21,7 @@ import org.jfxcore.compiler.util.NameHelper;
 import org.jfxcore.compiler.util.Resolver;
 import org.jfxcore.compiler.util.TypeHelper;
 import org.jfxcore.compiler.util.TypeInstance;
+import org.jfxcore.compiler.util.TypeInvoker;
 import java.util.List;
 
 public class TemplateContentTransform implements Transform {
@@ -66,7 +67,8 @@ public class TemplateContentTransform implements Transform {
                 parentNode.getSourceInfo(), parentType.jvmType(), 1, 0);
         }
 
-        TypeInstance templateContentType = resolver.getTypeInstance(Classes.Core.TemplateContentType(), List.of(itemType));
+        TypeInvoker invoker = new TypeInvoker(sourceInfo);
+        TypeInstance templateContentType = invoker.invokeType(Classes.Core.TemplateContentType(), List.of(itemType));
         ResolvedTypeNode typeNode = new ResolvedTypeNode(templateContentType, sourceInfo);
         TypeInstance contextClass = ExceptionHelper.unchecked(sourceInfo, () -> getContextClass(context, (ObjectNode)node));
 
@@ -88,7 +90,7 @@ public class TemplateContentTransform implements Transform {
             contextClass.setModifiers(Modifier.PRIVATE | Modifier.STATIC | Modifier.FINAL);
         }
 
-        return new Resolver(node.getSourceInfo()).getTypeInstance(contextClass);
+        return new TypeInvoker(node.getSourceInfo()).invokeType(contextClass);
     }
 
     private CtClass findClass(TransformContext context, String name) throws Exception {
@@ -100,5 +102,4 @@ public class TemplateContentTransform implements Transform {
 
         return null;
     }
-
 }

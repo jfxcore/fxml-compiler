@@ -1,4 +1,4 @@
-// Copyright (c) 2021, 2024, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2025, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.expression;
@@ -18,6 +18,7 @@ import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.diagnostic.errors.ParserErrors;
 import org.jfxcore.compiler.util.Resolver;
 import org.jfxcore.compiler.util.TypeInstance;
+import org.jfxcore.compiler.util.TypeInvoker;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -152,7 +153,7 @@ public class PathExpressionNode extends AbstractNode implements ExpressionNode {
                 operator,
                 new BindingContextNode(
                     BindingContextSelector.STATIC,
-                    resolver.getTypeInstance(type),
+                    new TypeInvoker(SourceInfo.none()).invokeType(type),
                     Integer.MAX_VALUE,
                     SourceInfo.none()),
                 segments.stream().skip(staticLimit + 1).toList(),
@@ -203,5 +204,4 @@ public class PathExpressionNode extends AbstractNode implements ExpressionNode {
     public int hashCode() {
         return Objects.hash(operator, bindingContext, segments);
     }
-
 }

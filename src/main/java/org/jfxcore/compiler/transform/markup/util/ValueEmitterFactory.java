@@ -45,6 +45,7 @@ import org.jfxcore.compiler.util.PropertyHelper;
 import org.jfxcore.compiler.util.Resolver;
 import org.jfxcore.compiler.util.TypeHelper;
 import org.jfxcore.compiler.util.TypeInstance;
+import org.jfxcore.compiler.util.TypeInvoker;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -246,7 +247,7 @@ public class ValueEmitterFactory {
             CtField field = resolver.tryResolveField(boxedDeclaringType, trimmedValue);
 
             if (field != null) {
-                var fieldType = resolver.getTypeInstance(field, List.of(declaringType));
+                var fieldType = new TypeInvoker(sourceInfo).invokeFieldType(field, List.of(declaringType));
                 if (targetType.isAssignableFrom(fieldType)) {
                     return new EmitClassConstantNode(id, targetType, boxedDeclaringType, field.getName(), sourceInfo);
                 }
@@ -588,11 +589,11 @@ public class ValueEmitterFactory {
     }
 
     private static ConstructorWithParams findConstructor(TypeInstance type, String[] literals, SourceInfo sourceInfo) {
-        Resolver resolver = new Resolver(sourceInfo);
+        TypeInvoker invoker = new TypeInvoker(sourceInfo);
 
         outer: for (CtConstructor constructor : type.jvmType().getConstructors()) {
             if (!Modifier.isPublic(constructor.getModifiers())
-                    || resolver.getParameterTypes(constructor, List.of(type)).length != literals.length) {
+                    || invoker.invokeParameterTypes(constructor, List.of(type)).length != literals.length) {
                 continue;
             }
 
@@ -604,7 +605,7 @@ public class ValueEmitterFactory {
             }
 
             List<ValueEmitterNode> params = new ArrayList<>();
-            TypeInstance[] paramTypes = resolver.getParameterTypes(constructor, List.of(type));
+            TypeInstance[] paramTypes = invoker.invokeParameterTypes(constructor, List.of(type));
 
             for (int i = 0; i < literals.length; ++i) {
                 ValueEmitterNode param = newLiteralValue(literals[i], paramTypes[i], sourceInfo);
@@ -711,8 +712,8 @@ public class ValueEmitterFactory {
             return List.of();
         }
 
-        Resolver resolver = new Resolver(sourceInfo);
-        TypeInstance[] constructorParamTypes = resolver.getParameterTypes(constructor, List.of(type));
+        TypeInvoker invoker = new TypeInvoker(sourceInfo);
+        TypeInstance[] constructorParamTypes = invoker.invokeParameterTypes(constructor, List.of(type));
         Annotation[][] annotations = attr.getAnnotations();
 
         if (annotations.length != constructorParamTypes.length) {

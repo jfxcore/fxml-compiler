@@ -17,9 +17,9 @@ import org.jfxcore.compiler.transform.Transform;
 import org.jfxcore.compiler.transform.TransformContext;
 import org.jfxcore.compiler.util.ExceptionHelper;
 import org.jfxcore.compiler.util.NameHelper;
-import org.jfxcore.compiler.util.Resolver;
 import org.jfxcore.compiler.util.TypeHelper;
 import org.jfxcore.compiler.util.TypeInstance;
+import org.jfxcore.compiler.util.TypeInvoker;
 import java.util.function.Function;
 
 public class BindingContextTransform implements Transform {
@@ -47,8 +47,8 @@ public class BindingContextTransform implements Transform {
                 throw GeneralErrors.expressionNotApplicable(bindingNode.getSourceInfo(), false);
             }
 
-            var resolver = new Resolver(propertyNode.getSourceInfo());
-            var invokingType = resolver.getTypeInstance(context.getCodeBehindOrMarkupClass());
+            var invoker = new TypeInvoker(propertyNode.getSourceInfo());
+            var invokingType = invoker.invokeType(context.getCodeBehindOrMarkupClass());
             var emitter = bindingNode.toPathEmitter(invokingType, null);
             var contextNode = new ContextNode(
                 createField.apply(emitter.getType()),

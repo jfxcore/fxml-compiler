@@ -42,6 +42,7 @@ import org.jfxcore.compiler.util.PropertyInfo;
 import org.jfxcore.compiler.util.Resolver;
 import org.jfxcore.compiler.util.TypeHelper;
 import org.jfxcore.compiler.util.TypeInstance;
+import org.jfxcore.compiler.util.TypeInvoker;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -348,7 +349,7 @@ public class PropertyAssignmentTransform implements Transform {
             TypeInstance itemType = resolver.tryFindArgument(nodeType, Core.TemplateType());
 
             return new EmitLiteralNode(
-                resolver.getTypeInstance(ClassType(), List.of(itemType)),
+                new TypeInvoker(node.getSourceInfo()).invokeType(ClassType(), List.of(itemType)),
                 itemType.getName(),
                 node.getSourceInfo());
         }
@@ -411,5 +412,4 @@ public class PropertyAssignmentTransform implements Transform {
         return node instanceof ValueEmitterNode valueEmitterNode && targetType.isAssignableFrom(valueType) ?
             valueEmitterNode : null;
     }
-
 }

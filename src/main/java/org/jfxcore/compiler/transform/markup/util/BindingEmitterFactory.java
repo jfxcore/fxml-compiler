@@ -28,6 +28,7 @@ import org.jfxcore.compiler.util.PropertyInfo;
 import org.jfxcore.compiler.util.Resolver;
 import org.jfxcore.compiler.util.TypeHelper;
 import org.jfxcore.compiler.util.TypeInstance;
+import org.jfxcore.compiler.util.TypeInvoker;
 import java.util.List;
 
 import static org.jfxcore.compiler.util.Classes.*;
@@ -163,8 +164,8 @@ public class BindingEmitterFactory {
             }
 
             if (converter != null) {
-                var resolver = new Resolver(converter.getSourceInfo());
-                var type = resolver.getTypeInstance(Classes.StringConverterType(), List.of(result.getValueType().boxed()));
+                var invoker = new TypeInvoker(converter.getSourceInfo());
+                var type = invoker.invokeType(Classes.StringConverterType(), List.of(result.getValueType().boxed()));
 
                 if (!type.isAssignableFrom(converter.getType().getTypeInstance())) {
                     throw BindingSourceErrors.cannotConvertSourceType(

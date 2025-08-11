@@ -1,4 +1,4 @@
-// Copyright (c) 2023, 2024, JFXcore. All rights reserved.
+// Copyright (c) 2023, 2025, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.generate.collections;
@@ -19,6 +19,7 @@ import org.jfxcore.compiler.util.Local;
 import org.jfxcore.compiler.util.NameHelper;
 import org.jfxcore.compiler.util.Resolver;
 import org.jfxcore.compiler.util.TypeInstance;
+import org.jfxcore.compiler.util.TypeInvoker;
 import javafx.beans.value.ObservableSetValue;
 import javafx.collections.ObservableSet;
 import java.util.List;
@@ -55,7 +56,7 @@ public class SetWrapperGenerator extends ClassGenerator {
     private final TypeInstance observableType;
 
     public SetWrapperGenerator() {
-        observableType = new Resolver(SourceInfo.none()).getTypeInstance(ObservableSetValueType());
+        observableType = new TypeInvoker(SourceInfo.none()).invokeType(ObservableSetValueType());
     }
 
     @Override
@@ -285,5 +286,4 @@ public class SetWrapperGenerator extends ClassGenerator {
         method.getMethodInfo().setCodeAttribute(code.toCodeAttribute());
         method.getMethodInfo().rebuildStackMap(generatedClass.getClassPool());
     }
-
 }

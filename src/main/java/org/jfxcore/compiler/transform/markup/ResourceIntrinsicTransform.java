@@ -16,6 +16,7 @@ import org.jfxcore.compiler.util.PropertyInfo;
 import org.jfxcore.compiler.util.Resolver;
 import org.jfxcore.compiler.util.TypeHelper;
 import org.jfxcore.compiler.util.TypeInstance;
+import org.jfxcore.compiler.util.TypeInvoker;
 
 import static org.jfxcore.compiler.util.ExceptionHelper.*;
 
@@ -28,12 +29,13 @@ public class ResourceIntrinsicTransform implements Transform {
         }
 
         Resolver resolver = new Resolver(node.getSourceInfo());
+        TypeInvoker invoker = new TypeInvoker(node.getSourceInfo());
         PropertyNode name = ((ObjectNode)node).getProperty("name");
         PropertyNode property = context.getParent().as(PropertyNode.class);
         if (property == null || property.isIntrinsic()) {
             return new EmitResourceNode(
                 name.getTrimmedTextNotEmpty(context),
-                resolver.getTypeInstance(Classes.URLType()),
+                invoker.invokeType(Classes.URLType()),
                 node.getSourceInfo());
         }
 
@@ -51,17 +53,16 @@ public class ResourceIntrinsicTransform implements Transform {
         }
 
         if (unchecked(node.getSourceInfo(), () -> propertyValueType.subtypeOf(Classes.URLType()))) {
-            targetType = resolver.getTypeInstance(Classes.URLType());
+            targetType = invoker.invokeType(Classes.URLType());
         } else if (unchecked(node.getSourceInfo(), () -> propertyValueType.subtypeOf(Classes.URIType()))) {
-            targetType = resolver.getTypeInstance(Classes.URIType());
+            targetType = invoker.invokeType(Classes.URIType());
         } else if (unchecked(node.getSourceInfo(), () -> propertyValueType.subtypeOf(Classes.StringType()))) {
             targetType = TypeInstance.StringType();
         } else {
             throw PropertyAssignmentErrors.incompatiblePropertyType(
-                node.getSourceInfo(), propertyInfo, resolver.getTypeInstance(Classes.URLType()));
+                node.getSourceInfo(), propertyInfo, invoker.invokeType(Classes.URLType()));
         }
 
         return new EmitResourceNode(name.getTrimmedTextNotEmpty(context), targetType, node.getSourceInfo());
     }
-
 }

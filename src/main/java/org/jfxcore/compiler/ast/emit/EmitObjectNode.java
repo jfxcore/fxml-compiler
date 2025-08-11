@@ -20,9 +20,9 @@ import org.jfxcore.compiler.ast.Visitor;
 import org.jfxcore.compiler.generate.RuntimeContextGenerator;
 import org.jfxcore.compiler.util.Bytecode;
 import org.jfxcore.compiler.util.Classes;
-import org.jfxcore.compiler.util.Resolver;
 import org.jfxcore.compiler.util.TypeHelper;
 import org.jfxcore.compiler.util.TypeInstance;
+import org.jfxcore.compiler.util.TypeInvoker;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -413,8 +413,8 @@ public class EmitObjectNode extends ReferenceableNode {
     private void emitInvokeConstructor(CtClass type, BytecodeEmitContext context) {
         Bytecode code = context.getOutput();
 
-        TypeInstance[] paramTypes = new Resolver(getSourceInfo())
-            .getParameterTypes(constructorOrFactoryMethod, Collections.emptyList());
+        TypeInstance[] paramTypes = new TypeInvoker(getSourceInfo())
+            .invokeParameterTypes(constructorOrFactoryMethod, Collections.emptyList());
 
         boolean varargs = Modifier.isVarArgs(constructorOrFactoryMethod.getModifiers());
 

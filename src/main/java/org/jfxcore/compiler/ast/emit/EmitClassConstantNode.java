@@ -1,4 +1,4 @@
-// Copyright (c) 2022, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2025, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.emit;
@@ -8,9 +8,9 @@ import org.jetbrains.annotations.Nullable;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.ast.ResolvedTypeNode;
 import org.jfxcore.compiler.util.Bytecode;
-import org.jfxcore.compiler.util.Resolver;
 import org.jfxcore.compiler.util.TypeHelper;
 import org.jfxcore.compiler.util.TypeInstance;
+import org.jfxcore.compiler.util.TypeInvoker;
 import java.util.Objects;
 
 import static org.jfxcore.compiler.util.Descriptors.*;
@@ -44,8 +44,7 @@ public class EmitClassConstantNode extends ReferenceableNode {
 
         if (type.getJvmType().isPrimitive()) {
             type = new ResolvedTypeNode(
-                new Resolver(type.getSourceInfo()).getTypeInstance(
-                    TypeHelper.getBoxedType(type.getJvmType())),
+                new TypeInvoker(type.getSourceInfo()).invokeType(TypeHelper.getBoxedType(type.getJvmType())),
                 type.getSourceInfo());
         }
 

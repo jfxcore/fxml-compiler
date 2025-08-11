@@ -28,7 +28,7 @@ import org.jfxcore.compiler.transform.TransformContext;
 import org.jfxcore.compiler.util.AccessVerifier;
 import org.jfxcore.compiler.util.Resolver;
 import org.jfxcore.compiler.util.TypeInstance;
-import java.util.Collections;
+import org.jfxcore.compiler.util.TypeInvoker;
 import java.util.List;
 
 /**
@@ -54,6 +54,7 @@ public class ResolveTypeTransform implements Transform {
         ObjectNode objectNode = context.getParent().as(ObjectNode.class);
         boolean parentIsDocument = context.getParent(1) instanceof DocumentNode;
         Resolver resolver = new Resolver(node.getSourceInfo());
+        TypeInvoker invoker = new TypeInvoker(node.getSourceInfo());
 
         if (typeNode.isIntrinsic()) {
             Intrinsic intrinsic = Intrinsics.find(typeNode.getName());
@@ -91,7 +92,7 @@ public class ResolveTypeTransform implements Transform {
 
         if (objectNode == null) {
             return new ResolvedTypeNode(
-                resolver.getTypeInstance(objectTypeClass),
+                invoker.invokeType(objectTypeClass),
                 typeNode.getName(),
                 typeNode.getMarkupName(),
                 true,
@@ -118,7 +119,7 @@ public class ResolveTypeTransform implements Transform {
             TypeInstance objectType;
 
             try {
-                objectType = resolver.getTypeInstance(objectTypeClass);
+                objectType = invoker.invokeType(objectTypeClass);
             } catch (MarkupException ex) {
                 if (ex.getDiagnostic().getCode() != ErrorCode.CLASS_NOT_FOUND) {
                     throw ex;
@@ -148,7 +149,7 @@ public class ResolveTypeTransform implements Transform {
                     typeArgsNode.getTrimmedTextNotEmpty(context),
                     typeArgsNode.getTrimmedTextSourceInfo(context).getStart()).parse();
 
-                type = resolver.getTypeInstance(objectTypeClass, typeArguments);
+                type = invoker.invokeType(objectTypeClass, typeArguments);
 
                 objectNode.setNodeData(NodeDataKey.TYPE_ARGUMENTS_SOURCE_INFO,
                     typeArgsNode.getValues().get(0).getSourceInfo());
@@ -161,7 +162,7 @@ public class ResolveTypeTransform implements Transform {
             }
         } else {
             try {
-                type = resolver.getTypeInstance(objectTypeClass, Collections.emptyList());
+                type = invoker.invokeType(objectTypeClass, List.of());
             } catch (MarkupException ex) {
                 if (ex.getDiagnostic().getCode() != ErrorCode.CLASS_NOT_FOUND) {
                     throw ex;
@@ -196,7 +197,7 @@ public class ResolveTypeTransform implements Transform {
 
         var resolver = new Resolver(sourceInfo);
         CtField field = resolver.resolveField(objectTypeClass, fieldNameTextNode.getText().trim(), false);
-        TypeInstance fieldType = resolver.getTypeInstance(field, List.of());
+        TypeInstance fieldType = new TypeInvoker(sourceInfo).invokeFieldType(field, List.of());
         var resolvedType = new ResolvedTypeNode(
             fieldType, fieldType.getName(), fieldType.getName(), false, sourceInfo);
         resolvedType.setNodeData(NodeDataKey.CONSTANT_DECLARING_TYPE, objectTypeClass);
@@ -217,8 +218,9 @@ public class ResolveTypeTransform implements Transform {
             new TypeParser(methodNameTextNode.getText(), sourceInfo.getStart()).parseMethod();
 
         var resolver = new Resolver(methodInfo.sourceInfo());
+        var invoker = new TypeInvoker(methodInfo.sourceInfo());
         CtMethod method = resolver.resolveGetter(objectTypeClass, methodInfo.methodName(), true, null);
-        TypeInstance returnType = resolver.getTypeInstance(method, List.of(), methodInfo.typeWitnesses());
+        TypeInstance returnType = invoker.invokeReturnType(method, List.of(), methodInfo.typeWitnesses());
         var resolvedType = new ResolvedTypeNode(
             returnType, returnType.getName(), returnType.getName(), false, sourceInfo);
         resolvedType.setNodeData(NodeDataKey.FACTORY_DECLARING_TYPE, objectTypeClass);

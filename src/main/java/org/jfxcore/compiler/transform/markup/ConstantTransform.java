@@ -19,6 +19,7 @@ import org.jfxcore.compiler.transform.Transform;
 import org.jfxcore.compiler.transform.TransformContext;
 import org.jfxcore.compiler.util.AccessVerifier;
 import org.jfxcore.compiler.util.Resolver;
+import org.jfxcore.compiler.util.TypeInvoker;
 import java.util.List;
 
 /**
@@ -47,6 +48,7 @@ public class ConstantTransform implements Transform {
         String fieldName = constantProperty.getTrimmedTextNotEmpty(context);
         SourceInfo sourceInfo = constantProperty.getTrimmedTextSourceInfo(context);
         Resolver resolver = new Resolver(sourceInfo);
+        TypeInvoker invoker = new TypeInvoker(sourceInfo);
         CtClass declaringType = (CtClass)objectNode.getType().getNodeData(NodeDataKey.CONSTANT_DECLARING_TYPE);
         CtField field = resolver.resolveField(declaringType, fieldName, false);
         AccessVerifier.verifyAccessible(field, context.getMarkupClass(), sourceInfo);
@@ -72,7 +74,7 @@ public class ConstantTransform implements Transform {
         }
 
         ObjectNode result = new ObjectNode(
-            new ResolvedTypeNode(resolver.getTypeInstance(field, List.of()), objectNode.getSourceInfo()),
+            new ResolvedTypeNode(invoker.invokeFieldType(field, List.of()), objectNode.getSourceInfo()),
             objectNode.getProperties(), List.of(), false, objectNode.getSourceInfo());
 
         result.setNodeData(NodeDataKey.CONSTANT_DECLARING_TYPE, declaringType);
