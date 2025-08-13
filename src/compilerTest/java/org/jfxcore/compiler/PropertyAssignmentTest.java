@@ -1,8 +1,10 @@
-// Copyright (c) 2022, 2024, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2025, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler;
 
+import javafx.beans.property.DoubleProperty;
+import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 import javafx.geometry.Pos;
@@ -11,6 +13,7 @@ import javafx.scene.control.Button;
 import javafx.scene.control.ListView;
 import javafx.scene.control.SelectionMode;
 import javafx.scene.layout.GridPane;
+import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
 import org.jfxcore.compiler.diagnostic.ErrorCode;
 import org.jfxcore.compiler.diagnostic.MarkupException;
@@ -162,6 +165,32 @@ public class PropertyAssignmentTest {
             assertMethodCall(root, methods ->
                 methods.stream().noneMatch(m -> m.getName().equals("setProp2"))
                 && methods.stream().anyMatch(m -> m.getName().equals("setValue")));
+        }
+    }
+
+    @Nested
+    public class WritableValueAssignment extends CompilerTestBase {
+
+        public static class WritableValueTestPane extends Pane {
+            private final DoubleProperty doubleProp = new SimpleDoubleProperty();
+            public final DoubleProperty doublePropProperty() { return doubleProp; }
+            public final double getDoubleProp() { return doubleProp.get(); }
+            public final void setDoubleProp(double value) { doubleProp.set(value); }
+
+            private final DoubleProperty doublePropWithoutSetter = new SimpleDoubleProperty();
+            public final DoubleProperty doublePropWithoutSetterProperty() { return doublePropWithoutSetter; }
+        }
+
+        @Test
+        public void Assignment_To_Property_Without_Setter() {
+            WritableValueTestPane pane = compileAndRun("""
+                <WritableValueTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                                       doubleProp="123"
+                                       doublePropWithoutSetter="456"/>
+            """);
+
+            assertEquals(123.0, pane.getDoubleProp(), 0.001);
+            assertEquals(456.0, pane.doublePropWithoutSetterProperty().get(), 0.001);
         }
     }
 
@@ -952,5 +981,4 @@ public class PropertyAssignmentTest {
             assertSame(javafx.scene.paint.Color.RED, root.getTextFill());
         }
     }
-
 }

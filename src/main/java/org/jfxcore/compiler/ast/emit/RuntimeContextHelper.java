@@ -1,4 +1,4 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2025, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.emit;
@@ -17,7 +17,7 @@ public class RuntimeContextHelper {
         Visitor.visit(node, new Visitor() {
             @Override
             protected Node onVisited(Node node) {
-                if (needsParentStack(node)) {
+                if (node instanceof EmitApplyMarkupExtensionNode || needsParentStack(node)) {
                     result[0] = true;
                     return Visitor.STOP;
                 }
@@ -69,5 +69,4 @@ public class RuntimeContextHelper {
         value = needsParentStackCache.get(node);
         return value != null ? value : false;
     }
-
 }

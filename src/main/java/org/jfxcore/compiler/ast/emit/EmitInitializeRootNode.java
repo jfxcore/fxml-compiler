@@ -1,4 +1,4 @@
-// Copyright (c) 2021, 2024, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2025, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.emit;
@@ -16,7 +16,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
 
-import static org.jfxcore.compiler.util.Classes.ObjectType;
 import static org.jfxcore.compiler.util.Descriptors.constructor;
 
 /**
@@ -72,12 +71,11 @@ public class EmitInitializeRootNode extends AbstractNode implements RootNode, Em
 
             code.anew(context.getRuntimeContextClass())
                 .dup()
-                .aload(0)
                 .iconst(maxDepth)
                 .invokespecial(
                     context.getRuntimeContextClass(),
                     MethodInfo.nameInit,
-                    constructor(ObjectType(), CtClass.intType))
+                    constructor(CtClass.intType))
                 .astore(context.getRuntimeContextLocal());
         }
 
@@ -114,6 +112,5 @@ public class EmitInitializeRootNode extends AbstractNode implements RootNode, Em
     public int hashCode() {
         return Objects.hash(preamble, root);
     }
-
 }
 

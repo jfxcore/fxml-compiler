@@ -1,4 +1,4 @@
-// Copyright (c) 2022, 2024, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2025, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.util;
@@ -951,11 +951,6 @@ public class Bytecode {
             }
         }
 
-        if (source.equals(Classes.ObjectType()) && isNumeric(target)) {
-            checkcast(Classes.NumberType());
-            return ext_autoconv(sourceInfo, Classes.NumberType(), target);
-        }
-
         if (!source.isPrimitive() && target.isPrimitive()) {
             CtClass targetBox = getBoxedType(target);
 
@@ -1267,5 +1262,4 @@ public class Bytecode {
             locals.clear(local.getIndex() + 1);
         }
     }
-
 }

@@ -288,8 +288,9 @@ public class EmitObjectNode extends ReferenceableNode {
     }
 
     public boolean addsToParentStack() {
-        return children.stream().anyMatch(RuntimeContextHelper::needsParentStack)
-            || arguments.stream().anyMatch(RuntimeContextHelper::needsParentStack);
+        return !(Classes.Markup.isAvailable() && type.getTypeInstance().subtypeOf(Classes.Markup.MarkupExtensionType()))
+            && (children.stream().anyMatch(RuntimeContextHelper::needsParentStack)
+                || arguments.stream().anyMatch(RuntimeContextHelper::needsParentStack));
     }
 
     /**

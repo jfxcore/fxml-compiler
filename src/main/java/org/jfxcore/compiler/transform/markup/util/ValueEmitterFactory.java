@@ -20,6 +20,7 @@ import org.jfxcore.compiler.ast.ObjectNode;
 import org.jfxcore.compiler.ast.PropertyNode;
 import org.jfxcore.compiler.ast.ValueNode;
 import org.jfxcore.compiler.ast.Visitor;
+import org.jfxcore.compiler.ast.emit.EmitApplyMarkupExtensionNode;
 import org.jfxcore.compiler.ast.emit.EmitArrayNode;
 import org.jfxcore.compiler.ast.emit.EmitClassConstantNode;
 import org.jfxcore.compiler.ast.emit.EmitGetParentNode;
@@ -329,8 +330,8 @@ public class ValueEmitterFactory {
                 // corresponding formal parameter of the current constructor.
                 if (propertyNode != null && propertyNode.getValues().size() == 1) {
                     AcceptArgumentResult result = acceptArgument(
-                        propertyNode.getValues().get(0), constructorParam.type(), type, vararg,
-                        parentsUnderInitializationCount);
+                        context, propertyNode.getValues().get(0), constructorParam, type,
+                        vararg, parentsUnderInitializationCount);
 
                     if (result.errorCode() != null) {
                         var namedArgs = namedArgsConstructor.namedArgs();
@@ -443,7 +444,7 @@ public class ValueEmitterFactory {
      * a new node that will emit the input argument.
      */
     private static AcceptArgumentResult acceptArgument(
-            Node argumentNode, TypeInstance targetType, TypeInstance invokingType,
+            TransformContext context, Node argumentNode, NamedArgParam argument, TypeInstance invokingType,
             boolean vararg, int parentsUnderInitializationCount) {
         SourceInfo sourceInfo = argumentNode.getSourceInfo();
         ValueNode value = null;
@@ -453,19 +454,19 @@ public class ValueEmitterFactory {
                 if (bindingNode.getBindingDistance() <= parentsUnderInitializationCount) {
                     return AcceptArgumentResult.error(null, ErrorCode.CANNOT_REFERENCE_NODE_UNDER_INITIALIZATION);
                 } else {
-                    value = bindingNode.toPathEmitter(invokingType, targetType).getValue();
+                    value = bindingNode.toPathEmitter(invokingType, argument.type()).getValue();
                     adjustParentIndex(value, parentsUnderInitializationCount + 1);
                 }
             } else {
                 throw GeneralErrors.expressionNotApplicable(sourceInfo, true);
             }
         } else if (argumentNode instanceof TextNode textNode) {
-            value = newObjectByCoercion(targetType, textNode);
+            value = newObjectByCoercion(argument.type(), textNode);
             if (value != null) {
                 return AcceptArgumentResult.value(value);
             }
 
-            value = newLiteralValue(textNode.getText(), List.of(targetType), targetType, sourceInfo);
+            value = newLiteralValue(textNode.getText(), List.of(argument.type()), argument.type(), sourceInfo);
             if (value != null) {
                 return AcceptArgumentResult.value(value);
             }
@@ -479,12 +480,29 @@ public class ValueEmitterFactory {
 
         TypeInstance valueType = TypeHelper.getTypeInstance(value);
 
-        if (!targetType.isAssignableFrom(valueType) &&
-                !(vararg && targetType.getComponentType().isAssignableFrom(valueType))) {
+        if (argument.type().isAssignableFrom(valueType) ||
+                vararg && argument.type().getComponentType().isAssignableFrom(valueType)) {
+            return AcceptArgumentResult.value(value);
+        }
+
+        if (!(value instanceof ObjectNode objectNode)
+                || !valueType.subtypeOf(Classes.Markup.MarkupExtensionType())
+                || !(MarkupExtensionInfo.of(value) instanceof MarkupExtensionInfo.Supplier supplierInfo)) {
             return AcceptArgumentResult.error(valueType, ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT);
         }
 
-        return AcceptArgumentResult.value(value);
+        if (supplierInfo.providedTypes().stream().noneMatch(argument.type()::isAssignableFrom)) {
+            return AcceptArgumentResult.error(valueType, ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT);
+        }
+
+        ValueEmitterNode argValueNode = newObjectWithNamedParams(context, objectNode, Collections.emptyList());
+        if (argValueNode == null) {
+            return AcceptArgumentResult.error(valueType, ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT);
+        }
+
+        return AcceptArgumentResult.value(new EmitApplyMarkupExtensionNode.Supplier(
+            argValueNode, supplierInfo.markupExtensionInterface(), argument.name(),
+            argument.type(), supplierInfo.returnType(), null));
     }
 
     private static void adjustParentIndex(ValueNode node, int adjustment) {

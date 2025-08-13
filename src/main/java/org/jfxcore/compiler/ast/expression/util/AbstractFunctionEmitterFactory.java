@@ -14,7 +14,10 @@ import org.jfxcore.compiler.ast.AbstractNode;
 import org.jfxcore.compiler.ast.Node;
 import org.jfxcore.compiler.ast.ResolvedTypeNode;
 import org.jfxcore.compiler.ast.emit.BytecodeEmitContext;
+import org.jfxcore.compiler.ast.emit.EmitApplyMarkupExtensionNode;
 import org.jfxcore.compiler.ast.text.PathNode;
+import org.jfxcore.compiler.diagnostic.errors.ObjectInitializationErrors;
+import org.jfxcore.compiler.transform.markup.util.MarkupExtensionInfo;
 import org.jfxcore.compiler.util.Callable;
 import org.jfxcore.compiler.ast.emit.EmitLiteralNode;
 import org.jfxcore.compiler.ast.emit.EmitMethodArgumentNode;
@@ -278,6 +281,22 @@ abstract class AbstractFunctionEmitterFactory {
         }
 
         if (argument instanceof ValueEmitterNode valueEmitterArg) {
+            var extensionInfo = MarkupExtensionInfo.of(valueEmitterArg);
+
+            if (extensionInfo instanceof MarkupExtensionInfo.Supplier supplierInfo) {
+                return EmitMethodArgumentNode.newScalar(
+                    paramType,
+                    new EmitApplyMarkupExtensionNode.Supplier(
+                        valueEmitterArg, supplierInfo.markupExtensionInterface(), null,
+                        paramType, supplierInfo.returnType(), null),
+                    false, sourceInfo);
+            }
+
+            if (extensionInfo instanceof MarkupExtensionInfo.PropertyConsumer) {
+                throw new InconvertibleArgumentException(argument.getClass().getName(),
+                    ObjectInitializationErrors.invalidMarkupExtensionUsage(sourceInfo));
+            }
+
             return EmitMethodArgumentNode.newScalar(paramType, valueEmitterArg, false, sourceInfo);
         }
 
@@ -460,6 +479,18 @@ abstract class AbstractFunctionEmitterFactory {
                 return TypeInstance.StringType();
             }
         } else if (argument instanceof ValueEmitterNode) {
+            var extensionInfo = MarkupExtensionInfo.of(argument);
+
+            if (extensionInfo instanceof MarkupExtensionInfo.Supplier supplierInfo) {
+                return supplierInfo.providedTypes().size() > 1
+                    ? TypeInstance.ofUnion(supplierInfo.providedTypes())
+                    : supplierInfo.providedTypes().get(0);
+            }
+
+            if (extensionInfo instanceof MarkupExtensionInfo.PropertyConsumer) {
+                throw ObjectInitializationErrors.invalidMarkupExtensionUsage(argument.getSourceInfo());
+            }
+
             return TypeHelper.getTypeInstance(argument);
         }
 

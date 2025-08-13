@@ -390,13 +390,18 @@ public class Resolver {
      * Returns the method that satisfies the predicate, or {@code null} if no such method can be found.
      */
     public CtMethod tryResolveMethod(CtClass ctclass, Predicate<CtMethod> predicate) {
-        for (CtMethod method : ctclass.getMethods()) {
-            if (predicate.test(method)) {
+        for (CtMethod method : ctclass.getDeclaredMethods()) {
+            if (!Modifier.isPrivate(method.getModifiers()) && !isSynthetic(method) && predicate.test(method)) {
                 return method;
             }
         }
 
-        return null;
+        try {
+            var superClass = ctclass.getSuperclass();
+            return superClass != null ? tryResolveMethod(superClass, predicate) : null;
+        } catch (NotFoundException ex) {
+            return null;
+        }
     }
 
     /**
@@ -404,10 +409,19 @@ public class Resolver {
      */
     public CtMethod[] resolveMethods(CtClass ctclass, Predicate<CtMethod> predicate) {
         List<CtMethod> methods = new ArrayList<>();
+        CtClass clazz = ctclass;
 
-        for (CtMethod method : ctclass.getMethods()) {
-            if (predicate.test(method)) {
-                methods.add(method);
+        while (clazz != null) {
+            for (CtMethod method : clazz.getDeclaredMethods()) {
+                if (!Modifier.isPrivate(method.getModifiers()) && !isSynthetic(method) && predicate.test(method)) {
+                    methods.add(method);
+                }
+            }
+
+            try {
+                clazz = clazz.getSuperclass();
+            } catch (NotFoundException ex) {
+                clazz = null;
             }
         }
 
@@ -752,6 +766,40 @@ public class Resolver {
         }
 
         return attr.getAnnotation(annotationName);
+    }
+
+    public CtClass getWritableClass(CtClass type, boolean requestProperty) {
+        try {
+            if (type == CtClass.booleanType || type == Classes.BooleanType()
+                    || type.subtypeOf(Classes.WritableBooleanValueType())) {
+                return requestProperty && type.subtypeOf(Classes.BooleanPropertyType()) ?
+                    Classes.BooleanPropertyType() : Classes.WritableBooleanValueType();
+            } else if (type == CtClass.intType || type == Classes.IntegerType()
+                    || type == CtClass.shortType || type == Classes.ShortType()
+                    || type == CtClass.byteType || type == Classes.ByteType()
+                    || type == CtClass.charType || type == Classes.CharacterType()
+                    || type.subtypeOf(Classes.WritableIntegerValueType())) {
+                return requestProperty && type.subtypeOf(Classes.IntegerPropertyType()) ?
+                    Classes.IntegerPropertyType() : Classes.WritableIntegerValueType();
+            } else if (type == CtClass.longType || type == Classes.LongType()
+                    || type.subtypeOf(Classes.WritableLongValueType())) {
+                return requestProperty && type.subtypeOf(Classes.LongPropertyType()) ?
+                    Classes.LongPropertyType() : Classes.WritableLongValueType();
+            } else if (type == CtClass.floatType || type == Classes.FloatType()
+                    || type.subtypeOf(Classes.WritableFloatValueType())) {
+                return requestProperty && type.subtypeOf(Classes.FloatPropertyType()) ?
+                    Classes.FloatPropertyType() : Classes.WritableFloatValueType();
+            } else if (type == CtClass.doubleType || type == Classes.DoubleType()
+                    || type.subtypeOf(Classes.WritableDoubleValueType())) {
+                return requestProperty && type.subtypeOf(Classes.DoublePropertyType()) ?
+                    Classes.DoublePropertyType() : Classes.WritableDoubleValueType();
+            } else {
+                return requestProperty && type.subtypeOf(Classes.PropertyType()) ?
+                    Classes.PropertyType() : Classes.WritableValueType();
+            }
+        } catch (NotFoundException ex) {
+            throw new RuntimeException(ex);
+        }
     }
 
     public CtClass getObservableClass(CtClass type, boolean requestProperty) {

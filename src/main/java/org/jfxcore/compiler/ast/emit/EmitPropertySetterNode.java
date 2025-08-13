@@ -1,4 +1,4 @@
-// Copyright (c) 2021, 2024, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2025, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.emit;
@@ -12,6 +12,7 @@ import org.jfxcore.compiler.ast.Visitor;
 import org.jfxcore.compiler.util.Bytecode;
 import org.jfxcore.compiler.util.Local;
 import org.jfxcore.compiler.util.PropertyInfo;
+import org.jfxcore.compiler.util.Resolver;
 import org.jfxcore.compiler.util.TypeHelper;
 import java.util.Objects;
 
@@ -37,50 +38,53 @@ public class EmitPropertySetterNode extends AbstractNode implements EmitterNode 
 
     @Override
     public void emit(BytecodeEmitContext context) {
-        if (content) {
+        if (!(value instanceof ValueEmitterNode)) {
+            context.emit(value);
+        } else if (content) {
             emitAddValues(context);
+        } else if (propertyInfo.getSetter() != null) {
+            emitInvokeSetter(context);
         } else {
-            emitSetValue(context);
+            emitInvokePropertySetter(context);
         }
     }
 
-    private void emitSetValue(BytecodeEmitContext context) {
+    private void emitInvokeSetter(BytecodeEmitContext context) {
         Bytecode code = context.getOutput();
+        CtMethod method = Objects.requireNonNull(propertyInfo.getSetter());
         CtClass valueType = TypeHelper.getJvmType(value);
-        CtMethod method = propertyInfo.getSetterOrPropertyGetter();
+        CtClass targetType = unchecked(() -> method.getParameterTypes()[0]);
 
         code.dup();
+        context.emit(value);
+        code.ext_castconv(getSourceInfo(), valueType, targetType)
+            .ext_invoke(method);
+    }
 
-        if (propertyInfo.getSetter() == null) {
-            code.ext_invoke(method);
-        }
+    private void emitInvokePropertySetter(BytecodeEmitContext context) {
+        Bytecode code = context.getOutput();
+        CtClass valueType = TypeHelper.getJvmType(value);
+        CtClass targetType = propertyInfo.getType().jvmType();
+        CtMethod method = propertyInfo.getSetterOrPropertyGetter();
+        CtClass declaringClass = new Resolver(getSourceInfo()).getWritableClass(unchecked(method::getReturnType), false);
 
         context.emit(value);
 
-        if (propertyInfo.getSetter() != null) {
-            code.ext_castconv(getSourceInfo(), valueType, unchecked(() -> method.getParameterTypes()[0]))
-                .ext_invoke(method);
+        Local valueLocal = code.acquireLocal(valueType);
+        code.ext_store(valueType, valueLocal);
+
+        code.dup()
+            .ext_invoke(method)
+            .ext_load(valueType, valueLocal)
+            .ext_castconv(getSourceInfo(), valueType, targetType);
+
+        if (targetType.isPrimitive()) {
+            code.invokeinterface(declaringClass, "set", function(voidType, targetType));
         } else {
-            switch (valueType.getName()) {
-                case "boolean" ->
-                    code.ext_autoconv(getSourceInfo(), valueType, booleanType)
-                        .invokeinterface(WritableBooleanValueType(), "set", function(voidType, booleanType));
-                case "int" ->
-                    code.ext_autoconv(getSourceInfo(), valueType, intType)
-                        .invokeinterface(WritableIntegerValueType(), "set", function(voidType, intType));
-                case "long" ->
-                    code.ext_autoconv(getSourceInfo(), valueType, longType)
-                        .invokeinterface(WritableLongValueType(), "set", function(voidType, longType));
-                case "float" ->
-                    code.ext_autoconv(getSourceInfo(), valueType, floatType)
-                        .invokeinterface(WritableFloatValueType(), "set", function(voidType, floatType));
-                case "double" ->
-                    code.ext_autoconv(getSourceInfo(), valueType, doubleType)
-                        .invokeinterface(WritableDoubleValueType(), "set", function(voidType, doubleType));
-                default ->
-                    code.invokeinterface(WritableValueType(), "setValue", function(voidType, ObjectType()));
-            }
+            code.invokeinterface(declaringClass, "setValue", function(voidType, ObjectType()));
         }
+
+        code.releaseLocal(valueLocal);
     }
 
     private void emitAddValues(BytecodeEmitContext context) {
@@ -149,5 +153,4 @@ public class EmitPropertySetterNode extends AbstractNode implements EmitterNode 
     public int hashCode() {
         return Objects.hash(propertyInfo, value, content);
     }
-
 }

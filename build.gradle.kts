@@ -55,6 +55,7 @@ val copyVersionInfo = tasks.create<Copy>("copyVersionInfo") {
 tasks.compileJava {
     dependsOn(copyVersionInfo)
     dependsOn(gradle.includedBuild("jfx").task(":sdk"))
+    dependsOn(gradle.includedBuild("markup").task(":jar"))
 }
 
 tasks.named<Jar>("sourcesJar") {
@@ -174,6 +175,7 @@ dependencies {
     testImplementation(files("${gradle.includedBuild("jfx").projectDir}/build/sdk/lib/javafx.graphics.jar"))
     testImplementation(files("${gradle.includedBuild("jfx").projectDir}/build/sdk/lib/javafx.controls.jar"))
     testImplementation(files("${gradle.includedBuild("jfx").projectDir}/build/sdk/lib/javafx.fxml.jar"))
+    testImplementation(files("${gradle.includedBuild("markup").projectDir}/build/libs/markup-1.0-SNAPSHOT.jar"))
 
     implementation("org.javassist:javassist:3.30.2-GA")
     implementation("org.jetbrains.kotlinx:kotlinx-metadata-jvm:0.4.1")
