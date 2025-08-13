@@ -3,4 +3,4 @@
 	url = https://github.com/openjdk/jfx.git
 [submodule "deps/markup"]
 	path = deps/markup
-	url = https://github.com/jfxcore/markup
+	url = https://github.com/jfxcore/markup.git
