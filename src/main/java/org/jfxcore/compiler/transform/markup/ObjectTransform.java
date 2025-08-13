@@ -71,7 +71,8 @@ public class ObjectTransform implements Transform {
             throw GeneralErrors.unexpectedIntrinsic(node.getSourceInfo(), objectNode.getType().getMarkupName());
         }
 
-        if (objectNode.isMarkupExtension()) {
+        if (objectNode.isMarkupExtension()
+                && !TypeHelper.getTypeInstance(objectNode).subtypeOf(Classes.Markup.MarkupExtensionType())) {
             throw ParserErrors.unexpectedMarkupExtension(node.getSourceInfo(), objectNode.getType().getName());
         }
 

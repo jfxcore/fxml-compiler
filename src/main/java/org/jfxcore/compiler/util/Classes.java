@@ -133,6 +133,7 @@ public final class Classes {
     public static CtClass FloatPropertyType() { return get("javafx.beans.property.FloatProperty"); }
     public static CtClass DoublePropertyType() { return get("javafx.beans.property.DoubleProperty"); }
     public static CtClass StringPropertyType() { return get("javafx.beans.property.StringProperty"); }
+    public static CtClass ReadOnlyPropertyType() { return get("javafx.beans.property.ReadOnlyProperty"); }
     public static CtClass ReadOnlyListPropertyType() { return get("javafx.beans.property.ReadOnlyListProperty"); }
     public static CtClass ReadOnlySetPropertyType() { return get("javafx.beans.property.ReadOnlySetProperty"); }
     public static CtClass ReadOnlyMapPropertyType() { return get("javafx.beans.property.ReadOnlyMapProperty"); }
@@ -172,6 +173,27 @@ public final class Classes {
         private Core() {}
         public static CtClass TemplateType() { return getOptional("javafx.scene.control.template.Template"); }
         public static CtClass TemplateContentType() { return getOptional("javafx.scene.control.template.TemplateContent"); }
+    }
+
+    public static final class Markup {
+        private Markup() {}
+        public static final String MarkupExtensionReturnTypeAnnotationName = "org.jfxcore.markup.MarkupExtension$Supplier$ReturnType";
+
+        public static boolean isAvailable() { return getOptional("org.jfxcore.markup.MarkupExtension") != null; }
+        public static CtClass MarkupExtensionType() { return get("org.jfxcore.markup.MarkupExtension"); }
+        public static CtClass MarkupContextType() { return get("org.jfxcore.markup.MarkupContext"); }
+
+        public static final class MarkupExtension {
+            private MarkupExtension() {}
+            public static CtClass SupplierType() { return get("org.jfxcore.markup.MarkupExtension$Supplier"); }
+            public static CtClass BooleanSupplierType() { return get("org.jfxcore.markup.MarkupExtension$BooleanSupplier"); }
+            public static CtClass IntSupplierType() { return get("org.jfxcore.markup.MarkupExtension$IntSupplier"); }
+            public static CtClass LongSupplierType() { return get("org.jfxcore.markup.MarkupExtension$LongSupplier"); }
+            public static CtClass FloatSupplierType() { return get("org.jfxcore.markup.MarkupExtension$FloatSupplier"); }
+            public static CtClass DoubleSupplierType() { return get("org.jfxcore.markup.MarkupExtension$DoubleSupplier"); }
+            public static CtClass PropertyConsumerType() { return get("org.jfxcore.markup.MarkupExtension$PropertyConsumer"); }
+            public static CtClass ReadOnlyPropertyConsumerType() { return get("org.jfxcore.markup.MarkupExtension$ReadOnlyPropertyConsumer"); }
+        }
     }
 
     private static CtClass getOptional(String name) {

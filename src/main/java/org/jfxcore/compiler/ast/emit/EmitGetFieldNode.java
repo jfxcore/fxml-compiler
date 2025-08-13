@@ -1,4 +1,4 @@
-// Copyright (c) 2021, 2024, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2025, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.emit;
@@ -66,12 +66,9 @@ public class EmitGetFieldNode extends AbstractNode implements ValueEmitterNode, 
         } else {
             if (loadRoot) {
                 code.aload(context.getRuntimeContextLocal())
-                    .getfield(
-                        context.getRuntimeContextClass(),
-                        RuntimeContextGenerator.PARENTS_FIELD,
-                        RuntimeContextGenerator.getParentArrayType())
-                    .iconst(0)
-                    .ext_arrayload(ObjectType())
+                    .invokevirtual(context.getRuntimeContextClass(),
+                                   RuntimeContextGenerator.GET_ROOT_METHOD,
+                                   function(ObjectType()))
                     .checkcast(context.getMarkupClass());
             }
 

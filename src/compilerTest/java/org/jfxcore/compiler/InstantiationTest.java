@@ -12,6 +12,7 @@ import javafx.geometry.Insets;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.Spinner;
+import javafx.scene.control.Tab;
 import javafx.scene.layout.BackgroundFill;
 import javafx.scene.layout.CornerRadii;
 import javafx.scene.layout.GridPane;
@@ -904,5 +905,22 @@ public class InstantiationTest extends CompilerTestBase {
 
         assertEquals(ErrorCode.OBJECT_CANNOT_HAVE_CONTENT, ex.getDiagnostic().getCode());
         assertCodeHighlight("<ComboBox>", ex);
+    }
+
+    @Test
+    public void Instantiate_NonNode_Root() {
+        Tab root = compileAndRun("""
+            <?import javafx.scene.layout.*?>
+            <?import javafx.scene.control.*?>
+            <Tab xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                 text="foo">
+                <content>
+                    <GridPane/>
+                </content>
+            </Tab>
+        """);
+
+        assertEquals("foo", root.getText());
+        assertInstanceOf(GridPane.class, root.getContent());
     }
 }

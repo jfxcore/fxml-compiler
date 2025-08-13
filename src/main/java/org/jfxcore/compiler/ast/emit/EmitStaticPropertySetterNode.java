@@ -1,4 +1,4 @@
-// Copyright (c) 2021, 2024, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2025, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.emit;
@@ -28,10 +28,6 @@ public class EmitStaticPropertySetterNode extends AbstractNode implements Emitte
         this.declaringType = checkNotNull(declaringType);
         this.propertyInfo = checkNotNull(propertyInfo);
         this.value = checkNotNull(value);
-
-        if (propertyInfo.isReadOnly()) {
-            throw new IllegalArgumentException();
-        }
     }
 
     @Override
@@ -45,13 +41,17 @@ public class EmitStaticPropertySetterNode extends AbstractNode implements Emitte
 
         context.emit(value);
 
-        code.ext_autoconv(getSourceInfo(), TypeHelper.getJvmType(value), propertyInfo.getType().jvmType());
+        if (value instanceof ValueEmitterNode) {
+            code.ext_autoconv(getSourceInfo(), TypeHelper.getJvmType(value), propertyInfo.getType().jvmType());
 
-        if (propertyInfo.getSetter() == null) {
-            code.invokeinterface(Classes.WritableValueType(), "setValue",
-                                 Descriptors.function(CtClass.voidType, Classes.ObjectType()));
+            if (propertyInfo.getSetter() == null) {
+                code.invokeinterface(Classes.WritableValueType(), "setValue",
+                                     Descriptors.function(CtClass.voidType, Classes.ObjectType()));
+            } else {
+                code.ext_invoke(propertyInfo.getSetter());
+            }
         } else {
-            code.ext_invoke(propertyInfo.getSetter());
+            code.pop2();
         }
     }
 
@@ -80,5 +80,4 @@ public class EmitStaticPropertySetterNode extends AbstractNode implements Emitte
     public int hashCode() {
         return Objects.hash(declaringType, propertyInfo.hashCode(), value);
     }
-
 }

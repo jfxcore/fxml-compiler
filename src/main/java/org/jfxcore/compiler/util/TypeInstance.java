@@ -50,6 +50,36 @@ public class TypeInstance {
         }
     }
 
+    private static class UnionTypeInstance extends TypeInstance {
+        final List<TypeInstance> types;
+
+        UnionTypeInstance(List<TypeInstance> types) {
+            super(CtClass.voidType, List.of(), List.of(), WildcardType.NONE);
+            this.types = types;
+        }
+
+        @Override
+        public boolean isAssignableFrom(TypeInstance from, AssignmentContext context) {
+            return false;
+        }
+
+        @Override
+        public boolean subtypeOf(TypeInstance other) {
+            return false;
+        }
+
+        @Override
+        public boolean subtypeOf(CtClass other) {
+            return false;
+        }
+
+        @Override
+        protected String toString(boolean simpleNames, boolean javaNames) {
+            return "<union>";
+        }
+    }
+
+    public static TypeInstance voidType() { return resolveTypeInstance(CtClass.voidType); }
     public static TypeInstance booleanType() { return resolveTypeInstance(CtClass.booleanType); }
     public static TypeInstance charType() { return resolveTypeInstance(CtClass.charType); }
     public static TypeInstance byteType() { return resolveTypeInstance(CtClass.byteType); }
@@ -127,6 +157,12 @@ public class TypeInstance {
 
     public static TypeInstance of(CtClass type) {
         return resolveTypeInstance(type);
+    }
+
+    public static TypeInstance ofUnion(List<TypeInstance> types) {
+        if (types.isEmpty()) throw new IllegalArgumentException("types");
+        if (types.size() == 1) return types.get(0);
+        return new UnionTypeInstance(types);
     }
 
     static TypeInstance ofErased(TypeInstance type) {
@@ -295,8 +331,23 @@ public class TypeInstance {
      * </ol>
      */
     public boolean isAssignableFrom(TypeInstance from, AssignmentContext context) {
+        // Reference types are always assignable from the null type
+        if (!isPrimitive() && from instanceof NullTypeInstance) {
+            return true;
+        }
+
+        if (from instanceof UnionTypeInstance union) {
+            for (TypeInstance type : union.types) {
+                if (isAssignableFrom(type, context)) {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         // Identity conversion
-        if (equals(from) || !isPrimitive() && from instanceof NullTypeInstance) {
+        if (equals(from)) {
             return true;
         }
 
@@ -415,6 +466,16 @@ public class TypeInstance {
     }
 
     public boolean subtypeOf(TypeInstance other) {
+        if (other instanceof UnionTypeInstance union) {
+            for (TypeInstance type : union.types) {
+                if (subtypeOf(type)) {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         return unchecked(SourceInfo.none(), () -> {
             if (other.dimensions == 0 && other.equals(Classes.ObjectType())) {
                 return true;

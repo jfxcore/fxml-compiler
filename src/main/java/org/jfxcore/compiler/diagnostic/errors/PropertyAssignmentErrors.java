@@ -17,7 +17,9 @@ import org.jfxcore.compiler.util.PropertyInfo;
 import org.jfxcore.compiler.util.TypeHelper;
 import org.jfxcore.compiler.util.TypeInstance;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import static org.jfxcore.compiler.util.NameHelper.formatPropertyName;
 
@@ -165,4 +167,18 @@ public class PropertyAssignmentErrors {
         return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(code, formatPropertyName(propertyInfo)));
     }
 
+    public static MarkupException markupExtensionNotApplicable(
+            SourceInfo sourceInfo, PropertyInfo propertyInfo, CtClass markupExtensionType, TypeInstance[] supportedTargetTypes) {
+        String supportedTargets = Arrays.stream(supportedTargetTypes)
+            .map(TypeInstance::getJavaName)
+            .collect(Collectors.joining(", "));
+
+        if (supportedTargets.isEmpty()) {
+            supportedTargets = "<none>";
+        }
+
+        return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(ErrorCode.MARKUP_EXTENSION_NOT_APPLICABLE,
+            NameHelper.getJavaClassName(sourceInfo, markupExtensionType),
+            formatPropertyName(propertyInfo), supportedTargets));
+    }
 }

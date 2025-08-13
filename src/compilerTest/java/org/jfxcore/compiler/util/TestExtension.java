@@ -1,7 +1,7 @@
 /*
  * Copyright 2013-2014 SmartBear Software
  * Copyright 2014-2019 The TestFX Contributors
- * Copyright 2021 JFXcore
+ * Copyright 2021-2025 JFXcore
  *
  * Licensed under the EUPL, Version 1.1 or - as soon they will be approved by the
  * European Commission - subsequent versions of the EUPL (the "Licence"); You may
@@ -21,11 +21,13 @@ package org.jfxcore.compiler.util;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.MouseButton;
 import javafx.stage.Stage;
+import org.jfxcore.compiler.diagnostic.MarkupException;
 import org.junit.jupiter.api.extension.AfterAllCallback;
 import org.junit.jupiter.api.extension.BeforeEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.ParameterContext;
 import org.junit.jupiter.api.extension.ParameterResolver;
+import org.junit.jupiter.api.extension.TestExecutionExceptionHandler;
 import org.junit.jupiter.api.extension.TestInstancePostProcessor;
 import org.testfx.api.FxRobot;
 import org.testfx.api.FxToolkit;
@@ -41,9 +43,10 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class TestExtension extends FxRobot implements BeforeEachCallback, AfterAllCallback,
-        TestInstancePostProcessor, ParameterResolver {
+        TestInstancePostProcessor, TestExecutionExceptionHandler, ParameterResolver {
 
     private ApplicationFixture applicationFixture;
     private boolean initialized;
@@ -74,6 +77,18 @@ public class TestExtension extends FxRobot implements BeforeEachCallback, AfterA
             }
         }
         applicationFixture = new AnnotationBasedApplicationFixture(testInstance, init, start, stop);
+    }
+
+    @Override
+    public void handleTestExecutionException(ExtensionContext extensionContext, Throwable throwable) throws Throwable {
+        if (throwable instanceof MarkupException ex) {
+            System.err.println(ex.getMessageWithSourceInfo()
+                .lines()
+                .skip(1)
+                .collect(Collectors.joining(System.lineSeparator())));
+        }
+
+        throw throwable;
     }
 
     @Override
@@ -175,7 +190,5 @@ public class TestExtension extends FxRobot implements BeforeEachCallback, AfterA
                 method.invoke(testInstance);
             }
         }
-
     }
-
 }

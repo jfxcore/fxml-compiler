@@ -1,4 +1,4 @@
-// Copyright (c) 2021, 2024, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2025, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.emit;
@@ -103,6 +103,7 @@ public class BytecodeEmitContext extends EmitContext<Bytecode> {
 
         if (runtimeContextClass == null) {
             boolean[] resourceSupport = new boolean[1];
+            boolean[] markupContextSupport = new boolean[1];
 
             Visitor.visit(rootNode, new Visitor() {
                 @Override
@@ -116,7 +117,20 @@ public class BytecodeEmitContext extends EmitContext<Bytecode> {
                 }
             });
 
-            runtimeContextClass = ClassGenerator.emit(this, new RuntimeContextGenerator(resourceSupport[0]));
+            Visitor.visit(rootNode, new Visitor() {
+                @Override
+                protected Node onVisited(Node node) {
+                    if (node instanceof EmitApplyMarkupExtensionNode) {
+                        markupContextSupport[0] = true;
+                        return Visitor.STOP;
+                    }
+
+                    return node;
+                }
+            });
+
+            runtimeContextClass = ClassGenerator.emit(
+                this, new RuntimeContextGenerator(resourceSupport[0], markupContextSupport[0]));
         }
 
         return runtimeContextClass;
@@ -361,5 +375,4 @@ public class BytecodeEmitContext extends EmitContext<Bytecode> {
             return map.size();
         }
     }
-
 }

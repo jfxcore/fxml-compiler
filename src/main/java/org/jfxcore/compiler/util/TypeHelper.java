@@ -1,4 +1,4 @@
-// Copyright (c) 2022, 2023, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2025, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.util;
@@ -384,6 +384,31 @@ public class TypeHelper {
         return list.toArray(String[]::new);
     }
 
+    /**
+     * Returns the value of the specified annotation member.
+     */
+    public static String[] getAnnotationClassArray(Annotation annotation, String memberName) {
+        List<String> list = new ArrayList<>();
+        MemberValue memberValue = annotation.getMemberValue(memberName);
+        if (memberValue == null) {
+            return new String[0];
+        }
+
+        memberValue.accept(new MemberValueVisitorAdapter() {
+            @Override
+            public void visitArrayMemberValue(ArrayMemberValue node) {
+                Arrays.stream(node.getValue()).forEach(value -> value.accept(new MemberValueVisitorAdapter() {
+                    @Override
+                    public void visitClassMemberValue(ClassMemberValue node) {
+                        list.add(node.getValue());
+                    }
+                }));
+            }
+        });
+
+        return list.toArray(String[]::new);
+    }
+
     public static @Nullable TypeInstance tryGetArrayComponentType(CtBehavior method, int paramIndex) {
         try {
             SignatureAttribute.MethodSignature signature =
@@ -551,5 +576,4 @@ public class TypeHelper {
 
         return false;
     }
-
 }
