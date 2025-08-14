@@ -12,6 +12,7 @@ import org.jfxcore.compiler.ast.BindingMode;
 import org.jfxcore.compiler.ast.BindingNode;
 import org.jfxcore.compiler.ast.NodeDataKey;
 import org.jfxcore.compiler.ast.TemplateContentNode;
+import org.jfxcore.compiler.ast.emit.EmitApplyMarkupExtensionNode;
 import org.jfxcore.compiler.ast.emit.EmitInitializeRootNode;
 import org.jfxcore.compiler.ast.Node;
 import org.jfxcore.compiler.ast.ObjectNode;
@@ -37,6 +38,7 @@ import org.jfxcore.compiler.parse.TypeParser;
 import org.jfxcore.compiler.transform.Transform;
 import org.jfxcore.compiler.transform.TransformContext;
 import org.jfxcore.compiler.transform.markup.util.AdderFactory;
+import org.jfxcore.compiler.transform.markup.util.MarkupExtensionInfo;
 import org.jfxcore.compiler.transform.markup.util.ValueEmitterFactory;
 import org.jfxcore.compiler.diagnostic.DiagnosticInfo;
 import org.jfxcore.compiler.util.AccessVerifier;
@@ -46,6 +48,7 @@ import org.jfxcore.compiler.util.PropertyHelper;
 import org.jfxcore.compiler.util.Resolver;
 import org.jfxcore.compiler.util.TypeHelper;
 import org.jfxcore.compiler.util.TypeInstance;
+import org.jfxcore.compiler.util.TypeInvoker;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.ListIterator;
@@ -252,9 +255,14 @@ public class ObjectTransform implements Transform {
             throw GeneralErrors.expressionNotApplicable(propertyValue.getSourceInfo(), false);
         }
 
+        MarkupExtensionInfo extensionInfo = MarkupExtensionInfo.of(argumentValue);
+        TypeInstance argumentType = extensionInfo instanceof MarkupExtensionInfo.Supplier supplierInfo
+            ? TypeInstance.ofUnion(supplierInfo.providedTypes())
+            : TypeHelper.getTypeInstance(argumentValue);
+
         List<DiagnosticInfo> diagnostics = new ArrayList<>();
         CtMethod valueOfMethod = new MethodFinder(nodeType, nodeType.jvmType())
-            .findMethod("valueOf", true, nodeType, List.of(), List.of(TypeHelper.getTypeInstance(argumentValue)),
+            .findMethod("valueOf", true, nodeType, List.of(), List.of(argumentType),
                         List.of(propertyNode.getSourceInfo()), diagnostics, propertyNode.getSourceInfo());
 
         if (valueOfMethod == null) {
@@ -265,11 +273,22 @@ public class ObjectTransform implements Transform {
             AccessVerifier.verifyAccessible(valueOfMethod, context.getMarkupClass(), propertyNode.getSourceInfo());
         }
 
+        if (extensionInfo instanceof MarkupExtensionInfo.Supplier supplierInfo) {
+            TypeInvoker invoker = new TypeInvoker(argumentValue.getSourceInfo());
+            TypeInstance paramType = invoker.invokeParameterTypes(valueOfMethod, List.of())[0];
+            argumentValue = new EmitApplyMarkupExtensionNode.Supplier(
+                argumentValue, supplierInfo.markupExtensionInterface(), null,
+                paramType, supplierInfo.returnType(), null);
+        } else if (extensionInfo != null) {
+            throw ObjectInitializationErrors.invalidMarkupExtensionUsage(argumentValue.getSourceInfo());
+        }
+
         return EmitObjectNode
             .valueOf(nodeType, valueOfMethod, propertyNode.getSourceInfo())
             .value(argumentValue)
             .children(
-                Stream.concat(objectNode.getChildren().stream(), objectNode.getProperties().stream())
+                Stream.concat(objectNode.getChildren().stream(),
+                              objectNode.getProperties().stream().filter(n -> !n.isIntrinsic(Intrinsics.VALUE)))
                       .collect(Collectors.toList()))
             .backingField(findAndRemoveId(context, objectNode))
             .create();

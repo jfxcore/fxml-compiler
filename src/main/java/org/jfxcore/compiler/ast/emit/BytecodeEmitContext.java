@@ -102,20 +102,7 @@ public class BytecodeEmitContext extends EmitContext<Bytecode> {
         }
 
         if (runtimeContextClass == null) {
-            boolean[] resourceSupport = new boolean[1];
             boolean[] markupContextSupport = new boolean[1];
-
-            Visitor.visit(rootNode, new Visitor() {
-                @Override
-                protected Node onVisited(Node node) {
-                    if (node instanceof EmitResourceNode) {
-                        resourceSupport[0] = true;
-                        return Visitor.STOP;
-                    }
-
-                    return node;
-                }
-            });
 
             Visitor.visit(rootNode, new Visitor() {
                 @Override
@@ -130,7 +117,7 @@ public class BytecodeEmitContext extends EmitContext<Bytecode> {
             });
 
             runtimeContextClass = ClassGenerator.emit(
-                this, new RuntimeContextGenerator(resourceSupport[0], markupContextSupport[0]));
+                this, new RuntimeContextGenerator(markupContextSupport[0]));
         }
 
         return runtimeContextClass;
