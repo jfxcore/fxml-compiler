@@ -12,13 +12,11 @@ import javassist.bytecode.MethodInfo;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.ast.emit.BytecodeEmitContext;
 import org.jfxcore.compiler.util.Bytecode;
-import org.jfxcore.compiler.util.Local;
 import org.jfxcore.compiler.util.NameHelper;
 import org.jfxcore.compiler.util.Resolver;
 import org.jfxcore.compiler.util.TypeInstance;
 
 import static org.jfxcore.compiler.util.Classes.*;
-import static org.jfxcore.compiler.util.Descriptors.*;
 
 public class RuntimeContextGenerator extends ClassGenerator {
 
@@ -28,7 +26,6 @@ public class RuntimeContextGenerator extends ClassGenerator {
     public static final String GET_ROOT_METHOD = "getRoot";
     public static final String GET_ANCESTOR_METHOD = "getAncestor";
     public static final String GET_ANCESTOR_COUNT_METHOD = "getAncestorCount";
-    public static final String GET_RESOURCE_METHOD = "getResource";
 
     private static final String ANCESTORS_FIELD = "ancestors";
     private static final String INDEX_FIELD = "index";
@@ -37,7 +34,6 @@ public class RuntimeContextGenerator extends ClassGenerator {
     private static final String TARGET_TYPE_FIELD = "targetType";
 
     private final boolean markupContextSupport;
-    private final boolean resourceSupport;
     private CtClass parentArrayType;
     private CtConstructor constructor;
     private CtMethod getTargetNameMethod;
@@ -48,11 +44,9 @@ public class RuntimeContextGenerator extends ClassGenerator {
     private CtMethod popParentMethod;
     private CtMethod getAncestorMethod;
     private CtMethod getAncestorCountMethod;
-    private CtMethod getResourceMethod;
     private CtMethod setTargetInfoMethod;
 
-    public RuntimeContextGenerator(boolean resourceSupport, boolean markupContextSupport) {
-        this.resourceSupport = resourceSupport;
+    public RuntimeContextGenerator(boolean markupContextSupport) {
         this.markupContextSupport = markupContextSupport && Markup.isAvailable();
     }
 
@@ -125,12 +119,6 @@ public class RuntimeContextGenerator extends ClassGenerator {
         getRootMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
         generatedClass.addMethod(getRootMethod);
 
-        if (resourceSupport) {
-            getResourceMethod = new CtMethod(URLType(), GET_RESOURCE_METHOD, new CtClass[] {StringType()}, generatedClass);
-            getResourceMethod.setModifiers(Modifier.FINAL);
-            generatedClass.addMethod(getResourceMethod);
-        }
-
         if (markupContextSupport) {
             setTargetInfoMethod = new CtMethod(CtClass.voidType, SET_TARGET_INFO,
                 new CtClass[] {ClassType(), ObjectType(), StringType()}, generatedClass);
@@ -164,10 +152,6 @@ public class RuntimeContextGenerator extends ClassGenerator {
         emitPopParentMethod(context);
         emitGetRootMethod(context);
         emitGetParentMethod(context);
-
-        if (resourceSupport) {
-            emitGetResourceMethod(context);
-        }
 
         if (markupContextSupport) {
             emitSetPropertyInfoMethod(context);
@@ -268,41 +252,6 @@ public class RuntimeContextGenerator extends ClassGenerator {
 
         getAncestorCountMethod.getMethodInfo().setCodeAttribute(code.toCodeAttribute());
         getAncestorCountMethod.getMethodInfo().rebuildStackMap(getAncestorCountMethod.getDeclaringClass().getClassPool());
-    }
-
-    @SuppressWarnings("CodeBlock2Expr")
-    private void emitGetResourceMethod(BytecodeEmitContext parentContext) throws Exception {
-        BytecodeEmitContext context = new BytecodeEmitContext(parentContext, generatedClass, 2, -1);
-        Bytecode code = context.getOutput();
-
-        code.aload(0)
-            .getfield(generatedClass, ANCESTORS_FIELD, parentArrayType)
-            .iconst(0)
-            .ext_arrayload(ParentType())
-            .invokevirtual(ObjectType(), "getClass", function(ClassType()))
-            .aload(1)
-            .invokevirtual(ClassType(), "getResource", function(URLType(), StringType()));
-
-        Local local = code.acquireLocal(false);
-
-        code.astore(local)
-            .aload(local)
-            .ifnull(() -> {
-                code.anew(RuntimeExceptionType())
-                    .dup()
-                    .ldc("Resource not found: ")
-                    .aload(1)
-                    .invokevirtual(StringType(), "concat", function(StringType(), StringType()))
-                    .invokespecial(RuntimeExceptionType(), MethodInfo.nameInit, constructor(StringType()))
-                    .athrow();
-            });
-
-        code.aload(local)
-            .areturn()
-            .releaseLocal(local);
-
-        getResourceMethod.getMethodInfo().setCodeAttribute(code.toCodeAttribute());
-        getResourceMethod.getMethodInfo().rebuildStackMap(getResourceMethod.getDeclaringClass().getClassPool());
     }
 
     private void emitSetPropertyInfoMethod(BytecodeEmitContext parentContext) throws Exception {

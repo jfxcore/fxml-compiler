@@ -53,7 +53,6 @@ public class FxmlParser {
 
     private static final String[] INLINE_EXPR_TOKENS = new String[] {
         "{",
-        InlineParser.RESOURCE_PREFIX,
         InlineParser.BIND_BIDIRECTIONAL_EXPR_PREFIX,
         InlineParser.BIND_EXPR_PREFIX,
         InlineParser.ONCE_EXPR_PREFIX

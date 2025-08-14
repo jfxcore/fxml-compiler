@@ -1,4 +1,4 @@
-// Copyright (c) 2022, 2024, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2025, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.transform;
@@ -34,7 +34,6 @@ import org.jfxcore.compiler.transform.markup.StylesheetTransform;
 import org.jfxcore.compiler.transform.markup.TemplateContentTransform;
 import org.jfxcore.compiler.transform.markup.TopologyTransform;
 import org.jfxcore.compiler.transform.markup.TypeIntrinsicTransform;
-import org.jfxcore.compiler.transform.markup.ResourceIntrinsicTransform;
 import org.jfxcore.compiler.transform.markup.ValidateTypeTransform;
 import java.util.Arrays;
 import java.util.List;
@@ -92,7 +91,6 @@ public class Transformer {
             new BindingContextTransform(),
             new BindingTransform(true),
             new DefineBlockTransform(),
-            new ResourceIntrinsicTransform(),
             new NullIntrinsicTransform(),
             new TypeIntrinsicTransform(),
             new ObjectTransform(),
@@ -153,5 +151,4 @@ public class Transformer {
 
         return node;
     }
-
 }

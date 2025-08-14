@@ -1,4 +1,4 @@
-// Copyright (c) 2022, 2024, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2025, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.intrinsic;
@@ -57,10 +57,6 @@ public class Intrinsics {
         "type", Kind.OBJECT, Placement.ANY, Classes::ClassType,
         new IntrinsicProperty("name", Classes::StringType, true));
 
-    public static final Intrinsic RESOURCE = new Intrinsic(
-        "resource", Kind.OBJECT, Placement.ANY, Classes::URLType,
-        new IntrinsicProperty("name", Classes::StringType, true));
-
     public static final Intrinsic ONCE = new Intrinsic(
         "once", Kind.OBJECT, Placement.ANY, Classes::BottomType,
         new IntrinsicProperty("path", Classes::StringType, true));
@@ -90,8 +86,8 @@ public class Intrinsics {
 
     private static final List<Intrinsic> NODES = List.of(
         NULL, CLASS, CLASS_MODIFIER, CLASS_PARAMETERS, MARKUP_CLASS_NAME, CONTEXT, ID, VALUE, CONSTANT,
-        FACTORY, TYPE_ARGUMENTS, ITEM_TYPE, DEFINE, STYLESHEET, TYPE, RESOURCE, ONCE, CONTENT, BIND,
-        BIND_CONTENT, BIND_BIDIRECTIONAL, BIND_CONTENT_BIDIRECTIONAL);
+        FACTORY, TYPE_ARGUMENTS, ITEM_TYPE, DEFINE, STYLESHEET, TYPE, ONCE, CONTENT, BIND, BIND_CONTENT,
+        BIND_BIDIRECTIONAL, BIND_CONTENT_BIDIRECTIONAL);
 
     public static Intrinsic find(ObjectNode node) {
         if (node.getType().isIntrinsic()){
@@ -110,5 +106,4 @@ public class Intrinsics {
 
         return null;
     }
-
 }
