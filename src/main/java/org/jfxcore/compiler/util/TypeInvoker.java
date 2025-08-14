@@ -87,8 +87,8 @@ public final class TypeInvoker {
         }
     }
 
-    public TypeInstance invokeFieldType(CtField field, List<TypeInstance> invocationChain) {
-        CacheKey key = new CacheKey("invokeFieldType", field, invocationChain);
+    public TypeInstance invokeFieldType(CtField field, List<TypeInstance> invocationContext) {
+        CacheKey key = new CacheKey("invokeFieldType", field, invocationContext);
         CacheEntry entry = getCache().get(key);
         if (entry.found() && cacheEnabled) {
             return (TypeInstance)entry.value();
@@ -110,7 +110,7 @@ public final class TypeInvoker {
                 TypeInstance.WildcardType.NONE,
                 classTypeParams,
                 new SignatureAttribute.TypeParameter[0],
-                invocationChain,
+                invocationContext,
                 Map.of());
 
             return getCache().put(key, Objects.requireNonNullElse(typeInstance, TypeInstance.ObjectType()).freeze(sourceInfo));
@@ -121,14 +121,14 @@ public final class TypeInvoker {
         }
     }
 
-    public TypeInstance invokeReturnType(CtBehavior method, List<TypeInstance> invocationChain) {
-        return invokeReturnType(method, invocationChain, List.of());
+    public TypeInstance invokeReturnType(CtBehavior method, List<TypeInstance> invocationContext) {
+        return invokeReturnType(method, invocationContext, List.of());
     }
 
     public TypeInstance invokeReturnType(CtBehavior behavior,
-                                         List<TypeInstance> invocationChain,
+                                         List<TypeInstance> invocationContext,
                                          List<TypeInstance> providedArguments) {
-        CacheKey key = new CacheKey("invokeReturnType", behavior, invocationChain, providedArguments);
+        CacheKey key = new CacheKey("invokeReturnType", behavior, invocationContext, providedArguments);
         CacheEntry entry = getCache().get(key);
         if (entry.found() && cacheEnabled) {
             return (TypeInstance)entry.value();
@@ -161,7 +161,7 @@ public final class TypeInvoker {
                     TypeInstance.WildcardType.NONE,
                     classTypeParams,
                     methodSignature.getTypeParameters(),
-                    invocationChain,
+                    invocationContext,
                     associateProvidedArguments(
                         method,
                         providedArguments,
@@ -176,15 +176,15 @@ public final class TypeInvoker {
         }
     }
 
-    public TypeInstance[] invokeParameterTypes(CtBehavior behavior, List<TypeInstance> invocationChain) {
-        return invokeParameterTypes(behavior, invocationChain, List.of());
+    public TypeInstance[] invokeParameterTypes(CtBehavior behavior, List<TypeInstance> invocationContext) {
+        return invokeParameterTypes(behavior, invocationContext, List.of());
     }
 
     public TypeInstance[] invokeParameterTypes(CtBehavior behavior,
-                                               List<TypeInstance> invocationChain,
+                                               List<TypeInstance> invocationContext,
                                                List<TypeInstance> providedArguments) {
         try {
-            CacheKey key = new CacheKey("getParameterTypes", behavior, invocationChain, providedArguments);
+            CacheKey key = new CacheKey("invokeParameterTypes", behavior, invocationContext, providedArguments);
             CacheEntry entry = getCache().get(key);
             if (entry.found() && cacheEnabled) {
                 return (TypeInstance[])entry.value();
@@ -207,7 +207,7 @@ public final class TypeInvoker {
                 result = new TypeInstance[methodSignature.getParameterTypes().length];
 
                 Map<String, TypeInstance> associatedTypeVariables = associateTypeVariables(
-                    behavior, methodSignature, invocationChain, providedArguments);
+                    behavior, methodSignature, invocationContext, providedArguments);
 
                 for (int i = 0; i < methodSignature.getParameterTypes().length; ++i) {
                     result[i] = Objects.requireNonNullElse(
@@ -217,7 +217,7 @@ public final class TypeInvoker {
                             TypeInstance.WildcardType.NONE,
                             classSignature != null ? classSignature.getParameters() : EMPTY_TYPE_PARAMS,
                             methodSignature.getTypeParameters(),
-                            invocationChain,
+                            invocationContext,
                             associatedTypeVariables),
                         TypeInstance.ObjectType());
                 }
@@ -249,7 +249,7 @@ public final class TypeInvoker {
     private Map<String, TypeInstance> associateTypeVariables(
             CtBehavior behavior,
             SignatureAttribute.MethodSignature methodSignature,
-            List<TypeInstance> invocationChain,
+            List<TypeInstance> invocationContext,
             List<TypeInstance> providedArguments)
                 throws NotFoundException, BadBytecode {
         class Algorithms {
@@ -298,8 +298,8 @@ public final class TypeInvoker {
                 continue;
             }
 
-            for (int i = invocationChain.size() - 1; i >= 0; --i) {
-                TypeInstance invokingType = Algorithms.findTypeInstance(invocationChain.get(i), declaringClass);
+            for (int i = invocationContext.size() - 1; i >= 0; --i) {
+                TypeInstance invokingType = Algorithms.findTypeInstance(invocationContext.get(i), declaringClass);
                 if (invokingType == null) {
                     continue;
                 }
@@ -484,7 +484,7 @@ public final class TypeInvoker {
             TypeInstance.WildcardType wildcard,
             SignatureAttribute.TypeParameter[] classTypeParams,
             SignatureAttribute.TypeParameter[] methodTypeParams,
-            List<TypeInstance> invocationChain,
+            List<TypeInstance> invocationContext,
             Map<String, TypeInstance> providedArguments)
                 throws NotFoundException, BadBytecode {
         if (invokedType instanceof SignatureAttribute.BaseType baseType) {
@@ -496,7 +496,7 @@ public final class TypeInvoker {
             int dimension = arrayType.getDimension();
             TypeInstance typeInst = invokeType(
                 invokingClass, componentType, TypeInstance.WildcardType.NONE, classTypeParams,
-                methodTypeParams, invocationChain, providedArguments);
+                methodTypeParams, invocationContext, providedArguments);
 
             return typeInst.withDimensions(dimension).withWildcard(wildcard);
         }
@@ -511,7 +511,7 @@ public final class TypeInvoker {
 
                 if (classType.getTypeArguments() == null || providedArguments.isEmpty()) {
                     arguments = invokeTypeArguments(
-                        invokingClass, classType, classTypeParams, methodTypeParams, invocationChain);
+                        invokingClass, classType, classTypeParams, methodTypeParams, invocationContext);
                 } else {
                     arguments = new ArrayList<>();
 
@@ -527,7 +527,7 @@ public final class TypeInvoker {
                         } else {
                             typeInst = invokeType(
                                 invokingClass, typeArg.getType(), TypeInstance.WildcardType.of(typeArg.getKind()),
-                                classTypeParams, methodTypeParams, invocationChain, providedArguments);
+                                classTypeParams, methodTypeParams, invocationContext, providedArguments);
                         }
 
                         arguments.add(Objects.requireNonNull(typeInst));
@@ -535,15 +535,15 @@ public final class TypeInvoker {
                 }
 
                 typeInstance = new TypeInstance(clazz, arguments, new ArrayList<>(), wildcard);
-                List<TypeInstance> extendedInvocationChain = new ArrayList<>(invocationChain.size() + 1);
-                extendedInvocationChain.addAll(invocationChain);
-                extendedInvocationChain.add(typeInstance);
+                List<TypeInstance> extendedInvocationContext = new ArrayList<>(invocationContext.size() + 1);
+                extendedInvocationContext.addAll(invocationContext);
+                extendedInvocationContext.add(typeInstance);
 
                 SignatureAttribute.TypeParameter[] typeParams = classSignature.getParameters();
 
                 TypeInstance superType = invokeType(
                     clazz, classSignature.getSuperClass(), TypeInstance.WildcardType.NONE, typeParams,
-                    EMPTY_TYPE_PARAMS, extendedInvocationChain, Map.of());
+                    EMPTY_TYPE_PARAMS, extendedInvocationContext, Map.of());
 
                 if (superType != null) {
                     typeInstance.getSuperTypes().add(superType);
@@ -552,7 +552,7 @@ public final class TypeInvoker {
                 for (SignatureAttribute.ClassType intfClass : classSignature.getInterfaces()) {
                     superType = invokeType(
                         clazz, intfClass, TypeInstance.WildcardType.NONE, typeParams,
-                        EMPTY_TYPE_PARAMS, extendedInvocationChain, Map.of());
+                        EMPTY_TYPE_PARAMS, extendedInvocationContext, Map.of());
 
                     if (superType != null) {
                         typeInstance.getSuperTypes().add(superType);
@@ -585,7 +585,7 @@ public final class TypeInvoker {
             }
 
             return findTypeParameter(
-                invokingClass, typeVar.getName(), classTypeParams, methodTypeParams, invocationChain);
+                invokingClass, typeVar.getName(), classTypeParams, methodTypeParams, invocationContext);
         }
 
         throw new IllegalArgumentException();
@@ -596,7 +596,7 @@ public final class TypeInvoker {
             SignatureAttribute.ClassType classType,
             SignatureAttribute.TypeParameter[] classTypeParams,
             SignatureAttribute.TypeParameter[] methodTypeParams,
-            List<TypeInstance> invocationChain)
+            List<TypeInstance> invocationContext)
                 throws NotFoundException, BadBytecode {
         List<TypeInstance> arguments = null;
 
@@ -620,15 +620,15 @@ public final class TypeInvoker {
                 TypeInstance existingInstance = null;
 
                 List<TypeInstance> typeArgs = invokeTypeArguments(
-                    argClass, classTypeArg, classTypeParams, methodTypeParams, invocationChain);
+                    argClass, classTypeArg, classTypeParams, methodTypeParams, invocationContext);
 
-                for (int i = invocationChain.size() - 1; i >= 0; --i) {
-                    TypeInstance instance = invocationChain.get(i);
+                for (int i = invocationContext.size() - 1; i >= 0; --i) {
+                    TypeInstance instance = invocationContext.get(i);
 
                     if (TypeHelper.equals(instance.jvmType(), argClass)
                             && instance.isRaw() == typeArgs.stream().anyMatch(TypeInstance::isRaw)
                             && instance.getArguments().equals(typeArgs)) {
-                        existingInstance = invocationChain.get(i);
+                        existingInstance = invocationContext.get(i);
                         break;
                     }
                 }
@@ -636,7 +636,7 @@ public final class TypeInvoker {
                 if (existingInstance == null) {
                     existingInstance = invokeType(
                         invokingClass, typeArg.getType(), TypeInstance.WildcardType.of(typeArg.getKind()),
-                        classTypeParams, methodTypeParams, invocationChain, Map.of());
+                        classTypeParams, methodTypeParams, invocationContext, Map.of());
                 }
 
                 if (existingInstance != null) {
@@ -646,7 +646,7 @@ public final class TypeInvoker {
 
             if (typeArg.getType() instanceof SignatureAttribute.TypeVariable typeVarArg) {
                 TypeInstance typeParam = findTypeParameter(
-                    invokingClass, typeVarArg.getName(), classTypeParams, methodTypeParams, invocationChain);
+                    invokingClass, typeVarArg.getName(), classTypeParams, methodTypeParams, invocationContext);
 
                 if (typeParam != null) {
                     var wildcard = TypeInstance.WildcardType.of(typeArg.getKind());
@@ -667,7 +667,7 @@ public final class TypeInvoker {
             String typeVariableName,
             SignatureAttribute.TypeParameter[] classTypeParams,
             SignatureAttribute.TypeParameter[] methodTypeParams,
-            List<TypeInstance> invocationChain)
+            List<TypeInstance> invocationContext)
                 throws NotFoundException, BadBytecode {
         for (SignatureAttribute.TypeParameter typeParam : methodTypeParams) {
             if (!typeParam.getName().equals(typeVariableName)) {
@@ -677,7 +677,7 @@ public final class TypeInvoker {
             return typeParam.getClassBound() != null ?
                 invokeType(
                     invokingClass, typeParam.getClassBound(), TypeInstance.WildcardType.NONE, classTypeParams,
-                    methodTypeParams, invocationChain, Map.of()) :
+                    methodTypeParams, invocationContext, Map.of()) :
                 new TypeInstance(
                     resolveClass(typeParam.getInterfaceBound()[0].jvmTypeName()),
                     List.of(), List.of(), TypeInstance.WildcardType.NONE);
@@ -689,8 +689,8 @@ public final class TypeInvoker {
                 continue;
             }
 
-            if (!invocationChain.isEmpty()) {
-                TypeInstance invoker = findInvoker(invokingClass, invocationChain.get(invocationChain.size() - 1));
+            if (!invocationContext.isEmpty()) {
+                TypeInstance invoker = findInvoker(invokingClass, invocationContext.get(invocationContext.size() - 1));
                 if (invoker == null || invoker.getArguments().isEmpty()) {
                     continue;
                 }
@@ -701,7 +701,7 @@ public final class TypeInvoker {
             return typeParam.getClassBound() != null ?
                 invokeType(
                     invokingClass, typeParam.getClassBound(), TypeInstance.WildcardType.NONE, classTypeParams,
-                    methodTypeParams, invocationChain, Map.of()) :
+                    methodTypeParams, invocationContext, Map.of()) :
                 new TypeInstance(
                     resolveClass(typeParam.getInterfaceBound()[0].jvmTypeName()),
                     List.of(), List.of(), TypeInstance.WildcardType.NONE);

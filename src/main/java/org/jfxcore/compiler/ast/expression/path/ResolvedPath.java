@@ -417,8 +417,8 @@ public class ResolvedPath {
             return null;
         }
 
-        List<TypeInstance> invocationChain = segments.stream().map(Segment::getTypeInstance).collect(Collectors.toList());
-        TypeInstance type = invoker.invokeFieldType(field, invocationChain);
+        List<TypeInstance> invocationContext = segments.stream().map(Segment::getTypeInstance).collect(Collectors.toList());
+        TypeInstance type = invoker.invokeFieldType(field, invocationContext);
 
         if (selectObservable) {
             return new SegmentInfo(
@@ -459,7 +459,7 @@ public class ResolvedPath {
             throw SymbolResolutionErrors.instanceMemberReferencedFromStaticContext(sourceInfo, getter);
         }
 
-        List<TypeInstance> invocationChain = segments.stream().map(segment -> {
+        List<TypeInstance> invocationContext = segments.stream().map(segment -> {
             if (segment.getObservableKind() == ObservableKind.NONE) {
                 return segment.getTypeInstance();
             }
@@ -479,7 +479,7 @@ public class ResolvedPath {
             return null;
         }
 
-        TypeInstance type = invoker.invokeReturnType(getter, invocationChain, providedArguments);
+        TypeInstance type = invoker.invokeReturnType(getter, invocationContext, providedArguments);
 
         if (selectObservable) {
             return new SegmentInfo(
@@ -514,7 +514,7 @@ public class ResolvedPath {
             return null;
         }
 
-        List<TypeInstance> invocationChain = segments.stream().map(segment -> {
+        List<TypeInstance> invocationContext = segments.stream().map(segment -> {
             if (segment.getObservableKind() == ObservableKind.NONE) {
                 return segment.getTypeInstance();
             }
@@ -542,7 +542,7 @@ public class ResolvedPath {
             observableKind = observableKind.toReadOnly();
         }
 
-        TypeInstance valueType = invoker.invokeReturnType(delegateInfo.getter, invocationChain, providedArguments);
+        TypeInstance valueType = invoker.invokeReturnType(delegateInfo.getter, invocationContext, providedArguments);
         TypeInstance type = invoker.invokeType(fieldType);
         TypeInstance argument = resolver.tryFindObservableArgument(type);
 
