@@ -471,21 +471,6 @@ public class InstantiationTest extends CompilerTestBase {
         }
 
         @Test
-        public void BindingExpression_Cannot_Be_Coerced_To_Constructor_Argument() {
-            MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
-                <?import javafx.scene.layout.*?>
-                <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
-                    <fx:define>
-                        <BackgroundFill fx:id="bf" fill="${test}" radii="EMPTY" insets="0"/>
-                    </fx:define>
-                </GridPane>
-            """));
-
-            assertEquals(ErrorCode.EXPRESSION_NOT_APPLICABLE, ex.getDiagnostic().getCode());
-            assertCodeHighlight("${test}", ex);
-        }
-
-        @Test
         public void AssignmentExpression_Can_Be_Coerced_To_Constructor_Argument() {
             GridPane root = compileAndRun("""
                 <?import javafx.scene.layout.*?>

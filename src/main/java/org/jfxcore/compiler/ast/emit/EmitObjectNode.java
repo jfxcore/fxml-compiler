@@ -441,11 +441,11 @@ public class EmitObjectNode extends ReferenceableNode {
                         context.emit(arguments.get(j));
 
                         code.ext_castconv(arguments.get(i).getSourceInfo(), argType.jvmType(), componentType.jvmType())
-                            .ext_arraystore(argType.jvmType());
+                            .ext_arraystore(componentType.jvmType());
                     }
                 } else {
                     context.emit(arguments.get(i));
-                    code.ext_castconv(arguments.get(i).getSourceInfo(), argType.jvmType(), componentType.jvmType());
+                    code.ext_castconv(arguments.get(i).getSourceInfo(), argType.jvmType(), paramTypes[i].jvmType());
                 }
             } else {
                 context.emit(arguments.get(i));

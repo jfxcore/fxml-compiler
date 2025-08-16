@@ -5,6 +5,7 @@ package org.jfxcore.compiler.ast.expression.util;
 
 import javassist.CtConstructor;
 import javassist.CtMethod;
+import org.jetbrains.annotations.Nullable;
 import org.jfxcore.compiler.ast.BindingMode;
 import org.jfxcore.compiler.ast.emit.EmitMethodCallNode;
 import org.jfxcore.compiler.ast.emit.EmitObjectNode;
@@ -22,7 +23,7 @@ public class SimpleFunctionEmitterFactory extends AbstractFunctionEmitterFactory
 
     public SimpleFunctionEmitterFactory(FunctionExpressionNode functionExpression,
                                         TypeInstance invokingType,
-                                        TypeInstance targetType) {
+                                        @Nullable TypeInstance targetType) {
         super(invokingType, targetType);
         this.functionExpression = functionExpression;
     }

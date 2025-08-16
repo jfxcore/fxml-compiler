@@ -329,9 +329,9 @@ public class ValueEmitterFactory {
                 // For scalar properties, check whether the property type is assignable to the
                 // corresponding formal parameter of the current constructor.
                 if (propertyNode != null && propertyNode.getValues().size() == 1) {
-                    AcceptArgumentResult result = acceptArgument(
-                        context, propertyNode.getValues().get(0), constructorParam, type,
-                        vararg, parentsUnderInitializationCount);
+                    AcceptArgumentResult<? extends ValueNode> result = acceptArgument(
+                        context, propertyNode.getValues().get(0), constructorParam.type(), constructorParam.name(),
+                        type, vararg, parentsUnderInitializationCount);
 
                     if (result.errorCode() != null) {
                         var namedArgs = namedArgsConstructor.namedArgs();
@@ -352,7 +352,7 @@ public class ValueEmitterFactory {
                                             methodSignature,
                                             propertyNode.getName(),
                                             errorType != null ? errorType.getJavaName() : "<error-type>"),
-                                        propertyNode.getValues().get(0).getSourceInfo()));
+                                        result.sourceInfo()));
                             }
 
                             case CANNOT_REFERENCE_NODE_UNDER_INITIALIZATION -> {
@@ -366,7 +366,7 @@ public class ValueEmitterFactory {
                                                 "argument",
                                                 methodSignature,
                                                 propertyNode.getName()),
-                                            propertyNode.getValues().get(0).getSourceInfo()));
+                                            result.sourceInfo()));
                                 } else {
                                     List<Node> parents = context.getParents();
                                     Node referencedParent = parents.get(parents.size() - bindingDistance);
@@ -379,7 +379,7 @@ public class ValueEmitterFactory {
                                                 methodSignature,
                                                 propertyNode.getName(),
                                                 TypeHelper.getTypeInstance(referencedParent).getJavaName()),
-                                            propertyNode.getValues().get(0).getSourceInfo()));
+                                            result.sourceInfo()));
                                 }
                             }
 
@@ -429,80 +429,128 @@ public class ValueEmitterFactory {
         return depth;
     }
 
-    private record AcceptArgumentResult(ValueNode value, TypeInstance errorType, ErrorCode errorCode) {
-        static AcceptArgumentResult value(ValueNode value) {
-            return new AcceptArgumentResult(value, null, null);
-        }
-
-        static AcceptArgumentResult error(TypeInstance errorType, ErrorCode errorCode) {
-            return new AcceptArgumentResult(null, errorType, errorCode);
-        }
-    }
-
     /**
      * Determines whether the input argument is acceptable for the target type and returns
      * a new node that will emit the input argument.
      */
-    private static AcceptArgumentResult acceptArgument(
-            TransformContext context, Node argumentNode, NamedArgParam argument, TypeInstance invokingType,
-            boolean vararg, int parentsUnderInitializationCount) {
+    private static AcceptArgumentResult<? extends ValueNode> acceptArgument(
+            TransformContext context, Node argumentNode, TypeInstance targetType, String targetName,
+            TypeInstance invokingType, boolean vararg, int parentsUnderInitializationCount) {
         SourceInfo sourceInfo = argumentNode.getSourceInfo();
         ValueNode value = null;
 
         if (argumentNode instanceof BindingNode bindingNode) {
-            if (bindingNode.getMode() == BindingMode.ONCE) {
-                if (bindingNode.getBindingDistance() <= parentsUnderInitializationCount) {
-                    return AcceptArgumentResult.error(null, ErrorCode.CANNOT_REFERENCE_NODE_UNDER_INITIALIZATION);
-                } else {
-                    value = bindingNode.toPathEmitter(invokingType, argument.type()).getValue();
-                    adjustParentIndex(value, parentsUnderInitializationCount + 1);
-                }
+            var result = acceptBindingArgument(bindingNode, invokingType, targetType,
+                                               parentsUnderInitializationCount);
+            if (result.errorCode() != null) {
+                return result;
             } else {
-                throw GeneralErrors.expressionNotApplicable(sourceInfo, true);
+                value = result.value();
+            }
+        } else if (argumentNode instanceof ListNode listNode && targetType.isArray()) {
+            var result = acceptArrayArgument(context, listNode, invokingType, targetType,
+                                             parentsUnderInitializationCount);
+            if (result.errorCode() != null) {
+                return result;
+            } else {
+                value = result.value();
             }
         } else if (argumentNode instanceof TextNode textNode) {
-            value = newObjectByCoercion(argument.type(), textNode);
-            if (value != null) {
-                return AcceptArgumentResult.value(value);
+            value = newObjectByCoercion(targetType, textNode);
+            if (value == null) {
+                value = newLiteralValue(textNode.getText(), List.of(targetType), targetType, sourceInfo);
             }
-
-            value = newLiteralValue(textNode.getText(), List.of(argument.type()), argument.type(), sourceInfo);
-            if (value != null) {
-                return AcceptArgumentResult.value(value);
+        } else if (MarkupExtensionInfo.of(argumentNode) instanceof MarkupExtensionInfo.Supplier supplierInfo) {
+            var result = acceptSupplierArgument(context, targetType, targetName,
+                                                (ObjectNode)argumentNode, supplierInfo);
+            if (result.errorCode() != null) {
+                return result;
+            } else {
+                value = result.value();
             }
         } else if (argumentNode instanceof ValueNode valueNode) {
             value = valueNode;
         }
 
         if (value == null) {
-            return AcceptArgumentResult.error(null, ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT);
+            return AcceptArgumentResult.error(
+                null, ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT, argumentNode.getSourceInfo());
         }
 
         TypeInstance valueType = TypeHelper.getTypeInstance(value);
 
-        if (argument.type().isAssignableFrom(valueType) ||
-                vararg && argument.type().getComponentType().isAssignableFrom(valueType)) {
+        if (targetType.isAssignableFrom(valueType) ||
+                vararg && targetType.getComponentType().isAssignableFrom(valueType)) {
             return AcceptArgumentResult.value(value);
         }
 
-        if (!(value instanceof ObjectNode objectNode)
-                || !valueType.subtypeOf(Classes.Markup.MarkupExtensionType())
-                || !(MarkupExtensionInfo.of(value) instanceof MarkupExtensionInfo.Supplier supplierInfo)) {
-            return AcceptArgumentResult.error(valueType, ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT);
+        return AcceptArgumentResult.error(valueType, ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT, value.getSourceInfo());
+    }
+
+    private static AcceptArgumentResult<? extends ValueNode> acceptArrayArgument(TransformContext context,
+                                                                                 ListNode listNode,
+                                                                                 TypeInstance invokingType,
+                                                                                 TypeInstance arrayType,
+                                                                                 int parentsUnderInitializationCount) {
+        List<ValueEmitterNode> values = new ArrayList<>();
+
+        for (ValueNode item : listNode.getValues()) {
+            var result = acceptArgument(context, item, arrayType.getComponentType(), null,
+                                        invokingType, false, parentsUnderInitializationCount);
+
+            if (result.errorCode() != null) {
+                return result;
+            } else if (result.value() instanceof ValueEmitterNode valueEmitterNode) {
+                values.add(valueEmitterNode);
+            } else {
+                return AcceptArgumentResult.error(
+                    arrayType.getComponentType(), ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT, item.getSourceInfo());
+            }
         }
 
-        if (supplierInfo.providedTypes().stream().noneMatch(argument.type()::isAssignableFrom)) {
-            return AcceptArgumentResult.error(valueType, ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT);
+        return AcceptArgumentResult.value(new EmitArrayNode(arrayType, values));
+    }
+
+    private static AcceptArgumentResult<ValueEmitterNode> acceptBindingArgument(BindingNode bindingNode,
+                                                                                TypeInstance invokingType,
+                                                                                TypeInstance argumentType,
+                                                                                int parentsUnderInitializationCount) {
+        if (bindingNode.getMode() != BindingMode.ONCE && bindingNode.getMode() != BindingMode.UNIDIRECTIONAL) {
+            throw GeneralErrors.expressionNotApplicable(bindingNode.getSourceInfo(), true);
         }
 
-        ValueEmitterNode argValueNode = newObjectWithNamedParams(context, objectNode, Collections.emptyList());
+        if (bindingNode.getBindingDistance() <= parentsUnderInitializationCount) {
+            return AcceptArgumentResult.error(
+                null, ErrorCode.CANNOT_REFERENCE_NODE_UNDER_INITIALIZATION, bindingNode.getSourceInfo());
+        }
+
+        ValueEmitterNode result = bindingNode.toPathEmitter(invokingType, argumentType).getValue();
+        adjustParentIndex(result, parentsUnderInitializationCount + 1);
+
+        return AcceptArgumentResult.value(result);
+    }
+
+    private static AcceptArgumentResult<ValueEmitterNode> acceptSupplierArgument(TransformContext context,
+                                                                                 TypeInstance targetType,
+                                                                                 String targetName,
+                                                                                 ObjectNode markupExtensionNode,
+                                                                                 MarkupExtensionInfo.Supplier supplierInfo) {
+        TypeInstance valueType = TypeHelper.getTypeInstance(markupExtensionNode);
+
+        if (supplierInfo.providedTypes().stream().noneMatch(targetType::isAssignableFrom)) {
+            return AcceptArgumentResult.error(
+                valueType, ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT, markupExtensionNode.getSourceInfo());
+        }
+
+        ValueEmitterNode argValueNode = newObjectWithNamedParams(context, markupExtensionNode, List.of());
         if (argValueNode == null) {
-            return AcceptArgumentResult.error(valueType, ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT);
+            return AcceptArgumentResult.error(
+                valueType, ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT, markupExtensionNode.getSourceInfo());
         }
 
         return AcceptArgumentResult.value(new EmitApplyMarkupExtensionNode.Supplier(
-            argValueNode, supplierInfo.markupExtensionInterface(), argument.name(),
-            argument.type(), supplierInfo.returnType(), null));
+                argValueNode, supplierInfo.markupExtensionInterface(), targetName,
+                targetType, supplierInfo.returnType(), null));
     }
 
     private static void adjustParentIndex(ValueNode node, int adjustment) {
@@ -787,5 +835,20 @@ public class ValueEmitterFactory {
         }
 
         return ((TextNode)propertyNode.getValues().get(0)).getText();
+    }
+
+    private record AcceptArgumentResult<T extends ValueNode>(T value,
+                                                             TypeInstance errorType,
+                                                             ErrorCode errorCode,
+                                                             SourceInfo sourceInfo) {
+        static <T extends ValueNode> AcceptArgumentResult<T> value(T value) {
+            return new AcceptArgumentResult<>(value, null, null, null);
+        }
+
+        static <T extends ValueNode> AcceptArgumentResult<T> error(TypeInstance errorType,
+                                                                   ErrorCode errorCode,
+                                                                   SourceInfo sourceInfo) {
+            return new AcceptArgumentResult<>(null, errorType, errorCode, sourceInfo);
+        }
     }
 }
