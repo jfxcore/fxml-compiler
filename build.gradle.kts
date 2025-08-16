@@ -68,6 +68,10 @@ testing {
     }
 }
 
+configurations.named("testImplementation").configure {
+    extendsFrom(configurations.implementation.get(), configurations.compileOnly.get())
+}
+
 configurations.named("compilerTestImplementation").configure {
     extendsFrom(configurations.implementation.get(), configurations.compileOnly.get())
 }
