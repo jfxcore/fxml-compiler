@@ -23,7 +23,6 @@ import javafx.beans.property.FloatProperty;
 import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.ListProperty;
 import javafx.beans.property.LongProperty;
-import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.Property;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyDoubleProperty;
@@ -34,16 +33,12 @@ import javafx.beans.property.SimpleFloatProperty;
 import javafx.beans.property.SimpleIntegerProperty;
 import javafx.beans.property.SimpleListProperty;
 import javafx.beans.property.SimpleLongProperty;
-import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
-import javafx.scene.control.Label;
 import javafx.scene.layout.Pane;
-import java.net.URI;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Objects;
 import java.util.stream.IntStream;
 
 import static org.jfxcore.compiler.util.MoreAssertions.*;
@@ -95,7 +90,7 @@ public class MarkupExtensionTest extends CompilerTestBase {
         public final double getDoubleProp1() { return doubleProp1.get(); }
         public final void setDoubleProp1(double value) { doubleProp1.set(value); }
 
-        private final DoubleProperty doublePropWithoutSetter = new SimpleDoubleProperty(1);
+        private final DoubleProperty doublePropWithoutSetter = new SimpleDoubleProperty(999);
         public final DoubleProperty doublePropWithoutSetterProperty() { return doublePropWithoutSetter; }
 
         private double doubleProp2;
@@ -201,18 +196,44 @@ public class MarkupExtensionTest extends CompilerTestBase {
             invocations.clear();
         }
 
-        @SuppressWarnings("unused")
+        @SuppressWarnings({"unused", "unchecked"})
         public static class PropertyConsumerExtension implements MarkupExtension.PropertyConsumer<Number> {
-            private final Double param;
+            private final Double[] params;
+            private final ObservableValue<Number>[] observableParams;
+            private boolean selectLast;
 
             public PropertyConsumerExtension(@NamedArg("param") Double param) {
-                this.param = param;
+                this.params = new Double[] { param };
+                this.observableParams = null;
             }
+
+            public PropertyConsumerExtension(@NamedArg("param") ObservableValue<Number> param) {
+                this.observableParams = new ObservableValue[] { param };
+                this.params = null;
+            }
+
+            public PropertyConsumerExtension(@NamedArg("params") Double... params) {
+                this.params = params;
+                this.observableParams = null;
+            }
+
+            @SafeVarargs
+            public PropertyConsumerExtension(@NamedArg("params") ObservableValue<Number>... params) {
+                this.observableParams = params;
+                this.params = null;
+            }
+
+            public boolean getSelectLast() { return selectLast; }
+            public void setSelectLast(boolean value) { selectLast = value; }
 
             @Override
             public void accept(Property<Number> property, MarkupContext context) {
                 invocations.add(ExtensionInvocation.of(property, context));
-                property.setValue(param);
+                if (observableParams != null) {
+                    property.bind(selectLast ? observableParams[observableParams.length - 1] : observableParams[0]);
+                } else if (params != null) {
+                    property.setValue(selectLast ? params[params.length - 1] : params[0]);
+                }
             }
         }
 
@@ -243,6 +264,73 @@ public class MarkupExtensionTest extends CompilerTestBase {
                                       int.class, root.intPropProperty());
             assertExtensionInvocation(invocations.get(4), root, 1, root, "longProp",
                                       long.class, root.longPropProperty());
+        }
+
+        @Test
+        public void PropertyConsumerExtension_With_PathParam() {
+            TestPane root = compileAndRun("""
+                <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                          doubleProp1="{PropertyConsumerExtension param=$doublePropWithoutSetter}"
+                          intProp="{PropertyConsumerExtension params=$doublePropWithoutSetter}"/>
+            """);
+
+            assertEquals(999, root.getDoubleProp1(), 0.001);
+            assertEquals(999, root.getIntProp());
+            root.doublePropWithoutSetterProperty().set(2);
+            assertEquals(999, root.getDoubleProp1(), 0.001);
+            assertEquals(999, root.getIntProp());
+            assertEquals(2, invocations.size());
+            assertExtensionInvocation(invocations.get(0), root, 1, root, "doubleProp1",
+                                      double.class, root.doubleProp1Property());
+            assertExtensionInvocation(invocations.get(1), root, 1, root, "intProp",
+                                      int.class, root.intPropProperty());
+        }
+
+        @Test
+        public void PropertyConsumerExtension_With_ObservablePathParam() {
+            TestPane root = compileAndRun("""
+                <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                          doubleProp1="{PropertyConsumerExtension param=${doublePropWithoutSetter}}"/>
+            """);
+
+            assertEquals(999, root.getDoubleProp1(), 0.001);
+            root.doublePropWithoutSetterProperty().set(2);
+            assertEquals(2, root.getDoubleProp1(), 0.001);
+            assertEquals(1, invocations.size());
+            assertExtensionInvocation(invocations.get(0), root, 1, root, "doubleProp1",
+                                      double.class, root.doubleProp1Property());
+        }
+
+        @Test
+        public void PropertyConsumerExtension_With_ObservablePathParam_Varargs() {
+            TestPane root = compileAndRun("""
+                <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                          doubleProp1="{PropertyConsumerExtension params=${doublePropWithoutSetter}}"/>
+            """);
+
+            assertEquals(999, root.getDoubleProp1(), 0.001);
+            root.doublePropWithoutSetterProperty().set(2);
+            assertEquals(2, root.getDoubleProp1(), 0.001);
+            assertEquals(1, invocations.size());
+            assertExtensionInvocation(invocations.get(0), root, 1, root, "doubleProp1",
+                                      double.class, root.doubleProp1Property());
+        }
+
+        @Test
+        public void PropertyConsumerExtension_With_Path_And_Literal_Varargs() {
+            TestPane root = compileAndRun("""
+                <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                          doubleProp1="{PropertyConsumerExtension params=$doublePropWithoutSetter, 123}"
+                          intProp="{PropertyConsumerExtension params=$doublePropWithoutSetter, 123; selectLast=true}"/>
+            """);
+
+            assertEquals(999, root.getDoubleProp1(), 0.001);
+            assertEquals(123, root.getIntProp());
+            assertEquals(2, invocations.size());
+            assertExtensionInvocation(invocations.get(0), root, 1, root, "doubleProp1",
+                                      double.class, root.doubleProp1Property());
+            assertExtensionInvocation(invocations.get(1), root, 1, root, "intProp",
+                                      int.class, root.intPropProperty());
         }
 
         @Test
@@ -590,7 +678,7 @@ public class MarkupExtensionTest extends CompilerTestBase {
                           doubleProp1="${add(doublePropWithoutSetter, {ObjectSupplierWithReturnTypeAnnotation param=2.5})}"/>
             """);
 
-            assertEquals(3.5, root.getDoubleProp1(), 0.001);
+            assertEquals(1001.5, root.getDoubleProp1(), 0.001);
             root.doublePropWithoutSetterProperty().set(10);
             assertEquals(12.5, root.getDoubleProp1(), 0.001);
         }
@@ -602,7 +690,7 @@ public class MarkupExtensionTest extends CompilerTestBase {
                           doubleProp1="${sum(doublePropWithoutSetter, {ObjectSupplierWithReturnTypeAnnotation param=2.5})}"/>
             """);
 
-            assertEquals(3.5, root.getDoubleProp1(), 0.001);
+            assertEquals(1001.5, root.getDoubleProp1(), 0.001);
             root.doublePropWithoutSetterProperty().set(10);
             assertEquals(12.5, root.getDoubleProp1(), 0.001);
             assertEquals(1, invocations.size());
@@ -1131,137 +1219,6 @@ public class MarkupExtensionTest extends CompilerTestBase {
 
             assertEquals(ErrorCode.MARKUP_EXTENSION_NOT_APPLICABLE, ex.getDiagnostic().getCode());
             assertCodeHighlight("{PrimitiveLongSupplier param=123}", ex);
-        }
-    }
-
-    @Nested
-    public class ResourceExtensionTest extends CompilerTestBase {
-
-        @SuppressWarnings("unused")
-        public static class TestLabel extends Label {
-            private final ObjectProperty<URL> url = new SimpleObjectProperty<>();
-            public final ObjectProperty<URL> urlProperty() { return url; }
-            public final URL getUrl() { return url.get(); }
-
-            private final ObjectProperty<URI> uri = new SimpleObjectProperty<>();
-            public final ObjectProperty<URI> uriProperty() { return uri; }
-            public final URI getUri() { return uri.get(); }
-        }
-
-        @Test
-        public void Resource_With_Relative_Location_Is_Evaluated_Correctly() throws Exception {
-            TestLabel root = compileAndRun("""
-                <?import org.jfxcore.markup.*?>
-                <TestLabel xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                           text="{Resource image.jpg}"
-                           url="{Resource image.jpg}"
-                           uri="{Resource image.jpg}"/>
-            """);
-
-            URL url = Objects.requireNonNull(root.getClass().getResource("image.jpg"));
-            assertTrue(root.getText().endsWith("org/jfxcore/compiler/classes/image.jpg"));
-            assertEquals(url, root.getUrl());
-            assertEquals(url.toURI(), root.getUri());
-        }
-
-        @Test
-        public void Resource_With_Root_Location_Is_Evaluated_Correctly() throws Exception {
-            TestLabel root = compileAndRun("""
-                <?import org.jfxcore.markup.*?>
-                <TestLabel xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                           text="{Resource /org/jfxcore/compiler/classes/image.jpg}"
-                           url="{Resource /org/jfxcore/compiler/classes/image.jpg}"
-                           uri="{Resource /org/jfxcore/compiler/classes/image.jpg}"/>
-            """);
-
-            URL url = Objects.requireNonNull(root.getClass().getResource("image.jpg"));
-            assertTrue(root.getText().endsWith("org/jfxcore/compiler/classes/image.jpg"));
-            assertEquals(url, root.getUrl());
-            assertEquals(url.toURI(), root.getUri());
-        }
-
-        @Test
-        public void Resource_With_Quoted_Path_Is_Evaluated_Correctly() throws Exception {
-            TestLabel root = compileAndRun("""
-                <?import org.jfxcore.markup.*?>
-                <TestLabel xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                           text="{Resource '/org/jfxcore/compiler/classes/image with   spaces.jpg'}"
-                           url="{Resource '/org/jfxcore/compiler/classes/image with   spaces.jpg'}"
-                           uri="{Resource '/org/jfxcore/compiler/classes/image with   spaces.jpg'}"/>
-            """);
-
-            URL url = Objects.requireNonNull(root.getClass().getResource("image with   spaces.jpg"));
-            assertTrue(root.getText().endsWith("org/jfxcore/compiler/classes/image%20with%20%20%20spaces.jpg"));
-            assertEquals(url, root.getUrl());
-            assertEquals(url.toURI(), root.getUri());
-        }
-
-        @Test
-        public void Resource_Extension_Works_In_ValueOf_Expression() {
-            Label root = compileAndRun("""
-                <?import javafx.scene.control.*?>
-                <?import org.jfxcore.markup.*?>
-                <Label xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
-                    <text>
-                        <String fx:value="{Resource image.jpg}"/>
-                    </text>
-                </Label>
-            """);
-
-            assertTrue(root.getText().endsWith("org/jfxcore/compiler/classes/image.jpg"));
-        }
-
-        @Test
-        public void Resource_Can_Be_Added_To_String_Collection() {
-            Label root = compileAndRun("""
-                <?import javafx.scene.control.*?>
-                <?import org.jfxcore.markup.*?>
-                <Label xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
-                    <stylesheets>
-                        <Resource>image.jpg</Resource>
-                    </stylesheets>
-                </Label>
-            """);
-
-            assertTrue(root.getStylesheets().stream().anyMatch(s -> s.endsWith("org/jfxcore/compiler/classes/image.jpg")));
-        }
-
-        @Test
-        public void Resource_Cannot_Be_Assigned_To_Incompatible_Property() {
-            MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
-                <?import javafx.scene.control.*?>
-                <?import org.jfxcore.markup.*?>
-                <Label xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                       prefWidth="{Resource image.jpg}"/>
-            """));
-
-            assertEquals(ErrorCode.MARKUP_EXTENSION_NOT_APPLICABLE, ex.getDiagnostic().getCode());
-            assertCodeHighlight("{Resource image.jpg}", ex);
-        }
-
-        @Test
-        public void Unsuitable_Parameter_Fails() {
-            MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
-                <?import javafx.scene.control.*?>
-                <?import org.jfxcore.markup.*?>
-                <Label xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                       text="{Resource ${foo}}"/>
-            """));
-
-            assertEquals(ErrorCode.EXPRESSION_NOT_APPLICABLE, ex.getDiagnostic().getCode());
-            assertCodeHighlight("${foo}", ex);
-        }
-
-        @Test
-        public void Nonexistent_Resource_Throws_RuntimeException() {
-            RuntimeException ex = assertThrows(RuntimeException.class, () -> compileAndRun("""
-                <?import javafx.scene.control.*?>
-                <?import org.jfxcore.markup.*?>
-                <Label xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                       text="{Resource foobarbaz.jpg}"/>
-            """));
-
-            assertTrue(ex.getMessage().startsWith("Resource not found"));
         }
     }
 }

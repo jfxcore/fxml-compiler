@@ -24,6 +24,7 @@ import org.jfxcore.compiler.ast.text.BooleanNode;
 import org.jfxcore.compiler.ast.text.CompositeNode;
 import org.jfxcore.compiler.ast.text.ContextSelectorNode;
 import org.jfxcore.compiler.ast.text.FunctionNode;
+import org.jfxcore.compiler.ast.text.ListNode;
 import org.jfxcore.compiler.ast.text.NumberNode;
 import org.jfxcore.compiler.ast.text.PathNode;
 import org.jfxcore.compiler.ast.text.TextNode;
@@ -77,10 +78,11 @@ public class BindingTransform implements Transform {
         PropertyNode format = objectNode.findProperty("format");
         PathNode formatPath = format != null ? format.getSingleValue(context).as(PathNode.class) : null;
 
-        return new BindingNode(
+        return BindingNode.newInstance(
             bindingMode, pathExpression,
             converterPath != null ? parsePathNode(context, Operator.IDENTITY, converterPath) : null,
             formatPath != null ? parsePathNode(context, Operator.IDENTITY, formatPath) : null,
+            context.getParent() instanceof ListNode,
             node.getSourceInfo());
     }
 

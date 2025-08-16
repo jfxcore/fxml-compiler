@@ -1,8 +1,9 @@
-// Copyright (c) 2022, 2024, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2025, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.expression.util;
 
+import org.jetbrains.annotations.Nullable;
 import org.jfxcore.compiler.ast.BindingMode;
 import org.jfxcore.compiler.ast.emit.EmitObservableFunctionNode;
 import org.jfxcore.compiler.ast.emit.ValueEmitterNode;
@@ -22,7 +23,7 @@ public class ObservableFunctionEmitterFactory
 
     public ObservableFunctionEmitterFactory(FunctionExpressionNode functionExpression,
                                             TypeInstance invokingType,
-                                            TypeInstance targetType) {
+                                            @Nullable TypeInstance targetType) {
         super(invokingType, targetType);
         this.functionExpression = functionExpression;
         this.resolver = new Resolver(functionExpression.getSourceInfo());
@@ -66,5 +67,4 @@ public class ObservableFunctionEmitterFactory
             invocationInfo.function().getBehavior().getName(),
             functionExpression.getSourceInfo());
     }
-
 }
