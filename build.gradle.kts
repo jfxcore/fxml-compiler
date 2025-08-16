@@ -1,3 +1,5 @@
+@file:Suppress("UnstableApiUsage")
+
 plugins {
     `java-library`
     `maven-publish`
@@ -16,14 +18,58 @@ repositories {
 
 sourceSets {
     main {
-        java.srcDir("$buildDir/generated/java/main")
+        java.srcDir("${layout.buildDirectory.get()}/generated/java/main")
     }
+}
 
-    create("compilerTest") {
-        java.srcDir("$projectDir/src/compilerTest/java")
-        compileClasspath += sourceSets.main.get().compileClasspath + sourceSets.test.get().compileClasspath + sourceSets.main.get().output
-        runtimeClasspath += sourceSets.main.get().runtimeClasspath + sourceSets.test.get().compileClasspath + sourceSets.main.get().output
+dependencies {
+    implementation("org.javassist:javassist:3.30.2-GA")
+    implementation("org.jetbrains.kotlinx:kotlinx-metadata-jvm:0.4.1")
+
+    compileOnly("org.jetbrains:annotations:13.0")
+    compileOnly(files("${gradle.includedBuild("jfx").projectDir}/build/sdk/lib/javafx.base.jar"))
+    compileOnly(files("${gradle.includedBuild("jfx").projectDir}/build/sdk/lib/javafx.graphics.jar"))
+    compileOnly(files("${gradle.includedBuild("jfx").projectDir}/build/sdk/lib/javafx.controls.jar"))
+}
+
+testing {
+    suites {
+        withType<JvmTestSuite> {
+            useJUnitJupiter()
+
+            dependencies {
+                implementation(project())
+                implementation(platform("org.junit:junit-bom:5.8.1"))
+                implementation("org.junit.jupiter:junit-jupiter")
+            }
+        }
+
+        val test by getting(JvmTestSuite::class)
+
+        register<JvmTestSuite>("compilerTest") {
+            sources {
+                java {
+                    setSrcDirs(listOf("src/compilerTest/java"))
+                }
+            }
+
+            dependencies {
+                implementation("org.testfx:testfx-junit5:4.0.16-alpha")
+                implementation("org.testfx:openjfx-monocle:jdk-12.0.1+2")
+                implementation(files("${gradle.includedBuild("markup").projectDir}/build/libs/markup-1.0-SNAPSHOT.jar"))
+            }
+
+            targets.all {
+                testTask.configure {
+                    shouldRunAfter(test)
+                }
+            }
+        }
     }
+}
+
+configurations.named("compilerTestImplementation").configure {
+    extendsFrom(configurations.implementation.get(), configurations.compileOnly.get())
 }
 
 java {
@@ -39,15 +85,12 @@ kotlin {
     }
 }
 
-configurations["compilerTestImplementation"].extendsFrom(configurations.implementation.get())
-configurations["compilerTestRuntimeOnly"].extendsFrom(configurations.runtimeOnly.get())
-
-val copyVersionInfo = tasks.create<Copy>("copyVersionInfo") {
+val copyVersionInfo = tasks.register<Copy>("copyVersionInfo") {
     from("$projectDir/src/main/version-info/VersionInfo.java")
-    into("$buildDir/generated/java/main/org/jfxcore/compiler")
+    into("${layout.buildDirectory.get()}/generated/java/main/org/jfxcore/compiler")
     filter { it
         .replace("\${group}", project.group.toString())
-        .replace("\${name}", project.name.toString())
+        .replace("\${name}", project.name)
         .replace("\${version}", project.version.toString())
     }
 }
@@ -78,20 +121,9 @@ tasks.withType<Test> {
     systemProperty("headless.geometry", "640x480-32")
 }
 
-val compilerTest = task<Test>("compilerTest") {
-    description = "Runs the compiler tests."
-    group = "verification"
-
-    testClassesDirs = sourceSets["compilerTest"].output.classesDirs
-    classpath +=
-        sourceSets["main"].runtimeClasspath +
-        sourceSets["test"].runtimeClasspath +
-        sourceSets["compilerTest"].runtimeClasspath
-
-    shouldRunAfter("test")
+tasks.check {
+    dependsOn(testing.suites.named("compilerTest"))
 }
-
-tasks.check { dependsOn(compilerTest) }
 
 tasks.shadowJar {
     archiveClassifier.set("")
@@ -164,24 +196,4 @@ publishing {
 
 signing {
     sign(publishing.publications["maven"])
-}
-
-dependencies {
-    testImplementation(platform("org.junit:junit-bom:5.8.1"))
-    testImplementation("org.junit.jupiter:junit-jupiter")
-    testImplementation("org.testfx:testfx-junit5:4.0.16-alpha")
-    testImplementation("org.testfx:openjfx-monocle:jdk-12.0.1+2")
-    testImplementation(files("${gradle.includedBuild("jfx").projectDir}/build/sdk/lib/javafx.base.jar"))
-    testImplementation(files("${gradle.includedBuild("jfx").projectDir}/build/sdk/lib/javafx.graphics.jar"))
-    testImplementation(files("${gradle.includedBuild("jfx").projectDir}/build/sdk/lib/javafx.controls.jar"))
-    testImplementation(files("${gradle.includedBuild("jfx").projectDir}/build/sdk/lib/javafx.fxml.jar"))
-    testImplementation(files("${gradle.includedBuild("markup").projectDir}/build/libs/markup-1.0-SNAPSHOT.jar"))
-
-    implementation("org.javassist:javassist:3.30.2-GA")
-    implementation("org.jetbrains.kotlinx:kotlinx-metadata-jvm:0.4.1")
-
-    compileOnly("org.jetbrains:annotations:13.0")
-    compileOnly(files("${gradle.includedBuild("jfx").projectDir}/build/sdk/lib/javafx.base.jar"))
-    compileOnly(files("${gradle.includedBuild("jfx").projectDir}/build/sdk/lib/javafx.graphics.jar"))
-    compileOnly(files("${gradle.includedBuild("jfx").projectDir}/build/sdk/lib/javafx.controls.jar"))
 }

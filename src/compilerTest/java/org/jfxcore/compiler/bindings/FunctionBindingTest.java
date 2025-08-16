@@ -457,7 +457,6 @@ public class FunctionBindingTest extends CompilerTestBase {
     @Test
     public void Bind_Once_With_FxConstant_Param() {
         TestPane root = compileAndRun("""
-            <?import javafx.fxml.*?>
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                       id="$defaultMethod('foo-%s', {Double fx:constant=POSITIVE_INFINITY})"/>
         """);
@@ -854,7 +853,6 @@ public class FunctionBindingTest extends CompilerTestBase {
     @Test
     public void Bind_Unidirectional_With_FxConstant_Param() {
         TestPane root = compileAndRun("""
-            <?import javafx.fxml.*?>
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                       id="${defaultMethod('foo-%s', {Double fx:constant=POSITIVE_INFINITY})}"/>
         """);
@@ -866,7 +864,6 @@ public class FunctionBindingTest extends CompilerTestBase {
     @Test
     public void Bind_Unidirectional_With_ConstantLiteral_Param() {
         TestPane root = compileAndRun("""
-            <?import javafx.fxml.*?>
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                       id="${defaultMethod('foo-%s', Double.POSITIVE_INFINITY)}"/>
         """);
@@ -1315,7 +1312,6 @@ public class FunctionBindingTest extends CompilerTestBase {
     @Test
     public void Bind_Bidirectional_To_Method_Without_InverseMethod_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
-            <?import javafx.fxml.*?>
             <BidirectionalTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                                    id="#{noInverseMethod(doubleProp)}"/>
         """));
@@ -1327,7 +1323,6 @@ public class FunctionBindingTest extends CompilerTestBase {
     @Test
     public void Bind_Bidirectional_To_Method_With_Incompatible_ReturnType_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
-            <?import javafx.fxml.*?>
             <BidirectionalTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                                    id="#{noInverseMethod(doubleProp); inverseMethod=invalidInverseMethod}"/>
         """));
@@ -1339,7 +1334,6 @@ public class FunctionBindingTest extends CompilerTestBase {
     @Test
     public void Bind_Bidirectional_To_Method_With_Invalid_Custom_InverseMethod2_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
-            <?import javafx.fxml.*?>
             <BidirectionalTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                                    id="#{noInverseMethod(doubleProp); inverseMethod=java.lang.String.format}"/>
         """));
@@ -1354,7 +1348,6 @@ public class FunctionBindingTest extends CompilerTestBase {
     @Test
     public void Bind_Bidirectional_To_Method_With_Nonexistent_Custom_InverseMethod_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
-            <?import javafx.fxml.*?>
             <BidirectionalTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                                    id="#{noInverseMethod(doubleProp); inverseMethod=doesNotExist}"/>
         """));
@@ -1366,7 +1359,6 @@ public class FunctionBindingTest extends CompilerTestBase {
     @Test
     public void Bind_Bidirectional_To_Method_With_ReadOnlyProperty_Argument_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
-            <?import javafx.fxml.*?>
             <BidirectionalTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                                    managed="#{instanceNot(readOnlyObservableBool)}"/>
         """));
@@ -1378,7 +1370,6 @@ public class FunctionBindingTest extends CompilerTestBase {
     @Test
     public void Bind_Bidirectional_To_Method_With_Unsuitable_Parameter_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
-            <?import javafx.fxml.*?>
             <BidirectionalTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                                    managed="#{instanceNot(instanceNot(boolProp))}"/>
         """));
