@@ -1,4 +1,4 @@
-// Copyright (c) 2022, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2025, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.util;
@@ -112,7 +112,7 @@ public class TestCompiler extends AbstractCompiler {
                     "-d", classDir.toString(),
                     "-classpath", System.getProperty("java.class.path") + File.pathSeparator + classDir,
                     "--module-path", System.getProperty("java.class.path"),
-                    "--add-modules", "javafx.base,javafx.graphics,javafx.controls,javafx.fxml",
+                    "--add-modules", "javafx.base,javafx.graphics,javafx.controls",
                     "--release", System.getProperty("java.specification.version")),
                 null,
                 fileManager.getJavaFileObjects(sourceFile.toString()))
@@ -170,5 +170,4 @@ public class TestCompiler extends AbstractCompiler {
             throw new RuntimeException(ex);
         }
     }
-
 }
