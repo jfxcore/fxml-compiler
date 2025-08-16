@@ -433,7 +433,6 @@ public class FunctionBindingTest extends CompilerTestBase {
     @Test
     public void Bind_Once_To_Interface_Default_Method() {
         TestPane root = compileAndRun("""
-            <?import javafx.fxml.*?>
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                       id="$defaultMethod('foo-%s', invariantDoubleVal)"/>
         """);
@@ -445,7 +444,6 @@ public class FunctionBindingTest extends CompilerTestBase {
     @Test
     public void Bind_Once_With_Unexpected_FxValue_Param_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
-            <?import javafx.fxml.*?>
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                       id="$defaultMethod('foo-%s', {fx:value})"/>
         """));
