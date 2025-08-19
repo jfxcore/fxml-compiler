@@ -17,7 +17,6 @@ import javafx.scene.layout.Pane;
 import org.jfxcore.compiler.diagnostic.ErrorCode;
 import org.jfxcore.compiler.diagnostic.MarkupException;
 import org.jfxcore.compiler.generate.collections.ListObservableValueWrapperGenerator;
-import org.jfxcore.compiler.generate.collections.ListWrapperGenerator;
 import org.jfxcore.compiler.util.CompilerTestBase;
 import org.jfxcore.compiler.util.NameHelper;
 import org.jfxcore.compiler.util.TestExtension;
@@ -37,10 +36,10 @@ public class ListBindingTest extends CompilerTestBase {
 
     @SuppressWarnings("unused")
     public static class IndirectContext {
-        public List<String> list1 = new ArrayList<>(List.of("foo", "bar", "baz"));
-        public ObservableList<String> list2 = FXCollections.observableArrayList("foo", "bar", "baz");
-        public ObjectProperty<List<String>> list3 = new SimpleObjectProperty<>(new ArrayList<>(List.of("foo", "bar", "baz")));
-        public ObjectProperty<ObservableList<String>> list4 = new SimpleObjectProperty<>(FXCollections.observableArrayList(List.of("foo", "bar", "baz")));
+        public List<String> list = new ArrayList<>(List.of("foo", "bar", "baz"));
+        public ObservableList<String> obsList = FXCollections.observableArrayList("foo", "bar", "baz");
+        public ObjectProperty<List<String>> propOfList = new SimpleObjectProperty<>(new ArrayList<>(List.of("foo", "bar", "baz")));
+        public ObjectProperty<ObservableList<String>> propOfObsList = new SimpleObjectProperty<>(FXCollections.observableArrayList(List.of("foo", "bar", "baz")));
     }
 
     @SuppressWarnings("unused")
@@ -48,25 +47,25 @@ public class ListBindingTest extends CompilerTestBase {
         private final ObjectProperty<IndirectContext> indirect = new SimpleObjectProperty<>(new IndirectContext());
         public Property<IndirectContext> indirectProperty() { return indirect; }
 
-        public List<Double> incompatibleList1 = new ArrayList<>();
+        public List<Double> incompatibleList = new ArrayList<>();
 
-        public List<String> list1 = new ArrayList<>(List.of("foo", "bar", "baz"));
-        public ObservableList<String> list2 = FXCollections.observableArrayList("foo", "bar", "baz");
-        public ObjectProperty<List<String>> list3 = new SimpleObjectProperty<>(new ArrayList<>(List.of("foo", "bar", "baz")));
-        public ObjectProperty<ObservableList<String>> list4 = new SimpleObjectProperty<>(FXCollections.observableArrayList(List.of("foo", "bar", "baz")));
-        public ObservableValue<ObservableList<String>> list4ReadOnly() { return list4; }
+        public List<String> list = new ArrayList<>(List.of("foo", "bar", "baz"));
+        public ObservableList<String> obsList = FXCollections.observableArrayList("foo", "bar", "baz");
+        public ObjectProperty<List<String>> propOfList = new SimpleObjectProperty<>(new ArrayList<>(List.of("foo", "bar", "baz")));
+        public ObjectProperty<ObservableList<String>> propOfObsList = new SimpleObjectProperty<>(FXCollections.observableArrayList(List.of("foo", "bar", "baz")));
+        public ObservableValue<ObservableList<String>> propOfObsListReadOnly() { return propOfObsList; }
 
         public final ListProperty<String> readOnlyListProp = new SimpleListProperty<>(this, "readOnlyListProp");
         public ReadOnlyListProperty<String> readOnlyListPropProperty() { return readOnlyListProp; }
 
-        public final ListProperty<String> listProp = new SimpleListProperty<>(this, "listProp", FXCollections.observableArrayList());
-        public ListProperty<String> listPropProperty() { return listProp; }
+        public final ListProperty<String> targetListProp = new SimpleListProperty<>(this, "targetListProp", FXCollections.observableArrayList());
+        public ListProperty<String> targetListPropProperty() { return targetListProp; }
 
-        private final ListProperty<String> listPropertyWithJavaGetterNameImpl = new SimpleListProperty<>(list2);
+        private final ListProperty<String> listPropertyWithJavaGetterNameImpl = new SimpleListProperty<>(obsList);
         public ListProperty<String> getListPropertyWithJavaGetterName() { return listPropertyWithJavaGetterNameImpl; }
 
-        public final ObjectProperty<ObservableList<String>> objectProp = new SimpleObjectProperty<>(this, "objectProp");
-        public ObjectProperty<ObservableList<String>> objectPropProperty() { return objectProp; }
+        public final ObjectProperty<ObservableList<String>> targetObjProp = new SimpleObjectProperty<>(this, "targetObjProp");
+        public ObjectProperty<ObservableList<String>> targetObjPropProperty() { return targetObjProp; }
 
         private final ObservableList<String> targetObservableList = FXCollections.observableArrayList();
         public Collection<String> getTargetCollection() { return targetObservableList; }
@@ -74,14 +73,12 @@ public class ListBindingTest extends CompilerTestBase {
         public ObservableList<String> getTargetObservableList() { return targetObservableList; }
     }
 
-    private static String LIST_WRAPPER;
     private static String OBSERVABLE_VALUE_WRAPPER;
     private static String ADD_REFERENCE_METHOD;
     private static String CLEAR_STALE_REFERENCES_METHOD;
 
     @BeforeAll
     public static void beforeAll() {
-        LIST_WRAPPER = ListWrapperGenerator.CLASS_NAME;
         OBSERVABLE_VALUE_WRAPPER = ListObservableValueWrapperGenerator.CLASS_NAME;
         ADD_REFERENCE_METHOD = NameHelper.getMangledMethodName("addReference");
         CLEAR_STALE_REFERENCES_METHOD = NameHelper.getMangledMethodName("clearStaleReferences");
@@ -91,308 +88,318 @@ public class ListBindingTest extends CompilerTestBase {
     public void Invalid_Content_Expression() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <ListTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                          listProp="$...list1"/>
+                          targetListProp="$...list"/>
         """));
 
         assertEquals(ErrorCode.INVALID_EXPRESSION, ex.getDiagnostic().getCode());
+        assertCodeHighlight("...list", ex);
     }
 
+    /*
+     *  source:   List
+     *  expected: error
+     */
     @Test
     public void Once_Binding_To_Vanilla_List() {
-        ListTestPane root = compileAndRun("""
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <ListTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                          listProp="$list1" objectProp="$list1"/>
-        """);
+                          targetListProp="$list"/>
+        """));
 
-        assertNotNewExpr(root, LIST_WRAPPER, OBSERVABLE_VALUE_WRAPPER);
-        assertNotMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
-        assertEquals(3, root.listProp.size());
-
-        boolean[] flag = new boolean[1];
-        root.listProp.addListener((ListChangeListener<String>)c -> flag[0] = true);
-
-        root.list1.clear(); // Change the source list
-        assertFalse(flag[0]); // ListChangeListener was not invoked
-        assertEquals(0, root.listProp.size());
-
-        assertEquals(0, root.objectProp.get().size());
-        root.list1.add("qux");
-        assertEquals("qux", root.objectProp.get().get(0));
+        assertEquals(ErrorCode.CANNOT_CONVERT_SOURCE_TYPE, ex.getDiagnostic().getCode());
+        assertCodeHighlight("list", ex);
     }
 
+    /*
+     *  source:   ObservableList
+     *  expected: target.setValue(source)
+     */
     @Test
     public void Once_Binding_To_ObservableList() {
         ListTestPane root = compileAndRun("""
             <ListTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                          listProp="$list2" objectProp="$list2"/>
+                          targetListProp="$obsList" targetObjProp="$obsList"/>
         """);
 
-        assertNotNewExpr(root, LIST_WRAPPER, OBSERVABLE_VALUE_WRAPPER);
+        assertMethodCall(root, "setValue");
+        assertNotMethodCall(root, "bind");
+        assertNotNewExpr(root, OBSERVABLE_VALUE_WRAPPER);
         assertNotMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
-        assertEquals(3, root.listProp.size());
+        assertEquals(3, root.targetListProp.size());
         boolean[] flag1 = new boolean[1];
-        root.listProp.addListener((ListChangeListener<String>)c -> flag1[0] = true);
-        root.list2.clear(); // Change the source list
+        root.targetListProp.addListener((ListChangeListener<String>)c -> flag1[0] = true);
+        root.obsList.clear(); // Change the source list
         assertTrue(flag1[0]); // ListChangeListener was invoked
-        assertEquals(0, root.listProp.size());
+        assertEquals(0, root.targetListProp.size());
 
-        assertEquals(0, root.objectProp.get().size());
+        assertEquals(0, root.targetObjProp.get().size());
         boolean[] flag2 = new boolean[1];
-        root.objectProp.addListener((observable, oldValue, newValue) -> flag2[0] = true);
-        root.list2.add("qux"); // Change the source list
+        root.targetObjProp.addListener((observable, oldValue, newValue) -> flag2[0] = true);
+        root.obsList.add("qux"); // Change the source list
         assertFalse(flag2[0]); // ChangeListener was not invoked
-        assertEquals("qux", root.objectProp.get().get(0));
+        assertEquals("qux", root.targetObjProp.get().get(0));
     }
 
+    /*
+     *  source:   ObservableValue<List>
+     *  expected: error
+     */
     @Test
     public void Once_Binding_To_ObservableValue_Of_Vanilla_List() {
-        ListTestPane root = compileAndRun("""
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <ListTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                          listProp="$list3" objectProp="$list3"/>
-        """);
+                          targetListProp="$propOfList"/>
+        """));
 
-        assertNotNewExpr(root, LIST_WRAPPER, OBSERVABLE_VALUE_WRAPPER);
-        assertNotMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
-        assertEquals(3, root.listProp.size());
-        boolean[] flag1 = new boolean[1];
-        root.listProp.addListener((ListChangeListener<String>)c -> flag1[0] = true);
-        root.list3.getValue().clear(); // Change the source list
-        assertFalse(flag1[0]); // ListChangeListener was not invoked
-        assertEquals(0, root.listProp.size());
-
-        assertEquals(0, root.objectProp.get().size());
-        boolean[] flag2 = new boolean[1];
-        root.objectProp.addListener((observable, oldValue, newValue) -> flag2[0] = true);
-        root.list3.getValue().add("qux"); // Change the source list
-        assertFalse(flag2[0]); // ChangeListener was not invoked
-        assertEquals("qux", root.objectProp.get().get(0));
-
-        flag1[0] = flag2[0] = false;
-        root.list3.setValue(FXCollections.observableArrayList("baz")); // Replace the entire source list
-        assertFalse(flag1[0]); // ListChangeListener was not invoked
-        assertFalse(flag2[0]); // ChangeListener was not invoked
+        assertEquals(ErrorCode.CANNOT_CONVERT_SOURCE_TYPE, ex.getDiagnostic().getCode());
+        assertCodeHighlight("propOfList", ex);
     }
 
+    /*
+     *  source:   ObservableValue<ObservableList>
+     *  expected: target.setValue(source.getValue())
+     */
     @Test
     public void Once_Binding_To_ObservableValue_Of_ObservableList() {
         ListTestPane root = compileAndRun("""
             <ListTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                          listProp="$list4" objectProp="$list4"/>
+                          targetListProp="$propOfObsList" targetObjProp="$propOfObsList"/>
         """);
 
-        assertNotNewExpr(root, LIST_WRAPPER, OBSERVABLE_VALUE_WRAPPER);
+        assertMethodCall(root, "setValue", "getValue");
+        assertNotMethodCall(root, "bind");
+        assertNotNewExpr(root, OBSERVABLE_VALUE_WRAPPER);
         assertNotMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
-        assertEquals(3, root.listProp.size());
+        assertEquals(3, root.targetListProp.size());
         boolean[] flag1 = new boolean[1];
-        root.listProp.addListener((ListChangeListener<String>)c -> flag1[0] = true);
-        root.list4.getValue().clear(); // Change the source list
+        root.targetListProp.addListener((ListChangeListener<String>)c -> flag1[0] = true);
+        root.propOfObsList.getValue().clear(); // Change the source list
         assertTrue(flag1[0]); // ListChangeListener was invoked
-        assertEquals(0, root.listProp.size());
+        assertEquals(0, root.targetListProp.size());
 
-        assertEquals(0, root.objectProp.get().size());
+        assertEquals(0, root.targetObjProp.get().size());
         boolean[] flag2 = new boolean[1];
-        root.objectProp.addListener((observable, oldValue, newValue) -> flag2[0] = true);
-        root.list4.getValue().add("qux"); // Change the source list
+        root.targetObjProp.addListener((observable, oldValue, newValue) -> flag2[0] = true);
+        root.propOfObsList.getValue().add("qux"); // Change the source list
         assertFalse(flag2[0]); // ChangeListener was not invoked
-        assertEquals("qux", root.objectProp.get().get(0));
+        assertEquals("qux", root.targetObjProp.get().get(0));
 
         flag1[0] = flag2[0] = false;
-        root.list4.setValue(FXCollections.observableArrayList("baz")); // Replace the entire source list
+        root.propOfObsList.setValue(FXCollections.observableArrayList("baz")); // Replace the entire source list
         assertFalse(flag1[0]); // ListChangeListener was not invoked
         assertFalse(flag2[0]); // ChangeListener was not invoked
     }
 
+    /*
+     *  source:   List
+     *  expected: target.addAll(source)
+     */
     @Test
     public void Once_ContentBinding_To_Vanilla_List() {
         ListTestPane root = compileAndRun("""
             <ListTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                          listProp="$..list1"/>
+                          targetListProp="$..list"/>
         """);
 
-        assertNotNewExpr(root, LIST_WRAPPER, OBSERVABLE_VALUE_WRAPPER);
+        assertMethodCall(root, "addAll");
+        assertNotNewExpr(root, OBSERVABLE_VALUE_WRAPPER);
         assertNotMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
-        assertEquals(3, root.listProp.size());
-        root.list1.clear(); // Change the source list
-        assertEquals(3, root.listProp.size()); // Target list is unchanged
+        assertEquals(3, root.targetListProp.size());
+        root.list.clear(); // Change the source list
+        assertEquals(3, root.targetListProp.size()); // Target list is unchanged
     }
 
+    /*
+     *  source:   List
+     *  expected: target.addAll(source)
+     */
     @Test
     public void Once_ContentBinding_To_Vanilla_List_Indirect() {
         ListTestPane root = compileAndRun("""
             <ListTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                          listProp="$..indirect.list1"/>
+                          targetListProp="$..indirect.list"/>
         """);
 
-        assertNotNewExpr(root, LIST_WRAPPER, OBSERVABLE_VALUE_WRAPPER);
+        assertMethodCall(root, "addAll");
+        assertNotNewExpr(root, OBSERVABLE_VALUE_WRAPPER);
         assertNotMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
-        assertEquals(3, root.listProp.size());
-        root.indirect.get().list1.clear(); // Change the source list
-        assertEquals(3, root.listProp.size()); // Target list is unchanged
+        assertEquals(3, root.targetListProp.size());
+        root.indirect.get().list.clear(); // Change the source list
+        assertEquals(3, root.targetListProp.size()); // Target list is unchanged
     }
 
+    /*
+     *  source:   ObservableList
+     *  expected: target.addAll(source)
+     */
     @Test
     public void Once_ContentBinding_To_Observable_List() {
         ListTestPane root = compileAndRun("""
             <ListTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                          listProp="$..list2"/>
+                          targetListProp="$..obsList"/>
         """);
 
-        assertNotNewExpr(root, LIST_WRAPPER, OBSERVABLE_VALUE_WRAPPER);
+        assertMethodCall(root, "addAll");
+        assertNotNewExpr(root, OBSERVABLE_VALUE_WRAPPER);
         assertNotMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
-        assertEquals(3, root.listProp.size());
-        root.list1.clear(); // Change the source list
-        assertEquals(3, root.listProp.size()); // Target list is unchanged
+        assertEquals(3, root.targetListProp.size());
+        root.list.clear(); // Change the source list
+        assertEquals(3, root.targetListProp.size()); // Target list is unchanged
     }
 
+    /*
+     *  source:   ObservableList
+     *  expected: target.addAll(source)
+     */
     @Test
     public void Once_ContentBinding_To_Observable_List_Indirect() {
         ListTestPane root = compileAndRun("""
             <ListTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                          listProp="$..indirect.list2"/>
+                          targetListProp="$..indirect.obsList"/>
         """);
 
-        assertNotNewExpr(root, LIST_WRAPPER, OBSERVABLE_VALUE_WRAPPER);
+        assertMethodCall(root, "addAll");
+        assertNotNewExpr(root, OBSERVABLE_VALUE_WRAPPER);
         assertNotMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
-        assertEquals(3, root.listProp.size());
-        root.indirect.get().list1.clear(); // Change the source list
-        assertEquals(3, root.listProp.size()); // Target list is unchanged
+        assertEquals(3, root.targetListProp.size());
+        root.indirect.get().list.clear(); // Change the source list
+        assertEquals(3, root.targetListProp.size()); // Target list is unchanged
     }
 
+    /*
+     *  source:   ObservableValue<List>
+     *  expected: target.addAll(source.getValue())
+     */
     @Test
     public void Once_ContentBinding_To_ObservableValue_Of_Vanilla_List() {
         ListTestPane root = compileAndRun("""
             <ListTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                          listProp="$..list3"/>
+                          targetListProp="$..propOfList"/>
         """);
 
-        assertNotNewExpr(root, LIST_WRAPPER, OBSERVABLE_VALUE_WRAPPER);
+        assertMethodCall(root, "addAll", "getValue");
+        assertNotNewExpr(root, OBSERVABLE_VALUE_WRAPPER);
         assertNotMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
-        assertEquals(3, root.listProp.size());
-        root.indirect.get().list1.clear(); // Change the source list
-        assertEquals(3, root.listProp.size()); // Target list is unchanged
+        assertEquals(3, root.targetListProp.size());
+        root.indirect.get().list.clear(); // Change the source list
+        assertEquals(3, root.targetListProp.size()); // Target list is unchanged
     }
 
+    /*
+     *  source:   ObservableValue<List>
+     *  expected: target.addAll(source.getValue())
+     */
     @Test
     public void Once_ContentBinding_To_ObservableValue_Of_Vanilla_List_Indirect() {
         ListTestPane root = compileAndRun("""
             <ListTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                          listProp="$..indirect.list3"/>
+                          targetListProp="$..indirect.propOfList"/>
         """);
 
-        assertNotNewExpr(root, LIST_WRAPPER, OBSERVABLE_VALUE_WRAPPER);
+        assertMethodCall(root, "addAll", "getValue");
+        assertNotNewExpr(root, OBSERVABLE_VALUE_WRAPPER);
         assertNotMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
-        assertEquals(3, root.listProp.size());
-        root.indirect.get().list1.clear(); // Change the source list
-        assertEquals(3, root.listProp.size()); // Target list is unchanged
+        assertEquals(3, root.targetListProp.size());
+        root.indirect.get().list.clear(); // Change the source list
+        assertEquals(3, root.targetListProp.size()); // Target list is unchanged
     }
 
+    /*
+     *  source:   ObservableValue<ObservableList>
+     *  expected: target.addAll(source.getValue())
+     */
     @Test
     public void Once_ContentBinding_To_ObservableValue_Of_Observable_List() {
         ListTestPane root = compileAndRun("""
             <ListTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                          listProp="$..list4"/>
+                          targetListProp="$..propOfObsList"/>
         """);
 
-        assertNotNewExpr(root, LIST_WRAPPER, OBSERVABLE_VALUE_WRAPPER);
+        assertMethodCall(root, "addAll", "getValue");
+        assertNotNewExpr(root, OBSERVABLE_VALUE_WRAPPER);
         assertNotMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
-        assertEquals(3, root.listProp.size());
-        root.indirect.get().list1.clear(); // Change the source list
-        assertEquals(3, root.listProp.size()); // Target list is unchanged
+        assertEquals(3, root.targetListProp.size());
+        root.indirect.get().list.clear(); // Change the source list
+        assertEquals(3, root.targetListProp.size()); // Target list is unchanged
     }
 
+    /*
+     *  source:   ObservableValue<ObservableList>
+     *  expected: target.addAll(source.getValue())
+     */
     @Test
     public void Once_ContentBinding_To_ObservableValue_Of_Observable_List_Indirect() {
         ListTestPane root = compileAndRun("""
             <ListTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                          listProp="$..indirect.list4"/>
+                          targetListProp="$..indirect.propOfObsList"/>
         """);
 
-        assertNotNewExpr(root, LIST_WRAPPER, OBSERVABLE_VALUE_WRAPPER);
+        assertMethodCall(root, "addAll", "getValue");
+        assertNotNewExpr(root, OBSERVABLE_VALUE_WRAPPER);
         assertNotMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
-        assertEquals(3, root.listProp.size());
-        root.indirect.get().list1.clear(); // Change the source list
-        assertEquals(3, root.listProp.size()); // Target list is unchanged
+        assertEquals(3, root.targetListProp.size());
+        root.indirect.get().list.clear(); // Change the source list
+        assertEquals(3, root.targetListProp.size()); // Target list is unchanged
     }
 
+    /*
+     *  source:   List
+     *  expected: error
+     */
     @Test
     public void Once_Binding_Fails_For_ReadOnlyListProperty() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <ListTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                          readOnlyListProp="$list1"/>
+                          readOnlyListProp="$list"/>
         """));
 
         assertEquals(ErrorCode.CANNOT_MODIFY_READONLY_PROPERTY, ex.getDiagnostic().getCode());
+        assertCodeHighlight("readOnlyListProp=\"$list\"", ex);
     }
 
+    /*
+     *  source:   List<Double>
+     *  expected: error
+     */
     @Test
     public void Once_Binding_Fails_For_Incompatible_List() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <ListTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                          listProp="$incompatibleList1"/>
+                          targetListProp="$incompatibleList"/>
         """));
 
         assertEquals(ErrorCode.CANNOT_CONVERT_SOURCE_TYPE, ex.getDiagnostic().getCode());
+        assertCodeHighlight("incompatibleList", ex);
     }
 
     /*
      *  source:   List
-     *  expected: target.bind(new ListWrapper(source))
+     *  expected: error
      */
     @Test
     public void Unidirectional_Binding_To_Vanilla_List() {
-        ListTestPane root = compileAndRun("""
-            <?import org.jfxcore.compiler.bindings.ListBindingTest.ListTestPane?>
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <ListTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                          listProp="${list1}" objectProp="${list1}"/>
-        """);
+                          targetListProp="${list}"/>
+        """));
 
-        assertNewExpr(root, LIST_WRAPPER);
-        assertNotNewExpr(root, "Constant");
-        assertNotMethodCall(root, ADD_REFERENCE_METHOD);
-        assertNotMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
-        assertEquals(3, root.listProp.size());
-
-        boolean[] flag = new boolean[1];
-        root.listProp.addListener((ListChangeListener<String>)c -> flag[0] = true);
-
-        root.list1.clear();
-        assertFalse(flag[0]);
-        assertEquals(0, root.listProp.size());
-
-        assertEquals(0, root.objectProp.get().size());
-        root.list1.add("qux");
-        assertEquals("qux", root.objectProp.get().get(0));
+        assertEquals(ErrorCode.CANNOT_CONVERT_SOURCE_TYPE, ex.getDiagnostic().getCode());
+        assertCodeHighlight("list", ex);
     }
 
     /*
      *  source:   List
-     *  expected: target.bind(new ListObservableValueWrapper(source))
+     *  expected: error
      */
     @Test
     public void Unidirectional_Binding_To_Vanilla_List_Indirect() {
-        ListTestPane root = compileAndRun("""
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <ListTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                          listProp="${indirect.list1}" objectProp="${indirect.list1}"/>
-        """);
+                          targetListProp="${indirect.list}"/>
+        """));
 
-        assertNewExpr(root, OBSERVABLE_VALUE_WRAPPER);
-        assertNotNewExpr(root, LIST_WRAPPER, "Constant");
-        assertNotMethodCall(root, ADD_REFERENCE_METHOD);
-        assertNotMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
-        assertEquals(3, root.listProp.size());
-
-        boolean[] flag = new boolean[1];
-        root.listProp.addListener((ListChangeListener<String>)c -> flag[0] = true);
-
-        root.indirect.get().list1.clear();
-        assertFalse(flag[0]);
-        assertEquals(0, root.listProp.size());
-        assertEquals(0, root.objectProp.get().size());
-
-        root.indirect.setValue(new IndirectContext());
-        assertTrue(flag[0]);
-        assertEquals(3, root.listProp.size());
-        assertEquals(3, root.objectProp.get().size());
+        assertEquals(ErrorCode.CANNOT_CONVERT_SOURCE_TYPE, ex.getDiagnostic().getCode());
+        assertCodeHighlight("indirect.list", ex);
     }
 
     /*
@@ -403,10 +410,11 @@ public class ListBindingTest extends CompilerTestBase {
     public void Unidirectional_ContentBinding_To_Vanilla_List_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <ListTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                          listProp="${..list1}"/>
+                          targetListProp="${..list}"/>
         """));
 
         assertEquals(ErrorCode.INVALID_CONTENT_BINDING_SOURCE, ex.getDiagnostic().getCode());
+        assertCodeHighlight("list", ex);
     }
 
     /*
@@ -417,41 +425,26 @@ public class ListBindingTest extends CompilerTestBase {
     public void Unidirectional_ContentBinding_Fails_For_ObjectProperty() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <ListTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                          objectProp="${..list1}"/>
+                          targetObjProp="${..list}"/>
         """));
 
         assertEquals(ErrorCode.INVALID_CONTENT_BINDING_TARGET, ex.getDiagnostic().getCode());
+        assertCodeHighlight("targetObjProp=\"${..list}\"", ex);
     }
 
     /*
      *  source:   ObservableList
-     *  expected: target.bind(new ObjectConstant(source))
+     *  expected: error
      */
     @Test
     public void Unidirectional_Binding_To_ObservableList() {
-        ListTestPane root = compileAndRun("""
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <ListTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                          listProp="${list2}" objectProp="${list2}"/>
-        """);
+                          targetListProp="${obsList}"/>
+        """));
 
-        assertNewExpr(root, "ObjectConstant");
-        assertNotNewExpr(root, OBSERVABLE_VALUE_WRAPPER, LIST_WRAPPER);
-        assertNotMethodCall(root, ADD_REFERENCE_METHOD);
-        assertNotMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
-
-        assertEquals(3, root.listProp.size());
-        boolean[] flag1 = new boolean[1];
-        root.listProp.addListener((ListChangeListener<String>)c -> flag1[0] = true);
-        root.list2.clear();
-        assertTrue(flag1[0]);
-        assertEquals(0, root.listProp.size());
-
-        assertEquals(0, root.objectProp.get().size());
-        boolean[] flag2 = new boolean[1];
-        root.objectProp.addListener((observable, oldValue, newValue) -> flag2[0] = true);
-        root.list2.add("qux");
-        assertFalse(flag2[0]);
-        assertEquals("qux", root.objectProp.get().get(0));
+        assertEquals(ErrorCode.INVALID_UNIDIRECTIONAL_BINDING_SOURCE, ex.getDiagnostic().getCode());
+        assertCodeHighlight("obsList", ex);
     }
 
     /*
@@ -462,79 +455,74 @@ public class ListBindingTest extends CompilerTestBase {
     public void Unidirectional_ContentBinding_To_ObservableList() {
         ListTestPane root = compileAndRun("""
             <ListTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                          listProp="${..list2}"/>
+                          targetListProp="${..obsList}"/>
         """);
 
-        assertNotNewExpr(root, "Constant", OBSERVABLE_VALUE_WRAPPER, LIST_WRAPPER);
+        assertNotNewExpr(root, OBSERVABLE_VALUE_WRAPPER);
         assertNotMethodCall(root, ADD_REFERENCE_METHOD);
         assertNotMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
 
-        assertEquals(3, root.listProp.size());
+        assertEquals(3, root.targetListProp.size());
         boolean[] flag1 = new boolean[1];
-        root.listProp.addListener((ListChangeListener<String>)c -> flag1[0] = true);
-        root.list2.clear();
+        root.targetListProp.addListener((ListChangeListener<String>)c -> flag1[0] = true);
+        root.obsList.clear();
         assertTrue(flag1[0]);
-        assertEquals(0, root.listProp.size());
+        assertEquals(0, root.targetListProp.size());
     }
 
     /*
-     *  source:   ObservableValue<List>
-     *  expected: target.bind(new ListObservableValueWrapper(source))
-     */
-    @Test
-    public void Unidirectional_Binding_To_ObservableValue_Of_Vanilla_List() throws Exception {
-        ListTestPane root = compileAndRun("""
-            <ListTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                          listProp="${list3}" objectProp="${list3}"/>
-        """);
-
-        assertNewExpr(root, OBSERVABLE_VALUE_WRAPPER);
-        assertNotNewExpr(root, "Constant", LIST_WRAPPER);
-        assertNotMethodCall(root, ADD_REFERENCE_METHOD);
-        assertNotMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
-
-        assertEquals(3, root.listProp.size());
-        boolean[] flag = new boolean[1];
-        root.listProp.addListener((ListChangeListener<String>)c -> flag[0] = true);
-        root.list3.getValue().clear(); // Change the source list
-        assertFalse(flag[0]); // ListChangeListener was not invoked
-        assertEquals(0, root.listProp.size());
-
-        flag[0] = false;
-        root.list3.setValue(FXCollections.observableArrayList("baz")); // Replace the entire source list
-        assertEquals(1, root.listProp.size());
-        assertTrue(flag[0]); // ListChangeListener was invoked
-
-        // create a new instance to reset all changes
-        root = newInstance(root);
-
-        flag[0] = false;
-        root.objectProp.addListener((observable, oldValue, newValue) -> flag[0] = true);
-        root.list3.getValue().clear(); // Change the source list
-        assertFalse(flag[0]); // ChangeListener was not invoked
-        assertEquals(0, root.objectProp.getValue().size());
-
-        flag[0] = false;
-        root.list3.setValue(FXCollections.observableArrayList("baz")); // Replace the entire source list
-        assertEquals(1, root.objectProp.getValue().size());
-        assertTrue(flag[0]); // ChangeListener was invoked
-    }
-
-    /*
-     *  source:   ObservableValue<List>
+     *  source:   ObservableList
      *  expected: target.bindContent(new ListObservableValueWrapper(source))
      */
     @Test
-    public void Unidirectional_ContentBinding_To_ObservableValue_Of_Vanilla_List() {
+    public void Unidirectional_ContentBinding_To_ObservableList_Indirect() {
         ListTestPane root = compileAndRun("""
             <ListTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                          listProp="${..list3}"/>
+                          targetListProp="${..indirect.obsList}"/>
         """);
 
         assertNewExpr(root, OBSERVABLE_VALUE_WRAPPER);
-        assertNotNewExpr(root, "Constant", LIST_WRAPPER);
         assertMethodCall(root, ADD_REFERENCE_METHOD);
         assertMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
+
+        assertEquals(3, root.targetListProp.size());
+        boolean[] flag1 = new boolean[1];
+        root.targetListProp.addListener((ListChangeListener<String>)c -> flag1[0] = true);
+        root.indirect.get().obsList.clear();
+        assertTrue(flag1[0]);
+        assertEquals(0, root.targetListProp.size());
+        root.indirect.set(new IndirectContext());
+        assertEquals(List.of("foo", "bar", "baz"), root.targetListProp);
+    }
+
+    /*
+     *  source:   ObservableValue<List>
+     *  expected: error
+     */
+    @Test
+    public void Unidirectional_Binding_To_ObservableValue_Of_Vanilla_List() {
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <ListTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                          targetListProp="${propOfList}"/>
+        """));
+
+        assertEquals(ErrorCode.CANNOT_CONVERT_SOURCE_TYPE, ex.getDiagnostic().getCode());
+        assertCodeHighlight("propOfList", ex);
+    }
+
+    /*
+     *  source:   ObservableValue<List>
+     *  expected: error
+     */
+    @Test
+    public void Unidirectional_ContentBinding_To_ObservableValue_Of_Vanilla_List() {
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <ListTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                          targetListProp="${..propOfList}"/>
+        """));
+
+        assertEquals(ErrorCode.INVALID_CONTENT_BINDING_SOURCE, ex.getDiagnostic().getCode());
+        assertCodeHighlight("propOfList", ex);
     }
 
     /*
@@ -545,59 +533,48 @@ public class ListBindingTest extends CompilerTestBase {
     public void Unidirectional_Binding_To_ObservableValue_Of_ObservableList() {
         ListTestPane root = compileAndRun("""
             <ListTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                          listProp="${list4}" objectProp="${list4}"/>
+                          targetListProp="${propOfObsList}" targetObjProp="${propOfObsList}"/>
         """);
 
-        assertNotNewExpr(root, "Constant", OBSERVABLE_VALUE_WRAPPER, LIST_WRAPPER);
+        assertMethodCall(root, "bind");
+        assertNotMethodCall(root, "getValue");
+        assertNotNewExpr(root, OBSERVABLE_VALUE_WRAPPER);
         assertNotMethodCall(root, ADD_REFERENCE_METHOD);
         assertNotMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
 
-        assertEquals(3, root.listProp.size());
+        assertEquals(3, root.targetListProp.size());
         boolean[] flag1 = new boolean[1];
-        root.listProp.addListener((ListChangeListener<String>)c -> flag1[0] = true);
-        root.list4.getValue().clear(); // Change the source list
+        root.targetListProp.addListener((ListChangeListener<String>)c -> flag1[0] = true);
+        root.propOfObsList.getValue().clear(); // Change the source list
         assertTrue(flag1[0]); // ListChangeListener was invoked
-        assertEquals(0, root.listProp.size());
+        assertEquals(0, root.targetListProp.size());
 
-        assertEquals(0, root.objectProp.get().size());
+        assertEquals(0, root.targetObjProp.get().size());
         boolean[] flag2 = new boolean[1];
-        root.objectProp.addListener((observable, oldValue, newValue) -> flag2[0] = true);
-        root.list4.getValue().add("qux"); // Change the source list
+        root.targetObjProp.addListener((observable, oldValue, newValue) -> flag2[0] = true);
+        root.propOfObsList.getValue().add("qux"); // Change the source list
         assertFalse(flag2[0]); // ChangeListener was not invoked
-        assertEquals("qux", root.objectProp.get().get(0));
+        assertEquals("qux", root.targetObjProp.get().get(0));
 
         flag1[0] = flag2[0] = false;
-        root.list4.setValue(FXCollections.observableArrayList("baz")); // Replace the entire source list
+        root.propOfObsList.setValue(FXCollections.observableArrayList("baz")); // Replace the entire source list
         assertTrue(flag1[0]); // ListChangeListener was invoked
         assertTrue(flag2[0]); // ChangeListener was invoked
     }
 
     /*
      *  source:   ObservableValue<ObservableList>
-     *  expected: target.bindContent(new ListObservableValueWrapper(source))
+     *  expected: error
      */
     @Test
     public void Unidirectional_ContentBinding_To_ObservableValue_Of_ObservableList() {
-        ListTestPane root = compileAndRun("""
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <ListTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                          listProp="${..list4}"/>
-        """);
+                          targetListProp="${..propOfObsList}"/>
+        """));
 
-        assertNewExpr(root, OBSERVABLE_VALUE_WRAPPER);
-        assertNotNewExpr(root, "Constant", LIST_WRAPPER);
-        assertMethodCall(root, ADD_REFERENCE_METHOD);
-        assertMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
-
-        assertEquals(3, root.listProp.size());
-        boolean[] flag1 = new boolean[1];
-        root.listProp.addListener((ListChangeListener<String>)c -> flag1[0] = true);
-        root.list4.getValue().clear(); // Change the source list
-        assertTrue(flag1[0]); // ListChangeListener was invoked
-        assertEquals(0, root.listProp.size());
-
-        flag1[0] = false;
-        root.list4.setValue(FXCollections.observableArrayList("baz")); // Replace the entire source list
-        assertTrue(flag1[0]); // ListChangeListener was invoked
+        assertEquals(ErrorCode.INVALID_CONTENT_BINDING_SOURCE, ex.getDiagnostic().getCode());
+        assertCodeHighlight("propOfObsList", ex);
     }
 
     /*
@@ -608,17 +585,19 @@ public class ListBindingTest extends CompilerTestBase {
     public void Bidirectional_Binding_To_Vanilla_List_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <ListTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                          listProp="#{list1}"/>
+                          targetListProp="#{list}"/>
         """));
 
         assertEquals(ErrorCode.INVALID_BIDIRECTIONAL_BINDING_SOURCE, ex.getDiagnostic().getCode());
+        assertCodeHighlight("list", ex);
 
         ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <ListTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                          objectProp="#{list1}"/>
+                          targetObjProp="#{list}"/>
         """));
 
         assertEquals(ErrorCode.INVALID_BIDIRECTIONAL_BINDING_SOURCE, ex.getDiagnostic().getCode());
+        assertCodeHighlight("list", ex);
     }
 
     /*
@@ -629,10 +608,11 @@ public class ListBindingTest extends CompilerTestBase {
     public void Bidirectional_ContentBinding_To_Vanilla_List_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <ListTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                          listProp="#{..list1}"/>
+                          targetListProp="#{..list}"/>
         """));
 
         assertEquals(ErrorCode.INVALID_BIDIRECTIONAL_CONTENT_BINDING_SOURCE, ex.getDiagnostic().getCode());
+        assertCodeHighlight("list", ex);
     }
 
     /*
@@ -643,10 +623,11 @@ public class ListBindingTest extends CompilerTestBase {
     public void Bidirectional_Binding_To_ObservableList_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <ListTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                          listProp="#{list2}" objectProp="#{list2}"/>
+                          targetListProp="#{obsList}"/>
         """));
 
         assertEquals(ErrorCode.INVALID_BIDIRECTIONAL_BINDING_SOURCE, ex.getDiagnostic().getCode());
+        assertCodeHighlight("obsList", ex);
     }
 
     /*
@@ -657,19 +638,47 @@ public class ListBindingTest extends CompilerTestBase {
     public void Bidirectional_ContentBinding_To_ObservableList() {
         ListTestPane root = compileAndRun("""
             <ListTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                          listProp="#{..list2}"/>
+                          targetListProp="#{..obsList}"/>
         """);
 
-        assertNotNewExpr(root, "Constant", OBSERVABLE_VALUE_WRAPPER, LIST_WRAPPER);
+        assertNotNewExpr(root, OBSERVABLE_VALUE_WRAPPER);
+        assertMethodCall(root, "bindContentBidirectional");
         assertNotMethodCall(root, ADD_REFERENCE_METHOD);
         assertNotMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
 
-        assertEquals(3, root.listProp.size());
+        assertEquals(3, root.targetListProp.size());
         boolean[] flag1 = new boolean[1];
-        root.listProp.addListener((ListChangeListener<String>)c -> flag1[0] = true);
-        root.list2.clear();
+        root.targetListProp.addListener((ListChangeListener<String>)c -> flag1[0] = true);
+        root.obsList.clear();
         assertTrue(flag1[0]);
-        assertEquals(0, root.listProp.size());
+        assertEquals(0, root.targetListProp.size());
+    }
+
+    /*
+     *  source:   ObservableList
+     *  expected: target.bindContentBidirectional(new ListObservableValueWrapper(source))
+     */
+    @Test
+    public void Bidirectional_ContentBinding_To_ObservableList_Indirect() {
+        ListTestPane root = compileAndRun("""
+            <ListTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                          targetListProp="#{..indirect.obsList}"/>
+        """);
+
+        assertNewExpr(root, OBSERVABLE_VALUE_WRAPPER);
+        assertMethodCall(root, "bindContentBidirectional");
+        assertMethodCall(root, ADD_REFERENCE_METHOD);
+        assertMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
+
+        assertEquals(3, root.targetListProp.size());
+        boolean[] flag1 = new boolean[1];
+        root.targetListProp.addListener((ListChangeListener<String>)c -> flag1[0] = !flag1[0]);
+        root.indirect.get().obsList.clear();
+        assertTrue(flag1[0]);
+        assertEquals(0, root.targetListProp.size());
+        root.indirect.set(new IndirectContext());
+        assertFalse(flag1[0]);
+        assertEquals(List.of("foo", "bar", "baz"), root.targetListProp);
     }
 
     /*
@@ -680,10 +689,11 @@ public class ListBindingTest extends CompilerTestBase {
     public void Bidirectional_Binding_To_ObservableValue_Of_Vanilla_List_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <ListTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                          listProp="#{list3}"/>
+                          targetListProp="#{propOfList}"/>
         """));
 
         assertEquals(ErrorCode.SOURCE_TYPE_MISMATCH, ex.getDiagnostic().getCode());
+        assertCodeHighlight("propOfList", ex);
     }
 
     /*
@@ -694,10 +704,11 @@ public class ListBindingTest extends CompilerTestBase {
     public void Bidirectional_ContentBinding_To_ObservableValue_Of_Vanilla_List_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <ListTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                          listProp="#{..list3}"/>
+                          targetListProp="#{..propOfList}"/>
         """));
 
         assertEquals(ErrorCode.INVALID_BIDIRECTIONAL_CONTENT_BINDING_SOURCE, ex.getDiagnostic().getCode());
+        assertCodeHighlight("propOfList", ex);
     }
 
     /*
@@ -708,32 +719,27 @@ public class ListBindingTest extends CompilerTestBase {
     public void Bidirectional_Binding_To_Property_Of_ObservableList() {
         ListTestPane root = compileAndRun("""
             <ListTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                          listProp="#{list4}"/>
+                          targetListProp="#{propOfObsList}"/>
         """);
 
-        assertNotNewExpr(root, OBSERVABLE_VALUE_WRAPPER, LIST_WRAPPER, "Constant");
+        assertMethodCall(root, "bindBidirectional");
+        assertNotNewExpr(root, OBSERVABLE_VALUE_WRAPPER);
         assertNotMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
     }
 
     /*
      * source:   Property<ObservableList>
-     * expected: target.bindContentBidirectional(new ListObservableValueWrapper(source))
+     * expected: error
      */
     @Test
     public void Bidirectional_ContentBinding_To_Property_Of_ObservableList() {
-        ListTestPane root = compileAndRun("""
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <ListTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                          listProp="#{..list4}"/>
-        """);
+                          targetListProp="#{..propOfObsList}"/>
+        """));
 
-        assertNewExpr(root, OBSERVABLE_VALUE_WRAPPER);
-        assertNotNewExpr(root, LIST_WRAPPER, "Constant");
-        assertMethodCall(root, ADD_REFERENCE_METHOD);
-        assertMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
-
-        gc(); // verify that the generated wrapper is not prematurely collected
-        root.list4.set(FXCollections.observableArrayList("123"));
-        assertEquals(List.of("123"), root.listProp.get());
+        assertEquals(ErrorCode.INVALID_BIDIRECTIONAL_CONTENT_BINDING_SOURCE, ex.getDiagnostic().getCode());
+        assertCodeHighlight("propOfObsList", ex);
     }
 
     /*
@@ -744,62 +750,51 @@ public class ListBindingTest extends CompilerTestBase {
     public void Bidirectional_Binding_To_ReadOnlyObservableValue_Of_ObservableList_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <ListTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                          listProp="#{list4ReadOnly}"/>
+                          targetListProp="#{propOfObsListReadOnly}"/>
         """));
 
         assertEquals(ErrorCode.INVALID_BIDIRECTIONAL_BINDING_SOURCE, ex.getDiagnostic().getCode());
+        assertCodeHighlight("propOfObsListReadOnly", ex);
     }
 
     /*
      * source:   ObservableValue<ObservableList>
-     * expected: target.bindContentBidirectional(new ListObservableValueWrapper(source))
+     * expected: error
      */
     @Test
     public void Bidirectional_ContentBinding_To_ReadOnlyObservableValue_Of_ObservableList() {
-        ListTestPane root = compileAndRun("""
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <ListTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                          listProp="#{..list4ReadOnly}"/>
-        """);
+                          targetListProp="#{..propOfObsListReadOnly}"/>
+        """));
 
-        assertNewExpr(root, OBSERVABLE_VALUE_WRAPPER);
-        assertNotNewExpr(root, "Constant", LIST_WRAPPER);
-        assertMethodCall(root, ADD_REFERENCE_METHOD);
-        assertMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
+        assertEquals(ErrorCode.INVALID_BIDIRECTIONAL_CONTENT_BINDING_SOURCE, ex.getDiagnostic().getCode());
+        assertCodeHighlight("propOfObsListReadOnly", ex);
     }
 
     @Test
     public void Bidirectional_Binding_To_ListProperty_With_Java_Getter_Name() {
         ListTestPane root = compileAndRun("""
             <ListTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                          listProp="#{listPropertyWithJavaGetterName}"/>
+                          targetListProp="#{listPropertyWithJavaGetterName}"/>
         """);
 
-        assertFalse(root.listProp.isBound());
+        assertFalse(root.targetListProp.isBound());
         assertFalse(root.listPropertyWithJavaGetterNameImpl.isBound());
-        assertEquals(root.listProp, root.listPropertyWithJavaGetterNameImpl);
-        assertEquals(List.of("foo", "bar", "baz"), root.listProp);
+        assertEquals(root.targetListProp, root.listPropertyWithJavaGetterNameImpl);
+        assertEquals(List.of("foo", "bar", "baz"), root.targetListProp);
     }
 
     @Test
     public void Bidirectional_ContentBinding_To_ListProperty_With_Java_Getter_Name() {
         ListTestPane root = compileAndRun("""
             <ListTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                          listProp="#{..listPropertyWithJavaGetterName}"/>
+                          targetListProp="#{..listPropertyWithJavaGetterName}"/>
         """);
 
-        assertFalse(root.listProp.isBound());
+        assertFalse(root.targetListProp.isBound());
         assertFalse(root.listPropertyWithJavaGetterNameImpl.isBound());
-        assertEquals(root.listProp, root.listPropertyWithJavaGetterNameImpl);
-        assertEquals(List.of("foo", "bar", "baz"), root.listProp);
+        assertEquals(root.targetListProp, root.listPropertyWithJavaGetterNameImpl);
+        assertEquals(List.of("foo", "bar", "baz"), root.targetListProp);
     }
-
-    @SuppressWarnings("unchecked")
-    private <T> T newInstance(T object) throws Exception {
-        object = (T)object.getClass().getConstructor().newInstance();
-        java.lang.reflect.Method method = object.getClass().getDeclaredMethod("initializeComponent");
-        method.setAccessible(true);
-        method.invoke(object);
-        return object;
-    }
-    
 }

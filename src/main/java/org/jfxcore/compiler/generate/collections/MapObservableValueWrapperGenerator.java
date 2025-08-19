@@ -29,7 +29,6 @@ import java.util.Map;
 
 import static javassist.CtClass.*;
 import static org.jfxcore.compiler.generate.SharedMethodImpls.*;
-import static org.jfxcore.compiler.generate.collections.MapWrapperGenerator.*;
 import static org.jfxcore.compiler.util.Classes.*;
 import static org.jfxcore.compiler.util.Descriptors.*;
 
@@ -52,6 +51,12 @@ public class MapObservableValueWrapperGenerator extends ClassGenerator {
     private static final String OBSERVABLE_FIELD = "observable";
     private static final String WEAK_MAP_CHANGE_LISTENER_FIELD = "weakSetChangeListener";
     private static final String VALID_FIELD = "valid";
+    private static final String ROOT_REF = "root";
+    private static final String VALUE_FIELD = "value";
+    private static final String ADAPTER_CHANGE_FIELD = "change";
+    private static final String INVALIDATION_LISTENER_FIELD = "invalidationListener";
+    private static final String CHANGE_LISTENER_FIELD = "changeListener";
+    private static final String MAP_CHANGE_LISTENER_FIELD = "mapChangeListener";
 
     private final TypeInstance observableType;
 
@@ -134,7 +139,7 @@ public class MapObservableValueWrapperGenerator extends ClassGenerator {
         createGetValueMethod(context);
         createGetMethod(context);
         createInvalidatedMethod(context);
-        createOnChangedMethod(context, generatedClass);
+        createOnChangedMethod(context);
         createListenerMethods(context, generatedClass, INVALIDATION_LISTENER_FIELD, InvalidationListenerType());
         createListenerMethods(context, generatedClass, CHANGE_LISTENER_FIELD, ChangeListenerType());
         createListenerMethods(context, generatedClass, MAP_CHANGE_LISTENER_FIELD, MapChangeListenerType());
@@ -544,6 +549,68 @@ public class MapObservableValueWrapperGenerator extends ClassGenerator {
         code.releaseLocal(iteratorLocal);
         code.releaseLocal(oldValueLocal);
         code.releaseLocal(currentValueLocal);
+        code.vreturn();
+
+        method.getMethodInfo().setCodeAttribute(code.toCodeAttribute());
+        method.getMethodInfo().rebuildStackMap(generatedClass.getClassPool());
+    }
+
+    private void createOnChangedMethod(BytecodeEmitContext context) throws Exception {
+        CtMethod method = new CtMethod(
+            voidType, "onChanged", new CtClass[] {MapChangeListenerChangeType()}, generatedClass);
+        method.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
+        generatedClass.addMethod(method);
+        BytecodeEmitContext ctx = new BytecodeEmitContext(context, generatedClass, 2, -1);
+        Bytecode code = ctx.getOutput();
+        CtClass adapterChangeType = context.getNestedClasses().find(MapSourceAdapterChangeGenerator.CLASS_NAME);
+
+        if (context.isGeneratorActive(ReferenceTrackerGenerator.class)) {
+            code.aload(0)
+                .getfield(generatedClass, ROOT_REF, context.getMarkupClass())
+                .invokevirtual(context.getMarkupClass(), ReferenceTrackerGenerator.CLEAR_STALE_REFERENCES_METHOD,
+                               function(voidType));
+        }
+
+        code.aload(0)
+            .getfield(generatedClass, INVALIDATION_LISTENER_FIELD, InvalidationListenerType())
+            .ifnonnull(() -> code
+                .aload(0)
+                .getfield(generatedClass, INVALIDATION_LISTENER_FIELD, InvalidationListenerType())
+                .aload(0)
+                .invokeinterface(InvalidationListenerType(), "invalidated",
+                                 function(voidType, ObservableType()))
+            );
+
+        code.aload(0)
+            .getfield(generatedClass, CHANGE_LISTENER_FIELD, ChangeListenerType())
+            .ifnonnull(() -> code
+                .aload(0)
+                .getfield(generatedClass, CHANGE_LISTENER_FIELD, ChangeListenerType())
+                .aload(0)
+                .aload(0)
+                .getfield(generatedClass, VALUE_FIELD, ObservableMapType())
+                .aload(0)
+                .getfield(generatedClass, VALUE_FIELD, ObservableMapType())
+                .invokeinterface(ChangeListenerType(), "changed",
+                                 function(voidType, ObservableValueType(), ObjectType(), ObjectType()))
+            );
+
+        code.aload(0)
+            .getfield(generatedClass, MAP_CHANGE_LISTENER_FIELD, MapChangeListenerType())
+            .ifnonnull(() -> code
+                .aload(0)
+                .getfield(generatedClass, ADAPTER_CHANGE_FIELD, adapterChangeType)
+                .aload(1)
+                .invokevirtual(adapterChangeType, MapSourceAdapterChangeGenerator.INIT_CHANGE_METHOD_NAME,
+                               function(voidType, MapChangeListenerChangeType()))
+                .aload(0)
+                .getfield(generatedClass, MAP_CHANGE_LISTENER_FIELD, MapChangeListenerType())
+                .aload(0)
+                .getfield(generatedClass, ADAPTER_CHANGE_FIELD, adapterChangeType)
+                .invokeinterface(MapChangeListenerType(), "onChanged",
+                                 function(voidType, MapChangeListenerChangeType()))
+            );
+
         code.vreturn();
 
         method.getMethodInfo().setCodeAttribute(code.toCodeAttribute());

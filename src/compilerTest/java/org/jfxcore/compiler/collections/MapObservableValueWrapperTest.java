@@ -1,4 +1,4 @@
-// Copyright (c) 2023, 2024, JFXcore. All rights reserved.
+// Copyright (c) 2023, 2025, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.collections;
@@ -8,6 +8,7 @@ import org.jfxcore.compiler.util.CompilerTestBase;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
+import javafx.beans.InvalidationListener;
 import javafx.beans.property.MapProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleMapProperty;
@@ -15,26 +16,32 @@ import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ObservableMapValue;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
+import javafx.collections.MapChangeListener;
 import javafx.collections.ObservableMap;
 import javafx.scene.layout.Pane;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static org.jfxcore.compiler.collections.MapWrapperTest.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public class MapObservableValueWrapperTest extends CompilerTestBase {
 
     @SuppressWarnings("unused")
+    public static class Holder {
+        public final ObjectProperty<ObservableMap<Integer, String>> map = new SimpleObjectProperty<>();
+    }
+
+    @SuppressWarnings("unused")
     public static class TestPane extends Pane {
-        public final MapProperty<Integer, String> mapProp = new SimpleMapProperty<>(this, "mapProp");
+        public final MapProperty<Integer, String> mapProp = new SimpleMapProperty<>(FXCollections.observableHashMap());
         public MapProperty<Integer, String> mapPropProperty() { return mapProp; }
-        public final ObjectProperty<Map<Integer, String>> map = new SimpleObjectProperty<>();
+        public final ObjectProperty<Holder> holder = new SimpleObjectProperty<>(new Holder());
     }
 
     private TestPane root;
@@ -44,7 +51,7 @@ public class MapObservableValueWrapperTest extends CompilerTestBase {
     public void compile() {
         root = compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                      mapProp="${map}"/>
+                      mapProp="${..holder.map}"/>
         """);
 
         mapWrapperClass =
@@ -138,4 +145,26 @@ public class MapObservableValueWrapperTest extends CompilerTestBase {
         }
     }
 
+    public static class MapTrace extends ArrayList<String> {
+        public MapTrace(ObservableMapValue<Integer, String> list) {
+            list.addListener((InvalidationListener) observable -> add("invalidated"));
+            list.addListener((observable, oldValue, newValue) -> add(
+                    String.format("changed (oldValue %s newValue)", oldValue != newValue ? "!=" : "==")));
+            list.addListener((MapChangeListener<Integer, String>) change -> {
+                StringBuilder builder = new StringBuilder();
+                if (change.wasAdded()) {
+                    if (change.wasRemoved()) {
+                        builder.append("replaced ").append(change.getValueRemoved())
+                                .append(" by ").append(change.getValueAdded());
+                    } else {
+                        builder.append("added ").append(change.getValueAdded());
+                    }
+                } else if (change.wasRemoved()) {
+                    builder.append("removed ").append(change.getValueRemoved());
+                }
+                builder.append(" at key ").append(change.getKey());
+                add(builder.toString());
+            });
+        }
+    }
 }

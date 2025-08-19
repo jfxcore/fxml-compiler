@@ -12,7 +12,6 @@ import org.jfxcore.compiler.ast.emit.EmitPropertyBindingNode;
 import org.jfxcore.compiler.ast.emit.EmitPropertySetterNode;
 import org.jfxcore.compiler.ast.emit.EmitStaticPropertySetterNode;
 import org.jfxcore.compiler.ast.emit.EmitUnwrapObservableNode;
-import org.jfxcore.compiler.ast.emit.EmitValueWrapperNode;
 import org.jfxcore.compiler.ast.emit.EmitterNode;
 import org.jfxcore.compiler.ast.emit.ValueEmitterNode;
 import org.jfxcore.compiler.ast.expression.BindingEmitterInfo;
@@ -63,7 +62,7 @@ public class BindingEmitterFactory {
 
             if (value == null) {
                 throw BindingSourceErrors.invalidContentAssignmentSource(
-                    sourceInfo, result.getSourceDeclaringType(), result.getSourceName());
+                    result.getSourceInfo(), result.getSourceDeclaringType(), result.getSourceName());
             }
 
             TypeInstance targetItemType = targetType.getArguments().get(0);
@@ -71,28 +70,18 @@ public class BindingEmitterFactory {
 
             if (!targetItemType.isAssignableFrom(sourceItemType)) {
                 throw BindingSourceErrors.cannotConvertSourceType(
-                    sourceInfo, sourceItemType.getJavaName(), targetItemType.getJavaName());
+                    result.getSourceInfo(), sourceItemType.getJavaName(), targetItemType.getJavaName());
             }
         } else {
             if (targetType.isAssignableFrom(result.getType())) {
                 value = result.getValue();
             } else if (result.getObservableType() != null) {
                 value = new EmitUnwrapObservableNode(result.getValue());
-            } else if (isCollectionWrapperApplicable(bindingNode, targetType, result.getValueType())) {
-                value = new EmitCollectionWrapperNode(
-                    result.getValue(),
-                    result.getValueType(),
-                    result.getObservableType(),
-                    false,
-                    sourceInfo);
-            } else {
-                throw BindingSourceErrors.cannotConvertSourceType(
-                    sourceInfo, result.getValueType().getJavaName(), targetType.getJavaName());
             }
 
-            if (!targetType.isAssignableFrom(TypeHelper.getTypeInstance(value))) {
+            if (value == null || !targetType.isAssignableFrom(TypeHelper.getTypeInstance(value))) {
                 throw BindingSourceErrors.cannotConvertSourceType(
-                    sourceInfo, result.getValueType().getJavaName(), targetType.getJavaName());
+                    result.getSourceInfo(), result.getValueType().getJavaName(), targetType.getJavaName());
             }
         }
 
@@ -126,17 +115,16 @@ public class BindingEmitterFactory {
         if (bindingMode.isContent()) {
             if (isValidContentBindingSource(bindingMode, targetType, result.getType())) {
                 value = result.getValue();
-            } else if (isCollectionWrapperApplicable(bindingNode, targetType, result.getType())) {
+            } else if (isCollectionWrapperApplicable(bindingNode, targetType, result)) {
                 value = new EmitCollectionWrapperNode(
                     result.getValue(),
                     result.getValueType(),
                     result.getObservableType(),
-                    false,
                     bindingNode.getSourceInfo());
             } else {
                 throw BindingSourceErrors.invalidContentBindingSource(
-                    bindingNode.getSourceInfo(), result.getSourceDeclaringType(),
-                    result.getSourceName(), bindingMode.isBidirectional(),
+                    result.getSourceInfo(), result.getSourceDeclaringType(),
+                    result.getSourceName(), targetType, bindingMode.isBidirectional(),
                     isValidContentBindingSource(BindingMode.CONTENT, targetType, result.getValueType()));
             }
 
@@ -144,7 +132,7 @@ public class BindingEmitterFactory {
 
             if (!targetType.isAssignableFrom(sourceType)) {
                 throw BindingSourceErrors.cannotConvertSourceType(
-                    bindingNode.getSourceInfo(), result.getValueType().getJavaName(), targetType.getJavaName());
+                    result.getSourceInfo(), result.getValueType().getJavaName(), targetType.getJavaName());
             }
         } else if (bindingMode.isBidirectional()) {
             BindingEmitterInfo converterEmitterInfo = bindingNode.toConverterEmitter(propertyInfo.getDeclaringType());
@@ -185,30 +173,21 @@ public class BindingEmitterFactory {
             // Bidirectional bindings require equal types
             if (!targetType.equals(result.getValueType()) && converter == null && format == null) {
                 throw BindingSourceErrors.sourceTypeMismatch(
-                    bindingNode.getSourceInfo(), result.getValueType().getJavaName(), targetType.getJavaName());
+                    result.getSourceInfo(), result.getValueType().getJavaName(), targetType.getJavaName());
             }
 
             value = result.getValue();
+        } else if (targetType.isAssignableFrom(result.getValueType())) {
+            if (result.getObservableType() != null) {
+                value = result.getValue();
+            } else {
+                throw BindingSourceErrors.invalidUnidirectionalBindingSource(
+                    result.getSourceInfo(), result.getSourceDeclaringType(),
+                    result.getSourceName(), result.isFunction());
+            }
         } else {
-            if (targetType.isAssignableFrom(result.getValueType())) {
-                if (result.getObservableType() == null) {
-                    value = new EmitValueWrapperNode(result.getValue());
-                } else {
-                    value = result.getValue();
-                }
-            }
-            else if (isCollectionWrapperApplicable(bindingNode, targetType, result.getValueType())) {
-                value = new EmitCollectionWrapperNode(
-                    result.getValue(),
-                    result.getValueType(),
-                    result.getObservableType(),
-                    true,
-                    bindingNode.getSourceInfo());
-            }
-            else {
-                throw BindingSourceErrors.cannotConvertSourceType(
-                    bindingNode.getSourceInfo(), result.getValueType().getJavaName(), targetType.getJavaName());
-            }
+            throw BindingSourceErrors.cannotConvertSourceType(
+                result.getSourceInfo(), result.getValueType().getJavaName(), targetType.getJavaName());
         }
 
         return new EmitPropertyBindingNode(
@@ -279,37 +258,37 @@ public class BindingEmitterFactory {
     }
 
     private static boolean isCollectionWrapperApplicable(
-            BindingNode node, TypeInstance target, TypeInstance source) {
+            BindingNode node, TypeInstance target, BindingEmitterInfo source) {
+        if (!source.isCompiledPath()) {
+            return false;
+        }
+
+        TypeInstance sourceType = source.getValueType();
+
         switch (node.getMode()) {
-            case ONCE:
-            case UNIDIRECTIONAL:
-                return target.subtypeOf(ObservableListType()) && source.subtypeOf(ListType())
-                    || target.subtypeOf(ObservableSetType()) && source.subtypeOf(SetType())
-                    || target.subtypeOf(ObservableMapType()) && source.subtypeOf(MapType());
-
             case UNIDIRECTIONAL_CONTENT:
-                if (source.subtypeOf(ObservableValueType())) {
+                if (sourceType.subtypeOf(ObservableValueType())) {
                     Resolver resolver = new Resolver(node.getSourceInfo());
-                    source = resolver.findObservableArgument(source);
+                    sourceType = resolver.findObservableArgument(sourceType);
 
-                    return target.subtypeOf(ListType()) && source.subtypeOf(ListType())
-                        || target.subtypeOf(SetType()) && source.subtypeOf(SetType())
-                        || target.subtypeOf(MapType()) && source.subtypeOf(MapType());
+                    return target.subtypeOf(ListType()) && sourceType.subtypeOf(ListType())
+                        || target.subtypeOf(SetType()) && sourceType.subtypeOf(SetType())
+                        || target.subtypeOf(MapType()) && sourceType.subtypeOf(MapType());
                 }
 
-                return target.subtypeOf(ListType()) && source.subtypeOf(ObservableListType())
-                    || target.subtypeOf(SetType()) && source.subtypeOf(ObservableSetType())
-                    || target.subtypeOf(MapType()) && source.subtypeOf(ObservableMapType());
+                return target.subtypeOf(ListType()) && sourceType.subtypeOf(ObservableListType())
+                    || target.subtypeOf(SetType()) && sourceType.subtypeOf(ObservableSetType())
+                    || target.subtypeOf(MapType()) && sourceType.subtypeOf(ObservableMapType());
 
             case BIDIRECTIONAL_CONTENT:
-                if (source.subtypeOf(ObservableValueType())) {
+                if (sourceType.subtypeOf(ObservableValueType())) {
                     Resolver resolver = new Resolver(node.getSourceInfo());
-                    source = resolver.findObservableArgument(source);
+                    sourceType = resolver.findObservableArgument(sourceType);
                 }
 
-                return target.subtypeOf(ObservableListType()) && source.subtypeOf(ObservableListType())
-                    || target.subtypeOf(ObservableSetType()) && source.subtypeOf(ObservableSetType())
-                    || target.subtypeOf(ObservableMapType()) && source.subtypeOf(ObservableMapType());
+                return target.subtypeOf(ObservableListType()) && sourceType.subtypeOf(ObservableListType())
+                    || target.subtypeOf(ObservableSetType()) && sourceType.subtypeOf(ObservableSetType())
+                    || target.subtypeOf(ObservableMapType()) && sourceType.subtypeOf(ObservableMapType());
 
             default:
                 return false;

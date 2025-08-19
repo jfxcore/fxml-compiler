@@ -933,7 +933,7 @@ public class MarkupExtensionTest extends CompilerTestBase {
         public void PrimitiveDoubleSupplier_Is_Applied_To_Function_Arguments() {
             TestPane root = compileAndRun("""
                 <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                          doubleProp1="${add({PrimitiveDoubleSupplier param=1.5}, {PrimitiveDoubleSupplier param=2.5})}"/>
+                          doubleProp1="$add({PrimitiveDoubleSupplier param=1.5}, {PrimitiveDoubleSupplier param=2.5})"/>
             """);
 
             assertEquals(4.0, root.getDoubleProp1(), 0.001);

@@ -1,4 +1,4 @@
-// Copyright (c) 2021, 2024, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2025, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.bindings;
@@ -170,26 +170,28 @@ public class BindingSourceTest extends CompilerTestBase {
 
     @Test
     public void Bind_Unidirectional_To_Unqualified_Static_Constant() {
-        Pane root = compileAndRun("""
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.scene.layout.*?>
             <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <Pane maxWidth="${Region.USE_PREF_SIZE}"/>
             </Pane>
-        """);
+        """));
 
-        assertFieldAccess(root, "javafx.scene.layout.Region", "USE_PREF_SIZE", "D");
+        assertEquals(ErrorCode.INVALID_UNIDIRECTIONAL_BINDING_SOURCE, ex.getDiagnostic().getCode());
+        assertCodeHighlight("Region.USE_PREF_SIZE", ex);
     }
 
     @Test
     public void Bind_Unidirectional_To_Qualified_Static_Constant() {
-        Pane root = compileAndRun("""
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.scene.layout.*?>
             <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <Pane maxWidth="${javafx.scene.layout.Region.USE_PREF_SIZE}"/>
             </Pane>
-        """);
+        """));
 
-        assertFieldAccess(root, "javafx.scene.layout.Region", "USE_PREF_SIZE", "D");
+        assertEquals(ErrorCode.INVALID_UNIDIRECTIONAL_BINDING_SOURCE, ex.getDiagnostic().getCode());
+        assertCodeHighlight("javafx.scene.layout.Region.USE_PREF_SIZE", ex);
     }
 
     @Test

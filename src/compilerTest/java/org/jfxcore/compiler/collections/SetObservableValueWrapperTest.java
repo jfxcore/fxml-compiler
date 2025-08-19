@@ -1,4 +1,4 @@
-// Copyright (c) 2023, 2024, JFXcore. All rights reserved.
+// Copyright (c) 2023, 2025, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.collections;
@@ -8,6 +8,7 @@ import org.jfxcore.compiler.util.CompilerTestBase;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
+import javafx.beans.InvalidationListener;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SetProperty;
 import javafx.beans.property.SimpleObjectProperty;
@@ -16,25 +17,31 @@ import javafx.beans.value.ObservableSetValue;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableSet;
+import javafx.collections.SetChangeListener;
 import javafx.scene.layout.Pane;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import static org.jfxcore.compiler.collections.SetWrapperTest.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public class SetObservableValueWrapperTest extends CompilerTestBase {
 
     @SuppressWarnings("unused")
+    public static class Holder {
+        public final ObjectProperty<ObservableSet<String>> set = new SimpleObjectProperty<>();
+    }
+
+    @SuppressWarnings("unused")
     public static class TestPane extends Pane {
-        public final SetProperty<String> setProp = new SimpleSetProperty<>(this, "listProp");
+        public final SetProperty<String> setProp = new SimpleSetProperty<>(FXCollections.observableSet(new HashSet<>()));
         public SetProperty<String> setPropProperty() { return setProp; }
-        public final ObjectProperty<Set<String>> set = new SimpleObjectProperty<>();
+        public final ObjectProperty<Holder> holder = new SimpleObjectProperty<>(new Holder());
     }
 
     private TestPane root;
@@ -44,7 +51,7 @@ public class SetObservableValueWrapperTest extends CompilerTestBase {
     public void compile() {
         root = compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                      setProp="${set}"/>
+                      setProp="${..holder.set}"/>
         """);
 
         setWrapperClass =
@@ -135,4 +142,18 @@ public class SetObservableValueWrapperTest extends CompilerTestBase {
         }
     }
 
+    public static class SetTrace extends ArrayList<String> {
+        public SetTrace(ObservableSetValue<String> list) {
+            list.addListener((InvalidationListener) observable -> add("invalidated"));
+            list.addListener((observable, oldValue, newValue) -> add(
+                    String.format("changed (oldValue %s newValue)", oldValue != newValue ? "!=" : "==")));
+            list.addListener((SetChangeListener<String>) change -> {
+                if (change.wasAdded()) {
+                    add("added " + change.getElementAdded());
+                } else if (change.wasRemoved()) {
+                    add("removed " + change.getElementRemoved());
+                }
+            });
+        }
+    }
 }

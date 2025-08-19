@@ -1,4 +1,4 @@
-// Copyright (c) 2022, 2024, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2025, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler;
@@ -172,13 +172,14 @@ public class AccessibleTests extends CompilerTestBase {
     }
 
     @Test
-    public void Bind_Unidirectional_To_Protected_Method_With_Constant_Argument_Succeeds() {
-        TestPane root = compileAndRun("""
+    public void Bind_Unidirectional_To_Protected_Method_With_Constant_Argument_Fails() {
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                       prefWidth="${protectedMethod(123)}"/>
-        """);
+        """));
 
-        assertEquals(123, root.getPrefWidth(), 0.001);
+        assertEquals(ErrorCode.INVALID_UNIDIRECTIONAL_BINDING_SOURCE, ex.getDiagnostic().getCode());
+        assertCodeHighlight("protectedMethod(123)", ex);
     }
 
     @Test
@@ -213,5 +214,4 @@ public class AccessibleTests extends CompilerTestBase {
         assertEquals(ErrorCode.MEMBER_NOT_ACCESSIBLE, ex.getDiagnostic().getCode());
         assertCodeHighlight("InaccessibleMethodHolder.protectedMethod", ex);
     }
-
 }

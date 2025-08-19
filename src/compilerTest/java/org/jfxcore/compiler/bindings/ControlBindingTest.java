@@ -1,4 +1,4 @@
-// Copyright (c) 2021, 2024, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2025, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.bindings;
@@ -39,7 +39,7 @@ public class ControlBindingTest extends CompilerTestBase {
         """));
 
         assertEquals(ErrorCode.CANNOT_CONVERT_SOURCE_TYPE, ex.getDiagnostic().getCode());
-        assertCodeHighlight("$btn.text", ex);
+        assertCodeHighlight("btn.text", ex);
     }
 
     @Test
@@ -260,7 +260,7 @@ public class ControlBindingTest extends CompilerTestBase {
         """));
 
         assertEquals(ErrorCode.CANNOT_CONVERT_SOURCE_TYPE, ex.getDiagnostic().getCode());
-        assertCodeHighlight("${btn.text}", ex);
+        assertCodeHighlight("btn.text", ex);
     }
 
     @Test
@@ -295,7 +295,7 @@ public class ControlBindingTest extends CompilerTestBase {
         """));
 
         assertEquals(ErrorCode.SOURCE_TYPE_MISMATCH, ex.getDiagnostic().getCode());
-        assertCodeHighlight("#{btn.text}", ex);
+        assertCodeHighlight("btn.text", ex);
     }
 
     @Test
@@ -338,5 +338,4 @@ public class ControlBindingTest extends CompilerTestBase {
         assertEquals(123.0, ((Pane)root.getChildren().get(0)).getPrefWidth(), 0.001);
         assertEquals(123.0, ((Pane)((Pane)root.getChildren().get(0)).getChildren().get(0)).getPrefWidth(), 0.001);
     }
-
 }
