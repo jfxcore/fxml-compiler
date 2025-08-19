@@ -61,6 +61,7 @@ testing {
 
             targets.all {
                 testTask.configure {
+                    maxParallelForks = (Runtime.getRuntime().availableProcessors() / 2).coerceAtLeast(1)
                     shouldRunAfter(test)
                 }
             }
