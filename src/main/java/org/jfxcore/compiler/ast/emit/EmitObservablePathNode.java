@@ -1,4 +1,4 @@
-// Copyright (c) 2021, 2024, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2025, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.emit;
@@ -84,6 +84,10 @@ public class EmitObservablePathNode
                 leadingValueWrapper = new EmitValueWrapperNode(new EmitNopNode(type, getSourceInfo()));
             }
         }
+    }
+
+    public boolean isCompiledPath() {
+        return useCompiledPath;
     }
 
     public ResolvedPath getPath() {
@@ -227,5 +231,4 @@ public class EmitObservablePathNode
     public int hashCode() {
         return Objects.hash(path, bidirectional, invariantPath);
     }
-
 }

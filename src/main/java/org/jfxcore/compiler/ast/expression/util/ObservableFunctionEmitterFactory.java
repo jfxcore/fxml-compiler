@@ -65,6 +65,8 @@ public class ObservableFunctionEmitterFactory
             TypeHelper.getTypeInstance(value),
             invocationInfo.function().getBehavior().getDeclaringClass(),
             invocationInfo.function().getBehavior().getName(),
+            true,
+            false,
             functionExpression.getSourceInfo());
     }
 }

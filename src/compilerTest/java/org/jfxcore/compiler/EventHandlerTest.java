@@ -1,8 +1,10 @@
-// Copyright (c) 2022, 2024, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2025, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler;
 
+import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.SimpleObjectProperty;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.scene.control.Button;
@@ -39,12 +41,13 @@ public class EventHandlerTest extends CompilerTestBase {
             flag = true;
         }
 
-        public EventHandler<ActionEvent> actionHandlerProp = new EventHandler<>() {
-            @Override
-            public void handle(ActionEvent event) {
-                flag = true;
-            }
-        };
+        public final ObjectProperty<EventHandler<ActionEvent>> actionHandlerProp =
+            new SimpleObjectProperty<>(new EventHandler<>() {
+                @Override
+                public void handle(ActionEvent actionEvent) {
+                    flag = true;
+                }
+            });
 
         private void inaccessibleHandler() {}
 

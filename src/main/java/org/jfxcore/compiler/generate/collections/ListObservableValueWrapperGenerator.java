@@ -29,7 +29,6 @@ import java.util.List;
 
 import static javassist.CtClass.*;
 import static org.jfxcore.compiler.generate.SharedMethodImpls.*;
-import static org.jfxcore.compiler.generate.collections.ListWrapperGenerator.*;
 import static org.jfxcore.compiler.util.Classes.*;
 import static org.jfxcore.compiler.util.Descriptors.*;
 
@@ -52,6 +51,12 @@ public class ListObservableValueWrapperGenerator extends ClassGenerator {
     private static final String OBSERVABLE_FIELD = "observable";
     private static final String WEAK_LIST_CHANGE_LISTENER_FIELD = "weakListChangeListener";
     private static final String VALID_FIELD = "valid";
+    private static final String ROOT_REF = "root";
+    private static final String VALUE_FIELD = "value";
+    private static final String ADAPTER_CHANGE_FIELD = "change";
+    private static final String INVALIDATION_LISTENER_FIELD = "invalidationListener";
+    private static final String CHANGE_LISTENER_FIELD = "changeListener";
+    private static final String LIST_CHANGE_LISTENER_FIELD = "listChangeListener";
 
     private final TypeInstance observableType;
 
@@ -134,7 +139,7 @@ public class ListObservableValueWrapperGenerator extends ClassGenerator {
         createObservableListMethods(context);
         createObservableValueMethods(context);
         createInvalidatedMethod(context);
-        createOnChangedMethod(context, generatedClass);
+        createOnChangedMethod(context);
     }
 
     private void createListMethods(BytecodeEmitContext context) throws Exception {
@@ -409,6 +414,68 @@ public class ListObservableValueWrapperGenerator extends ClassGenerator {
         code.releaseLocal(currentValueLocal);
         code.releaseLocal(safeSizeLocal);
         code.releaseLocal(safeOldValueLocal);
+        code.vreturn();
+
+        method.getMethodInfo().setCodeAttribute(code.toCodeAttribute());
+        method.getMethodInfo().rebuildStackMap(generatedClass.getClassPool());
+    }
+
+    private void createOnChangedMethod(BytecodeEmitContext context) throws Exception {
+        CtMethod method = new CtMethod(
+            voidType, "onChanged", new CtClass[] {ListChangeListenerChangeType()}, generatedClass);
+        method.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
+        generatedClass.addMethod(method);
+        BytecodeEmitContext ctx = new BytecodeEmitContext(context, generatedClass, 2, -1);
+        Bytecode code = ctx.getOutput();
+        CtClass adapterChangeType = context.getNestedClasses().find(ListSourceAdapterChangeGenerator.CLASS_NAME);
+
+        if (context.isGeneratorActive(ReferenceTrackerGenerator.class)) {
+            code.aload(0)
+                .getfield(generatedClass, ROOT_REF, context.getMarkupClass())
+                .invokevirtual(context.getMarkupClass(), ReferenceTrackerGenerator.CLEAR_STALE_REFERENCES_METHOD,
+                               function(voidType));
+        }
+
+        code.aload(0)
+            .getfield(generatedClass, INVALIDATION_LISTENER_FIELD, InvalidationListenerType())
+            .ifnonnull(() -> code
+                .aload(0)
+                .getfield(generatedClass, INVALIDATION_LISTENER_FIELD, InvalidationListenerType())
+                .aload(0)
+                .invokeinterface(InvalidationListenerType(), "invalidated",
+                                 function(voidType, ObservableType()))
+            );
+
+        code.aload(0)
+            .getfield(generatedClass, CHANGE_LISTENER_FIELD, ChangeListenerType())
+            .ifnonnull(() -> code
+                .aload(0)
+                .getfield(generatedClass, CHANGE_LISTENER_FIELD, ChangeListenerType())
+                .aload(0)
+                .aload(0)
+                .getfield(generatedClass, VALUE_FIELD, ObservableListType())
+                .aload(0)
+                .getfield(generatedClass, VALUE_FIELD, ObservableListType())
+                .invokeinterface(ChangeListenerType(), "changed",
+                                 function(voidType, ObservableValueType(), ObjectType(), ObjectType()))
+            );
+
+        code.aload(0)
+            .getfield(generatedClass, LIST_CHANGE_LISTENER_FIELD, ListChangeListenerType())
+            .ifnonnull(() -> code
+                .aload(0)
+                .getfield(generatedClass, ADAPTER_CHANGE_FIELD, adapterChangeType)
+                .aload(1)
+                .invokevirtual(adapterChangeType, ListSourceAdapterChangeGenerator.INIT_CHANGE_METHOD_NAME,
+                               function(voidType, ListChangeListenerChangeType()))
+                .aload(0)
+                .getfield(generatedClass, LIST_CHANGE_LISTENER_FIELD, ListChangeListenerType())
+                .aload(0)
+                .getfield(generatedClass, ADAPTER_CHANGE_FIELD, adapterChangeType)
+                .invokeinterface(ListChangeListenerType(), "onChanged",
+                                 function(voidType, ListChangeListenerChangeType()))
+            );
+
         code.vreturn();
 
         method.getMethodInfo().setCodeAttribute(code.toCodeAttribute());

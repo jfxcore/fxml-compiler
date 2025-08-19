@@ -1,4 +1,4 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2025, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.expression;
@@ -15,6 +15,8 @@ public class BindingEmitterInfo {
     private final TypeInstance observableType;
     private final CtClass sourceDeclaringType;
     private final String sourceName;
+    private final boolean function;
+    private final boolean compiledPath;
     private final SourceInfo sourceInfo;
 
     public BindingEmitterInfo(
@@ -23,12 +25,16 @@ public class BindingEmitterInfo {
             TypeInstance observableType,
             CtClass sourceDeclaringType,
             String sourceName,
+            boolean function,
+            boolean compiledPath,
             SourceInfo sourceInfo) {
         this.value = value;
         this.valueType = valueType;
         this.observableType = observableType;
         this.sourceDeclaringType = sourceDeclaringType;
         this.sourceName = sourceName;
+        this.function = function;
+        this.compiledPath = compiledPath;
         this.sourceInfo = sourceInfo;
     }
 
@@ -56,8 +62,15 @@ public class BindingEmitterInfo {
         return sourceName;
     }
 
+    public boolean isFunction() {
+        return function;
+    }
+
+    public boolean isCompiledPath() {
+        return compiledPath;
+    }
+
     public SourceInfo getSourceInfo() {
         return sourceInfo;
     }
-
 }

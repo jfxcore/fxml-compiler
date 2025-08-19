@@ -1,4 +1,4 @@
-// Copyright (c) 2022, 2024, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2025, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.diagnostic.errors;
@@ -10,6 +10,7 @@ import org.jfxcore.compiler.diagnostic.ErrorCode;
 import org.jfxcore.compiler.diagnostic.MarkupException;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.util.NameHelper;
+import org.jfxcore.compiler.util.TypeInstance;
 
 import static org.jfxcore.compiler.util.NameHelper.formatPropertyName;
 
@@ -31,7 +32,8 @@ public class BindingSourceErrors {
     }
 
     public static MarkupException invalidContentBindingSource(
-            SourceInfo sourceInfo, CtClass declaringType, String propertyName, boolean bidirectional, boolean assignHint) {
+            SourceInfo sourceInfo, CtClass declaringType, String propertyName, TypeInstance requiredType,
+            boolean bidirectional, boolean assignHint) {
         if (bidirectional) {
             return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
                 ErrorCode.INVALID_BIDIRECTIONAL_CONTENT_BINDING_SOURCE, formatPropertyName(declaringType, propertyName)));
@@ -39,9 +41,20 @@ public class BindingSourceErrors {
 
         return new MarkupException(sourceInfo, assignHint ?
             Diagnostic.newDiagnosticVariant(
-                ErrorCode.INVALID_CONTENT_BINDING_SOURCE, "assignHint", formatPropertyName(declaringType, propertyName)) :
+                ErrorCode.INVALID_CONTENT_BINDING_SOURCE, "assignHint",
+                formatPropertyName(declaringType, propertyName), requiredType.getJavaName()) :
             Diagnostic.newDiagnostic(
-                ErrorCode.INVALID_CONTENT_BINDING_SOURCE, formatPropertyName(declaringType, propertyName)));
+                ErrorCode.INVALID_CONTENT_BINDING_SOURCE,
+                formatPropertyName(declaringType, propertyName), requiredType.getJavaName()));
+    }
+
+    public static MarkupException invalidUnidirectionalBindingSource(SourceInfo sourceInfo, CtClass declaringType,
+                                                                     String propertyName, boolean function) {
+        return new MarkupException(sourceInfo, function
+            ? Diagnostic.newDiagnosticVariant(ErrorCode.INVALID_UNIDIRECTIONAL_BINDING_SOURCE,
+                                              "function", formatPropertyName(declaringType, propertyName))
+            : Diagnostic.newDiagnostic(ErrorCode.INVALID_UNIDIRECTIONAL_BINDING_SOURCE,
+                                       formatPropertyName(declaringType, propertyName)));
     }
 
     public static MarkupException invalidBidirectionalBindingSource(SourceInfo sourceInfo, CtClass declaringType, String propertyName) {

@@ -6,7 +6,6 @@ package org.jfxcore.compiler.bindings;
 import org.jfxcore.compiler.diagnostic.ErrorCode;
 import org.jfxcore.compiler.diagnostic.MarkupException;
 import org.jfxcore.compiler.generate.collections.SetObservableValueWrapperGenerator;
-import org.jfxcore.compiler.generate.collections.SetWrapperGenerator;
 import org.jfxcore.compiler.util.CompilerTestBase;
 import org.jfxcore.compiler.util.NameHelper;
 import org.jfxcore.compiler.util.TestExtension;
@@ -38,10 +37,10 @@ public class SetBindingTest extends CompilerTestBase {
 
     @SuppressWarnings("unused")
     public static class IndirectContext {
-        public Set<String> set1 = new HashSet<>(List.of("foo", "bar", "baz"));
-        public ObservableSet<String> set2 = FXCollections.observableSet("foo", "bar", "baz");
-        public ObjectProperty<Set<String>> set3 = new SimpleObjectProperty<>(new HashSet<>(List.of("foo", "bar", "baz")));
-        public ObjectProperty<ObservableSet<String>> set4 = new SimpleObjectProperty<>(FXCollections.observableSet("foo", "bar", "baz"));
+        public Set<String> set = new HashSet<>(List.of("foo", "bar", "baz"));
+        public ObservableSet<String> obsSet = FXCollections.observableSet("foo", "bar", "baz");
+        public ObjectProperty<Set<String>> propOfSet = new SimpleObjectProperty<>(new HashSet<>(List.of("foo", "bar", "baz")));
+        public ObjectProperty<ObservableSet<String>> propOfObsSet = new SimpleObjectProperty<>(FXCollections.observableSet("foo", "bar", "baz"));
     }
 
     @SuppressWarnings("unused")
@@ -51,20 +50,20 @@ public class SetBindingTest extends CompilerTestBase {
 
         public Set<Double> incompatibleSet1 = new HashSet<>();
 
-        public Set<String> set1 = new HashSet<>(List.of("foo", "bar", "baz"));
-        public ObservableSet<String> set2 = FXCollections.observableSet("foo", "bar", "baz");
-        public ObjectProperty<Set<String>> set3 = new SimpleObjectProperty<>(new HashSet<>(List.of("foo", "bar", "baz")));
-        public ObjectProperty<ObservableSet<String>> set4 = new SimpleObjectProperty<>(FXCollections.observableSet("foo", "bar", "baz"));
-        public ObservableValue<ObservableSet<String>> set4ReadOnly() { return set4; }
+        public Set<String> set = new HashSet<>(List.of("foo", "bar", "baz"));
+        public ObservableSet<String> obsSet = FXCollections.observableSet("foo", "bar", "baz");
+        public ObjectProperty<Set<String>> propOfSet = new SimpleObjectProperty<>(new HashSet<>(List.of("foo", "bar", "baz")));
+        public ObjectProperty<ObservableSet<String>> propOfObsSet = new SimpleObjectProperty<>(FXCollections.observableSet("foo", "bar", "baz"));
+        public ObservableValue<ObservableSet<String>> propOfObsSetReadOnly() { return propOfObsSet; }
 
         public final SetProperty<String> readOnlySetProp = new SimpleSetProperty<>(this, "readOnlySetProp");
         public ReadOnlySetProperty<String> readOnlySetPropProperty() { return readOnlySetProp; }
 
-        public final SetProperty<String> setProp = new SimpleSetProperty<>(this, "setProp", FXCollections.observableSet());
-        public SetProperty<String> setPropProperty() { return setProp; }
+        public final SetProperty<String> targetSetProp = new SimpleSetProperty<>(this, "targetSetProp", FXCollections.observableSet());
+        public SetProperty<String> targetSetPropProperty() { return targetSetProp; }
 
-        public final ObjectProperty<ObservableSet<String>> objectProp = new SimpleObjectProperty<>(this, "objectProp");
-        public ObjectProperty<ObservableSet<String>> objectPropProperty() { return objectProp; }
+        public final ObjectProperty<ObservableSet<String>> targetObjProp = new SimpleObjectProperty<>(this, "targetObjProp");
+        public ObjectProperty<ObservableSet<String>> targetObjPropProperty() { return targetObjProp; }
 
         private final ObservableSet<String> targetObservableSet = FXCollections.observableSet();
         public Collection<String> getTargetCollection() { return targetObservableSet; }
@@ -72,243 +71,278 @@ public class SetBindingTest extends CompilerTestBase {
         public ObservableSet<String> getTargetObservableSet() { return targetObservableSet; }
     }
 
-    private static String SET_WRAPPER;
     private static String OBSERVABLE_VALUE_WRAPPER;
     private static String ADD_REFERENCE_METHOD;
     private static String CLEAR_STALE_REFERENCES_METHOD;
 
     @BeforeAll
     public static void beforeAll() {
-        SET_WRAPPER = SetWrapperGenerator.CLASS_NAME;
         OBSERVABLE_VALUE_WRAPPER = SetObservableValueWrapperGenerator.CLASS_NAME;
         ADD_REFERENCE_METHOD = NameHelper.getMangledMethodName("addReference");
         CLEAR_STALE_REFERENCES_METHOD = NameHelper.getMangledMethodName("clearStaleReferences");
     }
 
+    /*
+     *  source:   Set
+     *  expected: error
+     */
     @Test
     public void Once_Binding_To_Vanilla_Set() {
-        SetTestPane root = compileAndRun("""
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <SetTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                         setProp="$set1" objectProp="$set1"/>
-        """);
+                         targetSetProp="$set"/>
+        """));
 
-        assertNotNewExpr(root, SET_WRAPPER, OBSERVABLE_VALUE_WRAPPER);
-        assertNotMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
-        assertEquals(3, root.setProp.size());
-
-        boolean[] flag = new boolean[1];
-        root.setProp.addListener((SetChangeListener<String>) c -> flag[0] = true);
-
-        root.set1.clear(); // Change the source set
-        assertFalse(flag[0]); // SetChangeListener was not invoked
-        assertEquals(0, root.setProp.size());
-
-        assertEquals(0, root.objectProp.get().size());
-        root.set1.add("qux");
-        assertTrue(root.objectProp.get().contains("qux"));
+        assertEquals(ErrorCode.CANNOT_CONVERT_SOURCE_TYPE, ex.getDiagnostic().getCode());
+        assertCodeHighlight("set", ex);
     }
 
+    /*
+     *  source:   ObservableSet
+     *  expected: target.setValue(source)
+     */
     @Test
     public void Once_Binding_To_ObservableSet() {
         SetTestPane root = compileAndRun("""
             <SetTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                         setProp="$set2" objectProp="$set2"/>
+                         targetSetProp="$obsSet" targetObjProp="$obsSet"/>
         """);
 
-        assertNotNewExpr(root, SET_WRAPPER, OBSERVABLE_VALUE_WRAPPER);
+        assertMethodCall(root, "setValue");
+        assertNotMethodCall(root, "getValue");
+        assertNotNewExpr(root, OBSERVABLE_VALUE_WRAPPER);
         assertNotMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
-        assertEquals(3, root.setProp.size());
+        assertEquals(3, root.targetSetProp.size());
 
         boolean[] flag1 = new boolean[1];
-        root.setProp.addListener((SetChangeListener<String>)c -> flag1[0] = true);
-        root.set2.clear(); // Change the source set
+        root.targetSetProp.addListener((SetChangeListener<String>)c -> flag1[0] = true);
+        root.obsSet.clear(); // Change the source set
         assertTrue(flag1[0]); // SetChangeListener was invoked
-        assertEquals(0, root.setProp.size());
+        assertEquals(0, root.targetSetProp.size());
 
-        assertEquals(0, root.objectProp.get().size());
+        assertEquals(0, root.targetObjProp.get().size());
         boolean[] flag2 = new boolean[1];
-        root.objectProp.addListener((observable, oldValue, newValue) -> flag2[0] = true);
-        root.set2.add("qux"); // Change the source set
+        root.targetObjProp.addListener((observable, oldValue, newValue) -> flag2[0] = true);
+        root.obsSet.add("qux"); // Change the source set
         assertFalse(flag2[0]); // ChangeListener was not invoked
-        assertTrue(root.objectProp.get().contains("qux"));
+        assertTrue(root.targetObjProp.get().contains("qux"));
     }
 
+    /*
+     *  source:   ObservableValue<Set>
+     *  expected: error
+     */
     @Test
     public void Once_Binding_To_ObservableValue_Of_Vanilla_Set() {
-        SetTestPane root = compileAndRun("""
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <SetTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                         setProp="$set3" objectProp="$set3"/>
-        """);
+                         targetSetProp="$propOfSet"/>
+        """));
 
-        assertNotNewExpr(root, SET_WRAPPER, OBSERVABLE_VALUE_WRAPPER);
-        assertNotMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
-        assertEquals(3, root.setProp.size());
-
-        boolean[] flag1 = new boolean[1];
-        root.setProp.addListener((SetChangeListener<String>)c -> flag1[0] = true);
-        root.set3.getValue().clear(); // Change the source set
-        assertFalse(flag1[0]); // SetChangeListener was not invoked
-        assertEquals(0, root.setProp.size());
-
-        assertEquals(0, root.objectProp.get().size());
-        boolean[] flag2 = new boolean[1];
-        root.objectProp.addListener((observable, oldValue, newValue) -> flag2[0] = true);
-        root.set3.getValue().add("qux"); // Change the source set
-        assertFalse(flag2[0]); // ChangeListener was not invoked
-        assertTrue(root.objectProp.get().contains("qux"));
-
-        flag1[0] = flag2[0] = false;
-        root.set3.setValue(FXCollections.observableSet("baz")); // Replace the entire source set
-        assertFalse(flag1[0]); // SetChangeListener was not invoked
-        assertFalse(flag2[0]); // ChangeListener was not invoked
+        assertEquals(ErrorCode.CANNOT_CONVERT_SOURCE_TYPE, ex.getDiagnostic().getCode());
+        assertCodeHighlight("propOfSet", ex);
     }
 
+    /*
+     *  source:   ObservableValue<ObservableSet>
+     *  expected: target.setValue(source.getValue())
+     */
     @Test
     public void Once_Binding_To_ObservableValue_Of_ObservableSet() {
         SetTestPane root = compileAndRun("""
             <SetTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                         setProp="$set4" objectProp="$set4"/>
+                         targetSetProp="$propOfObsSet" targetObjProp="$propOfObsSet"/>
         """);
 
-        assertNotNewExpr(root, SET_WRAPPER, OBSERVABLE_VALUE_WRAPPER);
+        assertMethodCall(root, "setValue", "getValue");
+        assertNotMethodCall(root, "addAll");
+        assertNotNewExpr(root, OBSERVABLE_VALUE_WRAPPER);
         assertNotMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
-        assertEquals(3, root.setProp.size());
+        assertEquals(3, root.targetSetProp.size());
         boolean[] flag1 = new boolean[1];
-        root.setProp.addListener((SetChangeListener<String>)c -> flag1[0] = true);
-        root.set4.getValue().clear(); // Change the source set
+        root.targetSetProp.addListener((SetChangeListener<String>)c -> flag1[0] = true);
+        root.propOfObsSet.getValue().clear(); // Change the source set
         assertTrue(flag1[0]); // SetChangeListener was invoked
-        assertEquals(0, root.setProp.size());
+        assertEquals(0, root.targetSetProp.size());
 
-        assertEquals(0, root.objectProp.get().size());
+        assertEquals(0, root.targetObjProp.get().size());
         boolean[] flag2 = new boolean[1];
-        root.objectProp.addListener((observable, oldValue, newValue) -> flag2[0] = true);
-        root.set4.getValue().add("qux"); // Change the source set
+        root.targetObjProp.addListener((observable, oldValue, newValue) -> flag2[0] = true);
+        root.propOfObsSet.getValue().add("qux"); // Change the source set
         assertFalse(flag2[0]); // ChangeListener was not invoked
-        assertTrue(root.objectProp.get().contains("qux"));
+        assertTrue(root.targetObjProp.get().contains("qux"));
 
         flag1[0] = flag2[0] = false;
-        root.set4.setValue(FXCollections.observableSet("baz")); // Replace the entire source set
+        root.propOfObsSet.setValue(FXCollections.observableSet("baz")); // Replace the entire source set
         assertFalse(flag1[0]); // SetChangeListener was not invoked
         assertFalse(flag2[0]); // ChangeListener was not invoked
     }
 
+    /*
+     *  source:   Set
+     *  expected: target.addAll(source)
+     */
     @Test
     public void Once_ContentBinding_To_Vanilla_Set() {
         SetTestPane root = compileAndRun("""
             <SetTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                         setProp="$..set1"/>
+                         targetSetProp="$..set"/>
         """);
 
-        assertNotNewExpr(root, SET_WRAPPER, OBSERVABLE_VALUE_WRAPPER);
+        assertMethodCall(root, "addAll");
+        assertNotMethodCall(root, "setValue", "getValue");
+        assertNotNewExpr(root, OBSERVABLE_VALUE_WRAPPER);
         assertNotMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
-        assertEquals(3, root.setProp.size());
-        root.set1.clear(); // Change the source set
-        assertEquals(3, root.setProp.size()); // Target set is unchanged
+        assertEquals(3, root.targetSetProp.size());
+        root.set.clear(); // Change the source set
+        assertEquals(3, root.targetSetProp.size()); // Target set is unchanged
     }
 
+    /*
+     *  source:   Set
+     *  expected: target.addAll(source)
+     */
     @Test
     public void Once_ContentBinding_To_Vanilla_Set_Indirect() {
         SetTestPane root = compileAndRun("""
             <SetTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                         setProp="$..indirect.set1"/>
+                         targetSetProp="$..indirect.set"/>
         """);
 
-        assertNotNewExpr(root, SET_WRAPPER, OBSERVABLE_VALUE_WRAPPER);
+        assertMethodCall(root, "addAll", "getValue");
+        assertNotMethodCall(root, "setValue");
+        assertNotNewExpr(root, OBSERVABLE_VALUE_WRAPPER);
         assertNotMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
-        assertEquals(3, root.setProp.size());
-        root.indirect.get().set1.clear(); // Change the source set
-        assertEquals(3, root.setProp.size()); // Target set is unchanged
+        assertEquals(3, root.targetSetProp.size());
+        root.indirect.get().set.clear(); // Change the source set
+        assertEquals(3, root.targetSetProp.size()); // Target set is unchanged
     }
 
+    /*
+     *  source:   ObservableSet
+     *  expected: target.addAll(source)
+     */
     @Test
     public void Once_ContentBinding_To_Observable_Set() {
         SetTestPane root = compileAndRun("""
             <SetTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                         setProp="$..set2"/>
+                         targetSetProp="$..obsSet"/>
         """);
 
-        assertNotNewExpr(root, SET_WRAPPER, OBSERVABLE_VALUE_WRAPPER);
+        assertMethodCall(root, "addAll");
+        assertNotMethodCall(root, "setValue", "getValue");
+        assertNotNewExpr(root, OBSERVABLE_VALUE_WRAPPER);
         assertNotMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
-        assertEquals(3, root.setProp.size());
-        root.set1.clear(); // Change the source set
-        assertEquals(3, root.setProp.size()); // Target set is unchanged
+        assertEquals(3, root.targetSetProp.size());
+        root.set.clear(); // Change the source set
+        assertEquals(3, root.targetSetProp.size()); // Target set is unchanged
     }
 
+    /*
+     *  source:   ObservableSet
+     *  expected: target.addAll(source)
+     */
     @Test
     public void Once_ContentBinding_To_Observable_Set_Indirect() {
         SetTestPane root = compileAndRun("""
             <SetTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                         setProp="$..indirect.set2"/>
+                         targetSetProp="$..indirect.obsSet"/>
         """);
 
-        assertNotNewExpr(root, SET_WRAPPER, OBSERVABLE_VALUE_WRAPPER);
+        assertMethodCall(root, "addAll", "getValue");
+        assertNotMethodCall(root, "setValue");
+        assertNotNewExpr(root, OBSERVABLE_VALUE_WRAPPER);
         assertNotMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
-        assertEquals(3, root.setProp.size());
-        root.indirect.get().set1.clear(); // Change the source set
-        assertEquals(3, root.setProp.size()); // Target set is unchanged
+        assertEquals(3, root.targetSetProp.size());
+        root.indirect.get().set.clear(); // Change the source set
+        assertEquals(3, root.targetSetProp.size()); // Target set is unchanged
     }
 
+    /*
+     *  source:   ObservableValue<Set>
+     *  expected: target.addAll(source.getValue())
+     */
     @Test
     public void Once_ContentBinding_To_ObservableValue_Of_Vanilla_Set() {
         SetTestPane root = compileAndRun("""
             <SetTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                         setProp="$..set3"/>
+                         targetSetProp="$..propOfSet"/>
         """);
 
-        assertNotNewExpr(root, SET_WRAPPER, OBSERVABLE_VALUE_WRAPPER);
+        assertMethodCall(root, "addAll", "getValue");
+        assertNotMethodCall(root, "setValue");
+        assertNotNewExpr(root, OBSERVABLE_VALUE_WRAPPER);
         assertNotMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
-        assertEquals(3, root.setProp.size());
-        root.indirect.get().set1.clear(); // Change the source set
-        assertEquals(3, root.setProp.size()); // Target set is unchanged
+        assertEquals(3, root.targetSetProp.size());
+        root.indirect.get().set.clear(); // Change the source set
+        assertEquals(3, root.targetSetProp.size()); // Target set is unchanged
     }
 
+    /*
+     *  source:   ObservableValue<Set>
+     *  expected: target.addAll(source.getValue())
+     */
     @Test
     public void Once_ContentBinding_To_ObservableValue_Of_Vanilla_Set_Indirect() {
         SetTestPane root = compileAndRun("""
             <SetTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                         setProp="$..indirect.set3"/>
+                         targetSetProp="$..indirect.propOfSet"/>
         """);
 
-        assertNotNewExpr(root, SET_WRAPPER, OBSERVABLE_VALUE_WRAPPER);
+        assertMethodCall(root, "addAll", "getValue");
+        assertNotMethodCall(root, "setValue");
+        assertNotNewExpr(root, OBSERVABLE_VALUE_WRAPPER);
         assertNotMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
-        assertEquals(3, root.setProp.size());
-        root.indirect.get().set1.clear(); // Change the source set
-        assertEquals(3, root.setProp.size()); // Target set is unchanged
+        assertEquals(3, root.targetSetProp.size());
+        root.indirect.get().set.clear(); // Change the source set
+        assertEquals(3, root.targetSetProp.size()); // Target set is unchanged
     }
 
+    /*
+     *  source:   ObservableValue<ObservableSet>
+     *  expected: target.addAll(source.getValue())
+     */
     @Test
     public void Once_ContentBinding_To_ObservableValue_Of_Observable_Set() {
         SetTestPane root = compileAndRun("""
             <SetTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                         setProp="$..set4"/>
+                         targetSetProp="$..propOfObsSet"/>
         """);
 
-        assertNotNewExpr(root, SET_WRAPPER, OBSERVABLE_VALUE_WRAPPER);
+        assertMethodCall(root, "addAll", "getValue");
+        assertNotMethodCall(root, "setValue");
+        assertNotNewExpr(root, OBSERVABLE_VALUE_WRAPPER);
         assertNotMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
-        assertEquals(3, root.setProp.size());
-        root.indirect.get().set1.clear(); // Change the source set
-        assertEquals(3, root.setProp.size()); // Target set is unchanged
+        assertEquals(3, root.targetSetProp.size());
+        root.indirect.get().set.clear(); // Change the source set
+        assertEquals(3, root.targetSetProp.size()); // Target set is unchanged
     }
 
+    /*
+     *  source:   ObservableValue<ObservableSet>
+     *  expected: target.addAll(source.getValue())
+     */
     @Test
     public void Once_ContentBinding_To_ObservableValue_Of_Observable_Set_Indirect() {
         SetTestPane root = compileAndRun("""
             <SetTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                         setProp="$..indirect.set4"/>
+                         targetSetProp="$..indirect.propOfObsSet"/>
         """);
 
-        assertNotNewExpr(root, SET_WRAPPER, OBSERVABLE_VALUE_WRAPPER);
+        assertMethodCall(root, "addAll", "getValue");
+        assertNotMethodCall(root, "setValue");
+        assertNotNewExpr(root, OBSERVABLE_VALUE_WRAPPER);
         assertNotMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
-        assertEquals(3, root.setProp.size());
-        root.indirect.get().set1.clear(); // Change the source set
-        assertEquals(3, root.setProp.size()); // Target set is unchanged
+        assertEquals(3, root.targetSetProp.size());
+        root.indirect.get().set.clear(); // Change the source set
+        assertEquals(3, root.targetSetProp.size()); // Target set is unchanged
     }
 
     @Test
     public void Once_Binding_Fails_For_ReadOnlySetProperty() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <SetTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                         readOnlySetProp="$set1"/>
+                         readOnlySetProp="$set"/>
         """));
 
         assertEquals(ErrorCode.CANNOT_MODIFY_READONLY_PROPERTY, ex.getDiagnostic().getCode());
@@ -318,7 +352,7 @@ public class SetBindingTest extends CompilerTestBase {
     public void Once_Binding_Fails_For_Incompatible_Set() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <SetTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                         setProp="$incompatibleSet1"/>
+                         targetSetProp="$incompatibleSet1"/>
         """));
 
         assertEquals(ErrorCode.CANNOT_CONVERT_SOURCE_TYPE, ex.getDiagnostic().getCode());
@@ -326,32 +360,17 @@ public class SetBindingTest extends CompilerTestBase {
 
     /*
      *  source:   Set
-     *  expected: target.bind(new SetWrapper(source))
+     *  expected: error
      */
     @Test
     public void Unidirectional_Binding_To_Vanilla_Set() {
-        SetTestPane root = compileAndRun("""
-            <?import org.jfxcore.compiler.bindings.SetBindingTest.SetTestPane?>
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <SetTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                         setProp="${set1}" objectProp="${set1}"/>
-        """);
+                         targetSetProp="${set}"/>
+        """));
 
-        assertNewExpr(root, SET_WRAPPER);
-        assertNotNewExpr(root, "Constant");
-        assertNotMethodCall(root, ADD_REFERENCE_METHOD);
-        assertNotMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
-        assertEquals(3, root.setProp.size());
-
-        boolean[] flag = new boolean[1];
-        root.setProp.addListener((SetChangeListener<String>)c -> flag[0] = true);
-
-        root.set1.clear();
-        assertFalse(flag[0]);
-        assertEquals(0, root.setProp.size());
-
-        assertEquals(0, root.objectProp.get().size());
-        root.set1.add("qux");
-        assertTrue(root.objectProp.get().contains("qux"));
+        assertEquals(ErrorCode.CANNOT_CONVERT_SOURCE_TYPE, ex.getDiagnostic().getCode());
+        assertCodeHighlight("set", ex);
     }
 
     /*
@@ -360,29 +379,13 @@ public class SetBindingTest extends CompilerTestBase {
      */
     @Test
     public void Unidirectional_Binding_To_Vanilla_Set_Indirect() {
-        SetTestPane root = compileAndRun("""
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <SetTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                         setProp="${indirect.set1}" objectProp="${indirect.set1}"/>
-        """);
+                         targetSetProp="${indirect.set}"/>
+        """));
 
-        assertNewExpr(root, OBSERVABLE_VALUE_WRAPPER);
-        assertNotNewExpr(root, SET_WRAPPER, "Constant");
-        assertNotMethodCall(root, ADD_REFERENCE_METHOD);
-        assertNotMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
-        assertEquals(3, root.setProp.size());
-
-        boolean[] flag = new boolean[1];
-        root.setProp.addListener((SetChangeListener<String>)c -> flag[0] = true);
-
-        root.indirect.get().set1.clear();
-        assertFalse(flag[0]);
-        assertEquals(0, root.setProp.size());
-        assertEquals(0, root.objectProp.get().size());
-
-        root.indirect.setValue(new IndirectContext());
-        assertTrue(flag[0]);
-        assertEquals(3, root.setProp.size());
-        assertEquals(3, root.objectProp.get().size());
+        assertEquals(ErrorCode.CANNOT_CONVERT_SOURCE_TYPE, ex.getDiagnostic().getCode());
+        assertCodeHighlight("indirect.set", ex);
     }
 
     /*
@@ -393,10 +396,11 @@ public class SetBindingTest extends CompilerTestBase {
     public void Unidirectional_ContentBinding_To_Vanilla_Set_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <SetTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                         setProp="${..set1}"/>
+                         targetSetProp="${..set}"/>
         """));
 
         assertEquals(ErrorCode.INVALID_CONTENT_BINDING_SOURCE, ex.getDiagnostic().getCode());
+        assertCodeHighlight("set", ex);
     }
 
     /*
@@ -407,41 +411,26 @@ public class SetBindingTest extends CompilerTestBase {
     public void Unidirectional_ContentBinding_Fails_For_ObjectProperty() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <SetTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                         objectProp="${..set1}"/>
+                         targetObjProp="${..set}"/>
         """));
 
         assertEquals(ErrorCode.INVALID_CONTENT_BINDING_TARGET, ex.getDiagnostic().getCode());
+        assertCodeHighlight("targetObjProp=\"${..set}\"", ex);
     }
 
     /*
      *  source:   ObservableSet
-     *  expected: target.bind(new ObjectConstant(source))
+     *  expected: error
      */
     @Test
     public void Unidirectional_Binding_To_ObservableSet() {
-        SetTestPane root = compileAndRun("""
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <SetTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                         setProp="${set2}" objectProp="${set2}"/>
-        """);
+                         targetSetProp="${obsSet}"/>
+        """));
 
-        assertNewExpr(root, "ObjectConstant");
-        assertNotNewExpr(root, OBSERVABLE_VALUE_WRAPPER, SET_WRAPPER);
-        assertNotMethodCall(root, ADD_REFERENCE_METHOD);
-        assertNotMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
-
-        assertEquals(3, root.setProp.size());
-        boolean[] flag1 = new boolean[1];
-        root.setProp.addListener((SetChangeListener<String>)c -> flag1[0] = true);
-        root.set2.clear();
-        assertTrue(flag1[0]);
-        assertEquals(0, root.setProp.size());
-
-        assertEquals(0, root.objectProp.get().size());
-        boolean[] flag2 = new boolean[1];
-        root.objectProp.addListener((observable, oldValue, newValue) -> flag2[0] = true);
-        root.set2.add("qux");
-        assertFalse(flag2[0]);
-        assertTrue(root.objectProp.get().contains("qux"));
+        assertEquals(ErrorCode.INVALID_UNIDIRECTIONAL_BINDING_SOURCE, ex.getDiagnostic().getCode());
+        assertCodeHighlight("obsSet", ex);
     }
 
     /*
@@ -452,79 +441,79 @@ public class SetBindingTest extends CompilerTestBase {
     public void Unidirectional_ContentBinding_To_ObservableSet() {
         SetTestPane root = compileAndRun("""
             <SetTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                         setProp="${..set2}"/>
+                         targetSetProp="${..obsSet}"/>
         """);
 
-        assertNotNewExpr(root, "Constant", OBSERVABLE_VALUE_WRAPPER, SET_WRAPPER);
+        assertMethodCall(root, "bindContent");
+        assertNotMethodCall(root, "setValue", "getValue");
+        assertNotNewExpr(root, OBSERVABLE_VALUE_WRAPPER);
         assertNotMethodCall(root, ADD_REFERENCE_METHOD);
         assertNotMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
 
-        assertEquals(3, root.setProp.size());
+        assertEquals(3, root.targetSetProp.size());
         boolean[] flag1 = new boolean[1];
-        root.setProp.addListener((SetChangeListener<String>)c -> flag1[0] = true);
-        root.set2.clear();
+        root.targetSetProp.addListener((SetChangeListener<String>)c -> flag1[0] = true);
+        root.obsSet.clear();
         assertTrue(flag1[0]);
-        assertEquals(0, root.setProp.size());
+        assertEquals(0, root.targetSetProp.size());
     }
 
     /*
-     *  source:   ObservableValue<Set>
-     *  expected: target.bind(new SetObservableValueWrapper(source))
-     */
-    @Test
-    public void Unidirectional_Binding_To_ObservableValue_Of_Vanilla_Set() throws Exception {
-        SetTestPane root = compileAndRun("""
-            <SetTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                         setProp="${set3}" objectProp="${set3}"/>
-        """);
-
-        assertNewExpr(root, OBSERVABLE_VALUE_WRAPPER);
-        assertNotNewExpr(root, "Constant", SET_WRAPPER);
-        assertNotMethodCall(root, ADD_REFERENCE_METHOD);
-        assertNotMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
-
-        assertEquals(3, root.setProp.size());
-        boolean[] flag = new boolean[1];
-        root.setProp.addListener((SetChangeListener<String>)c -> flag[0] = true);
-        root.set3.getValue().clear(); // Change the source set
-        assertFalse(flag[0]); // SetChangeListener was not invoked
-        assertEquals(0, root.setProp.size());
-
-        flag[0] = false;
-        root.set3.setValue(FXCollections.observableSet("baz")); // Replace the entire source set
-        assertEquals(1, root.setProp.size());
-        assertTrue(flag[0]); // SetChangeListener was invoked
-
-        // create a new instance to reset all changes
-        root = newInstance(root);
-
-        flag[0] = false;
-        root.objectProp.addListener((observable, oldValue, newValue) -> flag[0] = true);
-        root.set3.getValue().clear(); // Change the source set
-        assertFalse(flag[0]); // ChangeListener was not invoked
-        assertEquals(0, root.objectProp.getValue().size());
-
-        flag[0] = false;
-        root.set3.setValue(FXCollections.observableSet("baz")); // Replace the entire source set
-        assertEquals(1, root.objectProp.getValue().size());
-        assertTrue(flag[0]); // ChangeListener was invoked
-    }
-
-    /*
-     *  source:   ObservableValue<Set>
+     *  source:   ObservableSet
      *  expected: target.bindContent(new SetObservableValueWrapper(source))
      */
     @Test
-    public void Unidirectional_ContentBinding_To_ObservableValue_Of_Vanilla_Set() {
+    public void Unidirectional_ContentBinding_To_ObservableSet_Indirect() {
         SetTestPane root = compileAndRun("""
             <SetTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                         setProp="${..set3}"/>
+                         targetSetProp="${..indirect.obsSet}"/>
         """);
 
+        assertMethodCall(root, "bindContent");
+        assertNotMethodCall(root, "setValue", "getValue");
         assertNewExpr(root, OBSERVABLE_VALUE_WRAPPER);
-        assertNotNewExpr(root, "Constant", SET_WRAPPER);
         assertMethodCall(root, ADD_REFERENCE_METHOD);
         assertMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
+
+        assertEquals(3, root.targetSetProp.size());
+        boolean[] flag1 = new boolean[1];
+        root.targetSetProp.addListener((SetChangeListener<String>)c -> flag1[0] = !flag1[0]);
+        root.indirect.get().obsSet.clear();
+        assertTrue(flag1[0]);
+        assertEquals(0, root.targetSetProp.size());
+        root.indirect.set(new IndirectContext());
+        assertFalse(flag1[0]);
+        assertEquals(3, root.targetSetProp.size());
+    }
+
+    /*
+     *  source:   ObservableValue<Set>
+     *  expected: error
+     */
+    @Test
+    public void Unidirectional_Binding_To_ObservableValue_Of_Vanilla_Set() {
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <SetTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                         targetSetProp="${propOfSet}"/>
+        """));
+
+        assertEquals(ErrorCode.CANNOT_CONVERT_SOURCE_TYPE, ex.getDiagnostic().getCode());
+        assertCodeHighlight("propOfSet", ex);
+    }
+
+    /*
+     *  source:   ObservableValue<Set>
+     *  expected: error
+     */
+    @Test
+    public void Unidirectional_ContentBinding_To_ObservableValue_Of_Vanilla_Set() {
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <SetTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                         targetSetProp="${..propOfSet}"/>
+        """));
+
+        assertEquals(ErrorCode.INVALID_CONTENT_BINDING_SOURCE, ex.getDiagnostic().getCode());
+        assertCodeHighlight("propOfSet", ex);
     }
 
     /*
@@ -535,59 +524,47 @@ public class SetBindingTest extends CompilerTestBase {
     public void Unidirectional_Binding_To_ObservableValue_Of_ObservableList() {
         SetTestPane root = compileAndRun("""
             <SetTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                         setProp="${set4}" objectProp="${set4}"/>
+                         targetSetProp="${propOfObsSet}" targetObjProp="${propOfObsSet}"/>
         """);
 
-        assertNotNewExpr(root, "Constant", OBSERVABLE_VALUE_WRAPPER, SET_WRAPPER);
+        assertMethodCall(root, "bind");
+        assertNotNewExpr(root, OBSERVABLE_VALUE_WRAPPER);
         assertNotMethodCall(root, ADD_REFERENCE_METHOD);
         assertNotMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
 
-        assertEquals(3, root.setProp.size());
+        assertEquals(3, root.targetSetProp.size());
         boolean[] flag1 = new boolean[1];
-        root.setProp.addListener((SetChangeListener<String>)c -> flag1[0] = true);
-        root.set4.getValue().clear(); // Change the source set
+        root.targetSetProp.addListener((SetChangeListener<String>)c -> flag1[0] = true);
+        root.propOfObsSet.getValue().clear(); // Change the source set
         assertTrue(flag1[0]); // SetChangeListener was invoked
-        assertEquals(0, root.setProp.size());
+        assertEquals(0, root.targetSetProp.size());
 
-        assertEquals(0, root.objectProp.get().size());
+        assertEquals(0, root.targetObjProp.get().size());
         boolean[] flag2 = new boolean[1];
-        root.objectProp.addListener((observable, oldValue, newValue) -> flag2[0] = true);
-        root.set4.getValue().add("qux"); // Change the source set
+        root.targetObjProp.addListener((observable, oldValue, newValue) -> flag2[0] = true);
+        root.propOfObsSet.getValue().add("qux"); // Change the source set
         assertFalse(flag2[0]); // ChangeListener was not invoked
-        assertTrue(root.objectProp.get().contains("qux"));
+        assertTrue(root.targetObjProp.get().contains("qux"));
 
         flag1[0] = flag2[0] = false;
-        root.set4.setValue(FXCollections.observableSet("baz")); // Replace the entire source set
+        root.propOfObsSet.setValue(FXCollections.observableSet("baz")); // Replace the entire source set
         assertTrue(flag1[0]); // SetChangeListener was invoked
         assertTrue(flag2[0]); // ChangeListener was invoked
     }
 
     /*
      *  source:   ObservableValue<ObservableSet>
-     *  expected: target.bindContent(new SetObservableValueWrapper(source))
+     *  expected: error
      */
     @Test
     public void Unidirectional_ContentBinding_To_ObservableValue_Of_ObservableSet() {
-        SetTestPane root = compileAndRun("""
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <SetTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                         setProp="${..set4}"/>
-        """);
+                         targetSetProp="${..propOfObsSet}"/>
+        """));
 
-        assertNewExpr(root, OBSERVABLE_VALUE_WRAPPER);
-        assertNotNewExpr(root, "Constant", SET_WRAPPER);
-        assertMethodCall(root, ADD_REFERENCE_METHOD);
-        assertMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
-
-        assertEquals(3, root.setProp.size());
-        boolean[] flag1 = new boolean[1];
-        root.setProp.addListener((SetChangeListener<String>)c -> flag1[0] = true);
-        root.set4.getValue().clear(); // Change the source set
-        assertTrue(flag1[0]); // SetChangeListener was invoked
-        assertEquals(0, root.setProp.size());
-
-        flag1[0] = false;
-        root.set4.setValue(FXCollections.observableSet("baz")); // Replace the entire source set
-        assertTrue(flag1[0]); // SetChangeListener was invoked
+        assertEquals(ErrorCode.INVALID_CONTENT_BINDING_SOURCE, ex.getDiagnostic().getCode());
+        assertCodeHighlight("propOfObsSet", ex);
     }
 
     /*
@@ -598,17 +575,19 @@ public class SetBindingTest extends CompilerTestBase {
     public void Bidirectional_Binding_To_Vanilla_Set_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <SetTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                         setProp="#{set1}"/>
+                         targetSetProp="#{set}"/>
         """));
 
         assertEquals(ErrorCode.INVALID_BIDIRECTIONAL_BINDING_SOURCE, ex.getDiagnostic().getCode());
+        assertCodeHighlight("set", ex);
 
         ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <SetTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                         objectProp="#{set1}"/>
+                         targetObjProp="#{set}"/>
         """));
 
         assertEquals(ErrorCode.INVALID_BIDIRECTIONAL_BINDING_SOURCE, ex.getDiagnostic().getCode());
+        assertCodeHighlight("set", ex);
     }
 
     /*
@@ -619,10 +598,11 @@ public class SetBindingTest extends CompilerTestBase {
     public void Bidirectional_ContentBinding_To_Vanilla_Set_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <SetTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                         setProp="#{..set1}"/>
+                         targetSetProp="#{..set}"/>
         """));
 
         assertEquals(ErrorCode.INVALID_BIDIRECTIONAL_CONTENT_BINDING_SOURCE, ex.getDiagnostic().getCode());
+        assertCodeHighlight("set", ex);
     }
 
     /*
@@ -633,17 +613,19 @@ public class SetBindingTest extends CompilerTestBase {
     public void Bidirectional_Binding_To_ObservableSet_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <SetTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                         setProp="#{set2}"/>
+                         targetSetProp="#{obsSet}"/>
         """));
 
         assertEquals(ErrorCode.INVALID_BIDIRECTIONAL_BINDING_SOURCE, ex.getDiagnostic().getCode());
+        assertCodeHighlight("obsSet", ex);
 
         ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <SetTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                         objectProp="#{set2}"/>
+                         targetObjProp="#{obsSet}"/>
         """));
 
         assertEquals(ErrorCode.INVALID_BIDIRECTIONAL_BINDING_SOURCE, ex.getDiagnostic().getCode());
+        assertCodeHighlight("obsSet", ex);
     }
 
     /*
@@ -654,19 +636,20 @@ public class SetBindingTest extends CompilerTestBase {
     public void Bidirectional_ContentBinding_To_ObservableSet() {
         SetTestPane root = compileAndRun("""
             <SetTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                         setProp="#{..set2}"/>
+                         targetSetProp="#{..obsSet}"/>
         """);
 
-        assertNotNewExpr(root, "Constant", OBSERVABLE_VALUE_WRAPPER, SET_WRAPPER);
+        assertMethodCall(root, "bindContentBidirectional");
+        assertNotNewExpr(root, OBSERVABLE_VALUE_WRAPPER);
         assertNotMethodCall(root, ADD_REFERENCE_METHOD);
         assertNotMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
 
-        assertEquals(3, root.setProp.size());
+        assertEquals(3, root.targetSetProp.size());
         boolean[] flag1 = new boolean[1];
-        root.setProp.addListener((SetChangeListener<String>)c -> flag1[0] = true);
-        root.set2.clear();
+        root.targetSetProp.addListener((SetChangeListener<String>)c -> flag1[0] = true);
+        root.obsSet.clear();
         assertTrue(flag1[0]);
-        assertEquals(0, root.setProp.size());
+        assertEquals(0, root.targetSetProp.size());
     }
 
     /*
@@ -677,10 +660,11 @@ public class SetBindingTest extends CompilerTestBase {
     public void Bidirectional_Binding_To_ObservableValue_Of_Vanilla_Set_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <SetTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                         setProp="#{set3}"/>
+                         targetSetProp="#{propOfSet}"/>
         """));
 
         assertEquals(ErrorCode.SOURCE_TYPE_MISMATCH, ex.getDiagnostic().getCode());
+        assertCodeHighlight("propOfSet", ex);
     }
 
     /*
@@ -691,10 +675,11 @@ public class SetBindingTest extends CompilerTestBase {
     public void Bidirectional_ContentBinding_To_ObservableValue_Of_Vanilla_Set_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <SetTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                         setProp="#{..set3}"/>
+                         targetSetProp="#{..propOfSet}"/>
         """));
 
         assertEquals(ErrorCode.INVALID_BIDIRECTIONAL_CONTENT_BINDING_SOURCE, ex.getDiagnostic().getCode());
+        assertCodeHighlight("propOfSet", ex);
     }
 
     /*
@@ -705,33 +690,28 @@ public class SetBindingTest extends CompilerTestBase {
     public void Bidirectional_Binding_To_Property_Of_ObservableSet() {
         SetTestPane root = compileAndRun("""
             <SetTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                         setProp="#{set4}"/>
+                         targetSetProp="#{propOfObsSet}"/>
         """);
 
-        assertNotNewExpr(root, OBSERVABLE_VALUE_WRAPPER, SET_WRAPPER, "Constant");
+        assertMethodCall(root, "bindBidirectional");
+        assertNotNewExpr(root, OBSERVABLE_VALUE_WRAPPER);
         assertNotMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
-        assertEquals(root.set4.get(), root.setProp);
+        assertEquals(root.propOfObsSet.get(), root.targetSetProp);
     }
 
     /*
      * source:   Property<ObservableSet>
-     * expected: target.bindContentBidirectional(new SetObservableValueWrapper(source))
+     * expected: error
      */
     @Test
     public void Bidirectional_ContentBinding_To_Property_Of_ObservableSet() {
-        SetTestPane root = compileAndRun("""
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <SetTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                         setProp="#{..set4}"/>
-        """);
+                         targetSetProp="#{..propOfObsSet}"/>
+        """));
 
-        assertNewExpr(root, OBSERVABLE_VALUE_WRAPPER);
-        assertNotNewExpr(root, SET_WRAPPER, "Constant");
-        assertMethodCall(root, ADD_REFERENCE_METHOD);
-        assertMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
-
-        gc(); // verify that the generated wrapper is not prematurely collected
-        root.set4.set(FXCollections.observableSet("123"));
-        assertEquals(Set.of("123"), root.setProp.get());
+        assertEquals(ErrorCode.INVALID_BIDIRECTIONAL_CONTENT_BINDING_SOURCE, ex.getDiagnostic().getCode());
+        assertCodeHighlight("propOfObsSet", ex);
     }
 
     /*
@@ -742,10 +722,11 @@ public class SetBindingTest extends CompilerTestBase {
     public void Bidirectional_Binding_To_ReadOnlyObservableValue_Of_ObservableSet_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <SetTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                         setProp="#{set4ReadOnly}"/>
+                         targetSetProp="#{propOfObsSetReadOnly}"/>
         """));
 
         assertEquals(ErrorCode.INVALID_BIDIRECTIONAL_BINDING_SOURCE, ex.getDiagnostic().getCode());
+        assertCodeHighlight("propOfObsSetReadOnly", ex);
     }
 
     /*
@@ -754,24 +735,12 @@ public class SetBindingTest extends CompilerTestBase {
      */
     @Test
     public void Bidirectional_ContentBinding_To_ReadOnlyObservableValue_Of_ObservableSet() {
-        SetTestPane root = compileAndRun("""
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <SetTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                         setProp="#{..set4ReadOnly}"/>
-        """);
+                         targetSetProp="#{..propOfObsSetReadOnly}"/>
+        """));
 
-        assertNewExpr(root, OBSERVABLE_VALUE_WRAPPER);
-        assertNotNewExpr(root, "Constant", SET_WRAPPER);
-        assertMethodCall(root, ADD_REFERENCE_METHOD);
-        assertMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
+        assertEquals(ErrorCode.INVALID_BIDIRECTIONAL_CONTENT_BINDING_SOURCE, ex.getDiagnostic().getCode());
+        assertCodeHighlight("propOfObsSetReadOnly", ex);
     }
-
-    @SuppressWarnings("unchecked")
-    private <T> T newInstance(T object) throws Exception {
-        object = (T)object.getClass().getConstructor().newInstance();
-        java.lang.reflect.Method method = object.getClass().getDeclaredMethod("initializeComponent");
-        method.setAccessible(true);
-        method.invoke(object);
-        return object;
-    }
-
 }

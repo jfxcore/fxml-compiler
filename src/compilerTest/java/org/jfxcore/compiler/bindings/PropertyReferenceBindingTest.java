@@ -144,7 +144,7 @@ public class PropertyReferenceBindingTest extends CompilerTestBase {
     public void Select_PropertyReference_Directly() {
         TestPane root = compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                      id="${::context.name}"/>
+                      id="$::context.name"/>
         """);
 
         assertEquals("context", root.getId());

@@ -30,7 +30,6 @@ import java.util.Set;
 
 import static javassist.CtClass.*;
 import static org.jfxcore.compiler.generate.SharedMethodImpls.*;
-import static org.jfxcore.compiler.generate.collections.SetWrapperGenerator.*;
 import static org.jfxcore.compiler.util.Classes.*;
 import static org.jfxcore.compiler.util.Descriptors.*;
 
@@ -53,6 +52,12 @@ public class SetObservableValueWrapperGenerator extends ClassGenerator {
     private static final String OBSERVABLE_FIELD = "observable";
     private static final String WEAK_SET_CHANGE_LISTENER_FIELD = "weakSetChangeListener";
     private static final String VALID_FIELD = "valid";
+    private static final String ROOT_REF = "root";
+    private static final String VALUE_FIELD = "value";
+    private static final String ADAPTER_CHANGE_FIELD = "change";
+    private static final String INVALIDATION_LISTENER_FIELD = "invalidationListener";
+    private static final String CHANGE_LISTENER_FIELD = "changeListener";
+    private static final String SET_CHANGE_LISTENER_FIELD = "setChangeListener";
 
     private final TypeInstance observableType;
 
@@ -135,7 +140,7 @@ public class SetObservableValueWrapperGenerator extends ClassGenerator {
         createGetValueMethod(context);
         createGetMethod(context);
         createInvalidatedMethod(context);
-        createOnChangedMethod(context, generatedClass);
+        createOnChangedMethod(context);
         createListenerMethods(context, generatedClass, INVALIDATION_LISTENER_FIELD, InvalidationListenerType());
         createListenerMethods(context, generatedClass, CHANGE_LISTENER_FIELD, ChangeListenerType());
         createListenerMethods(context, generatedClass, SET_CHANGE_LISTENER_FIELD, SetChangeListenerType());
@@ -481,6 +486,68 @@ public class SetObservableValueWrapperGenerator extends ClassGenerator {
         code.releaseLocal(iteratorLocal);
         code.releaseLocal(oldValueLocal);
         code.releaseLocal(currentValueLocal);
+        code.vreturn();
+
+        method.getMethodInfo().setCodeAttribute(code.toCodeAttribute());
+        method.getMethodInfo().rebuildStackMap(generatedClass.getClassPool());
+    }
+
+    private void createOnChangedMethod(BytecodeEmitContext context) throws Exception {
+        CtMethod method = new CtMethod(
+            voidType, "onChanged", new CtClass[] {SetChangeListenerChangeType()}, generatedClass);
+        method.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
+        generatedClass.addMethod(method);
+        BytecodeEmitContext ctx = new BytecodeEmitContext(context, generatedClass, 2, -1);
+        Bytecode code = ctx.getOutput();
+        CtClass adapterChangeType = context.getNestedClasses().find(SetSourceAdapterChangeGenerator.CLASS_NAME);
+
+        if (context.isGeneratorActive(ReferenceTrackerGenerator.class)) {
+            code.aload(0)
+                .getfield(generatedClass, ROOT_REF, context.getMarkupClass())
+                .invokevirtual(context.getMarkupClass(), ReferenceTrackerGenerator.CLEAR_STALE_REFERENCES_METHOD,
+                               function(voidType));
+        }
+
+        code.aload(0)
+            .getfield(generatedClass, INVALIDATION_LISTENER_FIELD, InvalidationListenerType())
+            .ifnonnull(() -> code
+                .aload(0)
+                .getfield(generatedClass, INVALIDATION_LISTENER_FIELD, InvalidationListenerType())
+                .aload(0)
+                .invokeinterface(InvalidationListenerType(), "invalidated",
+                                 function(voidType, ObservableType()))
+            );
+
+        code.aload(0)
+            .getfield(generatedClass, CHANGE_LISTENER_FIELD, ChangeListenerType())
+            .ifnonnull(() -> code
+                .aload(0)
+                .getfield(generatedClass, CHANGE_LISTENER_FIELD, ChangeListenerType())
+                .aload(0)
+                .aload(0)
+                .getfield(generatedClass, VALUE_FIELD, ObservableSetType())
+                .aload(0)
+                .getfield(generatedClass, VALUE_FIELD, ObservableSetType())
+                .invokeinterface(ChangeListenerType(), "changed",
+                                 function(voidType, ObservableValueType(), ObjectType(), ObjectType()))
+            );
+
+        code.aload(0)
+            .getfield(generatedClass, SET_CHANGE_LISTENER_FIELD, SetChangeListenerType())
+            .ifnonnull(() -> code
+                .aload(0)
+                .getfield(generatedClass, ADAPTER_CHANGE_FIELD, adapterChangeType)
+                .aload(1)
+                .invokevirtual(adapterChangeType, SetSourceAdapterChangeGenerator.INIT_CHANGE_METHOD_NAME,
+                               function(voidType, SetChangeListenerChangeType()))
+                .aload(0)
+                .getfield(generatedClass, SET_CHANGE_LISTENER_FIELD, SetChangeListenerType())
+                .aload(0)
+                .getfield(generatedClass, ADAPTER_CHANGE_FIELD, adapterChangeType)
+                .invokeinterface(SetChangeListenerType(), "onChanged",
+                                 function(voidType, SetChangeListenerChangeType()))
+            );
+
         code.vreturn();
 
         method.getMethodInfo().setCodeAttribute(code.toCodeAttribute());

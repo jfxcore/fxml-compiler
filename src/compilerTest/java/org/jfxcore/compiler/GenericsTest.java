@@ -368,7 +368,7 @@ public class GenericsTest extends CompilerTestBase {
         """));
 
         assertEquals(ErrorCode.CANNOT_CONVERT_SOURCE_TYPE, ex.getDiagnostic().getCode());
-        assertCodeHighlight("$self/prop3", ex);
+        assertCodeHighlight("self/prop3", ex);
     }
 
     @Test

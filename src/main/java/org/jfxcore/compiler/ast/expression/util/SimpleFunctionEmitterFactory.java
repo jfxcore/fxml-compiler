@@ -62,6 +62,8 @@ public class SimpleFunctionEmitterFactory extends AbstractFunctionEmitterFactory
             null,
             invocationInfo.function().getBehavior().getDeclaringClass(),
             invocationInfo.function().getBehavior().getName(),
+            true,
+            false,
             functionExpression.getSourceInfo());
     }
 }

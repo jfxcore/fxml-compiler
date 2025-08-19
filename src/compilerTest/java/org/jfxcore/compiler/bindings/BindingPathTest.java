@@ -225,7 +225,7 @@ public class BindingPathTest extends CompilerTestBase {
         """));
 
         assertEquals(ErrorCode.CANNOT_CONVERT_SOURCE_TYPE, ex.getDiagnostic().getCode());
-        assertCodeHighlight("$rawProp", ex);
+        assertCodeHighlight("rawProp", ex);
     }
 
     @Test
@@ -437,43 +437,25 @@ public class BindingPathTest extends CompilerTestBase {
     }
 
     @Test
-    public void Bind_Unidirectional_To_Single_Invariant_Property() {
-        TestPane root = compileAndRun("""
+    public void Bind_Unidirectional_To_Single_Invariant_Property_Fails() {
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                      prefWidth="${simpleDoubleVal}" prefHeight="${simpleDoubleBox}"
-                      minWidth="${simpleShortVal}" minHeight="${simpleShortBox}"/>
-        """);
+                      prefWidth="${simpleDoubleVal}"/>
+        """));
 
-        assertTrue(root.prefWidthProperty().isBound());
-        assertEquals(2.0, root.getPrefWidth(), 0.001);
-
-        assertTrue(root.prefHeightProperty().isBound());
-        assertEquals(3.0, root.getPrefHeight(), 0.001);
-
-        assertTrue(root.minWidthProperty().isBound());
-        assertEquals(4.0, root.getMinWidth(), 0.001);
-
-        assertTrue(root.minHeightProperty().isBound());
-        assertEquals(5.0, root.getMinHeight(), 0.001);
+        assertEquals(ErrorCode.INVALID_UNIDIRECTIONAL_BINDING_SOURCE, ex.getDiagnostic().getCode());
+        assertCodeHighlight("simpleDoubleVal", ex);
     }
 
     @Test
     public void Bind_Unidirectional_To_Invariant_Properties() {
-        TestPane root = compileAndRun("""
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                      managed="${invariantContext.invariantBoolVal}"
-                      prefWidth="${invariantContext.invariantDoubleVal}"
-                      prefHeight="${invariantContext.invariantDoubleBox}"/>
-        """);
+                      managed="${invariantContext.invariantBoolVal}"/>
+        """));
 
-        assertTrue(root.managedProperty().isBound());
-        assertTrue(root.isManaged());
-
-        assertTrue(root.prefWidthProperty().isBound());
-        assertEquals(234.0, root.getPrefWidth(), 0.001);
-
-        assertTrue(root.prefHeightProperty().isBound());
-        assertEquals(0.0, root.getPrefHeight(), 0.001);
+        assertEquals(ErrorCode.INVALID_UNIDIRECTIONAL_BINDING_SOURCE, ex.getDiagnostic().getCode());
+        assertCodeHighlight("invariantContext.invariantBoolVal", ex);
     }
 
     @Test
@@ -601,13 +583,14 @@ public class BindingPathTest extends CompilerTestBase {
 
     @Test
     public void Bind_Unidirectional_To_Static_Field_In_NestedClass() {
-        TestPane root = compileAndRun("""
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.scene.layout.*?>
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                       id="${TestPane.NestedClass.INSTANCE.value}"/>
-        """);
+        """));
 
-        assertEquals("testValue", root.getId());
+        assertEquals(ErrorCode.INVALID_UNIDIRECTIONAL_BINDING_SOURCE, ex.getDiagnostic().getCode());
+        assertCodeHighlight("TestPane.NestedClass.INSTANCE.value", ex);
     }
 
     @Test
@@ -738,5 +721,4 @@ public class BindingPathTest extends CompilerTestBase {
             GridPane.margin="#{context.margin}"
         """.trim(), ex);
     }
-
 }

@@ -1,13 +1,15 @@
-// Copyright (c) 2023, 2024, JFXcore. All rights reserved.
+// Copyright (c) 2023, 2025, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.collections;
 
+import com.sun.javafx.collections.ChangeHelper;
 import org.jfxcore.compiler.generate.collections.ListObservableValueWrapperGenerator;
 import org.jfxcore.compiler.util.CompilerTestBase;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
+import javafx.beans.InvalidationListener;
 import javafx.beans.property.ListProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleListProperty;
@@ -15,6 +17,7 @@ import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ObservableListValue;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
+import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.scene.layout.Pane;
 import java.lang.reflect.Constructor;
@@ -23,17 +26,21 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import static org.jfxcore.compiler.collections.ListWrapperTest.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public class ListObservableValueWrapperTest extends CompilerTestBase {
 
     @SuppressWarnings("unused")
+    public static class Holder {
+        public final ObjectProperty<ObservableList<String>> list = new SimpleObjectProperty<>();
+    }
+
+    @SuppressWarnings("unused")
     public static class TestPane extends Pane {
-        public final ListProperty<String> listProp = new SimpleListProperty<>(this, "listProp");
+        public final ListProperty<String> listProp = new SimpleListProperty<>(FXCollections.observableArrayList());
         public ListProperty<String> listPropProperty() { return listProp; }
-        public final ObjectProperty<List<String>> list = new SimpleObjectProperty<>();
+        public final ObjectProperty<Holder> holder = new SimpleObjectProperty<>(new Holder());
     }
 
     private TestPane root;
@@ -43,7 +50,7 @@ public class ListObservableValueWrapperTest extends CompilerTestBase {
     public void compile() {
         root = compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                      listProp="${list}"/>
+                      listProp="${..holder.list}"/>
         """);
 
         listWrapperClass =
@@ -131,4 +138,25 @@ public class ListObservableValueWrapperTest extends CompilerTestBase {
         }
     }
 
+    public static class ListTrace extends ArrayList<String> {
+        public ListTrace(ObservableListValue<String> list) {
+            list.addListener((InvalidationListener) observable -> add("invalidated"));
+            list.addListener((observable, oldValue, newValue) -> add(
+                    String.format("changed (oldValue %s newValue)", oldValue != newValue ? "!=" : "==")));
+            list.addListener((ListChangeListener<String>) change -> {
+                while (change.next()) {
+                    String ret;
+                    if (change.wasPermutated()) {
+                        ret = "permutated";
+                    } else if (change.wasUpdated()) {
+                        ret = ChangeHelper.updateChangeToString(change.getFrom(), change.getTo());
+                    } else {
+                        ret = ChangeHelper.addRemoveChangeToString(
+                                change.getFrom(), change.getTo(), change.getList(), change.getRemoved());
+                    }
+                    add("{ " + ret + " }");
+                }
+            });
+        }
+    }
 }

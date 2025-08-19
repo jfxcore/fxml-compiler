@@ -511,15 +511,14 @@ public class FunctionBindingTest extends CompilerTestBase {
     }
 
     @Test
-    public void Bind_Unidirectional_To_Static_Method_With_Invariant_Param() {
-        TestPane root = compileAndRun("""
+    public void Bind_Unidirectional_To_Static_Method_With_Invariant_Param_Fails() {
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                       id="${String.format('foo-%s', invariantDoubleVal)}"/>
-        """);
+        """));
 
-        assertNewFunctionExpr(root, 0);
-        assertTrue(root.idProperty().isBound());
-        assertEquals("foo-1.0", root.getId());
+        assertEquals(ErrorCode.INVALID_UNIDIRECTIONAL_BINDING_SOURCE, ex.getDiagnostic().getCode());
+        assertCodeHighlight("String.format('foo-%s', invariantDoubleVal)", ex);
     }
 
     @Test
@@ -691,15 +690,14 @@ public class FunctionBindingTest extends CompilerTestBase {
     }
 
     @Test
-    public void Bind_Unidirectional_To_Constructor() {
-        TestPane root = compileAndRun("""
+    public void Bind_Unidirectional_To_Constructor_Fails() {
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                       id="${String('foo')}"/>
-        """);
+        """));
 
-        assertNewFunctionExpr(root, 0);
-        assertTrue(root.idProperty().isBound());
-        assertEquals("foo", root.getId());
+        assertEquals(ErrorCode.INVALID_UNIDIRECTIONAL_BINDING_SOURCE, ex.getDiagnostic().getCode());
+        assertCodeHighlight("String('foo')", ex);
     }
 
     @Test
@@ -718,14 +716,14 @@ public class FunctionBindingTest extends CompilerTestBase {
     }
 
     @Test
-    public void Bind_Unidirectional_To_Constructor_With_More_Specific_Argument() {
-        TestPane root = compileAndRun("""
+    public void Bind_Unidirectional_To_Constructor_With_More_Specific_Argument_Fails() {
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                       objProp="${Stringifier('foo')}"/>
-        """);
+        """));
 
-        assertNewFunctionExpr(root, 0);
-        assertEquals("foo", root.objProp.get().value);
+        assertEquals(ErrorCode.INVALID_UNIDIRECTIONAL_BINDING_SOURCE, ex.getDiagnostic().getCode());
+        assertCodeHighlight("Stringifier('foo')", ex);
     }
 
     @Test
@@ -756,51 +754,48 @@ public class FunctionBindingTest extends CompilerTestBase {
     }
 
     @Test
-    public void Bind_Unidirectional_With_This_Argument() {
-        TestPane root = compileAndRun("""
+    public void Bind_Unidirectional_With_This_Argument_Fails() {
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.scene.layout.*?>
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <VBox>
                     <Pane id="${String.format('foo-%s', this)}"/>
                 </VBox>
             </TestPane>
-        """);
+        """));
 
-        assertNewFunctionExpr(root, 0);
-        Pane pane = (Pane)((Pane)root.getChildren().get(0)).getChildren().get(0);
-        assertTrue(pane.getId().startsWith("foo-FunctionBindingTest_Bind_Unidirectional_With_This_Argument"));
+        assertEquals(ErrorCode.INVALID_UNIDIRECTIONAL_BINDING_SOURCE, ex.getDiagnostic().getCode());
+        assertCodeHighlight("String.format('foo-%s', this)", ex);
     }
 
     @Test
-    public void Bind_Unidirectional_With_ParentScope_This_Argument() {
-        TestPane root = compileAndRun("""
+    public void Bind_Unidirectional_With_ParentScope_This_Argument_Fails() {
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.scene.layout.*?>
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <VBox>
                     <Pane id="${String.format('foo-%s', parent/this)}"/>
                 </VBox>
             </TestPane>
-        """);
+        """));
 
-        assertNewFunctionExpr(root, 0);
-        Pane pane = (Pane)((Pane)root.getChildren().get(0)).getChildren().get(0);
-        assertTrue(pane.getId().startsWith("foo-VBox"));
+        assertEquals(ErrorCode.INVALID_UNIDIRECTIONAL_BINDING_SOURCE, ex.getDiagnostic().getCode());
+        assertCodeHighlight("String.format('foo-%s', parent/this)", ex);
     }
 
     @Test
-    public void Bind_Unidirectional_With_ParentScope_Function() {
-        TestPane root = compileAndRun("""
+    public void Bind_Unidirectional_With_ParentScope_Function_Fails() {
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.scene.layout.*?>
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <Pane>
                     <Pane prefWidth="${parent[1]/add(1, 2)}"/>
                 </Pane>
             </TestPane>
-        """);
+        """));
 
-        assertNewFunctionExpr(root, 0);
-        Pane pane = (Pane)((Pane)root.getChildren().get(0)).getChildren().get(0);
-        assertEquals(3, pane.getPrefWidth(), 0.001);
+        assertEquals(ErrorCode.INVALID_UNIDIRECTIONAL_BINDING_SOURCE, ex.getDiagnostic().getCode());
+        assertCodeHighlight("parent[1]/add(1, 2)", ex);
     }
 
     @Test
@@ -849,25 +844,25 @@ public class FunctionBindingTest extends CompilerTestBase {
     }
 
     @Test
-    public void Bind_Unidirectional_With_FxConstant_Param() {
-        TestPane root = compileAndRun("""
+    public void Bind_Unidirectional_With_FxConstant_Param_Fails() {
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                       id="${defaultMethod('foo-%s', {Double fx:constant=POSITIVE_INFINITY})}"/>
-        """);
+        """));
 
-        assertNewFunctionExpr(root, 0);
-        assertEquals("foo-Infinity", root.getId());
+        assertEquals(ErrorCode.INVALID_UNIDIRECTIONAL_BINDING_SOURCE, ex.getDiagnostic().getCode());
+        assertCodeHighlight("defaultMethod('foo-%s', {Double fx:constant=POSITIVE_INFINITY})", ex);
     }
 
     @Test
-    public void Bind_Unidirectional_With_ConstantLiteral_Param() {
-        TestPane root = compileAndRun("""
+    public void Bind_Unidirectional_With_ConstantLiteral_Param_Fails() {
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                       id="${defaultMethod('foo-%s', Double.POSITIVE_INFINITY)}"/>
-        """);
+        """));
 
-        assertNewFunctionExpr(root, 0);
-        assertEquals("foo-Infinity", root.getId());
+        assertEquals(ErrorCode.INVALID_UNIDIRECTIONAL_BINDING_SOURCE, ex.getDiagnostic().getCode());
+        assertCodeHighlight("defaultMethod('foo-%s', Double.POSITIVE_INFINITY)", ex);
     }
 
     @Test
@@ -1417,7 +1412,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     public void Overloaded_Method_Is_Selected_Correctly() {
         OverloadTestPane root = compileAndRun("""
             <OverloadTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                              id="${overloadedMethod('ignored')}" stringProp="${overloadedMethod(0)}"/>
+                              id="$overloadedMethod('ignored')" stringProp="$overloadedMethod(0)"/>
         """);
 
         assertEquals("String", root.getId());
@@ -1428,7 +1423,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     public void Ambiguous_Method_Call_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <OverloadTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                              id="${overloadedMethod(d, d, d)}"/>
+                              id="$overloadedMethod(d, d, d)"/>
         """));
 
         assertEquals(ErrorCode.AMBIGUOUS_METHOD_CALL, ex.getDiagnostic().getCode());
@@ -1562,15 +1557,15 @@ public class FunctionBindingTest extends CompilerTestBase {
     }
 
     @Test
-    public void Bind_Unidirectional_To_Overloaded_Generic_Method() {
-        GenericTestPane<?> root = compileAndRun("""
+    public void Bind_Unidirectional_To_Overloaded_Generic_Method_Fails() {
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
                 <GenericTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                                  prefWidth="${<Double>m3_overloaded(123d)}"
                                  id="${m3_overloaded('foo')}"/>
-            """);
+            """));
 
-        assertEquals("foo", root.getId());
-        assertEquals(123.0, root.getPrefWidth());
+        assertEquals(ErrorCode.INVALID_UNIDIRECTIONAL_BINDING_SOURCE, ex.getDiagnostic().getCode());
+        assertCodeHighlight("m3_overloaded('foo')", ex);
     }
 
     @Test
