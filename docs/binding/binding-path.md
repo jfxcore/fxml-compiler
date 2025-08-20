@@ -65,51 +65,11 @@ An attached property can be selected by wrapping the qualified attached property
 ```
 
 ## Generic type witness
-When a generic method is selected, it can sometimes be necessary to specify a type witness in order to preserve type information. Similar to the Java language, a generic type witness is specified in angle brackets in front of the method name:
+When a generic method is selected, it can sometimes be necessary to specify a type witness in order to preserve type information. A generic type witness is specified in angle brackets after the method name:
 
 ```xml
-<MyControl value="${path.to.<String>genericGetter.value}"/>
+<MyControl value="${path.to.genericGetter<String>.value}"/>
 ```
 
 {: .note }
 In XML files, the `<` character can only be used as a markup delimiter, and must be escaped using `&lt;` in attribute text. However, the FXML compiler accepts the non-standard literal form for better code readability.
-
-## Binding to non-observable values
-The JavaFX Property API `Property.bind(ObservableValue)` requires the binding source to be an `ObservableValue` instance. It is therefore not possible to bind a property to a non-observable source in Java code. However, FXML 2.0 relaxes this restriction and supports non-observable values in `{fx:bind}` expressions:
-
-```xml
-<Button text="${path.to.non.observable.source}"/>
-```
-
-If the specified source is not an `ObservableValue`, it will be automatically boxed into a compiler-generated `ObservableValue` wrapper. In the example, the `Button.text` property will appear to be bound, even though the `ObservableValue` it is bound to will never change.
-
-## Binding to non-observable collections
-A collection property can also be bound to a non-observable collection. Consider the following example, where the binding source of a unidirectional binding (`fx:bind`) is a `List<T>`. The binding is still valid, even though the list itself is not observable. However, note that since the binding path contains the observable property `user`, the address list _will_ be updated if the `User` instance is replaced.
-
-<div class="filename">com/sample/MyControl.java</div>
-```java
-public class MyControl extends MyControlBase {
-    ObjectProperty<User> userProperty(); // observable
-
-    MyControl() {
-        initializeComponent();
-    }
-}
-
-class User {
-    List<Address> getAddresses(); // not observable
-    ...
-}
-
-class Address {
-    ...
-}
-```
-
-<div class="filename">com/sample/MyControl.fxml</div>
-```xml
-<StackPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-           fx:class="com.sample.MyControl">
-    <ListView fx:typeArguments="Address" items="${user.addresses}"/>
-<StackPane/>
-```
