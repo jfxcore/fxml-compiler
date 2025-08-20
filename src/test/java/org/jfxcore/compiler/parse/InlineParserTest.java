@@ -1,10 +1,11 @@
-// Copyright (c) 2022, 2024, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2025, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.parse;
 
 import org.jfxcore.compiler.ast.PropertyNode;
 import org.jfxcore.compiler.ast.ValueNode;
+import org.jfxcore.compiler.ast.intrinsic.Intrinsics;
 import org.jfxcore.compiler.ast.text.BooleanNode;
 import org.jfxcore.compiler.ast.text.CompositeNode;
 import org.jfxcore.compiler.ast.text.FunctionNode;
@@ -16,6 +17,7 @@ import org.jfxcore.compiler.ast.text.TextNode;
 import org.jfxcore.compiler.ast.text.TextSegmentNode;
 import org.jfxcore.compiler.diagnostic.ErrorCode;
 import org.jfxcore.compiler.diagnostic.MarkupException;
+import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.junit.jupiter.api.Test;
 import org.jfxcore.compiler.TestBase;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -372,7 +374,7 @@ public class InlineParserTest extends TestBase {
 
     @Test
     public void TypeWitness_Is_Parsed_Correctly() {
-        ObjectNode root = new InlineParser("$<String>foo", null).parseObject();
+        ObjectNode root = new InlineParser("$foo<String>", null).parseObject();
         var segment = (TextSegmentNode)((PathNode)root.getChildren().get(0)).getSegments().get(0);
         assertEquals(1, segment.getWitnesses().size());
         assertEquals("String", segment.getWitnesses().get(0).getText());
@@ -381,7 +383,7 @@ public class InlineParserTest extends TestBase {
 
     @Test
     public void TypeWitnessList_Is_Parsed_Correctly() {
-        ObjectNode root = new InlineParser("$<j.l.String, Integer, j.l.Comparable<j.l.Double>>foo", null).parseObject();
+        ObjectNode root = new InlineParser("$foo<j.l.String, Integer, j.l.Comparable<j.l.Double>>", null).parseObject();
         PathNode path = (PathNode)root.getChildren().get(0);
         assertEquals("foo", path.getText());
         TextSegmentNode segment = (TextSegmentNode)path.getSegments().get(0);
@@ -403,7 +405,7 @@ public class InlineParserTest extends TestBase {
 
     @Test
     public void MultiSegment_Path_With_TypeWitnesses_Is_Parsed_Correctly() {
-        ObjectNode root = new InlineParser("$<Foo>foo.<Bar>bar::<Baz<Double>>baz", null).parseObject();
+        ObjectNode root = new InlineParser("$foo<Foo>.bar<Bar>::baz<Baz<Double>>", null).parseObject();
         var segments = ((PathNode)root.getChildren().get(0)).getSegments();
         assertEquals(3, segments.size());
         var segment1 = (TextSegmentNode)segments.get(0);
@@ -428,9 +430,33 @@ public class InlineParserTest extends TestBase {
     @Test
     public void Missing_Close_Angle_Bracket_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () ->
-            new InlineParser("$<String", null).parseObject());
+            new InlineParser("$foo<String", null).parseObject());
         assertEquals(ErrorCode.EXPECTED_TOKEN, ex.getDiagnostic().getCode());
         assertTrue(ex.getDiagnostic().getMessage().contains(">"));
+    }
+
+    @Test
+    public void ParameterizedType_Is_Parsed_Correctly() {
+        ObjectNode root = new InlineParser("{Foo <Bar, Comparable<Baz>, java.lang.String>}", null).parseObject();
+        TextNode text = (TextNode)root.findIntrinsicProperty(Intrinsics.TYPE_ARGUMENTS).getValues().get(0);
+        assertEquals(new SourceInfo(0, 1, 0, 45), root.getType().getSourceInfo());
+        assertEquals("Bar,Comparable<Baz>,java.lang.String", text.getText());
+    }
+
+    @Test
+    public void ParameterizedType_Whitespace_Between_Identifiers_Is_Retained() {
+        ObjectNode root = new InlineParser("{Foo<Bar, Comparable<Foo   Bar Baz>, java.lang.String>}", null).parseObject();
+        TextNode text = (TextNode)root.findIntrinsicProperty(Intrinsics.TYPE_ARGUMENTS).getValues().get(0);
+        assertEquals(new SourceInfo(0, 1, 0, 54), root.getType().getSourceInfo());
+        assertEquals("Bar,Comparable<Foo Bar Baz>,java.lang.String", text.getText());
+    }
+
+    @Test
+    public void SyntaxMapping_Cannot_Be_Parameterized() {
+        MarkupException ex = assertThrows(MarkupException.class,
+            () -> new InlineParser("${<Foo>bar}", null).parseObject());
+
+        assertEquals(ErrorCode.EXPECTED_IDENTIFIER, ex.getDiagnostic().getCode());
     }
 
     @ParameterizedTest
