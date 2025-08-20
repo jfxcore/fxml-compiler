@@ -217,7 +217,7 @@ public class GenericsTest extends CompilerTestBase {
     public void Incompatible_Class_TypeParameter_Is_Rejected() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <GenericObject xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                           fx:typeArguments="String" minWidth="$<Double>m1(123.5)"/>
+                           fx:typeArguments="String" minWidth="$m1<Double>(123.5)"/>
         """));
 
         assertEquals(ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT, ex.getDiagnostic().getCode());
@@ -230,7 +230,7 @@ public class GenericsTest extends CompilerTestBase {
     public void TypeParameter_Hides_VisibleType_Is_Acceptable() {
         GenericObject<String> root = compileAndRun("""
             <GenericObject xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                           fx:typeArguments="String" minWidth="$<Double>m2(123.5)"/>
+                           fx:typeArguments="String" minWidth="$m2<Double>(123.5)"/>
         """);
 
         assertEquals(123.5, root.getMinWidth());
@@ -376,7 +376,7 @@ public class GenericsTest extends CompilerTestBase {
         GridPane root = compileAndRun("""
             <?import javafx.scene.layout.*?>
             <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
-                <GenericMethodsObject fx:id="obj" prop3="foo" prop2="$self/<String>prop3"/>
+                <GenericMethodsObject fx:id="obj" prop3="foo" prop2="$self/prop3<String>"/>
             </GridPane>
         """);
 
@@ -389,12 +389,12 @@ public class GenericsTest extends CompilerTestBase {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.scene.layout.*?>
             <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
-                <GenericMethodsObject fx:id="obj" prop2="foo" prop3="$self/<Comparable<String>>prop2"/>
+                <GenericMethodsObject fx:id="obj" prop2="foo" prop3="$self/prop2<Comparable<String>>"/>
             </GridPane>
         """));
 
         assertEquals(ErrorCode.TYPE_ARGUMENT_OUT_OF_BOUND, ex.getDiagnostic().getCode());
-        assertCodeHighlight("self/<Comparable<String>>prop2", ex);
+        assertCodeHighlight("self/prop2<Comparable<String>>", ex);
     }
 
     @Test
@@ -402,19 +402,19 @@ public class GenericsTest extends CompilerTestBase {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.scene.layout.*?>
             <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
-                <GenericMethodsObject fx:id="obj" prop3="foo" prop2="$self/<String>prop4"/>
+                <GenericMethodsObject fx:id="obj" prop3="foo" prop2="$self/prop4<String>"/>
             </GridPane>
         """));
 
         assertEquals(ErrorCode.NUM_TYPE_ARGUMENTS_MISMATCH, ex.getDiagnostic().getCode());
-        assertCodeHighlight("self/<String>prop4", ex);
+        assertCodeHighlight("self/prop4<String>", ex);
     }
 
     @Test
     public void Bind_Once_To_Method_With_TypeWitness() {
         Pane root = compileAndRun("""
             <GenericMethodsObject xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                                  minWidth="$<Double>m1('123.5')"/>
+                                  minWidth="$m1<Double>('123.5')"/>
         """);
 
         assertEquals(123.5, root.getMinWidth());
@@ -424,7 +424,21 @@ public class GenericsTest extends CompilerTestBase {
     public void Bind_Unidirectional_To_Method_With_TypeWitness() {
         Pane root = compileAndRun("""
             <GenericMethodsObject xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                                  id="1" minWidth="${<Double>m1(id)}"/>
+                                  id="1" minWidth="${m1<Double>(id)}"/>
+        """);
+
+        assertEquals(1, root.getMinWidth());
+        root.setId("123.5");
+        assertEquals(123.5, root.getMinWidth());
+        root.setId("5");
+        assertEquals(5, root.getMinWidth());
+    }
+
+    @Test
+    public void Bind_Unidirectional_To_Method_With_TypeWitness_LongNotation() {
+        Pane root = compileAndRun("""
+            <GenericMethodsObject xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                                  id="1" minWidth="{fx:bind m1<Double>(id)}"/>
         """);
 
         assertEquals(1, root.getMinWidth());

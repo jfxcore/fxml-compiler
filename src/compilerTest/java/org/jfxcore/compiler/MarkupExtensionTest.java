@@ -187,6 +187,53 @@ public class MarkupExtensionTest extends CompilerTestBase {
     }
 
     @Nested
+    public class GenericExtensionTest extends CompilerTestBase {
+
+        @SuppressWarnings({"unused", "unchecked"})
+        public static class GenericMarkupExtension<T> implements MarkupExtension.Supplier<T> {
+            @Override
+            public T get(MarkupContext context) {
+                return (T)"foo";
+            }
+        }
+
+        @Test
+        public void Generic_Markup_Extension_Instantiation() {
+            Pane root = compileAndRun("""
+                <?import javafx.scene.layout.*?>
+                <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                      id="{GenericMarkupExtension<String>}"/>
+            """);
+
+            assertEquals("foo", root.getId());
+        }
+
+        @Test
+        public void Generic_Markup_Extension_Cannot_Be_Applied_To_IncompatibleType() {
+            MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+                <?import javafx.scene.layout.*?>
+                <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                      id="{GenericMarkupExtension<Integer>}"/>
+            """));
+
+            assertEquals(ErrorCode.MARKUP_EXTENSION_NOT_APPLICABLE, ex.getDiagnostic().getCode());
+            assertCodeHighlight("{GenericMarkupExtension<Integer>}", ex);
+        }
+
+        @Test
+        public void Generic_Markup_Extension_Cannot_Use_AngleBrackets_And_FxTypeArguments_At_Same_Time() {
+            MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+                <?import javafx.scene.layout.*?>
+                <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                      id="{GenericMarkupExtension<String> fx:typeArguments=String}"/>
+            """));
+
+            assertEquals(ErrorCode.DUPLICATE_PROPERTY, ex.getDiagnostic().getCode());
+            assertCodeHighlight("fx:typeArguments=String", ex);
+        }
+    }
+
+    @Nested
     public class PropertyConsumerExtensionTest extends CompilerTestBase {
 
         static List<ExtensionInvocation> invocations = new ArrayList<>();

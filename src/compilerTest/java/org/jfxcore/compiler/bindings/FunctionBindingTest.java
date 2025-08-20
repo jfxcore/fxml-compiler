@@ -1514,7 +1514,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     public void Generic_Method_Is_Not_Callable_With_Incompatible_TypeWitness() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
                 <GenericTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                                 id="${<String>m2(prefWidth)}"/>
+                                 id="${m2<String>(prefWidth)}"/>
             """));
 
         assertEquals(ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT, ex.getDiagnostic().getCode());
@@ -1526,29 +1526,29 @@ public class FunctionBindingTest extends CompilerTestBase {
     public void Generic_Method_Is_Not_Assignable_With_Incompatible_TypeWitness() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
                 <GenericTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                                 id="${<Double>m2(prefWidth)}"/>
+                                 id="${m2<Double>(prefWidth)}"/>
             """));
 
         assertEquals(ErrorCode.INCOMPATIBLE_RETURN_VALUE, ex.getDiagnostic().getCode());
-        assertCodeHighlight("<Double>m2", ex);
+        assertCodeHighlight("m2<Double>", ex);
     }
 
     @Test
     public void Generic_Method_Wrong_Number_Of_TypeWitnesses() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
                 <GenericTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                                 id="${<Object, String>m2(prefWidth)}"/>
+                                 id="${m2<Object, String>(prefWidth)}"/>
             """));
 
         assertEquals(ErrorCode.NUM_TYPE_ARGUMENTS_MISMATCH, ex.getDiagnostic().getCode());
-        assertCodeHighlight("<Object, String>m2", ex);
+        assertCodeHighlight("m2<Object, String>", ex);
     }
 
     @Test
     public void Bind_Once_To_Overloaded_Generic_Method() {
         GenericTestPane<?> root = compileAndRun("""
                 <GenericTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                                 prefWidth="$<Double>m3_overloaded(123d)"
+                                 prefWidth="$m3_overloaded<Double>(123d)"
                                  id="$m3_overloaded('foo')"/>
             """);
 
@@ -1560,7 +1560,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     public void Bind_Unidirectional_To_Overloaded_Generic_Method_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
                 <GenericTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                                 prefWidth="${<Double>m3_overloaded(123d)}"
+                                 prefWidth="${m3_overloaded<Double>(123d)}"
                                  id="${m3_overloaded('foo')}"/>
             """));
 

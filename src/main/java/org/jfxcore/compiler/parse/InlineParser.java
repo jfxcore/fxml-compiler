@@ -216,6 +216,12 @@ public class InlineParser {
         List<PropertyNode> properties = new ArrayList<>();
 
         if (mapping == null) {
+            if (tokenizer.peek(OPEN_ANGLE) != null) {
+                PropertyNode typeArgs = parseTypeArguments(tokenizer);
+                name = new TextNode(name.getText(), SourceInfo.span(name.getSourceInfo(), typeArgs.getSourceInfo()));
+                properties.add(typeArgs);
+            }
+
             eatSemis(tokenizer);
         }
 
@@ -349,14 +355,16 @@ public class InlineParser {
                 segments.add(new SubPathSegmentNode(colonSelector, path.getSegments(), SourceInfo.span(start, end)));
             } else {
                 SourceInfo start = tokenizer.peekNotNull().getSourceInfo();
-                PathInfo typeWitnesses = allowTypeWitnesses ? parseAngleBracketPath(tokenizer) : null;
                 InlineToken identifier = tokenizer.remove(IDENTIFIER);
+                PathInfo typeWitnesses = allowTypeWitnesses ? parseAngleBracketPath(tokenizer) : null;
 
                 segments.add(new TextSegmentNode(
                     colonSelector,
                     new TextNode(identifier.getValue(), identifier.getSourceInfo()),
                     typeWitnesses != null ? typeWitnesses.paths() : List.of(),
-                    SourceInfo.span(start, identifier.getSourceInfo())));
+                    SourceInfo.span(start, typeWitnesses != null
+                        ? typeWitnesses.sourceInfo()
+                        : identifier.getSourceInfo())));
             }
         } while (tokenizer.peek(DOT) != null || tokenizer.containsAhead(COLON, COLON));
 
@@ -387,6 +395,42 @@ public class InlineParser {
         }
 
         return null;
+    }
+
+    private PropertyNode parseTypeArguments(InlineTokenizer tokenizer) {
+        int scope = 1;
+        var builder = new StringBuilder();
+        SourceInfo start = tokenizer.remove(OPEN_ANGLE).getSourceInfo();
+        SourceInfo end = start;
+        InlineToken lastToken = null;
+
+        while (!tokenizer.isEmpty() && scope > 0) {
+            if (tokenizer.peek(OPEN_ANGLE) != null) {
+                scope++;
+            } else if (tokenizer.peek(CLOSE_ANGLE) != null) {
+                scope--;
+            }
+
+            InlineToken token = tokenizer.remove();
+            end = token.getSourceInfo();
+
+            if (scope > 0) {
+                if (lastToken != null && lastToken.getType() == IDENTIFIER && token.getType() == IDENTIFIER) {
+                    builder.append(' ');
+                }
+
+                builder.append(token.getValue());
+                lastToken = token;
+            }
+        }
+
+        String intrinsicName = Intrinsics.TYPE_ARGUMENTS.getName();
+
+        return new PropertyNode(
+            new String[] { intrinsicName },
+            intrinsicPrefix != null ? intrinsicPrefix + ":" + intrinsicName : intrinsicName,
+            new TextNode(builder.toString(), SourceInfo.span(start, end)),
+            true, false, SourceInfo.span(start, end));
     }
 
     private ContextSelectorNode tryParseContextSelector(InlineTokenizer tokenizer) {
