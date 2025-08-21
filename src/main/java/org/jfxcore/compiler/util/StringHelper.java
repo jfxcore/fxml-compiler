@@ -1,4 +1,4 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2025, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.util;
@@ -76,8 +76,9 @@ public class StringHelper {
                 case "&apos;": return "'";
                 default:
                     String numValue = result.group().substring(2, result.group().length() - 1);
-                    return String.valueOf((char)(numValue.startsWith("x") ?
+                    String text = String.valueOf((char)(numValue.startsWith("x") ?
                         Integer.parseInt(numValue.substring(1), 16) : Integer.parseInt(numValue)));
+                    return Matcher.quoteReplacement(text);
             }
         });
     }
@@ -218,5 +219,4 @@ public class StringHelper {
             return result.group();
         });
     }
-
 }
