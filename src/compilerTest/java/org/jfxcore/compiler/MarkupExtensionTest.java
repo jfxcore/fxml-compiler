@@ -23,6 +23,7 @@ import javafx.beans.property.FloatProperty;
 import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.ListProperty;
 import javafx.beans.property.LongProperty;
+import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.Property;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyDoubleProperty;
@@ -33,6 +34,7 @@ import javafx.beans.property.SimpleFloatProperty;
 import javafx.beans.property.SimpleIntegerProperty;
 import javafx.beans.property.SimpleListProperty;
 import javafx.beans.property.SimpleLongProperty;
+import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.scene.layout.Pane;
@@ -64,7 +66,17 @@ public class MarkupExtensionTest extends CompilerTestBase {
     }
 
     @SuppressWarnings("unused")
+    public static class IndirectContext {
+        private final DoubleProperty doubleProp1 = new SimpleDoubleProperty(1);
+        public final DoubleProperty doubleProp1Property() { return doubleProp1; }
+        public final double getDoubleProp1() { return doubleProp1.get(); }
+        public final void setDoubleProp1(double value) { doubleProp1.set(value); }
+    }
+
+    @SuppressWarnings("unused")
     public static class TestPane extends Pane {
+        public final ObjectProperty<IndirectContext> indirect = new SimpleObjectProperty<>(new IndirectContext());
+
         private final BooleanProperty boolProp = new SimpleBooleanProperty(true);
         public final BooleanProperty boolPropProperty() { return boolProp; }
         public final boolean getBoolProp() { return boolProp.get(); }
@@ -259,6 +271,11 @@ public class MarkupExtensionTest extends CompilerTestBase {
                 this.params = null;
             }
 
+            public PropertyConsumerExtension(@NamedArg("propertyParam") Property<Number> param) {
+                this.observableParams = new ObservableValue[] { param };
+                this.params = null;
+            }
+
             public PropertyConsumerExtension(@NamedArg("params") Double... params) {
                 this.params = params;
                 this.observableParams = null;
@@ -357,6 +374,21 @@ public class MarkupExtensionTest extends CompilerTestBase {
 
             assertEquals(999, root.getDoubleProp1(), 0.001);
             root.doublePropWithoutSetterProperty().set(2);
+            assertEquals(2, root.getDoubleProp1(), 0.001);
+            assertEquals(1, invocations.size());
+            assertExtensionInvocation(invocations.get(0), root, 1, root, "doubleProp1",
+                                      double.class, root.doubleProp1Property());
+        }
+
+        @Test
+        public void PropertyConsumerExtension_With_Indirect_PropertyPathParam() {
+            TestPane root = compileAndRun("""
+                <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                          doubleProp1="{PropertyConsumerExtension propertyParam=${indirect.doubleProp1}}"/>
+            """);
+
+            assertEquals(1, root.getDoubleProp1(), 0.001);
+            root.indirect.get().setDoubleProp1(2);
             assertEquals(2, root.getDoubleProp1(), 0.001);
             assertEquals(1, invocations.size());
             assertExtensionInvocation(invocations.get(0), root, 1, root, "doubleProp1",

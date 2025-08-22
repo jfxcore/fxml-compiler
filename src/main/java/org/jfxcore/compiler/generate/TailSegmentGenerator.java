@@ -735,9 +735,28 @@ public class TailSegmentGenerator extends PropertySegmentGeneratorBase {
     private void emitGetBeanMethod(CtMethod method) throws Exception {
         Bytecode code = new Bytecode(method.getDeclaringClass(), 1);
 
-        // TODO: Figure out how to deal with getBean()
-        code.aconst_null()
-            .areturn();
+        if (boxedValueClass.subtypeOf(ReadOnlyPropertyType())) {
+            code.aload(0)
+                .getfield(method.getDeclaringClass(), VALUE_FIELD, boxedValueClass)
+                .dup()
+                .ifnonnull(
+                    () -> code.invokevirtual(boxedValueClass, "getBean", function(ObjectType())),
+                    () -> code.pop().aconst_null())
+                .areturn();
+        } else {
+            code.aload(0)
+                .getfield(method.getDeclaringClass(), VALUE_FIELD, boxedValueClass)
+                .dup()
+                .isinstanceof(ReadOnlyPropertyType())
+                .ifne(
+                    () -> code
+                        .checkcast(ReadOnlyPropertyType())
+                        .invokeinterface(ReadOnlyPropertyType(), "getBean", function(ObjectType())),
+                    () -> code
+                        .pop()
+                        .aconst_null())
+                .areturn();
+        }
 
         method.getMethodInfo().setCodeAttribute(code.toCodeAttribute());
         method.getMethodInfo().rebuildStackMap(method.getDeclaringClass().getClassPool());
@@ -746,9 +765,28 @@ public class TailSegmentGenerator extends PropertySegmentGeneratorBase {
     private void emitGetNameMethod(CtMethod method) throws Exception {
         Bytecode code = new Bytecode(method.getDeclaringClass(), 1);
 
-        // TODO: Figure out how to deal with getName()
-        code.aconst_null()
-            .areturn();
+        if (boxedValueClass.subtypeOf(ReadOnlyPropertyType())) {
+            code.aload(0)
+                .getfield(method.getDeclaringClass(), VALUE_FIELD, boxedValueClass)
+                .dup()
+                .ifnonnull(
+                    () -> code.invokevirtual(boxedValueClass, "getName", function(StringType())),
+                    () -> code.pop().aconst_null())
+                .areturn();
+        } else {
+            code.aload(0)
+                .getfield(method.getDeclaringClass(), VALUE_FIELD, boxedValueClass)
+                .dup()
+                .isinstanceof(ReadOnlyPropertyType())
+                .ifne(
+                    () -> code
+                        .checkcast(ReadOnlyPropertyType())
+                        .invokeinterface(ReadOnlyPropertyType(), "getName", function(StringType())),
+                    () -> code
+                        .pop()
+                        .aconst_null())
+                .areturn();
+        }
 
         method.getMethodInfo().setCodeAttribute(code.toCodeAttribute());
         method.getMethodInfo().rebuildStackMap(method.getDeclaringClass().getClassPool());
