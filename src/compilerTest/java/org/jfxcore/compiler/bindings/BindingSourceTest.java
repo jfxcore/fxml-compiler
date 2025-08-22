@@ -4,12 +4,15 @@
 package org.jfxcore.compiler.bindings;
 
 import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.Property;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.value.ObservableValue;
 import javafx.scene.control.Button;
 import javafx.scene.layout.Pane;
 import org.jfxcore.compiler.diagnostic.ErrorCode;
 import org.jfxcore.compiler.diagnostic.MarkupException;
 import org.jfxcore.compiler.util.CompilerTestBase;
+import org.jfxcore.compiler.util.Reflection;
 import org.jfxcore.compiler.util.TestExtension;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -331,6 +334,49 @@ public class BindingSourceTest extends CompilerTestBase {
 
         assertEquals(ErrorCode.UNEXPECTED_EXPRESSION, ex.getDiagnostic().getCode());
         assertCodeHighlight("2", ex);
+    }
+
+    @Nested
+    public class BeanAndName extends CompilerTestBase {
+
+        @SuppressWarnings("unused")
+        public static class IndirectContext {
+            public final ObjectProperty<String> stringProp1 = new SimpleObjectProperty<>(this, "doubleProp1");
+            public final ObservableValue<String> obsStringValue1 = new SimpleObjectProperty<>(this, "obsStringValue1");
+        }
+
+        @SuppressWarnings("unused")
+        public static class TestPane extends Pane {
+            public final ObjectProperty<IndirectContext> indirect = new SimpleObjectProperty<>(new IndirectContext());
+            private final ObjectProperty<ObservableValue<String>> target = new SimpleObjectProperty<>();
+            public ObjectProperty<ObservableValue<String>> targetProperty() { return target; }
+        }
+
+        @Test
+        @SuppressWarnings("unchecked")
+        public void Bean_And_Name_Are_Forwarded_To_SourceProperty() {
+            TestPane root = compileAndRun("""
+                <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                          target="${indirect::stringProp1}"/>
+            """);
+
+            var source = (Property<String>)Reflection.getFieldValue(root.target, "observable");
+            assertEquals("doubleProp1", source.getName());
+            assertSame(root.indirect.get(), source.getBean());
+        }
+
+        @Test
+        @SuppressWarnings("unchecked")
+        public void Bean_And_Name_Are_Forwarded_To_Source_ObservableValue() {
+            TestPane root = compileAndRun("""
+                <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                          target="${indirect::obsStringValue1}"/>
+            """);
+
+            var source = (Property<String>)Reflection.getFieldValue(root.target, "observable");
+            assertEquals("obsStringValue1", source.getName());
+            assertSame(root.indirect.get(), source.getBean());
+        }
     }
 
     @Nested
