@@ -407,13 +407,10 @@ public class PropertyAssignmentTransform implements Transform {
 
     private Result<ValueNode> createApplyMarkupExtensionNode(
             Node node, PropertyInfo targetProperty, TypeInstance targetType) {
-        if (!Markup.isAvailable() ||
-                !(node instanceof ValueEmitterNode valueEmitterNode) ||
-                !TypeHelper.getTypeInstance(valueEmitterNode).subtypeOf(Markup.MarkupExtensionType())) {
+        var extensionInfo = MarkupExtensionInfo.of(node);
+        if (extensionInfo == null || !(node instanceof ValueEmitterNode valueEmitterNode)) {
             return Result.of(null);
         }
-
-        var extensionInfo = MarkupExtensionInfo.of(node);
 
         if (extensionInfo instanceof MarkupExtensionInfo.Supplier supplierInfo) {
             if (supplierInfo.providedTypes().stream().noneMatch(targetType::isAssignableFrom)) {

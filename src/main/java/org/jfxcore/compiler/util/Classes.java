@@ -197,10 +197,16 @@ public final class Classes {
     }
 
     private static CtClass getOptional(String name) {
-        CtClass clazz = getClassCache().get(name);
+        Map<String, CtClass> cache = getClassCache();
+        CtClass clazz = cache.get(name);
+
+        if (cache.containsKey(name)) {
+            return clazz;
+        }
+
         if (clazz == null) {
             clazz = new Resolver(new SourceInfo(0, 0)).tryResolveClass(name);
-            getClassCache().put(name, clazz);
+            cache.put(name, clazz);
         }
 
         return clazz;
@@ -220,5 +226,4 @@ public final class Classes {
         return (Map<String, CtClass>)CompilationContext.getCurrent()
             .computeIfAbsent(Classes.class, key -> new HashMap<String, CtClass>());
     }
-
 }
