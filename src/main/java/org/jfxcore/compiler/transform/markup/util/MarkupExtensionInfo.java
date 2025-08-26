@@ -31,6 +31,10 @@ public sealed interface MarkupExtensionInfo {
                             boolean readOnly) implements MarkupExtensionInfo {}
 
     static MarkupExtensionInfo of(Node node) {
+        if (!Markup.isAvailable()) {
+            return null;
+        }
+
         TypeInstance type = TypeHelper.getTypeInstance(node);
         var resolver = new Resolver(node.getSourceInfo());
         var invoker = new TypeInvoker(node.getSourceInfo());
