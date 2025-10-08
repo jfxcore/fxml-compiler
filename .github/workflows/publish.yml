@@ -53,9 +53,10 @@ jobs:
           EOT
 
       - name: Run Gradle build
-        run: ./gradlew publish -x test -x compilerTest -x check -PREPOSITORY_URL=${URL} -PREPOSITORY_USERNAME=${USERNAME} -PREPOSITORY_PASSWORD=${PASSWORD} -PTAG_VERSION_COMPILER=${VERSION}
+        run: ./gradlew publish -x test -x compilerTest -x check -PREPOSITORY_URL=${URL} -PREPOSITORY_POST_URL=${POST_URL} -PREPOSITORY_USERNAME=${USERNAME} -PREPOSITORY_PASSWORD=${PASSWORD} -PTAG_VERSION_COMPILER=${VERSION}
         env:
-          URL: https://oss.sonatype.org/service/local/staging/deploy/maven2
+          URL: https://ossrh-staging-api.central.sonatype.com/service/local/staging/deploy/maven2
+          POST_URL: https://ossrh-staging-api.central.sonatype.com/manual/upload/defaultRepository/org.jfxcore
           VERSION: ${{ github.ref_name }}
           USERNAME: ${{ secrets.SONATYPE_USERNAME }}
           PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
