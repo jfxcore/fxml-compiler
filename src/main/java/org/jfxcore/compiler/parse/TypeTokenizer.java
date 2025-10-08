@@ -1,4 +1,4 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2025, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.parse;
@@ -50,11 +50,11 @@ public class TypeTokenizer extends AbstractTokenizer<TypeTokenType, TypeToken> {
             }
 
             SourceInfo sourceInfo = getSourceInfo(start, end);
-            tokens.add(new TypeToken(token, getLines().get(sourceInfo.getStart().getLine()), sourceInfo));
+            tokens.add(new TypeToken(token, getLines().get(sourceInfo.getStart().getLine()),
+                                     SourceInfo.offset(sourceInfo, sourceOffset)));
             lastPosition = end;
         }
 
         addAll(tokens);
     }
-
 }

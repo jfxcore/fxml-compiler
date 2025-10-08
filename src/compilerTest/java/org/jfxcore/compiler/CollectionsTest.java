@@ -124,7 +124,7 @@ public class CollectionsTest {
                             <Double fx:value="123.5"/>
                         </HashMap>
 
-                        <FXCollections fx:id="map1" fx:factory="<String,Object>observableHashMap">
+                        <FXCollections fx:id="map1" fx:factory="observableHashMap<String,Object>">
                             <String fx:id="str0">foo</String>
                             <Double fx:id="val0" fx:value="123.5"/>
                             <String>baz</String>
@@ -284,5 +284,4 @@ public class CollectionsTest {
             assertEquals(3, root.stringKeyMap.size());
         }
     }
-
 }

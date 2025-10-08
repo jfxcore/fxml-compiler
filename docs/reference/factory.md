@@ -7,13 +7,14 @@ nav_order: 12
 
 # fx:factory attribute
 The `fx:factory` attribute can be used to initialize an element with a factory method instead of a constructor. The factory method must be accessible and parameterless.
+Type witnesses may be provided after the method name.
 
 ## Usage
 
 ```xml
 <StackPane>
     <fx:define>
-        <FXCollections fx:factory="observableArrayList" fx:id="list1">
+        <FXCollections fx:factory="observableArrayList<String>" fx:id="list1">
             <String>foo</String>
             <String>bar</String>
             <String>baz</String>

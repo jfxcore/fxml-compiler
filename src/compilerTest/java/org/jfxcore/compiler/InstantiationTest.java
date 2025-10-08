@@ -727,7 +727,7 @@ public class InstantiationTest extends CompilerTestBase {
                 <?import javafx.scene.layout.*?>
                 <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                     <fx:define>
-                        <FXCollections fx:id="list" fx:factory="   <String> observableArrayList ">
+                        <FXCollections fx:id="list" fx:factory="   observableArrayList  <String>  ">
                             <String>foo</String>
                             <String>bar</String>
                             <String>baz</String>
@@ -751,7 +751,7 @@ public class InstantiationTest extends CompilerTestBase {
                 <?import javafx.scene.layout.*?>
                 <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                     <fx:define>
-                        <FXCollections fx:factory="<Double>observableArrayList">
+                        <FXCollections fx:factory="observableArrayList<Double>">
                             <String>foo</String>
                         </FXCollections>
                     </fx:define>
