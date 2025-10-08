@@ -7,6 +7,7 @@ import org.jfxcore.compiler.diagnostic.Location;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.diagnostic.errors.ParserErrors;
 import org.jfxcore.compiler.util.Classes;
+import org.jfxcore.compiler.util.NameHelper;
 import org.jfxcore.compiler.util.Resolver;
 import org.jfxcore.compiler.util.TypeInstance;
 import org.jfxcore.compiler.util.TypeInvoker;
@@ -48,24 +49,60 @@ public class TypeParser {
     }
 
     public MethodInfo parseMethod() {
-        int start = text.length() - text.stripLeading().length();
+        int start = -1;
+        int end = -1;
+
+        for (int i = 0; i < text.length(); ++i) {
+            if (!Character.isWhitespace(text.charAt(i))) {
+                start = i;
+                break;
+            }
+        }
+
+        for (int i = text.length() - 1; i >= 0; --i) {
+            if (!Character.isWhitespace(text.charAt(i))) {
+                end = i;
+                break;
+            }
+        }
+
+        if (start < 0) {
+            throw ParserErrors.expectedIdentifier(
+                new SourceInfo(sourceOffset.getLine(), sourceOffset.getColumn()));
+        }
+
         var sourceInfo = new SourceInfo(
             sourceOffset.getLine(), sourceOffset.getColumn() + start,
-            sourceOffset.getLine(), sourceOffset.getColumn() + start + text.trim().length());
+            sourceOffset.getLine(), sourceOffset.getColumn() + end + 1);
 
-        int closingAngleIndex = text.lastIndexOf('>');
-        if (closingAngleIndex <= 0) {
-            return new MethodInfo(List.of(), text.trim(), sourceInfo);
+        int openingAngleIndex = text.indexOf('<');
+        if (openingAngleIndex < 0) {
+            String methodName = text.trim();
+
+            if (!NameHelper.isJavaIdentifier(methodName)) {
+                throw ParserErrors.expectedIdentifier(
+                    new SourceInfo(sourceOffset.getLine(), sourceOffset.getColumn() + start));
+            }
+
+            return new MethodInfo(List.of(), methodName, sourceInfo);
         }
 
-        if (text.charAt(start) != '<') {
-            throw ParserErrors.invalidExpression(sourceInfo);
+        String methodName = text.substring(start, openingAngleIndex).trim();
+
+        if (!NameHelper.isJavaIdentifier(methodName)) {
+            throw ParserErrors.expectedIdentifier(
+                new SourceInfo(sourceOffset.getLine(), sourceOffset.getColumn() + start));
         }
 
-        return new MethodInfo(
-            parseText(text.substring(start + 1, closingAngleIndex), start + 1),
-            text.substring(closingAngleIndex + 1).trim(),
-            sourceInfo);
+        if (text.charAt(end) != '>') {
+            throw ParserErrors.expectedToken(
+                new SourceInfo(sourceOffset.getLine(), sourceOffset.getColumn() + end), ">");
+        }
+
+        List<TypeInstance> typeWitnesses = parseText(
+            text.substring(openingAngleIndex + 1, end), openingAngleIndex + 1);
+
+        return new MethodInfo(typeWitnesses, methodName, sourceInfo);
     }
 
     private List<TypeInstance> parseText(String text, int offset) {
