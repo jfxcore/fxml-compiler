@@ -2,7 +2,7 @@
 layout: default
 title: fx:typeArguments
 parent: FXML 2.0 language reference
-nav_order: 19
+nav_order: 18
 ---
 
 # fx:typeArguments attribute
