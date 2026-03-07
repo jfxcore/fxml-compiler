@@ -1,4 +1,4 @@
-// Copyright (c) 2021, 2025, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.emit;
@@ -15,6 +15,7 @@ import org.jfxcore.compiler.generate.BooleanMapperGenerator;
 import org.jfxcore.compiler.generate.ClassGenerator;
 import org.jfxcore.compiler.generate.Generator;
 import org.jfxcore.compiler.util.Bytecode;
+import org.jfxcore.compiler.util.CompilationContext;
 import org.jfxcore.compiler.util.Resolver;
 import org.jfxcore.compiler.util.TypeHelper;
 import org.jfxcore.compiler.util.TypeInstance;
@@ -35,16 +36,20 @@ public class EmitMapToBooleanNode extends AbstractNode
     private final ResolvedTypeNode type;
     private final ClassGenerator generator;
     private final boolean invert;
-    private EmitterNode child;
+    private ValueEmitterNode child;
 
-    public EmitMapToBooleanNode(EmitterNode child, boolean invert, SourceInfo sourceInfo) {
+    public EmitMapToBooleanNode(ValueEmitterNode child, boolean invert, SourceInfo sourceInfo) {
         super(sourceInfo);
 
-        Resolver resolver = new Resolver(sourceInfo);
-        TypeInstance typeInstance = TypeHelper.getTypeInstance(child);
-        CtClass valueType = TypeHelper.getBoxedType(resolver.findObservableArgument(typeInstance).jvmType());
+        if (CompilationContext.getCurrent().useSharedImplementation()) {
+            this.generator = null;
+        } else {
+            Resolver resolver = new Resolver(sourceInfo);
+            TypeInstance typeInstance = child.getType().getTypeInstance();
+            CtClass valueType = TypeHelper.getBoxedType(resolver.findObservableArgument(typeInstance).jvmType());
+            this.generator = new BooleanMapperGenerator(valueType, invert);
+        }
 
-        this.generator = new BooleanMapperGenerator(valueType, invert);
         this.child = checkNotNull(child);
         this.invert = invert;
         this.type = new ResolvedTypeNode(
@@ -69,6 +74,14 @@ public class EmitMapToBooleanNode extends AbstractNode
 
     @Override
     public void emit(BytecodeEmitContext context) {
+        if (generator != null) {
+            emitLocalImpl(context);
+        } else {
+            emitSharedImpl(context);
+        }
+    }
+
+    private void emitLocalImpl(BytecodeEmitContext context) {
         CtClass generatedClass = context.getNestedClasses().find(generator.getClassName());
         Bytecode code = context.getOutput();
 
@@ -80,10 +93,46 @@ public class EmitMapToBooleanNode extends AbstractNode
         code.invokespecial(generatedClass, MethodInfo.nameInit, constructor(ObservableValueType()));
     }
 
+    private void emitSharedImpl(BytecodeEmitContext context) {
+        Bytecode code = context.getOutput();
+        String name = invert ? "isZero" : "isNotZero";
+        TypeInstance childType = child.getType().getTypeInstance();
+
+        context.emit(child);
+
+        if (TypeInstance.of(ObservableDoubleValueType()).isAssignableFrom(childType)) {
+            code.invokestatic(Markup.Runtime.BooleanBindingsType(), name,
+                              function(BooleanBindingType(), ObservableDoubleValueType()));
+        } else if (TypeInstance.of(ObservableIntegerValueType()).isAssignableFrom(childType)) {
+            code.invokestatic(Markup.Runtime.BooleanBindingsType(), name,
+                              function(BooleanBindingType(), ObservableIntegerValueType()));
+        } else if (TypeInstance.of(ObservableFloatValueType()).isAssignableFrom(childType)) {
+            code.invokestatic(Markup.Runtime.BooleanBindingsType(), name,
+                              function(BooleanBindingType(), ObservableFloatValueType()));
+        } else if (TypeInstance.of(ObservableLongValueType()).isAssignableFrom(childType)) {
+            code.invokestatic(Markup.Runtime.BooleanBindingsType(), name,
+                              function(BooleanBindingType(), ObservableLongValueType()));
+        } else {
+            Resolver resolver = new Resolver(getSourceInfo());
+            TypeInstance argType = resolver.findObservableArgument(childType).boxed();
+
+            if (argType.subtypeOf(NumberType())) {
+                code.invokestatic(Markup.Runtime.BooleanBindingsType(), name,
+                                  function(BooleanBindingType(), ObservableValueType()));
+            } else if (argType.subtypeOf(BooleanType())) {
+                code.invokestatic(Markup.Runtime.BooleanBindingsType(), "isNot",
+                                  function(BooleanBindingType(), ObservableValueType()));
+            } else {
+                code.invokestatic(Markup.Runtime.BooleanBindingsType(), invert ? "isNull" : "isNotNull",
+                                  function(BooleanBindingType(), ObservableValueType()));
+            }
+        }
+    }
+
     @Override
     public void acceptChildren(Visitor visitor) {
         super.acceptChildren(visitor);
-        child = (EmitterNode)child.accept(visitor);
+        child = (ValueEmitterNode)child.accept(visitor);
     }
 
     @Override

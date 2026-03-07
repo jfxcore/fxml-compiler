@@ -1,4 +1,4 @@
-// Copyright (c) 2022, 2025, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.util;
@@ -29,13 +29,18 @@ import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.function.Consumer;
 
 public class TestCompiler extends AbstractCompiler {
 
-    @SuppressWarnings("unchecked")
     public static <T> T newInstance(String fileName, String fxml) {
+        return newInstance(fileName, fxml, null);
+    }
+
+    @SuppressWarnings("unchecked")
+    public static <T> T newInstance(String fileName, String fxml, Consumer<CompilationContext> configure) {
         try {
-            Constructor<?> ctor = new TestCompiler().compileClass(fileName, fxml).getDeclaredConstructor();
+            Constructor<?> ctor = new TestCompiler().compileClass(fileName, fxml, configure).getDeclaredConstructor();
             ctor.setAccessible(true);
             return (T)ctor.newInstance();
         } catch (InvocationTargetException ex) {
@@ -52,7 +57,7 @@ public class TestCompiler extends AbstractCompiler {
     }
 
     @SuppressWarnings("unchecked")
-    public <T> Class<T> compileClass(String fileName, String source) {
+    public <T> Class<T> compileClass(String fileName, String source, Consumer<CompilationContext> configure) {
         var classPool = new ClassPool();
         classPool.appendSystemPath();
 
@@ -66,6 +71,9 @@ public class TestCompiler extends AbstractCompiler {
             .resolve("src/compilerTest/java/org/jfxcore/compiler/classes/" + fileName + ".fxml");
 
         CompilationContext context = new CompilationContext(new CompilationSource.InMemory(source));
+        if (configure != null) {
+            configure.accept(context);
+        }
 
         try (CompilationScope ignored = new CompilationScope(context)) {
             document = new FxmlParser(sourceBaseDir, fxmlTestSourcePath, source).parseDocument();

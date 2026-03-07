@@ -1,4 +1,4 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.util;
@@ -11,6 +11,8 @@ import java.util.List;
 import java.util.Map;
 
 public class CompilationContext extends HashMap<Object, Object> {
+
+    public static final String USE_SHARED_IMPLEMENTATION = "CompilationContext.useSharedImplementation";
 
     private static CompilationContext current;
 
@@ -46,6 +48,12 @@ public class CompilationContext extends HashMap<Object, Object> {
         } else {
             current = null;
         }
+    }
+
+    public boolean useSharedImplementation() {
+        return get(CompilationContext.USE_SHARED_IMPLEMENTATION) instanceof Boolean value
+            ? value
+            : Classes.Markup.isAvailable();
     }
 
     public CompilationSource getCompilationSource() {

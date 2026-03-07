@@ -1,4 +1,4 @@
-// Copyright (c) 2022, 2025, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.util;
@@ -21,6 +21,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.function.Consumer;
 import java.util.function.Predicate;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -35,11 +36,27 @@ public class CompilerTestBase {
     }
 
     public <T> Class<T> compile(String fxml) {
-        return new TestCompiler().compileClass(getFileName(), getAdditionalImports() + fxml);
+        return compile(fxml, null);
+    }
+
+    public <T> Class<T> compile(String fxml, Consumer<CompilationContext> configure) {
+        return new TestCompiler().compileClass(getFileName(), getAdditionalImports() + fxml, configure);
+    }
+
+    public <T> Class<T> compile(String fxml, String suffix, Consumer<CompilationContext> configure) {
+        return new TestCompiler().compileClass(getFileName() + suffix, getAdditionalImports() + fxml, configure);
     }
 
     public <T> T compileAndRun(String fxml) {
-        return TestCompiler.newInstance(getFileName(), getAdditionalImports() + fxml);
+        return compileAndRun(fxml, null);
+    }
+
+    public <T> T compileAndRun(String fxml, Consumer<CompilationContext> configure) {
+        return TestCompiler.newInstance(getFileName(), getAdditionalImports() + fxml, configure);
+    }
+
+    public <T> T compileAndRun(String fxml, String suffix, Consumer<CompilationContext> configure) {
+        return TestCompiler.newInstance(getFileName() + suffix, getAdditionalImports() + fxml, configure);
     }
 
     public void gc() {
