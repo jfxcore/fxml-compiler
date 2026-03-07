@@ -1,4 +1,4 @@
-// Copyright (c) 2021, 2025, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.util;
@@ -193,6 +193,11 @@ public final class Classes {
             public static CtClass DoubleSupplierType() { return get("org.jfxcore.markup.MarkupExtension$DoubleSupplier"); }
             public static CtClass PropertyConsumerType() { return get("org.jfxcore.markup.MarkupExtension$PropertyConsumer"); }
             public static CtClass ReadOnlyPropertyConsumerType() { return get("org.jfxcore.markup.MarkupExtension$ReadOnlyPropertyConsumer"); }
+        }
+
+        public static final class Runtime {
+            private Runtime() {}
+            public static CtClass BooleanBindingsType() { return get("org.jfxcore.markup.runtime.BooleanBindings"); }
         }
     }
 

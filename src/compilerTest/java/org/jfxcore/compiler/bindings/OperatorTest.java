@@ -1,28 +1,35 @@
-// Copyright (c) 2021, 2025, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.bindings;
 
 import org.jfxcore.compiler.diagnostic.ErrorCode;
 import org.jfxcore.compiler.diagnostic.MarkupException;
+import org.jfxcore.compiler.diagnostic.SourceInfo;
+import org.jfxcore.compiler.util.CompilationContext;
 import org.jfxcore.compiler.util.CompilerTestBase;
 import org.jfxcore.compiler.util.InverseMethod;
 import org.jfxcore.compiler.util.NameHelper;
 import org.jfxcore.compiler.util.TestExtension;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
-import javafx.beans.InvalidationListener;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.property.SimpleObjectProperty;
-import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableDoubleValue;
+import javafx.beans.value.ObservableFloatValue;
+import javafx.beans.value.ObservableIntegerValue;
+import javafx.beans.value.ObservableLongValue;
 import javafx.beans.value.ObservableValue;
 import javafx.scene.layout.Pane;
 
+import static org.jfxcore.compiler.util.ExceptionHelper.*;
 import static org.jfxcore.compiler.util.MoreAssertions.*;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -63,17 +70,91 @@ public class OperatorTest extends CompilerTestBase {
 
         public final ObjectProperty<IndirectContext> indirectContext = new SimpleObjectProperty<>(new IndirectContext());
 
-        public final ObservableValue<Boolean> observableBool = new ObservableValue<>() {
-            @Override public void addListener(ChangeListener<? super Boolean> changeListener) {}
-            @Override public void removeListener(ChangeListener<? super Boolean> changeListener) {}
-            @Override public void addListener(InvalidationListener invalidationListener) {}
-            @Override public void removeListener(InvalidationListener invalidationListener) {}
-            @Override public Boolean getValue() { return true; }
-        };
+        public final ObservableValue<Boolean> observableBool = new SimpleObjectProperty<>(true);
     }
 
     public static class IndirectContext {
         public final BooleanProperty booleanProp = new SimpleBooleanProperty(false);
+    }
+
+    public enum ImplType {
+        UNIDIRECTIONAL_LOCAL((testBase, root, type, invert) ->
+            testBase.assertNewExpr(root, ctors -> ctors.stream().anyMatch(
+                ctor -> ctor.getName().endsWith(getMangledClassName(type, invert))))),
+
+        UNIDIRECTIONAL_LIBRARY((testBase, root, type, invert) -> {
+            Class<?> argType = getArgClass(type);
+            String methodName;
+            if (Number.class.isAssignableFrom(type)) {
+                methodName = invert ? "isZero" : "isNotZero";
+            } else if (Boolean.class.isAssignableFrom(type)) {
+                if (!invert) throw new AssertionError();
+                methodName = "isNot";
+            } else {
+                methodName = invert ? "isNull" : "isNotNull";
+            }
+
+            testBase.assertMethodCall(root, methods -> methods.stream().anyMatch(method ->
+                methodName.equals(method.getName())
+                && "BooleanBindings".equals(method.getDeclaringClass().getSimpleName())
+                && argType.getSimpleName().equals(unchecked(SourceInfo.none(), method::getParameterTypes)[0].getSimpleName())));
+        }),
+
+        BIDIRECTIONAL_INVERSE_LOCAL((testBase, root, type, invert) ->
+            testBase.assertMethodCall(root, methods -> methods.stream().anyMatch(method ->
+                "bindBidirectional".equals(method.getName())
+                && method.getDeclaringClass().getSimpleName().endsWith("InvertBooleanBinding")
+            ))),
+
+        BIDIRECTIONAL_INVERSE_LIBRARY((testBase, root, type, invert) ->
+            testBase.assertMethodCall(root, methods -> methods.stream().anyMatch(method ->
+                "bindBidirectionalComplement".equals(method.getName())
+                && "BooleanBindings".equals(method.getDeclaringClass().getSimpleName())
+            )));
+
+        ImplType(ImplTest implTest) {
+            this.implTest = implTest;
+        }
+
+        final ImplTest implTest;
+
+        public void configure(CompilationContext context) {
+            context.put(
+                CompilationContext.USE_SHARED_IMPLEMENTATION,
+                this == UNIDIRECTIONAL_LOCAL || this == BIDIRECTIONAL_INVERSE_LOCAL ? Boolean.FALSE : Boolean.TRUE);
+        }
+
+        public void assertImpl(CompilerTestBase testBase, Object root, Class<?> type, boolean invert) {
+            implTest.assertImpl(testBase, root, type, invert);
+        }
+
+        public String suffix() {
+            return this == UNIDIRECTIONAL_LOCAL || this == BIDIRECTIONAL_INVERSE_LOCAL ? "_LocalImpl" : "_LibraryImpl";
+        }
+
+        private static String getMangledClassName(Class<?> type, boolean invert) {
+            String className;
+            if (type == Double.class) className = invert ? "DoubleToInvBoolean" : "DoubleToBoolean";
+            else if (type == Float.class) className = invert ? "FloatToInvBoolean" : "FloatToBoolean";
+            else if (type == Integer.class) className = invert ? "IntToInvBoolean" : "IntToBoolean";
+            else if (type == Long.class) className = invert ? "LongToInvBoolean" : "LongToBoolean";
+            else if (type == Boolean.class) className = invert ? "BooleanToInvBoolean" : null;
+            else className = invert ? "ObjectToInvBoolean" : "ObjectToBoolean";
+
+            return NameHelper.getMangledClassName(className);
+        }
+
+        private static Class<?> getArgClass(Class<?> type) {
+            if (type == Double.class) return ObservableDoubleValue.class;
+            else if (type == Float.class) return ObservableFloatValue.class;
+            else if (type == Integer.class) return ObservableIntegerValue.class;
+            else if (type == Long.class) return ObservableLongValue.class;
+            return ObservableValue.class;
+        }
+
+        private interface ImplTest {
+            void assertImpl(CompilerTestBase testBase, Object root, Class<?> type, boolean invert);
+        }
     }
 
     @Test
@@ -131,25 +212,32 @@ public class OperatorTest extends CompilerTestBase {
         assertTrue(root.isVisible());
     }
 
-    @Test
-    public void Bind_Unidirectional_With_NotOperator_Succeeds_For_ObservableValue() {
+    @ParameterizedTest
+    @EnumSource(value = ImplType.class, names = {"UNIDIRECTIONAL_LOCAL", "UNIDIRECTIONAL_LIBRARY"})
+    public void Bind_Unidirectional_With_NotOperator_Succeeds_For_ObservableValue(ImplType implType) {
         TestPane root = compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                       visible="${!observableBool}"/>
-        """);
+        """, implType.suffix(), implType::configure);
 
         assertFalse(root.isVisible());
+        ((ObjectProperty<Boolean>)root.observableBool).set(false);
+        assertTrue(root.isVisible());
+        ((ObjectProperty<Boolean>)root.observableBool).set(true);
+        assertFalse(root.isVisible());
+        ((ObjectProperty<Boolean>)root.observableBool).setValue(null);
+        assertTrue(root.isVisible());
 
-        assertNewExpr(root, ctors -> ctors.stream().anyMatch(
-            ctor -> ctor.getName().endsWith(NameHelper.getMangledClassName("BooleanToInvBoolean"))));
+        implType.assertImpl(this, root, Boolean.class, true);
     }
 
-    @Test
-    public void Bind_Unidirectional_With_NotOperator_Succeeds_For_BooleanProperty() {
+    @ParameterizedTest
+    @EnumSource(value = ImplType.class, names = {"UNIDIRECTIONAL_LOCAL", "UNIDIRECTIONAL_LIBRARY"})
+    public void Bind_Unidirectional_With_NotOperator_Succeeds_For_BooleanProperty(ImplType implType) {
         TestPane root = compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                       visible="${!booleanProp}"/>
-        """);
+        """, implType.suffix(), implType::configure);
 
         assertFalse(root.isVisible());
         root.booleanProp.set(false);
@@ -157,8 +245,7 @@ public class OperatorTest extends CompilerTestBase {
         root.booleanProp.set(true);
         assertFalse(root.isVisible());
 
-        assertNewExpr(root, ctors -> ctors.stream().anyMatch(
-            ctor -> ctor.getName().endsWith(NameHelper.getMangledClassName("BooleanToInvBoolean"))));
+        implType.assertImpl(this, root, Boolean.class, true);
     }
 
     @Test
@@ -177,12 +264,13 @@ public class OperatorTest extends CompilerTestBase {
         assertNewExpr(root, ctors -> ctors.stream().noneMatch(ctor -> ctor.getName().endsWith("ToBoolean")));
     }
 
-    @Test
-    public void Bind_Unidirectional_With_NotOperator_Succeeds_For_DoubleProperty() {
+    @ParameterizedTest
+    @EnumSource(value = ImplType.class, names = {"UNIDIRECTIONAL_LOCAL", "UNIDIRECTIONAL_LIBRARY"})
+    public void Bind_Unidirectional_With_NotOperator_Succeeds_For_DoubleProperty(ImplType implType) {
         TestPane root = compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                       visible="${!doubleProp}"/>
-        """);
+        """, implType.suffix(), implType::configure);
 
         assertFalse(root.isVisible());
         root.doubleProp.set(0);
@@ -190,16 +278,16 @@ public class OperatorTest extends CompilerTestBase {
         root.doubleProp.set(1);
         assertFalse(root.isVisible());
 
-        assertNewExpr(root, ctors -> ctors.stream().anyMatch(
-            ctor -> ctor.getName().endsWith(NameHelper.getMangledClassName("DoubleToInvBoolean"))));
+        implType.assertImpl(this, root, Double.class, true);
     }
 
-    @Test
-    public void Bind_Unidirectional_With_BoolifyOperator_Succeeds_For_DoubleProperty() {
+    @ParameterizedTest
+    @EnumSource(value = ImplType.class, names = {"UNIDIRECTIONAL_LOCAL", "UNIDIRECTIONAL_LIBRARY"})
+    public void Bind_Unidirectional_With_BoolifyOperator_Succeeds_For_DoubleProperty(ImplType implType) {
         TestPane root = compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                       visible="${!!doubleProp}"/>
-        """);
+        """, implType.suffix(), implType::configure);
 
         assertTrue(root.isVisible());
         root.doubleProp.set(0);
@@ -207,17 +295,17 @@ public class OperatorTest extends CompilerTestBase {
         root.doubleProp.set(1);
         assertTrue(root.isVisible());
 
-        assertNewExpr(root, ctors -> ctors.stream().anyMatch(
-            ctor -> ctor.getName().endsWith(NameHelper.getMangledClassName("DoubleToBoolean"))));
+        implType.assertImpl(this, root, Double.class, false);
     }
 
-    @Test
-    public void Bind_Unidirectional_With_NotOperator_Succeeds_For_FunctionExpression() {
+    @ParameterizedTest
+    @EnumSource(value = ImplType.class, names = {"UNIDIRECTIONAL_LOCAL", "UNIDIRECTIONAL_LIBRARY"})
+    public void Bind_Unidirectional_With_NotOperator_Succeeds_For_FunctionExpression(ImplType implType) {
         TestPane root = compileAndRun("""
             <?import org.jfxcore.compiler.bindings.OperatorTest?>
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                       visible="${!OperatorTest.stringifyWithNull('%s', doubleProp)}"/>
-        """);
+        """, implType.suffix(), implType::configure);
 
         assertFalse(root.isVisible());
         root.doubleProp.set(0);
@@ -225,17 +313,17 @@ public class OperatorTest extends CompilerTestBase {
         root.doubleProp.set(1);
         assertFalse(root.isVisible());
 
-        assertNewExpr(root, ctors -> ctors.stream().anyMatch(
-            ctor -> ctor.getName().endsWith(NameHelper.getMangledClassName("ObjectToInvBoolean"))));
+        implType.assertImpl(this, root, String.class, true);
     }
 
-    @Test
-    public void Bind_Unidirectional_With_BoolifyOperator_Succeeds_For_FunctionExpression() {
+    @ParameterizedTest
+    @EnumSource(value = ImplType.class, names = {"UNIDIRECTIONAL_LOCAL", "UNIDIRECTIONAL_LIBRARY"})
+    public void Bind_Unidirectional_With_BoolifyOperator_Succeeds_For_FunctionExpression(ImplType implType) {
         TestPane root = compileAndRun("""
             <?import org.jfxcore.compiler.bindings.OperatorTest?>
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                       visible="${!!OperatorTest.stringifyWithNull('%s', doubleProp)}"/>
-        """);
+        """, implType.suffix(), implType::configure);
 
         assertTrue(root.isVisible());
         root.doubleProp.set(0);
@@ -243,8 +331,7 @@ public class OperatorTest extends CompilerTestBase {
         root.doubleProp.set(1);
         assertTrue(root.isVisible());
 
-        assertNewExpr(root, ctors -> ctors.stream().anyMatch(
-            ctor -> ctor.getName().endsWith(NameHelper.getMangledClassName("ObjectToBoolean"))));
+        implType.assertImpl(this, root, String.class, false);
     }
 
     @Test
@@ -293,12 +380,13 @@ public class OperatorTest extends CompilerTestBase {
         assertCodeHighlight("OperatorTest.doubleToString(doubleProp)", ex);
     }
 
-    @Test
-    public void Bind_Bidirectional_With_NotOperator_Succeeds_For_BooleanProperty() {
+    @ParameterizedTest
+    @EnumSource(value = ImplType.class, names = {"BIDIRECTIONAL_INVERSE_LOCAL", "BIDIRECTIONAL_INVERSE_LIBRARY"})
+    public void Bind_Bidirectional_With_NotOperator_Succeeds_For_BooleanProperty(ImplType implType) {
         TestPane root = compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                       visible="#{!booleanProp}"/>
-        """);
+        """, implType.suffix(), implType::configure);
 
         root.booleanProp.set(false);
         assertTrue(root.isVisible());
@@ -311,6 +399,8 @@ public class OperatorTest extends CompilerTestBase {
 
         root.setVisible(false);
         assertTrue(root.booleanProp.get());
+
+        implType.assertImpl(this, root, Boolean.class, true);
     }
 
     @Test
@@ -333,12 +423,13 @@ public class OperatorTest extends CompilerTestBase {
         assertFalse(root.booleanProp.get());
     }
 
-    @Test
-    public void Bind_Bidirectional_With_NotOperator_Succeeds_For_Indirect_BooleanProperty() {
+    @ParameterizedTest
+    @EnumSource(value = ImplType.class, names = {"BIDIRECTIONAL_INVERSE_LOCAL", "BIDIRECTIONAL_INVERSE_LIBRARY"})
+    public void Bind_Bidirectional_With_NotOperator_Succeeds_For_Indirect_BooleanProperty(ImplType implType) {
         TestPane root = compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                       visible="#{!indirectContext.booleanProp}"/>
-        """);
+        """, implType.suffix(), implType::configure);
 
         var context = root.indirectContext.get();
         context.booleanProp.set(false);
@@ -365,6 +456,8 @@ public class OperatorTest extends CompilerTestBase {
 
         root.setVisible(true);
         assertFalse(context.booleanProp.get());
+
+        implType.assertImpl(this, root, Boolean.class, true);
     }
 
     @Test

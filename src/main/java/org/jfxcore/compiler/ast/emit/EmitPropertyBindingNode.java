@@ -1,4 +1,4 @@
-// Copyright (c) 2021, 2025, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.emit;
@@ -15,6 +15,7 @@ import org.jfxcore.compiler.generate.Generator;
 import org.jfxcore.compiler.generate.InvertBooleanBindingGenerator;
 import org.jfxcore.compiler.generate.ReferenceTrackerGenerator;
 import org.jfxcore.compiler.util.Bytecode;
+import org.jfxcore.compiler.util.CompilationContext;
 import org.jfxcore.compiler.util.Local;
 import org.jfxcore.compiler.util.PropertyInfo;
 import org.jfxcore.compiler.util.TypeInstance;
@@ -67,7 +68,9 @@ public class EmitPropertyBindingNode extends AbstractNode implements EmitterNode
     @Override
     public List<? extends Generator> emitGenerators(BytecodeEmitContext context) {
         return child.getNodeData(NodeDataKey.BIND_BIDIRECTIONAL_INVERT_BOOLEAN) == Boolean.TRUE
-            ? List.of(new InvertBooleanBindingGenerator())
+            ? CompilationContext.getCurrent().useSharedImplementation()
+                ? List.of()
+                : List.of(new InvertBooleanBindingGenerator())
             : child instanceof EmitCollectionWrapperNode && bindingMode.isContent()
                 ? List.of(new ReferenceTrackerGenerator())
                 : List.of();
@@ -128,8 +131,13 @@ public class EmitPropertyBindingNode extends AbstractNode implements EmitterNode
         }
 
         if (child.getNodeData(NodeDataKey.BIND_BIDIRECTIONAL_INVERT_BOOLEAN) == Boolean.TRUE) {
-            code.invokestatic(context.getNestedClasses().find(InvertBooleanBindingGenerator.CLASS_NAME),
-                              "bindBidirectional", function(voidType, PropertyType(), PropertyType()));
+            if (CompilationContext.getCurrent().useSharedImplementation()) {
+                code.invokestatic(Markup.Runtime.BooleanBindingsType(), "bindBidirectionalComplement",
+                                  function(voidType, PropertyType(), PropertyType()));
+            } else {
+                code.invokestatic(context.getNestedClasses().find(InvertBooleanBindingGenerator.CLASS_NAME),
+                                  "bindBidirectional", function(voidType, PropertyType(), PropertyType()));
+            }
         } else if (bindingMode.isContent()) {
             emitBindContent(context, true);
         } else {
