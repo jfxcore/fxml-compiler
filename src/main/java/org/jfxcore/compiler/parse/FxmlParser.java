@@ -1,9 +1,12 @@
-// Copyright (c) 2022, 2025, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.parse;
 
 import org.jfxcore.compiler.ast.intrinsic.IntrinsicProperty;
+import org.jfxcore.compiler.ast.text.BooleanNode;
+import org.jfxcore.compiler.ast.text.ListNode;
+import org.jfxcore.compiler.ast.text.NumberNode;
 import org.jfxcore.compiler.diagnostic.Diagnostic;
 import org.jfxcore.compiler.diagnostic.ErrorCode;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
@@ -16,6 +19,8 @@ import org.jfxcore.compiler.ast.text.TextNode;
 import org.jfxcore.compiler.ast.TypeNode;
 import org.jfxcore.compiler.ast.ValueNode;
 import org.jfxcore.compiler.diagnostic.errors.ParserErrors;
+import org.jfxcore.compiler.util.NumberUtil;
+import org.jfxcore.compiler.util.StringHelper;
 import org.w3c.dom.Attr;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -28,6 +33,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -165,7 +171,7 @@ public class FxmlParser {
             if (FxmlNamespace.FXML.equalsIgnoreCase(parent.getNamespaceURI())) {
                 for (Intrinsic intrinsic : VERBATIM_INTRINSICS) {
                     if (intrinsic.getName().equals(parent.getLocalName())) {
-                        return new TextNode(text, sourceInfo);
+                        return createTextNode(text, sourceInfo, true);
                     }
                 }
             }
@@ -192,14 +198,52 @@ public class FxmlParser {
             String trimmed = text.trim();
             if (isInlineExpression(trimmed)) {
                 if (trimmed.startsWith("{}")) {
-                    return new TextNode(text.substring(text.indexOf("{}") + 2), sourceInfo);
+                    return createTextNode(text.substring(text.indexOf("{}") + 2), sourceInfo, true);
                 }
 
                 return new InlineParser(text, getFxmlNamespacePrefix(node), sourceInfo.getStart()).parseObject();
             }
         }
 
-        return new TextNode(text, sourceInfo);
+        return createTextNode(text, sourceInfo, true);
+    }
+
+    private TextNode createTextNode(String text, SourceInfo sourceInfo, boolean allowList) {
+        if ("true".equals(text) || "false".equals(text)) {
+            return new BooleanNode(text, sourceInfo);
+        }
+
+        try {
+            NumberUtil.parse(text);
+            return new NumberNode(text, sourceInfo);
+        } catch (NumberFormatException ignored) {
+        }
+
+        if (!allowList) {
+            return new TextNode(text, sourceInfo);
+        }
+
+        List<StringHelper.Part> items = StringHelper.splitList(text);
+        if (items.size() == 1) {
+            return new TextNode(text, sourceInfo);
+        }
+
+        TextNode[] textNodes = new TextNode[items.size()];
+        int column = sourceInfo.getStart().getColumn();
+
+        for (int i = 0; i < items.size(); i++) {
+            StringHelper.Part item = items.get(i);
+            int startLine = sourceInfo.getStart().getLine() + item.line();
+            int startColumn = column + item.column();
+            var itemSourceInfo = new SourceInfo(startLine, startColumn, startLine, startColumn + item.text().length());
+            textNodes[i] = createTextNode(item.text(), itemSourceInfo, false);
+
+            if (item.lineBreak()) {
+                column = 0;
+            }
+        }
+
+        return new ListNode(text, Arrays.asList(textNodes), sourceInfo);
     }
 
     private boolean isInlineExpression(String text) {

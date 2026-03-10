@@ -1,4 +1,4 @@
-// Copyright (c) 2022, 2025, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler;
@@ -487,10 +487,11 @@ public class PropertyAssignmentTest {
             Button root = compileAndRun("""
                 <?import javafx.scene.control.*?>
                 <Button xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                        prefWidth="123.5"/>
+                        prefWidth="123.5" userData="123.5"/>
             """);
 
             assertEquals(123.5, root.getPrefWidth(), 0.001);
+            assertEquals(123.5, assertInstanceOf(Double.class, root.getUserData()), 0.001);
         }
 
         @Test
@@ -498,10 +499,11 @@ public class PropertyAssignmentTest {
             Button root = compileAndRun("""
                 <?import javafx.scene.control.*?>
                 <Button xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                        prefWidth="-Infinity"/>
+                        prefWidth="-Infinity" userData="-Infinity"/>
             """);
 
             assertEquals(Double.NEGATIVE_INFINITY, root.getPrefWidth(), 0.001);
+            assertEquals(Double.NEGATIVE_INFINITY, assertInstanceOf(Double.class, root.getUserData()));
         }
 
         @Test
@@ -509,11 +511,12 @@ public class PropertyAssignmentTest {
             Button root = compileAndRun("""
                 <?import javafx.scene.control.*?>
                 <Button xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                        managed="true" visible="false"/>
+                        managed="true" visible="false" userData="false"/>
             """);
 
             assertTrue(root.isManaged());
             assertFalse(root.isVisible());
+            assertFalse(assertInstanceOf(Boolean.class, root.getUserData()));
         }
 
         @Test

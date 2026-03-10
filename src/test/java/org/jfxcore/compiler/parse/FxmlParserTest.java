@@ -5,6 +5,9 @@ package org.jfxcore.compiler.parse;
 
 import org.jfxcore.compiler.ast.DocumentNode;
 import org.jfxcore.compiler.ast.ObjectNode;
+import org.jfxcore.compiler.ast.text.BooleanNode;
+import org.jfxcore.compiler.ast.text.ListNode;
+import org.jfxcore.compiler.ast.text.NumberNode;
 import org.jfxcore.compiler.ast.text.TextNode;
 import org.jfxcore.compiler.diagnostic.ErrorCode;
 import org.jfxcore.compiler.diagnostic.MarkupException;
@@ -241,6 +244,47 @@ public class FxmlParserTest extends TestBase {
         assertEquals("{fx:foo bar}", ((TextNode)values.get(0)).getText());
     }
 
+    @Test
+    public void Attribute_Is_Parsed_As_List() {
+        DocumentNode document = new FxmlParser("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Label xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                       userData="123.5,
+                                 foo
+
+                                 ,bar,
+                                 ,
+                                 true"/>
+            """).parseDocument();
+
+        var properties = ((ObjectNode)document.getRoot()).getProperties();
+        assertEquals(1, properties.size());
+        var values = properties.get(0).getValues();
+        assertEquals(1, values.size());
+        var list = assertInstanceOf(ListNode.class, values.get(0)).getValues();
+        assertEquals(5, list.size());
+
+        var item1 = assertInstanceOf(NumberNode.class, list.get(0));
+        assertEquals("123.5", item1.getText());
+        assertSourceInfo(2, 21, 2, 26, item1.getSourceInfo());
+
+        var item2 = assertInstanceOf(TextNode.class, list.get(1));
+        assertEquals("foo", item2.getText());
+        assertSourceInfo(3, 21, 3, 24, item2.getSourceInfo());
+
+        var item3 = assertInstanceOf(TextNode.class, list.get(2));
+        assertEquals("bar", item3.getText());
+        assertSourceInfo(5, 22, 5, 25, item3.getSourceInfo());
+
+        var item4 = assertInstanceOf(TextNode.class, list.get(3));
+        assertEquals("", item4.getText());
+        assertSourceInfo(6, 21, 6, 21, item4.getSourceInfo());
+
+        var item5 = assertInstanceOf(BooleanNode.class, list.get(4));
+        assertEquals("true", item5.getText());
+        assertSourceInfo(7, 21, 7, 25, item5.getSourceInfo());
+    }
+
     private ObjectNode getElement(DocumentNode document, String elementName) {
         return document
             .getRoot().as(ObjectNode.class)
@@ -264,5 +308,16 @@ public class FxmlParserTest extends TestBase {
             .findFirst().get()
             .getValues().get(0).as(TextNode.class)
             .getText();
+    }
+
+    public static void assertSourceInfo(
+            int startLine, int startColumn,
+            int endLine, int endColumn,
+            SourceInfo sourceInfo) {
+
+        assertEquals(startLine, sourceInfo.getStart().getLine());
+        assertEquals(startColumn, sourceInfo.getStart().getColumn());
+        assertEquals(endLine, sourceInfo.getEnd().getLine());
+        assertEquals(endColumn, sourceInfo.getEnd().getColumn());
     }
 }

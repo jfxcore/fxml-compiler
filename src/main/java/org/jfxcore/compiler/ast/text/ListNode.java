@@ -1,4 +1,4 @@
-// Copyright (c) 2021, 2024, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.text;
@@ -19,13 +19,18 @@ public class ListNode extends TextNode {
 
     private final List<ValueNode> values;
 
+    public ListNode(String text, Collection<? extends ValueNode> values, SourceInfo sourceInfo) {
+        super(text, sourceInfo);
+        this.values = new ArrayList<>(AbstractNode.checkNotNull(values));
+    }
+
     public ListNode(Collection<? extends ValueNode> values, SourceInfo sourceInfo) {
         super(format(values), sourceInfo);
         this.values = new ArrayList<>(AbstractNode.checkNotNull(values));
     }
 
-    private ListNode(Collection<? extends ValueNode> values, TypeNode type, SourceInfo sourceInfo) {
-        super(format(values), false, type, sourceInfo);
+    private ListNode(String text, Collection<? extends ValueNode> values, TypeNode type, SourceInfo sourceInfo) {
+        super(text, false, type, sourceInfo);
         this.values = new ArrayList<>(AbstractNode.checkNotNull(values));
     }
 
@@ -41,7 +46,7 @@ public class ListNode extends TextNode {
 
     @Override
     public ListNode deepClone() {
-        return new ListNode(deepClone(values), getType(), getSourceInfo());
+        return new ListNode(getText(), deepClone(values), getType(), getSourceInfo());
     }
 
     @Override
@@ -68,5 +73,4 @@ public class ListNode extends TextNode {
                 return node.getType().getMarkupName();
             }).collect(Collectors.toList()));
     }
-
 }

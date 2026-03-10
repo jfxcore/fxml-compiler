@@ -1,4 +1,4 @@
-// Copyright (c) 2022, 2023, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.transform.markup.util;
@@ -11,6 +11,7 @@ import org.jfxcore.compiler.ast.emit.EmitMapAdderNode;
 import org.jfxcore.compiler.ast.emit.EmitObjectNode;
 import org.jfxcore.compiler.ast.emit.ValueEmitterNode;
 import org.jfxcore.compiler.ast.intrinsic.Intrinsics;
+import org.jfxcore.compiler.ast.text.ListNode;
 import org.jfxcore.compiler.ast.text.TextNode;
 import org.jfxcore.compiler.diagnostic.errors.GeneralErrors;
 import org.jfxcore.compiler.util.Classes;
@@ -34,48 +35,58 @@ public class AdderFactory {
         List<TypeInstance> typeArgs = TypeHelper.getTypeInstance(collection).getArguments();
         TypeInstance itemType = typeArgs.size() > 0 ? typeArgs.get(0) : TypeInstance.ObjectType();
 
-        if (child instanceof TextNode textNode) {
-            if (textNode.isRawText()) {
-                ValueEmitterNode value = ValueEmitterFactory.newLiteralValue(
-                    textNode.getText(), itemType, child.getSourceInfo());
-
-                if (value == null) {
-                    throw GeneralErrors.cannotAddItemIncompatibleType(
-                        child.getSourceInfo(),
-                        TypeHelper.getTypeInstance(collection),
-                        TypeHelper.getTypeInstance(child),
-                        itemType);
-                }
-
-                return List.of(new EmitCollectionAdderNode(value));
-            }
-
+        if (child instanceof ListNode listNode) {
             List<EmitCollectionAdderNode> adders = new ArrayList<>();
 
-            for (String part : textNode.getText().split(",|\\R")) {
-                if (part.isBlank()) {
-                    continue;
+            for (ValueNode item : listNode.getValues()) {
+                boolean error = false;
+
+                if (item instanceof TextNode textItem) {
+                    ValueEmitterNode value = ValueEmitterFactory.newLiteralValue(
+                        textItem, itemType, item.getSourceInfo());
+
+                    if (value == null) {
+                        error = true;
+                    } else {
+                        adders.add(new EmitCollectionAdderNode(value));
+                    }
+                } else {
+                    error = true;
                 }
 
-                ValueEmitterNode value = ValueEmitterFactory.newLiteralValue(
-                    part.trim(), itemType, child.getSourceInfo());
-
-                if (value == null) {
+                if (error) {
                     throw GeneralErrors.cannotAddItemIncompatibleType(
-                        child.getSourceInfo(),
+                        item.getSourceInfo(),
                         TypeHelper.getTypeInstance(collection),
-                        TypeHelper.getTypeInstance(child),
+                        TypeHelper.getTypeInstance(item),
                         itemType);
                 }
-
-                adders.add(new EmitCollectionAdderNode(value));
             }
 
             return adders;
-        } else if (!(child instanceof ObjectNode)) {
+        }
+
+        if (child instanceof TextNode textNode) {
+            ValueEmitterNode value = ValueEmitterFactory.newLiteralValue(
+                textNode, itemType, child.getSourceInfo());
+
+            if (value == null) {
+                throw GeneralErrors.cannotAddItemIncompatibleType(
+                    child.getSourceInfo(),
+                    TypeHelper.getTypeInstance(collection),
+                    TypeHelper.getTypeInstance(child),
+                    itemType);
+            }
+
+            return List.of(new EmitCollectionAdderNode(value));
+        }
+
+        if (!(child instanceof ObjectNode)) {
             throw GeneralErrors.cannotAddItemIncompatibleValue(
                 child.getSourceInfo(), TypeHelper.getJvmType(collection), child.getSourceInfo().getText());
-        } else if (!TypeHelper.getTypeInstance(child).subtypeOf(itemType)) {
+        }
+
+        if (!TypeHelper.getTypeInstance(child).subtypeOf(itemType)) {
             throw GeneralErrors.cannotAddItemIncompatibleType(
                 child.getSourceInfo(),
                 TypeHelper.getTypeInstance(collection),
@@ -116,7 +127,7 @@ public class AdderFactory {
         PropertyNode id = node.findIntrinsicProperty(Intrinsics.ID);
         if (id != null) {
             return ValueEmitterFactory.newLiteralValue(
-                ((TextNode)id.getValues().get(0)).getText(),
+                (TextNode)id.getValues().get(0),
                 TypeInstance.StringType(),
                 node.getSourceInfo());
         }
@@ -137,5 +148,4 @@ public class AdderFactory {
                 node.getSourceInfo())
             .create();
     }
-
 }

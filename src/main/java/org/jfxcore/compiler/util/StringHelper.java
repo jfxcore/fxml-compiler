@@ -205,11 +205,63 @@ public class StringHelper {
             }
         }
 
-        if (line.length() > 0) {
+        if (!line.isEmpty()) {
             lines.add(line.toString());
         }
 
         return lines.toArray(new String[0]);
+    }
+
+    private static final Pattern SPLIT_PATTERN = Pattern.compile(
+        ",(?:\\h*\\R(?:\\h*\\R)*)?|\\R(?:\\h*\\R)*(?:\\h*,(?:\\h*\\R(?:\\h*\\R)*)?)?");
+
+    private static final Pattern LINEBREAK_PATTERN = Pattern.compile("\\R");
+
+    private static final Pattern HSPACE_PATTERN = Pattern.compile("\\h*");
+
+    public record Part(String text, boolean lineBreak, int line, int column) {}
+
+    public static List<Part> splitList(String text) {
+        Matcher splitMatcher = SPLIT_PATTERN.matcher(text);
+        List<Part> result = new ArrayList<>();
+        int rawStart = 0;
+        int line = 0;
+        int lineStart = 0;
+
+        while (splitMatcher.find(rawStart)) {
+            int logicalStart = rawStart;
+            Matcher hspaceMatcher = HSPACE_PATTERN.matcher(text);
+            if (!hspaceMatcher.region(logicalStart, splitMatcher.start()).lookingAt()) {
+                throw new AssertionError(); // should never happen
+            }
+
+            logicalStart = hspaceMatcher.end();
+            String item = text.substring(logicalStart, splitMatcher.start());
+            String separator = splitMatcher.group();
+
+            boolean linebreak = LINEBREAK_PATTERN.matcher(separator).find();
+            int column = logicalStart - lineStart;
+            result.add(new Part(item, linebreak, line, column));
+
+            Matcher linebreakMatcher = LINEBREAK_PATTERN.matcher(separator);
+            while (linebreakMatcher.find()) {
+                line++;
+                lineStart = splitMatcher.start() + linebreakMatcher.end();
+            }
+
+            rawStart = splitMatcher.end();
+        }
+
+        int logicalStart = rawStart;
+        Matcher hspaceMatcher = HSPACE_PATTERN.matcher(text);
+        if (!hspaceMatcher.region(logicalStart, text.length()).lookingAt()) {
+            throw new AssertionError(); // should never happen
+        }
+
+        logicalStart = hspaceMatcher.end();
+        int column = logicalStart - lineStart;
+        result.add(new Part(text.substring(logicalStart), false, line, column));
+        return result;
     }
 
     private static final String QUOTED_STRING_PATTERN =

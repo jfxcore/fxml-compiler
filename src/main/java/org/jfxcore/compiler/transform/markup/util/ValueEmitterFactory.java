@@ -1,4 +1,4 @@
-// Copyright (c) 2022, 2025, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.transform.markup.util;
@@ -42,6 +42,7 @@ import org.jfxcore.compiler.transform.TransformContext;
 import org.jfxcore.compiler.util.Classes;
 import org.jfxcore.compiler.util.Descriptors;
 import org.jfxcore.compiler.util.NameHelper;
+import org.jfxcore.compiler.util.NumberUtil;
 import org.jfxcore.compiler.util.PropertyHelper;
 import org.jfxcore.compiler.util.Resolver;
 import org.jfxcore.compiler.util.TypeHelper;
@@ -57,8 +58,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
-
-import static org.jfxcore.compiler.util.ExceptionHelper.unchecked;
 
 /**
  * Creates AST nodes that represent the creation of a new value.
@@ -98,15 +97,13 @@ public class ValueEmitterFactory {
      * @return {@link EmitLiteralNode} if conversion was successful; <code>null</code> otherwise.
      */
     public static ValueEmitterNode newLiteralValue(ObjectNode node) {
-        if (node.getChildren().size() != 1 || !(node.getChildren().get(0) instanceof TextNode)) {
+        if (node.getChildren().size() != 1 || !(node.getChildren().get(0) instanceof TextNode textNode)) {
             return null;
         }
 
-        String text = ((TextNode)node.getChildren().get(0)).getText();
-
         ValueEmitterNode result = newLiteralValue(
             findAndRemoveId(node),
-            text,
+            textNode.getText(),
             Collections.emptyList(),
             TypeHelper.getTypeInstance(node),
             node.getSourceInfo());
@@ -128,25 +125,35 @@ public class ValueEmitterFactory {
     }
 
     /**
-     * Tries to convert the string value to the target type.
+     * Tries to convert the {@link TextNode} to the target type.
+     *
+     * @return {@link EmitLiteralNode} if conversion was successful; <code>null</code> otherwise.
+     */
+    public static ValueEmitterNode newLiteralValue(TextNode node, TypeInstance targetType, SourceInfo sourceInfo) {
+        return newLiteralValue(null, node.getText(), Collections.emptyList(), targetType, sourceInfo);
+    }
+
+    /**
+     * Tries to convert the {@link TextNode} to the target type.
      *
      * @return {@link EmitLiteralNode} if conversion was successful; <code>null</code> otherwise.
      */
     public static ValueEmitterNode newLiteralValue(
-            String value, List<TypeInstance> declaringTypes, TypeInstance targetType, SourceInfo sourceInfo) {
-        return newLiteralValue(null, value, declaringTypes, targetType, sourceInfo);
+            TextNode node, List<TypeInstance> declaringTypes, TypeInstance targetType, SourceInfo sourceInfo) {
+        return newLiteralValue(null, node.getText(), declaringTypes, targetType, sourceInfo);
     }
 
     private static ValueEmitterNode newLiteralValue(
             String id, String value, List<TypeInstance> declaringTypes, TypeInstance targetType, SourceInfo sourceInfo) {
+        TypeInstance boxedTargetType = targetType.boxed();
         String trimmedValue = value.trim();
 
         switch (targetType.getName()) {
         case "boolean":
         case Classes.BooleanName:
-            if (trimmedValue.equalsIgnoreCase("true")) {
+            if (trimmedValue.equals("true")) {
                 return new EmitLiteralNode(id, TypeInstance.booleanType(), true, sourceInfo);
-            } else if (trimmedValue.equalsIgnoreCase("false")) {
+            } else if (trimmedValue.equals("false")) {
                 return new EmitLiteralNode(id, TypeInstance.booleanType(), false, sourceInfo);
             }
 
@@ -210,13 +217,29 @@ public class ValueEmitterFactory {
             }
         }
 
-        if (unchecked(sourceInfo, () -> Classes.StringType().subtypeOf(targetType.jvmType()))) {
-            return new EmitLiteralNode(id, TypeInstance.StringType(), value, sourceInfo);
+        if (TypeInstance.BooleanType().subtypeOf(boxedTargetType)) {
+            if (trimmedValue.equals("true")) {
+                return new EmitLiteralNode(id, TypeInstance.booleanType(), true, sourceInfo);
+            } else if (trimmedValue.equals("false")) {
+                return new EmitLiteralNode(id, TypeInstance.booleanType(), false, sourceInfo);
+            } else if (boxedTargetType.subtypeOf(TypeInstance.BooleanType())) {
+                return null;
+            }
         }
 
-        if (unchecked(sourceInfo, () -> Classes.ColorType().subtypeOf(targetType.jvmType()))) {
+        if (TypeInstance.NumberType().subtypeOf(boxedTargetType)) {
             try {
-                Color color = Color.valueOf(value);
+                return new EmitLiteralNode(id, targetType, NumberUtil.parse(trimmedValue), sourceInfo);
+            } catch (NumberFormatException ignored) {
+                if (boxedTargetType.subtypeOf(TypeInstance.NumberType())) {
+                    return null;
+                }
+            }
+        }
+
+        if (TypeInstance.of(Classes.ColorType()).subtypeOf(targetType)) {
+            try {
+                Color color = Color.valueOf(trimmedValue);
                 Field colorField = findColorField(color);
 
                 if (colorField != null) {
@@ -232,11 +255,13 @@ public class ValueEmitterFactory {
 
                     return EmitObjectNode
                         .valueOf(TypeInstance.of(Classes.ColorType()), valueOfMethod, sourceInfo)
-                        .textValue(value)
+                        .textValue(trimmedValue)
                         .create();
                 }
             } catch (NullPointerException | IllegalArgumentException ex) {
-                return null;
+                if (boxedTargetType.subtypeOf(TypeInstance.of(Classes.ColorType()))) {
+                    return null;
+                }
             }
         }
 
@@ -253,6 +278,10 @@ public class ValueEmitterFactory {
                     return new EmitClassConstantNode(id, targetType, boxedDeclaringType, field.getName(), sourceInfo);
                 }
             }
+        }
+
+        if (TypeInstance.of(Classes.StringType()).subtypeOf(targetType)) {
+            return new EmitLiteralNode(id, TypeInstance.StringType(), value, sourceInfo);
         }
 
         return null;
@@ -458,7 +487,7 @@ public class ValueEmitterFactory {
         } else if (argumentNode instanceof TextNode textNode) {
             value = newObjectByCoercion(targetType, textNode);
             if (value == null) {
-                value = newLiteralValue(textNode.getText(), List.of(targetType), targetType, sourceInfo);
+                value = newLiteralValue(textNode, List.of(targetType), targetType, sourceInfo);
             }
         } else if (MarkupExtensionInfo.of(argumentNode) instanceof MarkupExtensionInfo.Supplier supplierInfo) {
             var result = acceptSupplierArgument(context, targetType, targetName,
@@ -618,31 +647,27 @@ public class ValueEmitterFactory {
             return null;
         }
 
-        String[] literals = new String[] {textNode.getText()};
+        TextNode[] literals;
 
         if (textNode instanceof ListNode listNode) {
-            List<String> list = new ArrayList<>();
+            List<TextNode> list = new ArrayList<>();
 
             for (ValueNode node : listNode.getValues()) {
                 if (!(node instanceof TextNode listTextNode)) {
                     return null;
                 }
 
-                list.add(listTextNode.getText());
+                list.add(listTextNode);
             }
 
-            literals = list.toArray(new String[0]);
+            literals = list.toArray(TextNode[]::new);
+        } else {
+            literals = new TextNode[] { textNode };
         }
 
         ConstructorWithParams constructor = findConstructor(targetType, literals, textNode.getSourceInfo());
-
         if (constructor == null) {
-            literals = Arrays.stream(textNode.getText().split(",")).map(String::trim).toArray(String[]::new);
-            constructor = findConstructor(targetType, literals, textNode.getSourceInfo());
-
-            if (constructor == null) {
-                return newArray(literals, targetType, textNode.getSourceInfo());
-            }
+            return newArray(literals, targetType, textNode.getSourceInfo());
         }
 
         SourceInfo sourceInfo = objectNode != null ? objectNode.getSourceInfo() : textNode.getSourceInfo();
@@ -654,7 +679,7 @@ public class ValueEmitterFactory {
             .create();
     }
 
-    private static ConstructorWithParams findConstructor(TypeInstance type, String[] literals, SourceInfo sourceInfo) {
+    private static ConstructorWithParams findConstructor(TypeInstance type, TextNode[] literals, SourceInfo sourceInfo) {
         TypeInvoker invoker = new TypeInvoker(sourceInfo);
 
         outer: for (CtConstructor constructor : type.jvmType().getConstructors()) {
@@ -690,14 +715,14 @@ public class ValueEmitterFactory {
 
     private record ConstructorWithParams(CtConstructor constructor, List<ValueEmitterNode> params) {}
 
-    private static ValueEmitterNode newArray(String[] literals, TypeInstance targetType, SourceInfo sourceInfo) {
+    private static ValueEmitterNode newArray(TextNode[] literals, TypeInstance targetType, SourceInfo sourceInfo) {
         if (!targetType.isArray() || targetType.getDimensions() != 1) {
             return null;
         }
 
         List<ValueEmitterNode> params = new ArrayList<>();
 
-        for (String literal : literals) {
+        for (TextNode literal : literals) {
             ValueEmitterNode param = newLiteralValue(literal, targetType.getComponentType(), sourceInfo);
             if (param != null) {
                 params.add(param);
