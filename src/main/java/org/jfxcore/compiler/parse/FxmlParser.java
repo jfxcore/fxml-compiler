@@ -223,24 +223,22 @@ public class FxmlParser {
             return new TextNode(text, sourceInfo);
         }
 
-        List<StringHelper.Part> lines = StringHelper.splitList(text);
-        if (lines.size() == 1) {
+        List<StringHelper.Part> items = StringHelper.splitList(text);
+        if (items.size() == 1) {
             return new TextNode(text, sourceInfo);
         }
 
-        TextNode[] textNodes = new TextNode[lines.size()];
+        TextNode[] textNodes = new TextNode[items.size()];
         int column = sourceInfo.getStart().getColumn();
 
-        for (int i = 0; i < lines.size(); i++) {
-            StringHelper.Part line = lines.get(i);
-            int startLine = sourceInfo.getStart().getLine() + line.line();
-            int startColumn = column + line.column();
-            textNodes[i] = createTextNode(
-                line.text().trim(),
-                new SourceInfo(startLine, startColumn, startLine, startColumn + line.text().length()),
-                false);
+        for (int i = 0; i < items.size(); i++) {
+            StringHelper.Part item = items.get(i);
+            int startLine = sourceInfo.getStart().getLine() + item.line();
+            int startColumn = column + item.column();
+            var itemSourceInfo = new SourceInfo(startLine, startColumn, startLine, startColumn + item.text().length());
+            textNodes[i] = createTextNode(item.text(), itemSourceInfo, false);
 
-            if (line.lineBreak()) {
+            if (item.lineBreak()) {
                 column = 0;
             }
         }
