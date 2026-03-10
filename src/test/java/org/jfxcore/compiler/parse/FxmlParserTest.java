@@ -1,4 +1,4 @@
-// Copyright (c) 2022, 2025, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.parse;
@@ -8,6 +8,7 @@ import org.jfxcore.compiler.ast.ObjectNode;
 import org.jfxcore.compiler.ast.text.TextNode;
 import org.jfxcore.compiler.diagnostic.ErrorCode;
 import org.jfxcore.compiler.diagnostic.MarkupException;
+import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.junit.jupiter.api.Test;
 import org.jfxcore.compiler.TestBase;
 
@@ -73,6 +74,16 @@ public class FxmlParserTest extends TestBase {
             """).parseDocument());
 
         assertEquals(ErrorCode.UNKNOWN_NAMESPACE, ex.getDiagnostic().getCode());
+    }
+
+    @Test
+    public void Reserved_Namespace_Cannot_Be_Rebound() {
+        MarkupException ex = assertThrows(MarkupException.class, () -> new FxmlParser("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Label xmlns:xml="http://jfxcore.org/error"/>
+            """).parseDocument());
+
+        assertEquals(ErrorCode.RESERVED_NAMESPACE_CANNOT_BE_REBOUND, ex.getDiagnostic().getCode());
     }
 
     @Test
@@ -145,6 +156,67 @@ public class FxmlParserTest extends TestBase {
     }
 
     @Test
+    public void Whitespace_Handling_InvalidValue() {
+        MarkupException ex = assertThrows(MarkupException.class, () -> new FxmlParser("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Label xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
+                    <text xml:space="invalid"/>
+                </Label>
+            """).parseDocument());
+
+        assertEquals(ErrorCode.CANNOT_COERCE_PROPERTY_VALUE, ex.getDiagnostic().getCode());
+        assertEquals("'invalid' is not a valid value for xml:space", ex.getDiagnostic().getMessage());
+    }
+
+    @Test
+    public void Whitespace_Handling_Default() {
+        DocumentNode document = new FxmlParser("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Label xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
+                    <text xml:space="default">
+                        foo
+                        bar
+                        baz
+                    </text>
+                </Label>
+            """).parseDocument();
+
+        ObjectNode element = getElement(document, "text");
+        assertEquals("foo\nbar\nbaz", element.getTextContent().getText());
+
+        SourceInfo sourceInfo = element.getTextContent().getSourceInfo();
+        assertEquals(3, sourceInfo.getStart().getLine());
+        assertEquals(12, sourceInfo.getStart().getColumn());
+        assertEquals(5, sourceInfo.getEnd().getLine());
+        assertEquals(15, sourceInfo.getEnd().getColumn());
+    }
+
+    @Test
+    public void Whitespace_Handling_Preserve() {
+        DocumentNode document = new FxmlParser("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Label xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
+                    <text xml:space="preserve">
+                        foo
+                        bar
+                        baz
+                    </text>
+                </Label>
+            """).parseDocument();
+
+        ObjectNode element = getElement(document, "text");
+        assertEquals(
+            "\n            foo\n            bar\n            baz\n        ",
+            element.getTextContent().getText());
+
+        SourceInfo sourceInfo = element.getTextContent().getSourceInfo();
+        assertEquals(2, sourceInfo.getStart().getLine());
+        assertEquals(35, sourceInfo.getStart().getColumn());
+        assertEquals(6, sourceInfo.getEnd().getLine());
+        assertEquals(8, sourceInfo.getEnd().getColumn());
+    }
+
+    @Test
     public void InlineParser_Is_Only_Used_For_Attribute_Values() {
         DocumentNode document = new FxmlParser("""
                 <?xml version="1.0" encoding="UTF-8"?>
@@ -169,13 +241,16 @@ public class FxmlParserTest extends TestBase {
         assertEquals("{fx:foo bar}", ((TextNode)values.get(0)).getText());
     }
 
-    private String getElementText(DocumentNode document, String elementName) {
-        //noinspection OptionalGetWithoutIsPresent
+    private ObjectNode getElement(DocumentNode document, String elementName) {
         return document
             .getRoot().as(ObjectNode.class)
             .getChildren().stream()
             .filter(e -> ((ObjectNode)e).getType().getMarkupName().equals(elementName))
-            .findFirst().get().as(ObjectNode.class)
+            .findFirst().orElseThrow().as(ObjectNode.class);
+    }
+
+    private String getElementText(DocumentNode document, String elementName) {
+        return getElement(document, elementName)
             .getTextContent()
             .getText();
     }
@@ -190,5 +265,4 @@ public class FxmlParserTest extends TestBase {
             .getValues().get(0).as(TextNode.class)
             .getText();
     }
-
 }

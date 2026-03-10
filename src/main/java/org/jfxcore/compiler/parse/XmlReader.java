@@ -1,9 +1,10 @@
-// Copyright (c) 2021, 2025, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.parse;
 
 import org.jfxcore.compiler.diagnostic.SourceInfo;
+import org.jfxcore.compiler.diagnostic.errors.GeneralErrors;
 import org.jfxcore.compiler.diagnostic.errors.ParserErrors;
 import org.jfxcore.compiler.diagnostic.errors.PropertyAssignmentErrors;
 import org.jfxcore.compiler.util.ExceptionHelper;
@@ -34,6 +35,8 @@ public class XmlReader {
     public final static String ELEMENT_NAME_SOURCE_INFO_KEY = XmlReader.class.getName() + "$elemNameSourceInfo";
     public final static String ATTR_VALUE_SOURCE_INFO_KEY = XmlReader.class.getName() + "$attrValueSourceInfo";
     public final static String NAMESPACE_TO_PREFIX_MAP_KEY = XmlReader.class.getName() + "$namespaceToPrefix";
+
+    private final static String XML_RESERVED_NAMESPACE = "http://www.w3.org/XML/1998/namespace";
 
     private final Deque<Map<String, String>> namespaceStack = new ArrayDeque<>();
     private final XmlTokenizer tokenizer;
@@ -101,7 +104,7 @@ public class XmlReader {
         return pi;
     }
 
-    private Node readText() {
+    private Node readText(boolean preserveWhitespace) {
         XmlToken nextToken = tokenizer.peekNotNull();
         if (nextToken.getType() == OPEN_BRACKET || nextToken.getType() == COMMENT_START) {
             return null;
@@ -137,8 +140,12 @@ public class XmlReader {
             throw ParserErrors.invalidExpression(SourceInfo.span(start, end));
         }
 
-        Node node = document.createTextNode(StringHelper.removeInsignificantWhitespace(value));
-        node.setUserData(SOURCE_INFO_KEY, SourceInfo.span(start, end), null);
+        Node node = document.createTextNode(preserveWhitespace ? value : StringHelper.stripIndent(value));
+        SourceInfo sourceInfo = preserveWhitespace
+            ? SourceInfo.span(start, end)
+            : SourceInfo.content(value, start.getStart().getLine(), start.getStart().getColumn());
+
+        node.setUserData(SOURCE_INFO_KEY, sourceInfo, null);
         return node;
     }
 
@@ -172,7 +179,24 @@ public class XmlReader {
                 .collect(Collectors.toMap(Map.Entry::getValue, Map.Entry::getKey)),
             null);
 
+        boolean preserveWhitespace = false;
+
         for (Attribute attribute : attributes) {
+            if ("xml".equals(attribute.name.prefix)) {
+                if ("space".equals(attribute.name.localName)) {
+                    preserveWhitespace = switch (attribute.value) {
+                        case "default" -> false;
+                        case "preserve" -> true;
+                        default -> throw PropertyAssignmentErrors.cannotCoercePropertyValue(
+                            attribute.sourceInfo, "xml:space", attribute.value);
+                    };
+
+                    continue;
+                } else {
+                    throw GeneralErrors.unknownIntrinsic(attribute.sourceInfo, attribute.name.toString());
+                }
+            }
+
             String uri = namespaceStack.getFirst().get(attribute.name.prefix);
             if (uri == null && !attribute.name.prefix.isEmpty()) {
                 throw ParserErrors.unknownNamespace(attribute.sourceInfo, attribute.name.prefix);
@@ -199,7 +223,7 @@ public class XmlReader {
             tokenizer.removeSkipWS(CLOSE_BRACKET);
 
             while (!tokenizer.containsAheadSkipWS(OPEN_BRACKET, SLASH)) {
-                Node text = readText();
+                Node text = readText(preserveWhitespace);
                 if (text != null) {
                     element.appendChild(text);
                 } else {
@@ -246,6 +270,10 @@ public class XmlReader {
             Attribute attribute = it.next();
 
             if ("xmlns".equals(attribute.name.prefix)) {
+                if ("xml".equals(attribute.name.localName) && !XML_RESERVED_NAMESPACE.equals(attribute.value)) {
+                    throw ParserErrors.reservedNamespaceCannotBeRebound(attribute.sourceInfo);
+                }
+
                 namespaceStack.getFirst().put(attribute.name.localName, attribute.value);
                 it.remove();
             } else if (attribute.name.prefix.isEmpty() && "xmlns".equals(attribute.name.localName)) {

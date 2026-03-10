@@ -1,4 +1,4 @@
-// Copyright (c) 2022, 2025, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.diagnostic;
@@ -76,6 +76,48 @@ public final class SourceInfo {
 
     public static SourceInfo after(SourceInfo sourceInfo) {
         return new SourceInfo(sourceInfo.end.getLine(), sourceInfo.end.getColumn());
+    }
+
+    public static SourceInfo content(String text, int line, int column) {
+        int first = -1;
+        int last = -1;
+
+        for (int i = 0; i < text.length(); i++) {
+            if (!Character.isWhitespace(text.charAt(i))) {
+                first = i;
+                break;
+            }
+        }
+
+        if (first < 0) {
+            return none();
+        }
+
+        for (int i = text.length() - 1; i >= 0; i--) {
+            if (!Character.isWhitespace(text.charAt(i))) {
+                last = i;
+                break;
+            }
+        }
+
+        Location start = locationOf(text, line, column, first);
+        Location end = locationOf(text, line, column, last + 1);
+
+        return new SourceInfo(start.getLine(), start.getColumn(), end.getLine(), end.getColumn());
+    }
+
+    private static Location locationOf(String text, int line, int column, int offset) {
+        for (int i = 0; i < offset; i++) {
+            char ch = text.charAt(i);
+            if (ch == '\n') {
+                line++;
+                column = 0;
+            } else if (ch != '\r') {
+                column++;
+            }
+        }
+
+        return new Location(line, column);
     }
 
     private final Location start;
