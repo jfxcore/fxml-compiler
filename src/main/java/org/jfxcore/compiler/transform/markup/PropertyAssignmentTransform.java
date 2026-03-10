@@ -1,4 +1,4 @@
-// Copyright (c) 2022, 2025, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.transform.markup;
@@ -27,6 +27,7 @@ import org.jfxcore.compiler.ast.emit.EmitUnwrapObservableNode;
 import org.jfxcore.compiler.ast.emit.ReferenceableNode;
 import org.jfxcore.compiler.ast.emit.ValueEmitterNode;
 import org.jfxcore.compiler.ast.intrinsic.Intrinsics;
+import org.jfxcore.compiler.ast.text.ListNode;
 import org.jfxcore.compiler.ast.text.TextNode;
 import org.jfxcore.compiler.diagnostic.MarkupException;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
@@ -299,29 +300,30 @@ public class PropertyAssignmentTransform implements Transform {
             TypeInstance childType = TypeHelper.getTypeInstance(child);
 
             if (!isMap && child instanceof TextNode textNode) {
-                if (textNode.isRawText()) {
+                if (textNode instanceof ListNode listNode) {
+                    for (ValueNode item : listNode.getValues()) {
+                        if (item instanceof TextNode textItem) {
+                            ValueNode valueNode = ValueEmitterFactory.newLiteralValue(
+                                textItem, itemType, item.getSourceInfo());
+
+                            if (valueNode == null) {
+                                error = true;
+                                break;
+                            }
+
+                            values.add(valueNode);
+                        } else {
+                            error = true;
+                            break;
+                        }
+                    }
+                } else {
                     ValueNode valueNode = ValueEmitterFactory.newLiteralValue(
-                        textNode.getText(), itemType, child.getSourceInfo());
+                        textNode, itemType, child.getSourceInfo());
 
                     if (valueNode == null) {
                         error = true;
                     } else {
-                        values.add(valueNode);
-                    }
-                } else {
-                    for (String value : textNode.getText().split(",|\\R")) {
-                        if (value.isBlank()) {
-                            continue;
-                        }
-
-                        ValueNode valueNode = ValueEmitterFactory.newLiteralValue(
-                            value.trim(), itemType, child.getSourceInfo());
-
-                        if (valueNode == null) {
-                            error = true;
-                            break;
-                        }
-
                         values.add(valueNode);
                     }
                 }
@@ -477,7 +479,7 @@ public class PropertyAssignmentTransform implements Transform {
 
         if (node instanceof TextNode textNode) {
             ValueEmitterNode coercedValue = ValueEmitterFactory.newLiteralValue(
-                textNode.getText(), List.of(targetType, declaringType), targetType, node.getSourceInfo());
+                textNode, List.of(targetType, declaringType), targetType, node.getSourceInfo());
 
             if (coercedValue != null) {
                 return coercedValue;

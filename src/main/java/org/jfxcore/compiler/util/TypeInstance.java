@@ -1,4 +1,4 @@
-// Copyright (c) 2022, 2025, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.util;
@@ -96,6 +96,7 @@ public class TypeInstance {
     public static TypeInstance LongType() { return resolveTypeInstance(Classes.LongType()); }
     public static TypeInstance FloatType() { return resolveTypeInstance(Classes.FloatType()); }
     public static TypeInstance DoubleType() { return resolveTypeInstance(Classes.DoubleType()); }
+    public static TypeInstance NumberType() { return resolveTypeInstance(Classes.NumberType()); }
     public static TypeInstance StringType() { return resolveTypeInstance(Classes.StringType()); }
     public static TypeInstance ObjectType() { return resolveTypeInstance(Classes.ObjectType()); }
 
