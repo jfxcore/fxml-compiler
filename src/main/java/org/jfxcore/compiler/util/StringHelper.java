@@ -1,4 +1,4 @@
-// Copyright (c) 2021, 2025, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.util;
@@ -83,32 +83,56 @@ public class StringHelper {
         });
     }
 
-    public static String removeInsignificantWhitespace(String value) {
-        String[] lines = splitLines(value, true);
-        int firstLine = -1;
+    public static String stripIndent(String value) {
+        String[] lines = value.split("\\R", -1);
 
-        for (int i = 0; i < lines.length; ++i) {
-            if (!lines[i].isBlank()) {
-                firstLine = i;
-                break;
-            }
+        int start = 0;
+        int end = lines.length;
+
+        while (start < end && lines[start].isBlank()) {
+            start++;
         }
 
-        if (firstLine < 0) {
+        while (end > start && lines[end - 1].isBlank()) {
+            end--;
+        }
+
+        if (start == end) {
             return "";
         }
 
-        int indent = getLeadingWhitespaceCount(lines[firstLine]);
-        StringBuilder builder = new StringBuilder();
-
-        for (int i = firstLine; i < lines.length; ++i) {
-            builder.append(lines[i].substring(Math.min(getLeadingWhitespaceCount(lines[i]), indent)));
+        int minIndent = Integer.MAX_VALUE;
+        for (int i = start; i < end; i++) {
+            if (!lines[i].isBlank()) {
+                minIndent = Math.min(minIndent, leadingWhitespaceCount(lines[i]));
+            }
         }
 
-        return builder.toString().stripTrailing();
+        var builder = new StringBuilder();
+        for (int i = start; i < end; i++) {
+            if (!lines[i].isBlank()) {
+                int cut = Math.min(minIndent, leadingWhitespaceCount(lines[i]));
+                builder.append(stripTrailingWhitespace(lines[i].substring(cut)));
+            }
+
+            if (i < end - 1) {
+                builder.append('\n');
+            }
+        }
+
+        return builder.toString();
     }
 
-    private static int getLeadingWhitespaceCount(String line) {
+    private static String stripTrailingWhitespace(String s) {
+        int end = s.length();
+        while (end > 0 && Character.isWhitespace(s.charAt(end - 1))) {
+            end--;
+        }
+
+        return s.substring(0, end);
+    }
+
+    private static int leadingWhitespaceCount(String line) {
         for (int i = 0; i < line.length(); ++i) {
             if (!Character.isWhitespace(line.charAt(i))) {
                 return i;
