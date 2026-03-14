@@ -1,9 +1,10 @@
-// Copyright (c) 2022, 2025, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler;
 
 import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
@@ -53,6 +54,12 @@ public class EventHandlerTest extends CompilerTestBase {
 
         void packagePrivateHandler() {
             flag = true;
+        }
+
+        private final ReadOnlyObjectProperty<EventHandler<ActionEvent>> readOnlyActionHandlerProp = actionHandlerProp;
+
+        public final ReadOnlyObjectProperty<EventHandler<ActionEvent>> readOnlyActionHandlerPropProperty() {
+            return readOnlyActionHandlerProp;
         }
     }
 
@@ -136,6 +143,17 @@ public class EventHandlerTest extends CompilerTestBase {
         Button button = (Button)root.getChildren().get(0);
         button.getOnAction().handle(null);
         assertTrue(root.flag);
+    }
+
+    @Test
+    public void ReadOnly_EventHandlerProperty_Cannot_Be_Modified() {
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <?import javafx.scene.control.*?>
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                      readOnlyActionHandlerProp="#actionHandler"/>
+        """));
+
+        assertEquals(ErrorCode.CANNOT_MODIFY_READONLY_PROPERTY, ex.getDiagnostic().getCode());
     }
 
     @Test

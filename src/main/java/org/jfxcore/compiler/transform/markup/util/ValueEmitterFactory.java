@@ -571,7 +571,7 @@ public class ValueEmitterFactory {
                 valueType, ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT, markupExtensionNode.getSourceInfo());
         }
 
-        ValueEmitterNode argValueNode = newObjectWithNamedParams(context, markupExtensionNode, List.of());
+        ValueEmitterNode argValueNode = newObjectWithNamedParams(context, markupExtensionNode, new ArrayList<>());
         if (argValueNode == null) {
             return AcceptArgumentResult.error(
                 valueType, ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT, markupExtensionNode.getSourceInfo());

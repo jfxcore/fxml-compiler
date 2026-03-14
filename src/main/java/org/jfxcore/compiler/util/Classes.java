@@ -55,8 +55,12 @@ public final class Classes {
     public static CtClass NullType() { return nullType; }
     public static CtClass BottomType() { return bottomType; }
 
+    // java.io
+    public static CtClass SerializableType() { return get("java.io.Serializable"); }
+
     // java.lang
     public static CtClass ObjectType() { return get("java.lang.Object"); }
+    public static CtClass CloneableType() { return get("java.lang.Cloneable"); }
     public static CtClass ObjectsType() { return get("java.util.Objects"); }
     public static CtClass ClassType() { return get("java.lang.Class"); }
     public static CtClass StringType() { return get("java.lang.String"); }
