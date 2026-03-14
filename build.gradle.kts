@@ -10,8 +10,8 @@ plugins {
     `java-library`
     `maven-publish`
     signing
-    kotlin("jvm") version "1.9.25"
-    id("com.github.johnrengelman.shadow") version "7.1.0"
+    kotlin("jvm") version "2.3.10"
+    id("com.github.johnrengelman.shadow") version "8.1.1"
 }
 
 group = "org.jfxcore"
@@ -45,8 +45,8 @@ testing {
 
             dependencies {
                 implementation(project())
-                implementation(platform("org.junit:junit-bom:5.8.1"))
-                implementation("org.junit.jupiter:junit-jupiter")
+                implementation("org.junit.jupiter:junit-jupiter:5.12.2")
+                runtimeOnly("org.junit.platform:junit-platform-launcher")
             }
         }
 
@@ -112,6 +112,12 @@ tasks.compileJava {
     dependsOn(gradle.includedBuild("markup").task(":jar"))
 }
 
+tasks.compileKotlin {
+    dependsOn(copyVersionInfo)
+    dependsOn(gradle.includedBuild("jfx").task(":sdk"))
+    dependsOn(gradle.includedBuild("markup").task(":jar"))
+}
+
 tasks.named<Jar>("sourcesJar") {
     dependsOn(copyVersionInfo)
     duplicatesStrategy = DuplicatesStrategy.INCLUDE
@@ -124,6 +130,7 @@ tasks.withType<Javadoc> {
 
 tasks.withType<Test> {
     useJUnitPlatform()
+    jvmArgs("--enable-native-access=ALL-UNNAMED")
     systemProperty("prism.order", "sw")
     systemProperty("glass.platform", "Monocle")
     systemProperty("monocle.platform", "Headless")
