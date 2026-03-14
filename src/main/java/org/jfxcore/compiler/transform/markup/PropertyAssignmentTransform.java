@@ -4,7 +4,6 @@
 package org.jfxcore.compiler.transform.markup;
 
 import javassist.CtClass;
-import org.jetbrains.annotations.Nullable;
 import org.jfxcore.compiler.ast.BindingNode;
 import org.jfxcore.compiler.ast.ContextNode;
 import org.jfxcore.compiler.ast.Node;
@@ -24,6 +23,7 @@ import org.jfxcore.compiler.ast.emit.EmitSetFieldNode;
 import org.jfxcore.compiler.ast.emit.EmitStaticPropertySetterNode;
 import org.jfxcore.compiler.ast.emit.EmitTemplateContentNode;
 import org.jfxcore.compiler.ast.emit.EmitUnwrapObservableNode;
+import org.jfxcore.compiler.ast.emit.EmitterNode;
 import org.jfxcore.compiler.ast.emit.ReferenceableNode;
 import org.jfxcore.compiler.ast.emit.ValueEmitterNode;
 import org.jfxcore.compiler.ast.intrinsic.Intrinsics;
@@ -174,13 +174,13 @@ public class PropertyAssignmentTransform implements Transform {
             }
 
             if (child instanceof ValueNode valueNode) {
-                Result<Node> result = trySetValue(context, valueNode, targetProperty);
+                ValueAssignmentResolution res = resolveValueAssignment(context, valueNode, targetProperty);
 
-                if (result instanceof Result.Success<Node> success && success.value() != null) {
-                    return success.value();
+                if (res instanceof ValueAssignmentResolution.Assign assign) {
+                    return assign.node();
                 }
 
-                if (result instanceof Result.Error<Node> error) {
+                if (res instanceof ValueAssignmentResolution.Error error) {
                     storedException = error.error();
                 }
             }
@@ -219,24 +219,29 @@ public class PropertyAssignmentTransform implements Transform {
         throw PropertyAssignmentErrors.incompatiblePropertyItems(propertyNode.getSourceInfo(), targetProperty);
     }
 
-    private Result<Node> trySetValue(TransformContext context, @Nullable ValueNode node, PropertyInfo propertyInfo) {
-        if (node == null) {
-            return Result.of(null);
-        }
-
+    private ValueAssignmentResolution resolveValueAssignment(
+            TransformContext context, ValueNode node, PropertyInfo propertyInfo) {
         ValueNode value = null;
         MarkupException exception = null;
-        Result<ValueNode> extensionResult = createApplyMarkupExtensionNode(node, propertyInfo, propertyInfo.getType());
-        if (extensionResult instanceof Result.Success<ValueNode> successResult) {
-            value = successResult.value();
+        MarkupExtensionResolution res = resolveMarkupExtension(node, propertyInfo, propertyInfo.getType());
 
-            // Only a markup extension can potentially be assigned to a read-only property,
-            // so if we don't have one, exit early.
-            if (value == null && propertyInfo.isReadOnly()) {
-                return Result.of(null);
+        if (res instanceof MarkupExtensionResolution.ProvideValue provideValue) {
+            if (propertyInfo.isReadOnly()) {
+                // Value-producing extensions cannot mutate a read-only property directly.
+                // Let collection/map properties fall through to the add-item path instead.
+                return new ValueAssignmentResolution.NotHandled();
             }
-        } else if (extensionResult instanceof Result.Error<ValueNode> errorResult) {
-            exception = errorResult.error();
+
+            value = provideValue.value();
+        } else if (res instanceof MarkupExtensionResolution.ConsumeProperty consumeProperty) {
+            return new ValueAssignmentResolution.Assign(consumeProperty.node());
+        } else if (res instanceof MarkupExtensionResolution.Error error) {
+            exception = error.error();
+        } else if (propertyInfo.isReadOnly()) {
+            // Only markup extensions that apply directly to the target property can be used with
+            // read-only properties. Value-producing extensions must fall through so collection
+            // properties can add items instead of attempting to invoke a setter.
+            return new ValueAssignmentResolution.NotHandled();
         }
 
         if (value == null) {
@@ -252,14 +257,17 @@ public class PropertyAssignmentTransform implements Transform {
 
         if (value != null) {
             if (propertyInfo.isStatic()) {
-                return Result.of(new EmitStaticPropertySetterNode(
+                return new ValueAssignmentResolution.Assign(new EmitStaticPropertySetterNode(
                     propertyInfo.getDeclaringType(), propertyInfo, value, node.getSourceInfo()));
             } else {
-                return Result.of(new EmitPropertySetterNode(propertyInfo, value, false, node.getSourceInfo()));
+                return new ValueAssignmentResolution.Assign(new EmitPropertySetterNode(
+                    propertyInfo, value, false, node.getSourceInfo()));
             }
         }
 
-        return exception != null ? Result.error(exception) : Result.of(null);
+        return exception != null
+            ? new ValueAssignmentResolution.Error(exception)
+            : new ValueAssignmentResolution.NotHandled();
     }
 
     private Node tryAddValue(TransformContext context,
@@ -289,12 +297,16 @@ public class PropertyAssignmentTransform implements Transform {
         for (Node child : propertyNode.getValues()) {
             boolean error = false;
 
-            Result<ValueNode> result = createApplyMarkupExtensionNode(child, targetProperty, itemType);
+            MarkupExtensionResolution result = resolveMarkupExtension(child, targetProperty, itemType);
 
-            if (result instanceof Result.Success<ValueNode> success && success.value() != null) {
-                child = success.value();
-            } else if (result instanceof Result.Error<ValueNode> err) {
-                throw err.error();
+            if (result instanceof MarkupExtensionResolution.ProvideValue p) {
+                child = p.value();
+            } else if (result instanceof MarkupExtensionResolution.Error e) {
+                throw e.error();
+            } else if (result instanceof MarkupExtensionResolution.ConsumeProperty) {
+                throw GeneralErrors.cannotAddItemIncompatibleValue(
+                    child.getSourceInfo(), declaringType.jvmType(), propertyNode.getMarkupName(),
+                    child.getSourceInfo().getText());
             }
 
             TypeInstance childType = TypeHelper.getTypeInstance(child);
@@ -407,21 +419,21 @@ public class PropertyAssignmentTransform implements Transform {
             .create();
     }
 
-    private Result<ValueNode> createApplyMarkupExtensionNode(
+    private MarkupExtensionResolution resolveMarkupExtension(
             Node node, PropertyInfo targetProperty, TypeInstance targetType) {
         var extensionInfo = MarkupExtensionInfo.of(node);
         if (extensionInfo == null || !(node instanceof ValueEmitterNode valueEmitterNode)) {
-            return Result.of(null);
+            return new MarkupExtensionResolution.None();
         }
 
         if (extensionInfo instanceof MarkupExtensionInfo.Supplier supplierInfo) {
             if (supplierInfo.providedTypes().stream().noneMatch(targetType::isAssignableFrom)) {
-                return Result.error(PropertyAssignmentErrors.markupExtensionNotApplicable(
+                return new MarkupExtensionResolution.Error(PropertyAssignmentErrors.markupExtensionNotApplicable(
                     node.getSourceInfo(), targetProperty, TypeHelper.getJvmType(node),
                     supplierInfo.providedTypes().toArray(TypeInstance[]::new)));
             }
 
-            return Result.of(new EmitApplyMarkupExtensionNode.Supplier(
+            return new MarkupExtensionResolution.ProvideValue(new EmitApplyMarkupExtensionNode.Supplier(
                 valueEmitterNode, supplierInfo.markupExtensionInterface(), targetProperty.getName(),
                 targetType, supplierInfo.returnType(), targetProperty));
         }
@@ -429,12 +441,12 @@ public class PropertyAssignmentTransform implements Transform {
         if (extensionInfo instanceof MarkupExtensionInfo.PropertyConsumer propertyConsumerInfo) {
             if (targetProperty.getObservableType() == null
                     || !propertyConsumerInfo.propertyType().isAssignableFrom(targetProperty.getObservableType())) {
-                return Result.error(PropertyAssignmentErrors.markupExtensionNotApplicable(
+                return new MarkupExtensionResolution.Error(PropertyAssignmentErrors.markupExtensionNotApplicable(
                     node.getSourceInfo(), targetProperty, TypeHelper.getJvmType(node),
                     new TypeInstance[] {propertyConsumerInfo.propertyType()}));
             }
 
-            return Result.of(new EmitApplyMarkupExtensionNode(
+            return new MarkupExtensionResolution.ConsumeProperty(new EmitApplyMarkupExtensionNode(
                 valueEmitterNode, propertyConsumerInfo.markupExtensionInterface(), targetProperty.getName(),
                 targetType, TypeInstance.voidType(), targetProperty));
         }
@@ -492,16 +504,16 @@ public class PropertyAssignmentTransform implements Transform {
             valueEmitterNode : null;
     }
 
-    private sealed interface Result<T> {
-        record Success<T>(T value) implements Result<T> {}
-        record Error<T>(MarkupException error) implements Result<T> {}
+    private sealed interface ValueAssignmentResolution {
+        record NotHandled() implements ValueAssignmentResolution {}
+        record Assign(EmitterNode node) implements ValueAssignmentResolution {}
+        record Error(MarkupException error) implements ValueAssignmentResolution {}
+    }
 
-        static <T> Success<T> of(T value) {
-            return new Success<>(value);
-        }
-
-        static <T> Error<T> error(MarkupException error) {
-            return new Error<>(error);
-        }
+    private sealed interface MarkupExtensionResolution {
+        record None() implements MarkupExtensionResolution {}
+        record ProvideValue(ValueEmitterNode value) implements MarkupExtensionResolution {}
+        record ConsumeProperty(EmitterNode node) implements MarkupExtensionResolution {}
+        record Error(MarkupException error) implements MarkupExtensionResolution {}
     }
 }

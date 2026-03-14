@@ -1,4 +1,4 @@
-// Copyright (c) 2025, JFXcore. All rights reserved.
+// Copyright (c) 2025, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.transform.markup.util;
@@ -62,8 +62,19 @@ public sealed interface MarkupExtensionInfo {
                 }
             }
 
+            // If the following conditions are met, we consider the supplier extension to return the bottom type:
+            //   1. The MarkupExtension.Supplier interface is implemented with a generic type parameter.
+            //   2. The extension type is used in raw form such that the generic type parameter of the
+            //      MarkupExtension.Supplier interface is erased.
+            //   3. The 'get' method returns java.lang.Object
+            //
+            // In this special case, the markup extension is considered to be applicable to any type.
             if (providedTypes.isEmpty()) {
-                providedTypes.add(returnType);
+                if (returnType.equals(TypeInstance.ObjectType()) && isRawSupplier(type)) {
+                    providedTypes.add(TypeInstance.bottomType());
+                } else {
+                    providedTypes.add(returnType);
+                }
             }
 
             return new Supplier(returnType, providedTypes, Markup.MarkupExtension.SupplierType());
@@ -111,6 +122,26 @@ public sealed interface MarkupExtensionInfo {
 
             if (propertyType == ReadOnlyPropertyType()) {
                 return new PropertyConsumer(paramType, Markup.MarkupExtension.ReadOnlyPropertyConsumerType(), true);
+            }
+        }
+
+        return null;
+    }
+
+    private static boolean isRawSupplier(TypeInstance type) {
+        TypeInstance supplierType = getSupplierType(type);
+        return supplierType != null && supplierType.isRaw();
+    }
+
+    private static TypeInstance getSupplierType(TypeInstance type) {
+        if (type.equals(Markup.MarkupExtension.SupplierType())) {
+            return type;
+        }
+
+        for (TypeInstance superType : type.getSuperTypes()) {
+            TypeInstance supplierType = getSupplierType(superType);
+            if (supplierType != null) {
+                return supplierType;
             }
         }
 

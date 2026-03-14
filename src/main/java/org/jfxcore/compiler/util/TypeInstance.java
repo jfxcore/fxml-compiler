@@ -99,7 +99,7 @@ public class TypeInstance {
     public static TypeInstance NumberType() { return resolveTypeInstance(Classes.NumberType()); }
     public static TypeInstance StringType() { return resolveTypeInstance(Classes.StringType()); }
     public static TypeInstance ObjectType() { return resolveTypeInstance(Classes.ObjectType()); }
-
+    public static TypeInstance bottomType() { return resolveTypeInstance(Classes.BottomType()); }
     public static TypeInstance nullType() {
         TypeInstance typeInstance = getClassCache().get(null);
         if (typeInstance == null) {
@@ -332,6 +332,11 @@ public class TypeInstance {
      * </ol>
      */
     public boolean isAssignableFrom(TypeInstance from, AssignmentContext context) {
+        // Any type is assignable from the bottom type
+        if (from.equals(Classes.BottomType())) {
+            return true;
+        }
+
         // Reference types are always assignable from the null type
         if (!isPrimitive() && from instanceof NullTypeInstance) {
             return true;
@@ -420,7 +425,10 @@ public class TypeInstance {
         }
 
         if (dimensions != from.dimensions) {
-            return dimensions == 0 || equals(Classes.ObjectType());
+            return dimensions == 0 && (
+                equals(Classes.ObjectType())
+                || equals(Classes.CloneableType())
+                || equals(Classes.SerializableType()));
         }
 
         if (!unchecked(SourceInfo.none(), () -> from.type.subtypeOf(type))) {

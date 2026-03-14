@@ -1,4 +1,4 @@
-// Copyright (c) 2022, 2025, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.util;
@@ -763,6 +763,16 @@ public class TypeInstanceTest extends TestBase {
     }
 
     @Test
+    public void IsAssignableFrom_Integer_DoubleMultiArray() {
+        TypeInstance t0 = new TypeParser("java.lang.Integer").parse().get(0);
+        TypeInstance t1 = new TypeParser("java.lang.Double[][][]").parse().get(0);
+        assertEquals("java.lang.Integer", t0.getJavaName());
+        assertEquals("java.lang.Double[][][]", t1.getJavaName());
+        assertFalse(t0.isAssignableFrom(t1));
+        assertFalse(t1.isAssignableFrom(t0));
+    }
+
+    @Test
     public void IsAssignableFrom_Object_primitiveDoubleArray() {
         TypeInstance t0 = new TypeParser("java.lang.Object").parse().get(0);
         TypeInstance t1 = new TypeParser("double[]").parse().get(0);
@@ -836,6 +846,14 @@ public class TypeInstanceTest extends TestBase {
         assertEquals("double[][]", t0.getJavaName());
         assertEquals("double[][][]", t1.getJavaName());
         assertFalse(t0.isAssignableFrom(t1));
+    }
+
+    @Test
+    public void IsAssignableFrom_BottomType() {
+        var bottomType = TypeInstance.of(Classes.BottomType());
+        assertTrue(TypeInstance.booleanType().isAssignableFrom(bottomType));
+        assertTrue(TypeInstance.StringType().isAssignableFrom(bottomType));
+        assertTrue(new TypeParser("double[][]").parse().get(0).isAssignableFrom(bottomType));
     }
 
     public static class Type6<T> {}
