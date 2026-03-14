@@ -299,10 +299,10 @@ public class PropertyAssignmentTransform implements Transform {
 
             MarkupExtensionResolution result = resolveMarkupExtension(child, targetProperty, itemType);
 
-            if (result instanceof MarkupExtensionResolution.ProvideValue p) {
-                child = p.value();
-            } else if (result instanceof MarkupExtensionResolution.Error e) {
-                throw e.error();
+            if (result instanceof MarkupExtensionResolution.ProvideValue provideValue) {
+                child = provideValue.value();
+            } else if (result instanceof MarkupExtensionResolution.Error err) {
+                throw err.error();
             } else if (result instanceof MarkupExtensionResolution.ConsumeProperty) {
                 throw GeneralErrors.cannotAddItemIncompatibleValue(
                     child.getSourceInfo(), declaringType.jvmType(), propertyNode.getMarkupName(),
