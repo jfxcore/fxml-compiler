@@ -73,17 +73,17 @@ The following example implements a markup extension that converts the name of an
 
 <div class="filename">FXML</div>
 ```xml
-<Image url="{Resource /path/to/image.jpg}"/>
+<Image url="{ClassPathResource /path/to/image.jpg}"/>
 ```
 
 <div class="filename">Java code</div>
 ```java
 @DefaultProperty("name")
-public final class Resource implements MarkupExtension.Supplier<Object> {
+public final class ClassPathResource implements MarkupExtension.Supplier<Object> {
 
     private final String name;
 
-    public Resource(@NamedArg("name") String name) {
+    public ClassPathResource(@NamedArg("name") String name) {
         this.name = Objects.requireNonNull(name, "name cannot be null").trim();
     }
 
@@ -114,7 +114,7 @@ public final class Resource implements MarkupExtension.Supplier<Object> {
 ```
 
 The markup extension in this example uses several FXML features:
-1. It defines a `@DefaultProperty`, which allows users to omit the `name` property in the markup extension invocation. If not for the default property, users would have to explicitly spell out the name of the constructor parameter: `{Resource name=/path/to/image.jpg}`.
+1. It defines a `@DefaultProperty`, which allows users to omit the `name` property in the markup extension invocation. If not for the default property, users would have to explicitly spell out the name of the constructor parameter: `{ClassPathResource name=/path/to/image.jpg}`.
 2. It implements `MarkupExtension.Supplier<Object>` to make the extension compatible with `String`, `URL`, and `URI` target types, as there is no other common base class other than `Object`. However, it restricts the set of target types with the `@ReturnType` annotation. This allows the FXML compiler to type-check the markup extension usage at compile time, instead of potentially running into `ClassCastException` later at runtime.
 3. It queries the `MarkupContext` at runtime to decide which type of object to return based on the type of the property or argument targeted by the markup extension.
 
