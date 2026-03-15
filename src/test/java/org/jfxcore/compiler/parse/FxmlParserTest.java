@@ -152,7 +152,8 @@ public class FxmlParserTest extends TestBase {
                 <Label xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"/>
             """).parseDocument());
 
-        assertEquals(ErrorCode.INVALID_EXPRESSION, ex.getDiagnostic().getCode());
+        assertEquals(ErrorCode.DUPLICATE_PREFIX_DECLARATION, ex.getDiagnostic().getCode());
+        assertEquals("Prefix '%' is already declared for 'StaticResource'", ex.getDiagnostic().getMessage());
     }
 
     @Test

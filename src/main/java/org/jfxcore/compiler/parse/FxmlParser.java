@@ -285,8 +285,9 @@ public class FxmlParser {
         }
 
         char prefix = prefixText.charAt(0);
-        if (prefixMappings.putIfAbsent(prefix, typeName) != null) {
-            throw ParserErrors.invalidExpression(getSourceInfo(pi));
+        String previousType = prefixMappings.putIfAbsent(prefix, typeName);
+        if (previousType != null) {
+            throw ParserErrors.duplicatePrefixDeclaration(getSourceInfo(pi), prefix, previousType);
         }
     }
 

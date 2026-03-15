@@ -65,4 +65,9 @@ public class ParserErrors {
         return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
             ErrorCode.UNEXPECTED_MARKUP_EXTENSION, type));
     }
+
+    public static MarkupException duplicatePrefixDeclaration(SourceInfo sourceInfo, char prefix, String type) {
+        return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
+            ErrorCode.DUPLICATE_PREFIX_DECLARATION, prefix, type));
+    }
 }
