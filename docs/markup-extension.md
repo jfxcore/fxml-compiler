@@ -36,17 +36,16 @@ The FXML 2.0 runtime library includes markup extensions for resolving classpath 
 | [`DynamicResource`](markup-extension/dynamic-resource.html) | Resolves a localizable resource for a property and updates that property when the resource changes |
 
 ## Prefix shorthand in attribute notation
-Markup extensions that use attribute notation can also be written with a document-defined single-character prefix. Prefixes are declared with a `<?prefix?>` processing instruction before the root element. After a prefix has been declared, attribute values that start with that prefix are expanded to the corresponding markup extension:
+Markup extensions that use attribute notation can also be written with a single-character prefix. The `%` and `@` prefixes are available implicitly and expand to `StaticResource` and `ClassPathResource`, even if the FXML file does not import these markup extensions and does not declare any prefixes:
 
 ```xml
-<?import org.jfxcore.markup.resource.*?>
-<?prefix % = StaticResource?>
-<?prefix @ = ClassPathResource?>
-
 <Label xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
        text="%greeting"
        graphic="@icons/app.png"/>
 ```
+
+{: .note }
+If the [markup](https://github.com/jfxcore/markup) runtime library is not on the compile classpath, compilation will fail when the built-in markup extensions or their implicit prefixes are used.
 
 These examples are equivalent to the following long form:
 
@@ -68,6 +67,30 @@ The prefix form has the same semantics as the corresponding markup extension. In
 {: .note }
 Generic type arguments are not allowed in prefix form, so `%greeting` is valid, but `%<String>greeting` is not. If type arguments are required, use the regular markup extension syntax instead; for example `{StaticResource<String> greeting}`.
 
+### Prefix declarations
+Additional prefixes can be declared explicitly with a `<?prefix?>` processing instruction before the root element. Explicit declarations can also override the built-in defaults for `%` and `@`:
+
+```xml
+<?import org.example.MyStaticResource?>
+<?prefix % = MyStaticResource?>
+<?prefix @ = org.example.MyClassPathResource?>
+
+<Label xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+       text="%greeting"
+       graphic="@icons/app.png"/>
+```
+
+A declared prefix must satisfy the following rules:
+
+- It must be exactly one character.
+- It must not be a letter or digit.
+- It must not be one of the following reserved characters: `{ } ( ) [ ] < > , ; : = * / . # & " ' ? _`
+
+In practice, punctuation characters such as `%` and `@` are good choices.
+
+{: .note }
+The `%` and `@` prefixes are reserved as built-in defaults for `StaticResource` and `ClassPathResource`. They can still be declared explicitly, in which case the explicit declaration overrides the built-in mapping for the current document.
+
 ### Escaping declared prefixes
 
 Prefix shorthand uses the same escape mechanism as other attribute-form markup extensions. To treat a prefixed value as a literal string, prefix it with `{}`:
@@ -77,16 +100,6 @@ Prefix shorthand uses the same escape mechanism as other attribute-form markup e
 ```
 
 The value assigned to `text` in this example is the literal string `%greeting`, and not a markup extension.
-
-### Restrictions for declared prefixes
-
-A declared prefix must satisfy the following rules:
-
-- It must be exactly one character.
-- It must not be a letter or digit.
-- It must not be one of the following reserved characters: `{ } ( ) [ ] < > , ; : = * / . # & " ' ? _`
-
-In practice, punctuation characters such as `%` and `@` are good choices.
 
 ## Types of markup extensions
 Markup extensions have two general forms: property consumers and value suppliers. A property consumer extension can only be applied to a JavaFX property (i.e. a property implementing `Property` or `ReadOnlyProperty`). A value supplier extension can also be applied to method or constructor arguments.

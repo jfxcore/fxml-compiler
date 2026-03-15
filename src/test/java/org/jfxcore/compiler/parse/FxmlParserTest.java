@@ -121,15 +121,70 @@ public class FxmlParserTest extends TestBase {
     }
 
     @Test
+    public void Fully_Qualified_Prefix_ProcessingInstruction_Is_Parsed_Correctly() {
+        DocumentNode document = new FxmlParser("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <?prefix % = org.jfxcore.markup.resource.StaticResource?>
+                <Label xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                       text="% greeting; formatArguments=foo, bar"/>
+            """).parseDocument();
+
+        var property = ((ObjectNode)document.getRoot()).findProperty("text");
+        assertNotNull(property);
+        var objectNode = assertInstanceOf(ObjectNode.class, property.getValues().get(0));
+        assertEquals("org.jfxcore.markup.resource.StaticResource", objectNode.getType().getMarkupName());
+        assertTrue(objectNode.getChildren().get(0) instanceof TextNode textNode && textNode.getText().equals("greeting"));
+        assertEquals("formatArguments", objectNode.getProperties().get(0).getName());
+    }
+
+    @Test
+    public void Builtin_Prefixes_Are_Parsed_Without_Imports_Or_Declarations() {
+        DocumentNode document = new FxmlParser("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Label xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                       text="% greeting"
+                       graphic="@icons/app.png"/>
+            """).parseDocument();
+
+        var root = (ObjectNode)document.getRoot();
+        var textProperty = root.findProperty("text");
+        assertNotNull(textProperty);
+        var textValue = assertInstanceOf(ObjectNode.class, textProperty.getValues().get(0));
+        assertEquals("org.jfxcore.markup.resource.StaticResource", textValue.getType().getName());
+        assertTrue(textValue.getChildren().get(0) instanceof TextNode textNode && textNode.getText().equals("greeting"));
+
+        var graphicProperty = root.findProperty("graphic");
+        assertNotNull(graphicProperty);
+        var graphicValue = assertInstanceOf(ObjectNode.class, graphicProperty.getValues().get(0));
+        assertEquals("org.jfxcore.markup.resource.ClassPathResource", graphicValue.getType().getName());
+        assertTrue(graphicValue.getChildren().get(0) instanceof TextNode textNode && textNode.getText().equals("icons/app.png"));
+    }
+
+    @Test
     public void Escaped_Prefix_Is_Not_Processed() {
         DocumentNode document = new FxmlParser("""
                 <?xml version="1.0" encoding="UTF-8"?>
-                <?prefix % = StaticResource?>
                 <Label xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                        text="{}% greeting"/>
             """).parseDocument();
 
         assertEquals("% greeting", getPropertyText(document, "text"));
+    }
+
+    @Test
+    public void Explicit_Prefix_Declaration_Overrides_Builtin_Default() {
+        DocumentNode document = new FxmlParser("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <?prefix % = com.example.CustomResource?>
+                <Label xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                       text="%greeting"/>
+            """).parseDocument();
+
+        var property = ((ObjectNode)document.getRoot()).findProperty("text");
+        assertNotNull(property);
+        var objectNode = assertInstanceOf(ObjectNode.class, property.getValues().get(0));
+        assertEquals("com.example.CustomResource", objectNode.getType().getName());
+        assertTrue(objectNode.getChildren().get(0) instanceof TextNode textNode && textNode.getText().equals("greeting"));
     }
 
     @Test

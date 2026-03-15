@@ -140,6 +140,37 @@ public class StaticResourceExtensionTest extends CompilerTestBase {
     }
 
     @Test
+    public void Fully_Qualified_Prefix_Syntax_Is_Assigned_Correctly() {
+        resourceContext = ResourceContext.ofResourceBundle(
+            bundle(new Object[][] {
+                { "greeting", "Hello World" }
+            }, Locale.getDefault()));
+
+        LocalizedLabel root = compileAndRun("""
+            <?prefix % = org.jfxcore.markup.resource.StaticResource?>
+            <LocalizedLabel xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                            text="%greeting"/>
+        """);
+
+        assertEquals("Hello World", root.getText());
+    }
+
+    @Test
+    public void Builtin_Prefix_Syntax_Is_Assigned_Correctly_Without_Imports_Or_Declarations() {
+        resourceContext = ResourceContext.ofResourceBundle(
+            bundle(new Object[][] {
+                { "greeting", "Hello World" }
+            }, Locale.getDefault()));
+
+        LocalizedLabel root = compileAndRun("""
+            <LocalizedLabel xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                            text="% greeting"/>
+        """);
+
+        assertEquals("Hello World", root.getText());
+    }
+
+    @Test
     public void String_Is_Formatted_Correctly() {
         resourceContext = ResourceContext.ofResourceBundle(
             bundle(new Object[][] {

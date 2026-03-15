@@ -66,6 +66,11 @@ public class FxmlParser {
         InlineParser.ONCE_EXPR_PREFIX
     };
 
+    private static final Map<Character, String> DEFAULT_PREFIX_MAPPINGS = Map.of(
+        '%', "org.jfxcore.markup.resource.StaticResource",
+        '@', "org.jfxcore.markup.resource.ClassPathResource"
+    );
+
     private static final String RESERVED_PREFIX_CHARACTERS = "{}()[]<>,;:=*/.#&\"'?";
 
     private final String source;
@@ -102,6 +107,10 @@ public class FxmlParser {
                     parsePrefixInstruction(pi, prefixMappings);
                 }
             }
+        }
+
+        for (var entry : DEFAULT_PREFIX_MAPPINGS.entrySet()) {
+            prefixMappings.putIfAbsent(entry.getKey(), entry.getValue());
         }
 
         this.prefixMappings = Map.copyOf(prefixMappings);
