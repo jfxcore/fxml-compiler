@@ -39,6 +39,8 @@ The FXML 2.0 runtime library includes markup extensions for resolving classpath 
 Markup extensions that use attribute notation can also be written with a single-character prefix. The `%` and `@` prefixes are available implicitly and expand to `StaticResource` and `ClassPathResource`, even if the FXML file does not import these markup extensions and does not declare any prefixes:
 
 ```xml
+<?import javafx.scene.control.Label?>
+
 <Label xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
        text="%greeting"
        graphic="@icons/app.png"/>
@@ -50,6 +52,8 @@ If the [markup](https://github.com/jfxcore/markup) runtime library is not on the
 These examples are equivalent to the following long form:
 
 ```xml
+<?import javafx.scene.control.Label?>
+
 <Label xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
        text="{StaticResource greeting}"
        graphic="{ClassPathResource icons/app.png}"/>
@@ -57,6 +61,8 @@ These examples are equivalent to the following long form:
 
 If the markup extension has named arguments, they can also be specified in the prefix form:
 ```xml
+<?import javafx.scene.control.Label?>
+
 <Label xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
        text="%greeting; formatArguments=Jane, Doe, 1234.5"
        graphic="@icons/app.png"/>
@@ -71,7 +77,9 @@ Generic type arguments are not allowed in prefix form, so `%greeting` is valid, 
 Additional prefixes can be declared explicitly with a `<?prefix?>` processing instruction before the root element. Explicit declarations can also override the built-in defaults for `%` and `@`:
 
 ```xml
+<?import javafx.scene.control.Label?>
 <?import org.example.MyStaticResource?>
+
 <?prefix % = MyStaticResource?>
 <?prefix @ = org.example.MyClassPathResource?>
 
