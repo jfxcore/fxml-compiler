@@ -461,6 +461,14 @@ public class InlineParserTest extends TestBase {
     }
 
     @Test
+    public void Prefix_Syntax_Cannot_Be_Parameterized() {
+        MarkupException ex = assertThrows(MarkupException.class,
+            () -> new InlineParser("%<String>foo", "fx", Map.of('%', "StaticResource")).parseObject());
+
+        assertEquals(ErrorCode.EXPECTED_IDENTIFIER, ex.getDiagnostic().getCode());
+    }
+
+    @Test
     public void Prefix_Syntax_Is_Expanded() {
         ObjectNode objectNode = new InlineParser(
             "%foo; formatArguments=bar, baz",

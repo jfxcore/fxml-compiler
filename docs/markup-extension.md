@@ -36,20 +36,15 @@ The FXML 2.0 runtime library includes markup extensions for resolving classpath 
 | [`DynamicResource`](markup-extension/dynamic-resource.html) | Resolves a localizable resource for a property and updates that property when the resource changes |
 
 ## Prefix shorthand in attribute notation
-Markup extensions that use attribute notation can also be written with a document-defined single-character prefix. Prefixes are declared with a processing instruction before the root element:
+Markup extensions that use attribute notation can also be written with a document-defined single-character prefix. Prefixes are declared with a `<?prefix?>` processing instruction before the root element. After a prefix has been declared, attribute values that start with that prefix are expanded to the corresponding markup extension:
 
 ```xml
 <?import org.jfxcore.markup.resource.*?>
 <?prefix % = StaticResource?>
 <?prefix @ = ClassPathResource?>
-```
 
-After a prefix has been declared, attribute values that start with that prefix are expanded to the corresponding markup extension:
-
-```xml
 <Label xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
        text="%greeting"
-       tooltip="%greeting; formatArguments=userName"
        graphic="@icons/app.png"/>
 ```
 
@@ -58,11 +53,20 @@ These examples are equivalent to the following long form:
 ```xml
 <Label xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
        text="{StaticResource greeting}"
-       tooltip="{StaticResource greeting; formatArguments=userName}"
        graphic="{ClassPathResource icons/app.png}"/>
 ```
 
+If the markup extension has named arguments, they can also be specified in the prefix form:
+```xml
+<Label xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+       text="%greeting; formatArguments=Jane, Doe, 1234.5"
+       graphic="@icons/app.png"/>
+```
+
 The prefix form has the same semantics as the corresponding markup extension. In this example, `%...` follows the rules documented for [`StaticResource`](markup-extension/static-resource.html), and `@...` follows the rules documented for [`ClassPathResource`](markup-extension/class-path-resource.html).
+
+{: .note }
+Generic type arguments are not allowed in prefix form, so `%greeting` is valid, but `%<String>greeting` is not. If type arguments are required, use the regular markup extension syntax instead; for example `{StaticResource<String> greeting}`.
 
 ### Escaping declared prefixes
 
