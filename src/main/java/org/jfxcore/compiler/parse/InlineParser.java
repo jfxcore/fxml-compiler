@@ -1,4 +1,4 @@
-// Copyright (c) 2022, 2025, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.parse;
@@ -8,7 +8,6 @@ import org.jfxcore.compiler.ast.ObjectNode;
 import org.jfxcore.compiler.ast.PropertyNode;
 import org.jfxcore.compiler.ast.TypeNode;
 import org.jfxcore.compiler.ast.ValueNode;
-import org.jfxcore.compiler.ast.intrinsic.Intrinsic;
 import org.jfxcore.compiler.ast.intrinsic.Intrinsics;
 import org.jfxcore.compiler.ast.text.CompositeNode;
 import org.jfxcore.compiler.ast.text.ContextSelectorNode;
@@ -26,6 +25,7 @@ import org.jfxcore.compiler.diagnostic.Location;
 import org.jfxcore.compiler.diagnostic.MarkupException;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.diagnostic.errors.ParserErrors;
+import java.util.Map;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -37,28 +37,35 @@ public class InlineParser {
     public static final String BIND_EXPR_PREFIX = "${";
     public static final String BIND_BIDIRECTIONAL_EXPR_PREFIX = "#{";
 
-    private record SyntaxMapping(String compact, Intrinsic intrinsic, boolean closingCurly) {}
+    private record SyntaxMapping(String compact, String name, boolean intrinsic, boolean closingCurly) {}
 
     private static final SyntaxMapping[] SYNTAX_MAPPING = new SyntaxMapping[] {
-        new SyntaxMapping(BIND_BIDIRECTIONAL_EXPR_PREFIX, Intrinsics.BIND_BIDIRECTIONAL, true),
-        new SyntaxMapping(BIND_EXPR_PREFIX, Intrinsics.BIND, true),
-        new SyntaxMapping(ONCE_EXPR_PREFIX, Intrinsics.ONCE, false),
+        new SyntaxMapping(BIND_BIDIRECTIONAL_EXPR_PREFIX, Intrinsics.BIND_BIDIRECTIONAL.getName(), true, true),
+        new SyntaxMapping(BIND_EXPR_PREFIX, Intrinsics.BIND.getName(), true, true),
+        new SyntaxMapping(ONCE_EXPR_PREFIX, Intrinsics.ONCE.getName(), true, false),
     };
 
     private final String source;
     private final String intrinsicPrefix;
     private final Location sourceOffset;
+    private final Map<Character, String> prefixMappings;
 
     public InlineParser(String source, @Nullable String intrinsicPrefix) {
-        this.source = source;
-        this.intrinsicPrefix = intrinsicPrefix;
-        this.sourceOffset = new Location(0, 0);
+        this(source, intrinsicPrefix, new Location(0, 0), Map.of());
     }
 
-    public InlineParser(String source, @Nullable String intrinsicPrefix, Location sourceOffset) {
+    public InlineParser(String source, @Nullable String intrinsicPrefix, Map<Character, String> prefixMappings) {
+        this(source, intrinsicPrefix, new Location(0, 0), prefixMappings);
+    }
+
+    public InlineParser(String source,
+                        @Nullable String intrinsicPrefix,
+                        Location sourceOffset,
+                        Map<Character, String> prefixMappings) {
         this.source = source;
         this.intrinsicPrefix = intrinsicPrefix;
         this.sourceOffset = sourceOffset;
+        this.prefixMappings = Map.copyOf(prefixMappings);
     }
 
     public ObjectNode parseObject() {
@@ -135,6 +142,14 @@ public class InlineParser {
             }
         }
 
+        InlineToken token = tokenizer.peek();
+        if (token != null && token.getValue().length() == 1) {
+            String mappedType = prefixMappings.get(token.getValue().charAt(0));
+            if (mappedType != null) {
+                return new SyntaxMapping(token.getValue(), mappedType, false, false);
+            }
+        }
+
         return null;
     }
 
@@ -191,7 +206,7 @@ public class InlineParser {
 
         if (mapping != null) {
             sourceStart = tokenizer.remove().getSourceInfo();
-            cleanName = mapping.intrinsic().getName();
+            cleanName = mapping.name();
 
             for (int i = 0; i < mapping.compact().length() - 1; ++i) {
                 tokenizer.remove();
@@ -202,9 +217,9 @@ public class InlineParser {
                 sourceStart.getStart().getColumn() + mapping.compact().length());
 
             name = new TextNode(
-                intrinsicPrefix != null
-                    ? intrinsicPrefix + ":" + mapping.intrinsic().getName()
-                    : mapping.intrinsic().getName(),
+                intrinsicPrefix != null && mapping.intrinsic()
+                    ? intrinsicPrefix + ":" + mapping.name()
+                    : mapping.name(),
                 SourceInfo.span(sourceStart, sourceEnd));
         } else {
             sourceStart = sourceEnd = tokenizer.remove(OPEN_CURLY).getSourceInfo();
@@ -222,6 +237,8 @@ public class InlineParser {
                 properties.add(typeArgs);
             }
 
+            eatSemis(tokenizer);
+        } else if (!mapping.closingCurly()) {
             eatSemis(tokenizer);
         }
 
@@ -254,7 +271,8 @@ public class InlineParser {
 
                 if (mapping != null && !mapping.closingCurly() && !tokenizer.isEmpty()) {
                     var tokenClass = tokenizer.peekNotNull().getType().getTokenClass();
-                    if (tokenClass == CurlyTokenClass.DELIMITER || tokenClass == CurlyTokenClass.SEMI) {
+                    if (tokenClass == CurlyTokenClass.DELIMITER
+                            || tokenClass == CurlyTokenClass.SEMI && mapping.intrinsic()) {
                         break;
                     }
                 }
@@ -274,7 +292,11 @@ public class InlineParser {
         }
 
         return new ObjectNode(
-            new TypeNode(cleanName, name.getText(), !cleanName.equals(name.getText()), name.getSourceInfo()),
+            new TypeNode(
+                cleanName,
+                name.getText(),
+                mapping != null ? mapping.intrinsic() : !cleanName.equals(name.getText()),
+                name.getSourceInfo()),
             properties, children, true, SourceInfo.span(sourceStart, sourceEnd));
     }
 

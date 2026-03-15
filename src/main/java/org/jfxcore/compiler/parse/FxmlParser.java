@@ -19,6 +19,7 @@ import org.jfxcore.compiler.ast.text.TextNode;
 import org.jfxcore.compiler.ast.TypeNode;
 import org.jfxcore.compiler.ast.ValueNode;
 import org.jfxcore.compiler.diagnostic.errors.ParserErrors;
+import org.jfxcore.compiler.util.NameHelper;
 import org.jfxcore.compiler.util.NumberUtil;
 import org.jfxcore.compiler.util.StringHelper;
 import org.w3c.dom.Attr;
@@ -35,6 +36,7 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -64,8 +66,11 @@ public class FxmlParser {
         InlineParser.ONCE_EXPR_PREFIX
     };
 
+    private static final String RESERVED_PREFIX_CHARACTERS = "{}()[]<>,;:=*/.#&\"'?";
+
     private final String source;
     private final Path documentFile;
+    private Map<Character, String> prefixMappings;
 
     public FxmlParser(String source) {
         this.source = source;
@@ -86,15 +91,20 @@ public class FxmlParser {
         Document document = new XmlReader(source).getDocument();
         NodeList nodes = document.getChildNodes();
         List<String> imports = new ArrayList<>();
+        Map<Character, String> prefixMappings = new HashMap<>();
 
         for (int i = 0; i < nodes.getLength(); ++i) {
             Node node = nodes.item(i);
             if (node instanceof ProcessingInstruction pi) {
                 if ("import".equals(pi.getTarget())) {
                     imports.add(pi.getData());
+                } else if ("prefix".equals(pi.getTarget())) {
+                    parsePrefixInstruction(pi, prefixMappings);
                 }
             }
         }
+
+        this.prefixMappings = Map.copyOf(prefixMappings);
 
         Element rootElement = document.getDocumentElement();
         String namespace = rootElement.getNamespaceURI();
@@ -192,7 +202,7 @@ public class FxmlParser {
             }
 
             if (parseAsPath) {
-                return new InlineParser(text, getFxmlNamespacePrefix(node), sourceInfo.getStart()).parsePath();
+                return new InlineParser(text, getFxmlNamespacePrefix(node), sourceInfo.getStart(), prefixMappings).parsePath();
             }
 
             String trimmed = text.trim();
@@ -201,7 +211,7 @@ public class FxmlParser {
                     return createTextNode(text.substring(text.indexOf("{}") + 2), sourceInfo, true);
                 }
 
-                return new InlineParser(text, getFxmlNamespacePrefix(node), sourceInfo.getStart()).parseObject();
+                return new InlineParser(text, getFxmlNamespacePrefix(node), sourceInfo.getStart(), prefixMappings).parseObject();
             }
         }
 
@@ -253,7 +263,37 @@ public class FxmlParser {
             }
         }
 
-        return false;
+        return !text.isEmpty() && prefixMappings.containsKey(text.charAt(0));
+    }
+
+    private void parsePrefixInstruction(ProcessingInstruction pi, Map<Character, String> prefixMappings) {
+        String data = pi.getData();
+        int separator = data.indexOf('=');
+
+        if (separator < 0) {
+            throw ParserErrors.invalidExpression(getSourceInfo(pi));
+        }
+
+        String prefixText = data.substring(0, separator).trim();
+        String typeName = data.substring(separator + 1).trim();
+
+        if (prefixText.length() != 1
+                || typeName.isEmpty()
+                || !isValidPrefixCharacter(prefixText.charAt(0))
+                || !NameHelper.isQualifiedIdentifier(typeName)) {
+            throw ParserErrors.invalidExpression(getSourceInfo(pi));
+        }
+
+        char prefix = prefixText.charAt(0);
+        if (prefixMappings.putIfAbsent(prefix, typeName) != null) {
+            throw ParserErrors.invalidExpression(getSourceInfo(pi));
+        }
+    }
+
+    private boolean isValidPrefixCharacter(char character) {
+        return !Character.isWhitespace(character)
+            && !Character.isJavaIdentifierPart(character)
+            && RESERVED_PREFIX_CHARACTERS.indexOf(character) < 0;
     }
 
     @SuppressWarnings("unchecked")

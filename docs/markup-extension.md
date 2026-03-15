@@ -26,6 +26,64 @@ In element notation, the markup extension looks like a regular XML element:
 </Label>
 ```
 
+## Built-in resource markup extensions
+The FXML 2.0 runtime library includes markup extensions for resolving classpath resources and localizable resources from a `ResourceContext`:
+
+| Markup extension | Description |
+|:-|:-|
+| [`ClassPathResource`](markup-extension/class-path-resource.html) | Resolves a classpath resource to a `String`, `URL`, or `URI`, depending on the target type |
+| [`StaticResource`](markup-extension/static-resource.html) | Resolves a localizable resource once and supplies the result to the target |
+| [`DynamicResource`](markup-extension/dynamic-resource.html) | Resolves a localizable resource for a property and updates that property when the resource changes |
+
+## Prefix shorthand in attribute notation
+Markup extensions that use attribute notation can also be written with a document-defined single-character prefix. Prefixes are declared with a processing instruction before the root element:
+
+```xml
+<?import org.jfxcore.markup.resource.*?>
+<?prefix % = StaticResource?>
+<?prefix @ = ClassPathResource?>
+```
+
+After a prefix has been declared, attribute values that start with that prefix are expanded to the corresponding markup extension:
+
+```xml
+<Label xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+       text="%greeting"
+       tooltip="%greeting; formatArguments=userName"
+       graphic="@icons/app.png"/>
+```
+
+These examples are equivalent to the following long form:
+
+```xml
+<Label xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+       text="{StaticResource greeting}"
+       tooltip="{StaticResource greeting; formatArguments=userName}"
+       graphic="{ClassPathResource icons/app.png}"/>
+```
+
+The prefix form has the same semantics as the corresponding markup extension. In this example, `%...` follows the rules documented for [`StaticResource`](markup-extension/static-resource.html), and `@...` follows the rules documented for [`ClassPathResource`](markup-extension/class-path-resource.html).
+
+### Escaping declared prefixes
+
+Prefix shorthand uses the same escape mechanism as other attribute-form markup extensions. To treat a prefixed value as a literal string, prefix it with `{}`:
+
+```xml
+<Label text="{}%greeting"/>
+```
+
+The value assigned to `text` in this example is the literal string `%greeting`, and not a markup extension.
+
+### Restrictions for declared prefixes
+
+A declared prefix must satisfy the following rules:
+
+- It must be exactly one character.
+- It must not be a letter or digit.
+- It must not be one of the following reserved characters: `{ } ( ) [ ] < > , ; : = * / . # & " ' ? _`
+
+In practice, punctuation characters such as `%` and `@` are good choices.
+
 ## Types of markup extensions
 Markup extensions have two general forms: property consumers and value suppliers. A property consumer extension can only be applied to a JavaFX property (i.e. a property implementing `Property` or `ReadOnlyProperty`). A value supplier extension can also be applied to method or constructor arguments.
 
@@ -39,15 +97,6 @@ All markup extensions implement one of the following interfaces in the [org.jfxc
 | | `MarkupExtension.LongSupplier` |
 | | `MarkupExtension.FloatSupplier` |
 | | `MarkupExtension.DoubleSupplier` |
-
-## Built-in resource markup extensions
-FXML 2.0 includes markup extensions for resolving classpath resources and keyed resources from a `ResourceContext`:
-
-| Markup extension | Description |
-|:-|:-|
-| [`ClassPathResource`](markup-extension/class-path-resource.html) | Resolves a classpath resource to a `String`, `URL`, or `URI`, depending on the target type |
-| [`StaticResource`](markup-extension/static-resource.html) | Resolves a keyed resource once and supplies the result to the target |
-| [`DynamicResource`](markup-extension/dynamic-resource.html) | Resolves a keyed resource for a property and updates that property when the resource changes |
 
 ## Configuring a markup extension
 Markup extensions can expose configuration parameters via constructor arguments annotated with `@NamedArg`, JavaFX properties, or getter/setter pairs:
