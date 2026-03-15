@@ -194,7 +194,7 @@ public class NameHelper {
         }
 
         for (String part : parts) {
-            if (!NameHelper.isJavaIdentifier(part)) {
+            if (!isJavaIdentifier(part)) {
                 return false;
             }
         }
