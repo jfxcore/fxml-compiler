@@ -8,7 +8,7 @@ nav_order: 3
 # fx:bindContent markup extension, ${..x}
 The `fx:bindContent` markup extension establishes a content binding. It can be set on any `ReadOnlyListProperty`, `ReadOnlySetProperty`, or `ReadOnlyMapProperty` instance, and is equivalent to invoking the `ReadOnly{List/Set/Map}Property.bindContent(Observable{List/Set/Map})` API in Java code.
 
-Its compact notation is `${..x}`, where <span class="inline-code">x</span> is the [binding path](../binding/binding-path.html).
+Its prefix notation is `${..x}`, where <span class="inline-code">x</span> is the [binding path](../binding/binding-path.html).
 
 ## Properties
 
@@ -32,6 +32,6 @@ Its compact notation is `${..x}`, where <span class="inline-code">x</span> is th
 <!-- Attribute notation with omitted "path" -->
 <object property="{fx:bindContent myPath}"/>
 
-<!-- Compact notation -->
+<!-- Prefix notation -->
 <object property="${..myPath}"/>
 ```

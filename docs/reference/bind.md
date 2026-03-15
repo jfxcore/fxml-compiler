@@ -8,7 +8,7 @@ nav_order: 1
 # fx:bind markup extension, ${x}
 The `fx:bind` markup extension establishes a unidirectional binding. It can be set on any `javafx.beans.property.Property` instance, and is equivalent to invoking the `Property.bind(ObservableValue)` API in Java code.
 
-Its compact notation is `${x}`, where <span class="inline-code">x</span> is the [binding path](../binding/binding-path.html).
+Its prefix notation is `${x}`, where <span class="inline-code">x</span> is the [binding path](../binding/binding-path.html).
 
 ## Properties
 
@@ -32,6 +32,6 @@ Its compact notation is `${x}`, where <span class="inline-code">x</span> is the 
 <!-- Attribute notation with omitted "path" -->
 <object property="{fx:bind myPath}"/>
 
-<!-- Compact notation -->
+<!-- Prefix notation -->
 <object property="${myPath}"/>
 ```

@@ -20,7 +20,7 @@ Here's how a simple binding is specified in FXML 2.0, using different (but equiv
     <!-- 'path' is the default property of the fx:bind markup extension, so it can be omitted -->
     <Button text="{fx:bind caption}"/>
 
-    <!-- Compact notation, similar to FXML 1.0 -->
+    <!-- Prefix notation, similar to FXML 1.0 -->
     <Button text="${caption}"/>
 </VBox>
 ```

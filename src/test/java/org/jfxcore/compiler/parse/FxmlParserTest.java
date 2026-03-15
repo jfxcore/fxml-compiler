@@ -103,6 +103,60 @@ public class FxmlParserTest extends TestBase {
     }
 
     @Test
+    public void Prefix_ProcessingInstruction_Is_Parsed_Correctly() {
+        DocumentNode document = new FxmlParser("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <?import org.jfxcore.markup.resource.*?>
+                <?prefix % = StaticResource?>
+                <Label xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                       text="% greeting; formatArguments=foo, bar"/>
+            """).parseDocument();
+
+        var property = ((ObjectNode)document.getRoot()).findProperty("text");
+        assertNotNull(property);
+        var objectNode = assertInstanceOf(ObjectNode.class, property.getValues().get(0));
+        assertEquals("StaticResource", objectNode.getType().getMarkupName());
+        assertTrue(objectNode.getChildren().get(0) instanceof TextNode textNode && textNode.getText().equals("greeting"));
+        assertEquals("formatArguments", objectNode.getProperties().get(0).getName());
+    }
+
+    @Test
+    public void Escaped_Prefix_Is_Not_Processed() {
+        DocumentNode document = new FxmlParser("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <?prefix % = StaticResource?>
+                <Label xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                       text="{}% greeting"/>
+            """).parseDocument();
+
+        assertEquals("% greeting", getPropertyText(document, "text"));
+    }
+
+    @Test
+    public void Prefix_ProcessingInstruction_With_Identifier_Character_Fails() {
+        MarkupException ex = assertThrows(MarkupException.class, () -> new FxmlParser("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <?prefix t = StaticResource?>
+                <Label xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"/>
+            """).parseDocument());
+
+        assertEquals(ErrorCode.INVALID_EXPRESSION, ex.getDiagnostic().getCode());
+    }
+
+    @Test
+    public void Duplicate_Prefix_ProcessingInstruction_Fails() {
+        MarkupException ex = assertThrows(MarkupException.class, () -> new FxmlParser("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <?prefix % = StaticResource?>
+                <?prefix % = ClassPathResource?>
+                <Label xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"/>
+            """).parseDocument());
+
+        assertEquals(ErrorCode.DUPLICATE_PREFIX_DECLARATION, ex.getDiagnostic().getCode());
+        assertEquals("Prefix '%' is already declared for 'StaticResource'", ex.getDiagnostic().getMessage());
+    }
+
+    @Test
     public void Unescape_Character_Entity_References() {
         DocumentNode document = new FxmlParser("""
                 <?xml version="1.0" encoding="UTF-8"?>

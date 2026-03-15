@@ -6,11 +6,11 @@ nav_order: 1
 ---
 
 # Types of bindings
-Binding expressions in FXML 2.0 are implemented as markup extensions that can be used in either element notation or attribute notation. An additional compact notation is supported for brevity.
+Binding expressions in FXML 2.0 are implemented as markup extensions that can be used in either element notation or attribute notation. An additional prefix notation is supported for brevity.
 
 The following table lists all binding types, as well as the corresponding JavaFX methods:
 
-| Markup extension | Compact notation | JavaFX method |
+| Markup extension | Prefix notation | JavaFX method |
 |:-|:-|:-|
 | `{fx:once path=source}` | `$source` | `WritableValue.setValue(source)` |
 | `{fx:bind path=source}` | `${source}` | `Property.bind(source)` |
@@ -23,7 +23,7 @@ The following table lists all binding types, as well as the corresponding JavaFX
 Since `path` is the [default property](../property-notation.html#default-property) of all binding markup extensions, it doesn't need to be explicitly specified. For example, `{fx:bind path=source}` and `{fx:bind source}` are equivalent.
 
 {: .note }
-This documentation will use the compact notation in most code samples.
+This documentation will use the prefix notation in most code samples.
 
 ## Runtime overhead of bindings
 [`fx:once`](../reference/once.html) and [`fx:content`](../reference/content.html) have the lowest run-time overhead, since no listener maintentance is required to keep the binding target in sync with the binding source. All other bindings may require setting up change listeners or additional code generation, and should only be used when the source value is expected to change.

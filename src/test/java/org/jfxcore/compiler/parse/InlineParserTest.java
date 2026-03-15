@@ -1,4 +1,4 @@
-// Copyright (c) 2022, 2025, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.parse;
@@ -23,6 +23,7 @@ import org.jfxcore.compiler.TestBase;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -457,6 +458,39 @@ public class InlineParserTest extends TestBase {
             () -> new InlineParser("${<Foo>bar}", null).parseObject());
 
         assertEquals(ErrorCode.EXPECTED_IDENTIFIER, ex.getDiagnostic().getCode());
+    }
+
+    @Test
+    public void Prefix_Syntax_Is_Expanded() {
+        ObjectNode objectNode = new InlineParser(
+            "%foo; formatArguments=bar, baz",
+            "fx",
+            Map.of('%', "StaticResource")).parseObject();
+
+        assertEquals("StaticResource", objectNode.getType().getName());
+        assertTrue(objectNode.getChildren().get(0) instanceof TextNode n && n.getText().equals("foo"));
+        assertEquals(1, objectNode.getProperties().size());
+        assertEquals("formatArguments", objectNode.getProperties().get(0).getName());
+    }
+
+    @Test
+    public void Prefix_Syntax_Allows_Whitespace_After_Prefix() {
+        ObjectNode objectNode = new InlineParser("%   foo", "fx", Map.of('%', "StaticResource")).parseObject();
+        assertEquals("StaticResource", objectNode.getType().getName());
+        assertTrue(objectNode.getChildren().get(0) instanceof TextNode n && n.getText().equals("foo"));
+    }
+
+    @Test
+    public void Prefix_Syntax_Is_Expanded_Within_PropertyExpression() {
+        PropertyNode property = new InlineParser(
+            "{Test qux=% foo}",
+            "fx",
+            Map.of('%', "StaticResource")).parseObject().getProperties().get(0);
+
+        assertEquals("qux", property.getName());
+        ObjectNode objectNode = assertInstanceOf(ObjectNode.class, property.getValues().get(0));
+        assertEquals("StaticResource", objectNode.getType().getName());
+        assertTrue(objectNode.getChildren().get(0) instanceof TextNode n && n.getText().equals("foo"));
     }
 
     @ParameterizedTest

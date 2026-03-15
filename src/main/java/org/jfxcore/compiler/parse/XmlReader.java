@@ -97,8 +97,14 @@ public class XmlReader {
             throw ParserErrors.unexpectedToken(token);
         }
 
-        String data = tokenizer.removeQualifiedIdentifierSkipWS(true).getValue();
-        SourceInfo end = tokenizer.removeSkipWS(CLOSE_PROCESSING_INSTRUCTION).getSourceInfo();
+        var builder = new StringBuilder();
+
+        while (tokenizer.peekNotNull().getType() != CLOSE_PROCESSING_INSTRUCTION) {
+            builder.append(tokenizer.remove().getValue());
+        }
+
+        String data = builder.toString().trim();
+        SourceInfo end = tokenizer.remove(CLOSE_PROCESSING_INSTRUCTION).getSourceInfo();
         ProcessingInstruction pi = document.createProcessingInstruction(token.getValue(), data);
         pi.setUserData(SOURCE_INFO_KEY, SourceInfo.span(start, end), null);
         return pi;
@@ -374,5 +380,4 @@ public class XmlReader {
             return Objects.hash(prefix, localName, sourceInfo);
         }
     }
-
 }

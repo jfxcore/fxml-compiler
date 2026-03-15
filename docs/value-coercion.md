@@ -32,6 +32,9 @@ If a literal value is assigned to a property in an FXML 2.0 document, the litera
     ```
     Any color literal that is accepted by the `Color.web` method is also accepted by FXML.
 
+{: .note }
+Values that use [markup extension](markup-extension.html) syntax are not treated as literals and therefore do not participate in literal value coercion. This includes both the standard attribute form such as `{StaticResource greeting}` and a prefix shorthand such as `%greeting` after a matching `<?prefix?>` declaration.
+
 ## Implicit constructor coercion
 An object instance can also be created implicitly from a literal value, provided that the literal value can be coerced to the type of the constructor argument. This conversion only works for constructors where the parameter is annotated with `@NamedArg`.
 

@@ -8,7 +8,7 @@ nav_order: 2
 # fx:bindBidirectional markup extension, #{x}
 The `fx:bindBidirectional` markup extension establishes a bidirectional binding. It can be set on any `javafx.beans.property.Property` instance, and is equivalent to invoking the `Property.bindBidirectional(Property)` API in Java code.
 
-Its compact notation is `#{x}`, where <span class="inline-code">x</span> is the [binding path](../binding/binding-path.html).
+Its prefix notation is `#{x}`, where <span class="inline-code">x</span> is the [binding path](../binding/binding-path.html).
 
 ## Properties
 
@@ -35,7 +35,7 @@ Its compact notation is `#{x}`, where <span class="inline-code">x</span> is the 
 <!-- Attribute notation with omitted "path" -->
 <object property="{fx:bindBidirectional myPath}"/>
 
-<!-- Compact notation -->
+<!-- Prefix notation -->
 <object property="#{myPath}"/>
 
 <!-- Bidirectional binding with StringConverter -->

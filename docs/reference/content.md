@@ -8,7 +8,7 @@ nav_order: 9
 # fx:content markup extension, $..x
 The `fx:content` markup extension assigns the content of a collection. It can be set on any `List`, `Set`, or `Map` property, and is equivalent to invoking the `List.addAll(Collection)`, `Set.addAll(Collection)`, or `Map.putAll(Map)` API in Java code.
 
-Its compact notation is `$..x`, where <span class="inline-code">x</span> is the [binding path](../binding/binding-path.html).
+Its prefix notation is `$..x`, where <span class="inline-code">x</span> is the [binding path](../binding/binding-path.html).
 
 ## Properties
 
@@ -32,6 +32,6 @@ Its compact notation is `$..x`, where <span class="inline-code">x</span> is the 
 <!-- Attribute notation with omitted "path" -->
 <object property="{fx:content myPath}"/>
 
-<!-- Compact notation -->
+<!-- Prefix notation -->
 <object property="$..myPath"/>
 ```

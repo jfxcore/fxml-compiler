@@ -8,7 +8,7 @@ nav_order: 16
 # fx:once markup extension, $x
 The `fx:once` markup extension resolves a value and assigns it to a property. Even if the source is an `ObservableValue`, no binding is established and the value is not updated after the initial assignment.
 
-Its compact notation is `$x`, where <span class="inline-code">x</span> is the [binding path](../binding/binding-path.html).
+Its prefix notation is `$x`, where <span class="inline-code">x</span> is the [binding path](../binding/binding-path.html).
 
 ## Properties
 
@@ -32,6 +32,6 @@ Its compact notation is `$x`, where <span class="inline-code">x</span> is the [b
 <!-- Attribute notation with omitted "path" -->
 <object property="{fx:once myPath}"/>
 
-<!-- Compact notation -->
+<!-- Prefix notation -->
 <object property="$myPath"/>
 ```

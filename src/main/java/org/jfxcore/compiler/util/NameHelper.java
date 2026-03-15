@@ -1,4 +1,4 @@
-// Copyright (c) 2022, 2023, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.util;
@@ -187,4 +187,18 @@ public class NameHelper {
         return CSS_IDENTIFIER.matcher(value).matches();
     }
 
+    public static boolean isQualifiedIdentifier(String text) {
+        String[] parts = text.split("\\.");
+        if (parts.length == 0) {
+            return false;
+        }
+
+        for (String part : parts) {
+            if (!isJavaIdentifier(part)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
 }
