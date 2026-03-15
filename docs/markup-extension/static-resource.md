@@ -1,11 +1,11 @@
 ---
 layout: default
-title: StaticResource
+title: StaticResource, <span class="nav-inline-code">%x</span>
 parent: Markup extensions
 nav_order: 3
 ---
 
-# StaticResource markup extension
+# StaticResource markup extension, %x
 
 {: .note }
 This markup extension is available in the [markup](https://github.com/jfxcore/markup) runtime library.
@@ -13,6 +13,8 @@ This markup extension is available in the [markup](https://github.com/jfxcore/ma
 The `StaticResource` markup extension resolves a localizable resource once and supplies the result to the assignment target. It is intended for values that are read during object construction and do not need to be updated afterward.
 
 `StaticResource` obtains its values from a `ResourceContext`, which is supplied by the root element of the FXML document through `ResourceContextProvider`.
+
+Its default [prefix](../markup-extension.html#prefix-shorthand-in-attribute-notation) notation is `%x`, where <span class="inline-code">x</span> is the resource key.
 
 ## Properties
 

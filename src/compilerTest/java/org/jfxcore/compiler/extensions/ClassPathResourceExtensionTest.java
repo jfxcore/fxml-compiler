@@ -67,6 +67,21 @@ public class ClassPathResourceExtensionTest extends CompilerTestBase {
     }
 
     @Test
+    public void Builtin_Prefix_Syntax_With_Relative_Location_Is_Evaluated_Without_Declaration() throws Exception {
+        TestLabel root = compileAndRun("""
+            <TestLabel xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                       text="@image.jpg"
+                       url="@ image.jpg"
+                       uri="@image.jpg "/>
+        """);
+
+        URL url = Objects.requireNonNull(root.getClass().getResource("image.jpg"));
+        assertTrue(root.getText().endsWith("org/jfxcore/compiler/classes/image.jpg"));
+        assertEquals(url, root.getUrl());
+        assertEquals(url.toURI(), root.getUri());
+    }
+
+    @Test
     public void Resource_With_Root_Location_Is_Evaluated_Correctly() throws Exception {
         TestLabel root = compileAndRun("""
             <?import org.jfxcore.markup.resource.*?>
