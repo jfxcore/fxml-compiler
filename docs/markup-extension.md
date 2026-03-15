@@ -2,6 +2,7 @@
 layout: default
 title: Markup extensions
 nav_order: 8
+has_children: true
 ---
 
 # Markup extensions
@@ -28,7 +29,7 @@ In element notation, the markup extension looks like a regular XML element:
 ## Types of markup extensions
 Markup extensions have two general forms: property consumers and value suppliers. A property consumer extension can only be applied to a JavaFX property (i.e. a property implementing `Property` or `ReadOnlyProperty`). A value supplier extension can also be applied to method or constructor arguments.
 
-All markup extensions implement one of the following interfaces in the `org.jfxcore.markup` package:
+All markup extensions implement one of the following interfaces in the [org.jfxcore.markup](https://github.com/jfxcore/markup) package:
 
 | Property consumer extensions | Supplier extensions |
 |:-|:-|
@@ -38,6 +39,15 @@ All markup extensions implement one of the following interfaces in the `org.jfxc
 | | `MarkupExtension.LongSupplier` |
 | | `MarkupExtension.FloatSupplier` |
 | | `MarkupExtension.DoubleSupplier` |
+
+## Built-in resource markup extensions
+FXML 2.0 includes markup extensions for resolving classpath resources and keyed resources from a `ResourceContext`:
+
+| Markup extension | Description |
+|:-|:-|
+| [`ClassPathResource`](markup-extension/class-path-resource.html) | Resolves a classpath resource to a `String`, `URL`, or `URI`, depending on the target type |
+| [`StaticResource`](markup-extension/static-resource.html) | Resolves a keyed resource once and supplies the result to the target |
+| [`DynamicResource`](markup-extension/dynamic-resource.html) | Resolves a keyed resource for a property and updates that property when the resource changes |
 
 ## Configuring a markup extension
 Markup extensions can expose configuration parameters via constructor arguments annotated with `@NamedArg`, JavaFX properties, or getter/setter pairs:
@@ -78,24 +88,24 @@ The following example implements a markup extension that converts the name of an
 
 <div class="filename">Java code</div>
 ```java
-@DefaultProperty("name")
+@DefaultProperty("value")
 public final class ClassPathResource implements MarkupExtension.Supplier<Object> {
 
-    private final String name;
+    private final String value;
 
-    public ClassPathResource(@NamedArg("name") String name) {
-        this.name = Objects.requireNonNull(name, "name cannot be null").trim();
+    public ClassPathResource(@NamedArg("value") String value) {
+        this.value = Objects.requireNonNull(value, "value cannot be null").trim();
     }
 
     @Override
     @ReturnType({String.class, URI.class, URL.class})
     public Object get(MarkupContext context) throws Exception {
-        URL url = name.startsWith("/") ?
-            Thread.currentThread().getContextClassLoader().getResource(name.substring(1)) :
-            context.getRoot().getClass().getResource(name);
+        URL url = value.startsWith("/") ?
+            Thread.currentThread().getContextClassLoader().getResource(value.substring(1)) :
+            context.getRoot().getClass().getResource(value);
 
         if (url == null) {
-            throw new RuntimeException("Resource not found: " + name);
+            throw new RuntimeException("Resource not found: " + value);
         }
 
         Class<?> targetType = context.getTargetType();
@@ -114,7 +124,7 @@ public final class ClassPathResource implements MarkupExtension.Supplier<Object>
 ```
 
 The markup extension in this example uses several FXML features:
-1. It defines a `@DefaultProperty`, which allows users to omit the `name` property in the markup extension invocation. If not for the default property, users would have to explicitly spell out the name of the constructor parameter: `{ClassPathResource name=/path/to/image.jpg}`.
+1. It defines a `@DefaultProperty`, which allows users to omit the `value` property in the markup extension invocation. If not for the default property, users would have to explicitly spell out the name of the constructor parameter: `{ClassPathResource value=/path/to/image.jpg}`.
 2. It implements `MarkupExtension.Supplier<Object>` to make the extension compatible with `String`, `URL`, and `URI` target types, as there is no other common base class other than `Object`. However, it restricts the set of target types with the `@ReturnType` annotation. This allows the FXML compiler to type-check the markup extension usage at compile time, instead of potentially running into `ClassCastException` later at runtime.
 3. It queries the `MarkupContext` at runtime to decide which type of object to return based on the type of the property or argument targeted by the markup extension.
 
