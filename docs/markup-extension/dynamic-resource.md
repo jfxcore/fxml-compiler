@@ -8,7 +8,7 @@ nav_order: 2
 # DynamicResource markup extension
 
 {: .note }
-This markup extension is available in the [org.jfxcore.markup](https://github.com/jfxcore/markup) package.
+This markup extension is available in the [markup](https://github.com/jfxcore/markup) runtime library.
 
 The `DynamicResource` markup extension resolves a localizable resource for a JavaFX property and updates that property when the resource context or a format argument changes.
 

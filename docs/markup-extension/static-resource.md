@@ -8,7 +8,7 @@ nav_order: 3
 # StaticResource markup extension
 
 {: .note }
-This markup extension is available in the [org.jfxcore.markup](https://github.com/jfxcore/markup) package.
+This markup extension is available in the [markup](https://github.com/jfxcore/markup) runtime library.
 
 The `StaticResource` markup extension resolves a localizable resource once and supplies the result to the assignment target. It is intended for values that are read during object construction and do not need to be updated afterward.
 

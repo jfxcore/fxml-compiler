@@ -87,7 +87,7 @@ In practice, punctuation characters such as `%` and `@` are good choices.
 ## Types of markup extensions
 Markup extensions have two general forms: property consumers and value suppliers. A property consumer extension can only be applied to a JavaFX property (i.e. a property implementing `Property` or `ReadOnlyProperty`). A value supplier extension can also be applied to method or constructor arguments.
 
-All markup extensions implement one of the following interfaces in the [org.jfxcore.markup](https://github.com/jfxcore/markup) package:
+All markup extensions implement one of the following interfaces in the [markup](https://github.com/jfxcore/markup) runtime library:
 
 | Property consumer extensions | Supplier extensions |
 |:-|:-|

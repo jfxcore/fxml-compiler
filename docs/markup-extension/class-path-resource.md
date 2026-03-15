@@ -8,7 +8,7 @@ nav_order: 1
 # ClassPathResource markup extension
 
 {: .note }
-This markup extension is available in the [org.jfxcore.markup](https://github.com/jfxcore/markup) package.
+This markup extension is available in the [markup](https://github.com/jfxcore/markup) runtime library.
 
 The `ClassPathResource` markup extension resolves a classpath resource and converts it to a `String`, `URL`, or `URI`, depending on the type of the target property or argument.
 
