@@ -1,4 +1,4 @@
-// Copyright (c) 2023, 2025, JFXcore. All rights reserved.
+// Copyright (c) 2023, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.generate.collections;
@@ -162,7 +162,7 @@ public class ListObservableValueWrapperGenerator extends ClassGenerator {
         createDelegateMethod(context, voidType, delegateType, "clear");
         createDelegateMethod(context, ObjectType(), delegateType, "get", intType);
         createDelegateMethod(context, ObjectType(), delegateType, "set", intType, ObjectType());
-        createDelegateMethod(context, ObjectType(), delegateType, "add", intType, ObjectType());
+        createDelegateMethod(context, voidType, delegateType, "add", intType, ObjectType());
         createDelegateMethod(context, ObjectType(), delegateType, "remove", intType);
         createDelegateMethod(context, intType, delegateType, "indexOf", ObjectType());
         createDelegateMethod(context, intType, delegateType, "lastIndexOf", ObjectType());

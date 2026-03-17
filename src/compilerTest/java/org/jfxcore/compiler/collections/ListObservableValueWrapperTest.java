@@ -1,4 +1,4 @@
-// Copyright (c) 2023, 2025, JFXcore. All rights reserved.
+// Copyright (c) 2023, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.collections;
@@ -79,6 +79,20 @@ public class ListObservableValueWrapperTest extends CompilerTestBase {
         ObservableListValue<String> wrapper = newInstance(wrappedProperty);
         wrapper.addAll(List.of("foo", "bar", "baz"));
         assertEquals(List.of("foo", "bar", "baz"), wrappedProperty.get());
+        wrapper.set(2, "qux");
+        assertEquals(List.of("foo", "bar", "qux"), wrappedProperty.get());
+        wrapper.remove(2);
+        assertEquals(List.of("foo", "bar"), wrappedProperty.get());
+        wrapper.retainAll("foo");
+        assertEquals(List.of("foo"), wrappedProperty.get());
+        wrapper.setAll("foo", "bar", "baz");
+        assertEquals(List.of("foo", "bar", "baz"), wrappedProperty.get());
+        wrapper.remove(1, 3);
+        assertEquals(List.of("foo"), wrappedProperty.get());
+        wrapper.add(0, "qux");
+        assertEquals(List.of("qux", "foo"), wrappedProperty.get());
+        wrapper.clear();
+        assertEquals(List.of(), wrappedProperty.get());
     }
 
     @Test
