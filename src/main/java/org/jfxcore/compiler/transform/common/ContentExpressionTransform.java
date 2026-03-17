@@ -1,4 +1,4 @@
-// Copyright (c) 2024, 2025, JFXcore. All rights reserved.
+// Copyright (c) 2024, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.transform.common;
@@ -12,6 +12,7 @@ import org.jfxcore.compiler.ast.intrinsic.Intrinsic;
 import org.jfxcore.compiler.ast.text.CompositeNode;
 import org.jfxcore.compiler.ast.text.TextNode;
 import org.jfxcore.compiler.diagnostic.errors.ParserErrors;
+import org.jfxcore.compiler.diagnostic.errors.PropertyAssignmentErrors;
 import org.jfxcore.compiler.transform.Transform;
 import org.jfxcore.compiler.transform.TransformContext;
 import java.util.List;
@@ -48,6 +49,11 @@ public class ContentExpressionTransform implements Transform {
                                  Intrinsic sourceIntrinsic,
                                  Intrinsic targetIntrinsic) {
         PropertyNode pathProperty = expression.findProperty(sourceIntrinsic.getDefaultProperty().getName());
+        if (pathProperty == null) {
+            throw PropertyAssignmentErrors.propertyMustBeSpecified(
+                expression.getSourceInfo(), expression.getType().getMarkupName(),
+                sourceIntrinsic.getDefaultProperty().getName());
+        }
 
         if (!(pathProperty.getSingleValue(context) instanceof CompositeNode compositeNode)) {
             return expression;
