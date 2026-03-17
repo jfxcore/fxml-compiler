@@ -89,6 +89,10 @@ public class ListObservableValueWrapperTest extends CompilerTestBase {
         assertEquals(List.of("foo", "bar", "baz"), wrappedProperty.get());
         wrapper.remove(1, 3);
         assertEquals(List.of("foo"), wrappedProperty.get());
+        wrapper.add(0, "qux");
+        assertEquals(List.of("qux", "foo"), wrappedProperty.get());
+        wrapper.clear();
+        assertEquals(List.of(), wrappedProperty.get());
     }
 
     @Test
