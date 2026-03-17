@@ -1,4 +1,4 @@
-// Copyright (c) 2021, 2025, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler;
@@ -312,6 +312,32 @@ public class IntrinsicsTest extends CompilerTestBase {
 
     @Nested
     public class BindingIntrinsicsTest extends CompilerTestBase {
+        @Test
+        public void Path_Must_Be_Specified_Prefix_Notation() {
+            MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+                <?import javafx.scene.control.*?>
+                <Button xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                        prefHeight="${}"/>
+            """));
+
+            assertEquals(ErrorCode.PROPERTY_MUST_BE_SPECIFIED, ex.getDiagnostic().getCode());
+            assertTrue(ex.getDiagnostic().getMessage().startsWith("fx:bind.path"));
+            assertCodeHighlight("${}", ex);
+        }
+
+        @Test
+        public void Path_Must_Be_Specified_Long_Notation() {
+            MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+                <?import javafx.scene.control.*?>
+                <Button xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                        prefHeight="{fx:bindBidirectional}"/>
+            """));
+
+            assertEquals(ErrorCode.PROPERTY_MUST_BE_SPECIFIED, ex.getDiagnostic().getCode());
+            assertTrue(ex.getDiagnostic().getMessage().startsWith("fx:bindBidirectional.path"));
+            assertCodeHighlight("{fx:bindBidirectional}", ex);
+        }
+
         @Test
         public void FxOnce_Compact_Syntax_Has_Correct_CodeHighlight() {
             MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
