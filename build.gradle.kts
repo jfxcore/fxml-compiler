@@ -40,26 +40,23 @@ dependencies {
 
 testing {
     suites {
-        withType<JvmTestSuite> {
+        val test by getting(JvmTestSuite::class) {
+            useJUnitJupiter()
+
+            dependencies {
+                implementation("org.junit.jupiter:junit-jupiter:5.12.2")
+                runtimeOnly("org.junit.platform:junit-platform-launcher")
+            }
+        }
+
+        register<JvmTestSuite>("compilerTest") {
             useJUnitJupiter()
 
             dependencies {
                 implementation(project())
                 implementation("org.junit.jupiter:junit-jupiter:5.12.2")
                 runtimeOnly("org.junit.platform:junit-platform-launcher")
-            }
-        }
 
-        val test by getting(JvmTestSuite::class)
-
-        register<JvmTestSuite>("compilerTest") {
-            sources {
-                java {
-                    setSrcDirs(listOf("src/compilerTest/java"))
-                }
-            }
-
-            dependencies {
                 implementation("org.testfx:testfx-junit5:4.0.16-alpha")
                 implementation("org.testfx:openjfx-monocle:jdk-12.0.1+2")
                 implementation(files("${gradle.includedBuild("markup").projectDir}/build/libs/markup-1.0-SNAPSHOT.jar"))
