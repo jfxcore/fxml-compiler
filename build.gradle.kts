@@ -140,6 +140,10 @@ tasks.check {
     dependsOn(testing.suites.named("compilerTest"))
 }
 
+tasks.jar {
+    archiveClassifier.set("test")
+}
+
 tasks.shadowJar {
     archiveClassifier.set("")
     include("*.jar")
