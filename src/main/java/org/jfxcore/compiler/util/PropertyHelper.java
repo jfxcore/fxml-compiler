@@ -1,12 +1,17 @@
-// Copyright (c) 2022, 2023, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.util;
 
 import org.jfxcore.compiler.ast.ObjectNode;
 import org.jfxcore.compiler.ast.PropertyNode;
+import org.jfxcore.compiler.type.Resolver;
+import org.jfxcore.compiler.type.TypeHelper;
+import org.jfxcore.compiler.type.TypeInstance;
 import java.util.ArrayList;
 import java.util.List;
+
+import static org.jfxcore.compiler.type.Types.*;
 
 public class PropertyHelper {
 
@@ -34,12 +39,12 @@ public class PropertyHelper {
 
             TypeInstance propertyType = propertyInfo.getType();
 
-            if (propertyInfo.getType().subtypeOf(Classes.CollectionType())) {
-                var typeArguments = TypeHelper.getTypeArguments(propertyInfo.getType(), Classes.CollectionType());
+            if (propertyInfo.getType().subtypeOf(CollectionDecl())) {
+                var typeArguments = TypeHelper.getTypeArguments(propertyInfo.getType(), CollectionDecl());
                 propertyType = typeArguments.size() == 1 ? typeArguments.get(0) : propertyInfo.getType();
             }
 
-            if (propertyType.subtypeOf(Classes.NodeType())) {
+            if (propertyType.subtypeOf(NodeDecl())) {
                 first.add(property);
             } else {
                 last.add(property);
@@ -49,5 +54,4 @@ public class PropertyHelper {
         first.addAll(last);
         return first;
     }
-
 }

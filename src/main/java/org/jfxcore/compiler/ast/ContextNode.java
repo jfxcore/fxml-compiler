@@ -1,18 +1,17 @@
-// Copyright (c) 2024, JFXcore. All rights reserved.
+// Copyright (c) 2024, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast;
 
-import javassist.CtField;
 import org.jetbrains.annotations.Nullable;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
-import org.jfxcore.compiler.util.TypeHelper;
-import org.jfxcore.compiler.util.TypeInstance;
+import org.jfxcore.compiler.type.FieldDeclaration;
+import org.jfxcore.compiler.type.TypeInstance;
 import java.util.Objects;
 
 public class ContextNode extends AbstractNode implements ValueNode {
 
-    private final CtField field;
+    private final FieldDeclaration field;
     private final ResolvedTypeNode typeNode;
     private final TypeInstance type;
     private final TypeInstance valueType;
@@ -20,7 +19,7 @@ public class ContextNode extends AbstractNode implements ValueNode {
     private ValueNode value;
 
     public ContextNode(
-            CtField field,
+            FieldDeclaration field,
             TypeInstance type,
             TypeInstance valueType,
             @Nullable TypeInstance observableType,
@@ -54,7 +53,7 @@ public class ContextNode extends AbstractNode implements ValueNode {
         return observableType;
     }
 
-    public CtField getField() {
+    public FieldDeclaration getField() {
         return field;
     }
 
@@ -72,7 +71,7 @@ public class ContextNode extends AbstractNode implements ValueNode {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         ContextNode that = (ContextNode)o;
-        return TypeHelper.equals(field, that.field)
+        return field.equals(that.field)
             && value.equals(that.value)
             && valueType.equals(that.valueType)
             && Objects.equals(observableType, that.observableType);
@@ -80,6 +79,6 @@ public class ContextNode extends AbstractNode implements ValueNode {
 
     @Override
     public int hashCode() {
-        return Objects.hash(TypeHelper.hashCode(field), value, valueType, observableType);
+        return Objects.hash(field, value, valueType, observableType);
     }
 }

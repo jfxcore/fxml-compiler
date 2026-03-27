@@ -1,21 +1,19 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.emit;
 
-import javassist.CtClass;
-import javassist.CtMethod;
 import org.jfxcore.compiler.ast.AbstractNode;
-import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.ast.ResolvedTypeNode;
+import org.jfxcore.compiler.diagnostic.SourceInfo;
+import org.jfxcore.compiler.type.MethodDeclaration;
+import org.jfxcore.compiler.type.TypeDeclaration;
+import org.jfxcore.compiler.type.TypeInstance;
 import org.jfxcore.compiler.util.Bytecode;
 import org.jfxcore.compiler.util.ObservableKind;
-import org.jfxcore.compiler.util.TypeHelper;
-import org.jfxcore.compiler.util.TypeInstance;
 import java.util.Objects;
 
-import static org.jfxcore.compiler.util.Classes.*;
-import static org.jfxcore.compiler.util.Descriptors.*;
+import static org.jfxcore.compiler.type.Types.*;
 
 /**
  * Calls a getter and places the value on top of the operand stack, applying boxing and/or numeric conversions
@@ -23,13 +21,13 @@ import static org.jfxcore.compiler.util.Descriptors.*;
  */
 public class EmitInvokeGetterNode extends AbstractNode implements ValueEmitterNode, NullableInfo {
 
-    private final CtMethod getter;
+    private final MethodDeclaration getter;
     private final ObservableKind observableKind;
     private final ResolvedTypeNode type;
     private final boolean requireNonNull;
 
     public EmitInvokeGetterNode(
-            CtMethod getter,
+            MethodDeclaration getter,
             TypeInstance type,
             ObservableKind observableKind,
             boolean requireNonNull,
@@ -49,16 +47,16 @@ public class EmitInvokeGetterNode extends AbstractNode implements ValueEmitterNo
     @Override
     public void emit(BytecodeEmitContext context) {
         Bytecode code = context.getOutput();
-        CtClass returnType = unchecked(this.getter::getReturnType);
+        TypeDeclaration returnType = getter.returnType();
 
-        code.ext_invoke(getter);
+        code.invoke(getter);
 
         if (requireNonNull) {
-            code.ldc(getter.getName())
-                .invokestatic(ObjectsType(), "requireNonNull", function(ObjectType(), ObjectType(), StringType()))
-                .checkcast(type.getJvmType());
+            code.ldc(getter.name())
+                .invoke(ObjectsDecl().requireDeclaredMethod("requireNonNull", ObjectDecl(), StringDecl()))
+                .checkcast(type.getTypeDeclaration());
         } else {
-            code.ext_castconv(getSourceInfo(), returnType, type.getJvmType());
+            code.castconv(returnType, type.getTypeDeclaration());
         }
     }
 
@@ -77,7 +75,7 @@ public class EmitInvokeGetterNode extends AbstractNode implements ValueEmitterNo
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         EmitInvokeGetterNode that = (EmitInvokeGetterNode)o;
-        return TypeHelper.equals(getter, that.getter) &&
+        return getter.equals(that.getter) &&
             observableKind == that.observableKind &&
             type.equals(that.type) &&
             requireNonNull == that.requireNonNull;
@@ -85,7 +83,6 @@ public class EmitInvokeGetterNode extends AbstractNode implements ValueEmitterNo
 
     @Override
     public int hashCode() {
-        return Objects.hash(TypeHelper.hashCode(getter), observableKind, type, requireNonNull);
+        return Objects.hash(getter, observableKind, type, requireNonNull);
     }
-
 }

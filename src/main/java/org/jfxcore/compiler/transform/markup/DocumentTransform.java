@@ -1,21 +1,20 @@
-// Copyright (c) 2021, 2022, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.transform.markup;
 
-import javassist.CtClass;
-import javassist.CtMethod;
-import javassist.bytecode.MethodInfo;
 import org.jfxcore.compiler.ast.DocumentNode;
 import org.jfxcore.compiler.ast.Node;
 import org.jfxcore.compiler.ast.emit.BytecodeEmitContext;
 import org.jfxcore.compiler.ast.emit.EmitInitializeRootNode;
 import org.jfxcore.compiler.transform.Transform;
 import org.jfxcore.compiler.transform.TransformContext;
+import org.jfxcore.compiler.type.MethodDeclaration;
+import org.jfxcore.compiler.type.TypeDeclaration;
 import org.jfxcore.compiler.util.Bytecode;
 import java.lang.reflect.Modifier;
 
-import static org.jfxcore.compiler.util.Descriptors.function;
+import static org.jfxcore.compiler.type.Types.*;
 
 public class DocumentTransform implements Transform {
 
@@ -35,26 +34,21 @@ public class DocumentTransform implements Transform {
             }
 
             private void emitStaticInitializer(BytecodeEmitContext context) {
-                unchecked(() -> {
-                    CtClass clazz = context.getMarkupClass();
+                TypeDeclaration clazz = context.getMarkupClass();
 
-                    CtMethod method = new CtMethod(CtClass.voidType, MethodInfo.nameClinit, new CtClass[0], clazz);
-                    method.setModifiers(Modifier.PUBLIC | Modifier.STATIC);
-                    clazz.addMethod(method);
+                MethodDeclaration method = clazz.createMethod("<clinit>", voidDecl())
+                                                       .setModifiers(Modifier.PUBLIC | Modifier.STATIC);
 
-                    Bytecode code = new Bytecode(clazz, 0);
+                Bytecode code = new Bytecode(clazz, 0);
 
-                    for (CtClass nestedClass : context.getNestedClasses()) {
-                        code.invokestatic(nestedClass, "forceInit", function(CtClass.voidType));
-                    }
+                for (TypeDeclaration nestedClass : context.getNestedClasses()) {
+                    code.invoke(nestedClass.requireDeclaredMethod("forceInit"));
+                }
 
-                    code.vreturn();
+                code.vreturn();
 
-                    method.getMethodInfo().setCodeAttribute(code.toCodeAttribute());
-                    method.getMethodInfo().rebuildStackMap(method.getDeclaringClass().getClassPool());
-                });
+                method.setCode(code);
             }
         };
     }
-
 }

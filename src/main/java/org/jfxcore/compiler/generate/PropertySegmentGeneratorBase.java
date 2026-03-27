@@ -1,108 +1,100 @@
-// Copyright (c) 2021, 2025, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.generate;
 
-import javassist.CtClass;
-import javassist.CtMethod;
-import javassist.Modifier;
-import javassist.bytecode.MethodInfo;
 import org.jfxcore.compiler.ast.emit.BytecodeEmitContext;
-import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.ast.expression.path.FoldedGroup;
+import org.jfxcore.compiler.diagnostic.SourceInfo;
+import org.jfxcore.compiler.type.MethodDeclaration;
+import org.jfxcore.compiler.type.TypeDeclaration;
+import org.jfxcore.compiler.type.TypeInstance;
+import org.jfxcore.compiler.type.TypeInvoker;
+import org.jfxcore.compiler.type.Types;
 import org.jfxcore.compiler.util.Bytecode;
-import org.jfxcore.compiler.util.Descriptors;
 import org.jfxcore.compiler.util.NameHelper;
-import org.jfxcore.compiler.util.TypeHelper;
-import org.jfxcore.compiler.util.TypeInstance;
-import org.jfxcore.compiler.util.TypeInvoker;
+import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.jfxcore.compiler.util.Classes.*;
-import static org.jfxcore.compiler.util.ExceptionHelper.unchecked;
+import static org.jfxcore.compiler.type.Types.*;
 
 abstract class PropertySegmentGeneratorBase extends SegmentGeneratorBase {
 
     boolean isNumeric;
-    CtClass valueClass;
-    CtMethod getValueMethod;
-    CtMethod setValueMethod;
-    CtMethod getMethod;
-    CtMethod setMethod;
-    CtMethod intValueMethod;
-    CtMethod longValueMethod;
-    CtMethod floatValueMethod;
-    CtMethod doubleValueMethod;
-    CtMethod addInvalidationListenerMethod;
-    CtMethod removeInvalidationListenerMethod;
-    CtMethod addChangeListenerMethod;
-    CtMethod removeChangeListenerMethod;
-    CtMethod getBeanMethod;
-    CtMethod getNameMethod;
+    TypeDeclaration valueClass;
+    MethodDeclaration getValueMethod;
+    MethodDeclaration setValueMethod;
+    MethodDeclaration getMethod;
+    MethodDeclaration setMethod;
+    MethodDeclaration intValueMethod;
+    MethodDeclaration longValueMethod;
+    MethodDeclaration floatValueMethod;
+    MethodDeclaration doubleValueMethod;
+    MethodDeclaration addInvalidationListenerMethod;
+    MethodDeclaration removeInvalidationListenerMethod;
+    MethodDeclaration addChangeListenerMethod;
+    MethodDeclaration removeChangeListenerMethod;
+    MethodDeclaration getBeanMethod;
+    MethodDeclaration getNameMethod;
 
-    private CtMethod bindMethod;
-    private CtMethod unbindMethod;
-    private CtMethod isBoundMethod;
-    private CtMethod bindBidirectionalMethod;
-    private CtMethod unbindBidirectionalMethod;
+    private MethodDeclaration bindMethod;
+    private MethodDeclaration unbindMethod;
+    private MethodDeclaration isBoundMethod;
+    private MethodDeclaration bindBidirectionalMethod;
+    private MethodDeclaration unbindBidirectionalMethod;
     private final TypeInstance type;
-    private final CtClass superClass;
-    private final List<CtClass> interfaces;
+    private final TypeDeclaration superClass;
+    private final List<TypeDeclaration> interfaces;
 
     PropertySegmentGeneratorBase(SourceInfo sourceInfo, FoldedGroup[] groups, int segment) {
         super(sourceInfo, groups, segment);
 
         interfaces = new ArrayList<>();
 
-        CtClass type = groups[groups.length - 1].getObservableType();
+        TypeDeclaration type = groups[groups.length - 1].getObservableType();
         if (type == null) {
             type = groups[groups.length - 1].getValueType();
         }
 
-        CtClass finalType = type;
+        TypeDeclaration finalType = type;
 
-        if (type == CtClass.booleanType
-                || unchecked(sourceInfo, () -> finalType.subtypeOf(ObservableBooleanValueType()))) {
-            superClass = BooleanPropertyType();
-            valueClass = CtClass.booleanType;
-        } else if (finalType == CtClass.intType
-                || finalType == CtClass.shortType
-                || finalType == CtClass.byteType
-                || finalType == CtClass.charType
-                || unchecked(sourceInfo, () -> finalType.subtypeOf(ObservableIntegerValueType()))) {
-            superClass = IntegerPropertyType();
-            valueClass = unchecked(sourceInfo, () ->
-                finalType.subtypeOf(ObservableIntegerValueType())) ? CtClass.intType : finalType;
+        if (type.equals(booleanDecl()) || finalType.subtypeOf(ObservableBooleanValueDecl())) {
+            superClass = BooleanPropertyDecl();
+            valueClass = booleanDecl();
+        } else if (finalType.equals(intDecl())
+                || finalType.equals(shortDecl())
+                || finalType.equals(byteDecl())
+                || finalType.equals(charDecl())
+                || finalType.subtypeOf(ObservableIntegerValueDecl())) {
+            superClass = IntegerPropertyDecl();
+            valueClass = finalType.subtypeOf(ObservableIntegerValueDecl()) ? intDecl() : finalType;
             isNumeric = true;
-        } else if (finalType == CtClass.longType
-                || unchecked(sourceInfo, () -> finalType.subtypeOf(ObservableLongValueType()))) {
-            superClass = LongPropertyType();
-            valueClass = CtClass.longType;
+        } else if (finalType.equals(longDecl()) || finalType.subtypeOf(ObservableLongValueDecl())) {
+            superClass = LongPropertyDecl();
+            valueClass = longDecl();
             isNumeric = true;
-        } else if (finalType == CtClass.floatType
-                || unchecked(sourceInfo, () -> finalType.subtypeOf(ObservableFloatValueType()))) {
-            superClass = FloatPropertyType();
-            valueClass = CtClass.floatType;
+        } else if (finalType.equals(floatDecl()) || finalType.subtypeOf(ObservableFloatValueDecl())) {
+            superClass = FloatPropertyDecl();
+            valueClass = floatDecl();
             isNumeric = true;
-        } else if (finalType == CtClass.doubleType
-                || unchecked(sourceInfo, () -> finalType.subtypeOf(ObservableDoubleValueType()))) {
-            superClass = DoublePropertyType();
-            valueClass = CtClass.doubleType;
+        } else if (finalType.equals(doubleDecl()) || finalType.subtypeOf(ObservableDoubleValueDecl())) {
+            superClass = DoublePropertyDecl();
+            valueClass = doubleDecl();
             isNumeric = true;
         } else {
-            superClass = ObjectType();
-            interfaces.add(PropertyType());
+            superClass = ObjectDecl();
+            interfaces.add(PropertyDecl());
             valueClass = groups[groups.length - 1].getValueType();
         }
 
-        if (!TypeHelper.equals(superClass, ObjectType())) {
+        if (!superClass.equals(ObjectDecl())) {
             this.type = TypeInstance.of(superClass);
         } else {
             TypeInvoker invoker = new TypeInvoker(sourceInfo);
             this.type = invoker.invokeType(
-                PropertyType(),
-                List.of(invoker.invokeType(TypeHelper.getBoxedType(valueClass))));
+                PropertyDecl(),
+                List.of(invoker.invokeType(valueClass.boxed())));
         }
     }
 
@@ -117,137 +109,120 @@ abstract class PropertySegmentGeneratorBase extends SegmentGeneratorBase {
     }
 
     @Override
-    public void emitClass(BytecodeEmitContext context) throws Exception {
-        generatedClass = context.getNestedClasses().create(getClassName());
-        generatedClass.setSuperclass(superClass);
-        generatedClass.setModifiers(Modifier.PRIVATE | Modifier.FINAL);
-        interfaces.forEach(itf -> generatedClass.addInterface(itf));
+    public TypeDeclaration emitClass(BytecodeEmitContext context) {
+        TypeDeclaration generatedClass = super.emitClass(context)
+            .setSuperClass(superClass)
+            .setModifiers(Modifier.PRIVATE | Modifier.FINAL);
+
+        for (TypeDeclaration itf : interfaces) {
+            generatedClass.addInterface(itf);
+        }
+
         groups[segment].setCompiledClass(generatedClass);
+
+        return generatedClass;
     }
 
     @Override
-    public void emitMethods(BytecodeEmitContext context) throws Exception {
+    public void emitMethods(BytecodeEmitContext context) {
         super.emitMethods(context);
 
-        getValueMethod = new CtMethod(ObjectType(), "getValue", new CtClass[0], generatedClass);
-        getValueMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
+        getValueMethod = createMethod("getValue", ObjectDecl())
+            .setModifiers(Modifier.PUBLIC | Modifier.FINAL);
 
-        setValueMethod = new CtMethod(CtClass.voidType, "setValue", new CtClass[] {ObjectType()}, generatedClass);
-        setValueMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
+        setValueMethod = createMethod("setValue", voidDecl(), ObjectDecl())
+            .setModifiers(Modifier.PUBLIC | Modifier.FINAL);
 
-        addInvalidationListenerMethod = new CtMethod(
-            CtClass.voidType, "addListener", new CtClass[] {InvalidationListenerType()}, generatedClass);
-        addInvalidationListenerMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
+        addInvalidationListenerMethod = createMethod("addListener", voidDecl(), InvalidationListenerDecl())
+            .setModifiers(Modifier.PUBLIC | Modifier.FINAL);
 
-        removeInvalidationListenerMethod = new CtMethod(
-            CtClass.voidType, "removeListener", new CtClass[] {InvalidationListenerType()}, generatedClass);
-        removeInvalidationListenerMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
+        removeInvalidationListenerMethod = createMethod("removeListener", voidDecl(), InvalidationListenerDecl())
+            .setModifiers(Modifier.PUBLIC | Modifier.FINAL);
 
-        addChangeListenerMethod = new CtMethod(
-            CtClass.voidType, "addListener", new CtClass[] {ChangeListenerType()}, generatedClass);
-        addChangeListenerMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
+        addChangeListenerMethod = createMethod("addListener", voidDecl(), ChangeListenerDecl())
+            .setModifiers(Modifier.PUBLIC | Modifier.FINAL);
 
-        removeChangeListenerMethod = new CtMethod(
-            CtClass.voidType, "removeListener", new CtClass[] {ChangeListenerType()}, generatedClass);
-        removeChangeListenerMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
+        removeChangeListenerMethod = createMethod("removeListener", voidDecl(), ChangeListenerDecl())
+            .setModifiers(Modifier.PUBLIC | Modifier.FINAL);
 
-        bindMethod = new CtMethod(CtClass.voidType, "bind", new CtClass[] {ObservableValueType()}, generatedClass);
-        bindMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
+        bindMethod = createMethod("bind", voidDecl(), ObservableValueDecl())
+            .setModifiers(Modifier.PUBLIC | Modifier.FINAL);
 
-        unbindMethod = new CtMethod(CtClass.voidType, "unbind", new CtClass[0], generatedClass);
-        unbindMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
+        unbindMethod = createMethod("unbind", voidDecl())
+            .setModifiers(Modifier.PUBLIC | Modifier.FINAL);
 
-        isBoundMethod = new CtMethod(CtClass.booleanType, "isBound", new CtClass[0], generatedClass);
-        isBoundMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
+        isBoundMethod = createMethod("isBound", booleanDecl())
+            .setModifiers(Modifier.PUBLIC | Modifier.FINAL);
 
-        bindBidirectionalMethod = new CtMethod(
-            CtClass.voidType, "bindBidirectional", new CtClass[] {PropertyType()}, generatedClass);
-        bindBidirectionalMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
+        bindBidirectionalMethod = createMethod("bindBidirectional", voidDecl(), PropertyDecl())
+            .setModifiers(Modifier.PUBLIC | Modifier.FINAL);
 
-        unbindBidirectionalMethod = new CtMethod(
-            CtClass.voidType, "unbindBidirectional", new CtClass[] {PropertyType()}, generatedClass);
-        unbindBidirectionalMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
+        unbindBidirectionalMethod = createMethod("unbindBidirectional", voidDecl(), PropertyDecl())
+            .setModifiers(Modifier.PUBLIC | Modifier.FINAL);
 
-        getBeanMethod = new CtMethod(ObjectType(), "getBean", new CtClass[0], generatedClass);
-        getBeanMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
+        getBeanMethod = createMethod("getBean", ObjectDecl())
+            .setModifiers(Modifier.PUBLIC | Modifier.FINAL);
 
-        getNameMethod = new CtMethod(StringType(), "getName", new CtClass[0], generatedClass);
-        getNameMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
+        getNameMethod = createMethod("getName", StringDecl())
+            .setModifiers(Modifier.PUBLIC | Modifier.FINAL);
 
         if (valueClass.isPrimitive()) {
-            getMethod = new CtMethod(TypeHelper.getWidenedNumericType(valueClass), "get", new CtClass[0], generatedClass);
-            getMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
-            generatedClass.addMethod(getMethod);
+            getMethod = createMethod("get", widenShortInt(valueClass))
+                .setModifiers(Modifier.PUBLIC | Modifier.FINAL);
 
-            setMethod = new CtMethod(CtClass.voidType, "set", new CtClass[] {valueClass}, generatedClass);
-            setMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
-            generatedClass.addMethod(setMethod);
+            setMethod = createMethod("set", voidDecl(), valueClass)
+                .setModifiers(Modifier.PUBLIC | Modifier.FINAL);
         }
 
         if (isNumeric) {
-            intValueMethod = new CtMethod(CtClass.intType, "intValue", new CtClass[0], generatedClass);
-            intValueMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
-            generatedClass.addMethod(intValueMethod);
+            intValueMethod = createMethod("intValue", intDecl())
+                .setModifiers(Modifier.PUBLIC | Modifier.FINAL);
 
-            longValueMethod = new CtMethod(CtClass.longType, "longValue", new CtClass[0], generatedClass);
-            longValueMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
-            generatedClass.addMethod(longValueMethod);
+            longValueMethod = createMethod("longValue", longDecl())
+                .setModifiers(Modifier.PUBLIC | Modifier.FINAL);
 
-            floatValueMethod = new CtMethod(CtClass.floatType, "floatValue", new CtClass[0], generatedClass);
-            floatValueMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
-            generatedClass.addMethod(floatValueMethod);
+            floatValueMethod = createMethod("floatValue", floatDecl())
+                .setModifiers(Modifier.PUBLIC | Modifier.FINAL);
 
-            doubleValueMethod = new CtMethod(CtClass.doubleType, "doubleValue", new CtClass[0], generatedClass);
-            doubleValueMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
-            generatedClass.addMethod(doubleValueMethod);
+            doubleValueMethod = createMethod("doubleValue", doubleDecl())
+                .setModifiers(Modifier.PUBLIC | Modifier.FINAL);
         }
-
-        generatedClass.addMethod(getValueMethod);
-        generatedClass.addMethod(setValueMethod);
-        generatedClass.addMethod(addInvalidationListenerMethod);
-        generatedClass.addMethod(removeInvalidationListenerMethod);
-        generatedClass.addMethod(addChangeListenerMethod);
-        generatedClass.addMethod(removeChangeListenerMethod);
-        generatedClass.addMethod(bindMethod);
-        generatedClass.addMethod(unbindMethod);
-        generatedClass.addMethod(isBoundMethod);
-        generatedClass.addMethod(bindBidirectionalMethod);
-        generatedClass.addMethod(unbindBidirectionalMethod);
-        generatedClass.addMethod(getBeanMethod);
-        generatedClass.addMethod(getNameMethod);
     }
 
     @Override
-    public void emitCode(BytecodeEmitContext context) throws Exception {
-        super.emitCode(context);
-
-        emitNotSupportedMethod(bindMethod, 2);
-        emitNotSupportedMethod(unbindMethod, 1);
-        emitNotSupportedMethod(bindBidirectionalMethod, 2);
-        emitNotSupportedMethod(unbindBidirectionalMethod, 2);
+    public void emitCode(BytecodeEmitContext context) {
+        emitNotSupportedMethod(bindMethod);
+        emitNotSupportedMethod(unbindMethod);
+        emitNotSupportedMethod(bindBidirectionalMethod);
+        emitNotSupportedMethod(unbindBidirectionalMethod);
         emitIsBoundMethod(isBoundMethod);
     }
 
-    protected void emitNotSupportedMethod(CtMethod method, int maxLocals) throws Exception {
-        final String exceptionType = "java.lang.UnsupportedOperationException";
-        Bytecode code = new Bytecode(method.getDeclaringClass(), maxLocals);
+    protected void emitNotSupportedMethod(MethodDeclaration method) {
+        Bytecode code = new Bytecode(method);
 
-        code.anew(exceptionType)
+        code.anew(UnsupportedOperationExceptionDecl())
             .dup()
-            .invokespecial(exceptionType, MethodInfo.nameInit, Descriptors.constructor())
+            .invoke(UnsupportedOperationExceptionDecl().requireDeclaredConstructor())
             .athrow();
 
-        method.getMethodInfo().setCodeAttribute(code.toCodeAttribute());
-        method.getMethodInfo().rebuildStackMap(method.getDeclaringClass().getClassPool());
+        method.setCode(code);
     }
 
-    private void emitIsBoundMethod(CtMethod method) throws Exception {
-        Bytecode code = new Bytecode(method.getDeclaringClass(), 1);
+    private void emitIsBoundMethod(MethodDeclaration method) {
+        Bytecode code = new Bytecode(method);
 
         code.iconst(0)
             .ireturn();
 
-        method.getMethodInfo().setCodeAttribute(code.toCodeAttribute());
-        method.getMethodInfo().rebuildStackMap(method.getDeclaringClass().getClassPool());
+        method.setCode(code);
+    }
+
+    static TypeDeclaration widenShortInt(TypeDeclaration type) {
+        return switch (type.name()) {
+            case "short", "byte", "char" -> Types.intDecl();
+            case ShortName, ByteName, CharacterName -> Types.IntegerDecl();
+            default -> type;
+        };
     }
 }

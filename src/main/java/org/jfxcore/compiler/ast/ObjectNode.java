@@ -1,16 +1,16 @@
-// Copyright (c) 2022, 2025, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast;
 
 import org.jetbrains.annotations.Nullable;
-import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.ast.intrinsic.Intrinsic;
 import org.jfxcore.compiler.ast.intrinsic.Intrinsics;
 import org.jfxcore.compiler.ast.text.TextNode;
+import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.diagnostic.errors.ObjectInitializationErrors;
 import org.jfxcore.compiler.diagnostic.errors.PropertyAssignmentErrors;
-import org.jfxcore.compiler.util.TypeHelper;
+import org.jfxcore.compiler.type.TypeHelper;
 import java.util.AbstractList;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -113,13 +113,13 @@ public class ObjectNode extends AbstractNode implements ValueNode {
         if (children.size() > 1) {
             throw ObjectInitializationErrors.objectCannotHaveMultipleChildren(
                 SourceInfo.span(children.get(0).getSourceInfo(), children.get(children.size() - 1).getSourceInfo()),
-                TypeHelper.getJvmType(this));
+                TypeHelper.getTypeDeclaration(this));
         }
 
-        if (children.size() == 0 || !(children.get(0) instanceof TextNode)) {
+        if (children.isEmpty() || !(children.get(0) instanceof TextNode)) {
             throw ObjectInitializationErrors.objectMustContainText(
-                children.size() == 0 ? getSourceInfo() : children.get(0).getSourceInfo(),
-                TypeHelper.getJvmType(this));
+                children.isEmpty() ? getSourceInfo() : children.get(0).getSourceInfo(),
+                TypeHelper.getTypeDeclaration(this));
         }
 
         return (TextNode)children.get(0);

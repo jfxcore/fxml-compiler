@@ -1,129 +1,113 @@
-// Copyright (c) 2022, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.util;
 
-import javassist.CtClass;
-import javassist.CtMember;
-import javassist.Modifier;
-import javassist.NotFoundException;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.diagnostic.errors.SymbolResolutionErrors;
-import java.util.Objects;
+import org.jfxcore.compiler.type.AccessModifier;
+import org.jfxcore.compiler.type.MemberDeclaration;
+import org.jfxcore.compiler.type.TypeDeclaration;
 import java.util.function.Predicate;
 
 public class AccessVerifier {
 
     private AccessVerifier() {}
 
-    public static void verifyAccessible(CtClass type, CtClass fromType, SourceInfo sourceInfo) {
-        if (!isAccessible(type, fromType, sourceInfo)) {
-            throw SymbolResolutionErrors.classNotAccessible(sourceInfo, NameHelper.getJavaClassName(sourceInfo, type));
+    public static void verifyAccessible(TypeDeclaration type, TypeDeclaration fromType, SourceInfo sourceInfo) {
+        if (!isAccessible(type, fromType)) {
+            throw SymbolResolutionErrors.classNotAccessible(sourceInfo, type.javaName());
         }
     }
 
-    public static void verifyAccessible(CtMember member, CtClass fromType, SourceInfo sourceInfo) {
-        if (!isAccessible(member, fromType, sourceInfo)) {
+    public static void verifyAccessible(MemberDeclaration member, TypeDeclaration fromType, SourceInfo sourceInfo) {
+        if (!isAccessible(member, fromType)) {
             throw SymbolResolutionErrors.memberNotAccessible(sourceInfo, member);
         }
     }
 
-    public static void verifyNestedAccessible(CtClass type, CtClass fromType, SourceInfo sourceInfo) {
-        if (!isNestedAccessible(type, fromType, sourceInfo)) {
-            throw SymbolResolutionErrors.classNotAccessible(sourceInfo, NameHelper.getJavaClassName(sourceInfo, type));
+    public static void verifyNestedAccessible(TypeDeclaration type, TypeDeclaration fromType, SourceInfo sourceInfo) {
+        if (!isNestedAccessible(type, fromType)) {
+            throw SymbolResolutionErrors.classNotAccessible(sourceInfo, type.javaName());
         }
     }
 
-    public static void verifyNestedAccessible(CtMember member, CtClass fromType, SourceInfo sourceInfo) {
-        if (!isNestedAccessible(member, fromType, sourceInfo)) {
+    public static void verifyNestedAccessible(MemberDeclaration member, TypeDeclaration fromType, SourceInfo sourceInfo) {
+        if (!isNestedAccessible(member, fromType)) {
             throw SymbolResolutionErrors.memberNotAccessible(sourceInfo, member);
         }
     }
 
-    public static boolean isAccessible(CtMember member, CtClass fromType, SourceInfo sourceInfo) {
-        CtClass declaringClass = member.getDeclaringClass();
+    public static boolean isAccessible(MemberDeclaration member, TypeDeclaration fromType) {
+        TypeDeclaration declaringClass = member.declaringType();
 
-        if (Objects.equals(declaringClass.getPackageName(), fromType.getPackageName())) {
-            return !Modifier.isPrivate(member.getModifiers());
+        if (declaringClass.packageName().equals(fromType.packageName())) {
+            return member.accessModifier() != AccessModifier.PRIVATE;
         }
 
-        if (!isAccessible(declaringClass, fromType, sourceInfo)) {
+        if (!isAccessible(declaringClass, fromType)) {
             return false;
         }
 
-        try {
-            if (Modifier.isPublic(member.getModifiers())) {
-                return true;
-            }
-
-            if (fromType.subtypeOf(declaringClass)) {
-                return Modifier.isProtected(member.getModifiers());
-            }
-        } catch (NotFoundException e) {
-            throw SymbolResolutionErrors.classNotFound(sourceInfo, e.getMessage());
-        }
-
-        return false;
-    }
-
-    public static boolean isAccessible(CtClass type, CtClass fromType, SourceInfo sourceInfo) {
-        if (Objects.equals(type.getPackageName(), fromType.getPackageName())) {
-            return allEnclosingMatch(type, t -> !Modifier.isPrivate(t.getModifiers()), sourceInfo);
-        }
-
-        if (allEnclosingMatch(type, t -> Modifier.isPublic(t.getModifiers()), sourceInfo)) {
+        if (member.accessModifier() == AccessModifier.PUBLIC) {
             return true;
         }
 
-        try {
-            CtClass declaringClass = type.getDeclaringClass();
-            if (declaringClass != null && fromType.subtypeOf(declaringClass)) {
-                return Modifier.isProtected(type.getModifiers());
-            }
-        } catch (NotFoundException e) {
-            throw SymbolResolutionErrors.classNotFound(sourceInfo, e.getMessage());
+        if (fromType.subtypeOf(declaringClass)) {
+            return member.accessModifier() == AccessModifier.PROTECTED;
         }
 
         return false;
     }
 
-    public static boolean isNestedAccessible(CtMember member, CtClass fromType, SourceInfo sourceInfo) {
-        CtClass declaringClass = member.getDeclaringClass();
-
-        if (Objects.equals(declaringClass.getPackageName(), fromType.getPackageName())) {
-            return !Modifier.isPrivate(member.getModifiers());
+    public static boolean isAccessible(TypeDeclaration type, TypeDeclaration fromType) {
+        if (type.packageName().equals(fromType.packageName())) {
+            return allEnclosingMatch(type, t -> t.accessModifier() != AccessModifier.PRIVATE);
         }
 
-        if (!isNestedAccessible(declaringClass, fromType, sourceInfo)) {
+        if (allEnclosingMatch(type, t -> t.accessModifier() == AccessModifier.PUBLIC)) {
+            return true;
+        }
+
+        if (type.declaringType().filter(fromType::subtypeOf).isPresent()) {
+            return type.accessModifier() == AccessModifier.PROTECTED;
+        }
+
+        return false;
+    }
+
+    public static boolean isNestedAccessible(MemberDeclaration member, TypeDeclaration fromType) {
+        TypeDeclaration declaringClass = member.declaringType();
+
+        if (declaringClass.packageName().equals(fromType.packageName())) {
+            return member.accessModifier() != AccessModifier.PRIVATE;
+        }
+
+        if (!isNestedAccessible(declaringClass, fromType)) {
             return false;
         }
 
-        return Modifier.isPublic(member.getModifiers());
+        return member.accessModifier() == AccessModifier.PUBLIC;
     }
 
-    public static boolean isNestedAccessible(CtClass type, CtClass fromType, SourceInfo sourceInfo) {
-        if (Objects.equals(type.getPackageName(), fromType.getPackageName())) {
-            return allEnclosingMatch(type, t -> !Modifier.isPrivate(t.getModifiers()), sourceInfo);
+    public static boolean isNestedAccessible(TypeDeclaration type, TypeDeclaration fromType) {
+        if (type.packageName().equals(fromType.packageName())) {
+            return allEnclosingMatch(type, t -> t.accessModifier() != AccessModifier.PRIVATE);
         }
 
-        return allEnclosingMatch(type, t -> Modifier.isPublic(t.getModifiers()), sourceInfo);
+        return allEnclosingMatch(type, t -> t.accessModifier() == AccessModifier.PUBLIC);
     }
 
-    private static boolean allEnclosingMatch(CtClass type, Predicate<CtClass> predicate, SourceInfo sourceInfo) {
-        CtClass t = type;
+    private static boolean allEnclosingMatch(TypeDeclaration type, Predicate<TypeDeclaration> predicate) {
+        TypeDeclaration t = type;
         while (t != null) {
             if (!predicate.test(t)) {
                 return false;
             }
 
-            try {
-                t = t.getDeclaringClass();
-            } catch (NotFoundException e) {
-                throw SymbolResolutionErrors.classNotFound(sourceInfo, e.getMessage());
-            }
+            t = t.declaringType().orElse(null);
         }
 
         return true;
     }
-
 }

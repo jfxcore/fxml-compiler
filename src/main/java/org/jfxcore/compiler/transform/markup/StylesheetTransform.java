@@ -1,4 +1,4 @@
-// Copyright (c) 2021, 2022, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.transform.markup;
@@ -18,10 +18,9 @@ import org.jfxcore.compiler.parse.CurlyTokenClass;
 import org.jfxcore.compiler.parse.CurlyTokenType;
 import org.jfxcore.compiler.transform.Transform;
 import org.jfxcore.compiler.transform.TransformContext;
-import org.jfxcore.compiler.util.Classes;
+import org.jfxcore.compiler.type.TypeHelper;
+import org.jfxcore.compiler.util.ExceptionHelper;
 import org.jfxcore.compiler.util.StringHelper;
-import org.jfxcore.compiler.util.TypeHelper;
-
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -33,7 +32,7 @@ import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
 
-import static org.jfxcore.compiler.util.ExceptionHelper.unchecked;
+import static org.jfxcore.compiler.type.Types.*;
 
 /**
  * Compiles stylesheets defined in markup using the fx:stylesheet intrinsic and stores the binary stylesheets
@@ -57,8 +56,7 @@ public class StylesheetTransform implements Transform {
             PropertyNode propertyNode = context.getParent().as(PropertyNode.class);
             if (propertyNode != null && propertyNode.getName().equals("style")) {
                 ObjectNode objectNode = context.getParent(1).as(ObjectNode.class);
-                if (objectNode != null && unchecked(node.getSourceInfo(),
-                        () -> TypeHelper.getJvmType(objectNode).subtypeOf(Classes.NodeType()))) {
+                if (objectNode != null && TypeHelper.getTypeDeclaration(objectNode).subtypeOf(NodeDecl())) {
                     return processInlineStyle(textNode);
                 }
             }
@@ -139,7 +137,7 @@ public class StylesheetTransform implements Transform {
             Stylesheet.convertToBinary(inputFile, outputFile);
             output = Files.readAllBytes(outputFile.toPath());
         } catch (IOException ex) {
-            throw unchecked(ex);
+            throw ExceptionHelper.unchecked(ex);
         } finally {
             if (inputFile != null) {
                 inputFile.delete();

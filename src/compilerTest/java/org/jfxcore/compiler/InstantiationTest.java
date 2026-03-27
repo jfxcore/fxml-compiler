@@ -1,4 +1,4 @@
-// Copyright (c) 2022, 2025, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler;
@@ -521,7 +521,7 @@ public class InstantiationTest extends CompilerTestBase {
                 </Button>
             """);
 
-            assertMethodCall(root, ms -> ms.stream().anyMatch(m -> m.getName().equals("valueOf")));
+            assertMethodCall(root, ms -> ms.stream().anyMatch(m -> m.name().equals("valueOf")));
             assertEquals(javafx.scene.paint.Color.RED, root.getTextFill());
         }
 
@@ -565,7 +565,7 @@ public class InstantiationTest extends CompilerTestBase {
                 </GridPane>
             """);
 
-            assertMethodCall(root, ms -> ms.stream().anyMatch(m -> m.getName().equals("valueOf")));
+            assertMethodCall(root, ms -> ms.stream().anyMatch(m -> m.name().equals("valueOf")));
             assertEquals(5.5, root.getMinHeight(), 0.001);
         }
 
@@ -578,7 +578,7 @@ public class InstantiationTest extends CompilerTestBase {
                 </GridPane>
             """);
 
-            assertMethodCall(root, ms -> ms.stream().anyMatch(m -> m.getName().equals("valueOf")));
+            assertMethodCall(root, ms -> ms.stream().anyMatch(m -> m.name().equals("valueOf")));
             assertEquals(5.5, root.getMinHeight(), 0.001);
         }
 
@@ -591,7 +591,7 @@ public class InstantiationTest extends CompilerTestBase {
                 </GridPane>
             """);
 
-            assertMethodCall(root, ms -> ms.stream().anyMatch(m -> m.getName().equals("valueOf")));
+            assertMethodCall(root, ms -> ms.stream().anyMatch(m -> m.name().equals("valueOf")));
             assertEquals("foo", root.getId());
         }
 
@@ -604,7 +604,7 @@ public class InstantiationTest extends CompilerTestBase {
                 </GridPane>
             """);
 
-            assertMethodCall(root, ms -> ms.stream().anyMatch(m -> m.getName().equals("valueOf")));
+            assertMethodCall(root, ms -> ms.stream().anyMatch(m -> m.name().equals("valueOf")));
             assertEquals("foo", root.getId());
         }
 
@@ -617,7 +617,7 @@ public class InstantiationTest extends CompilerTestBase {
                 </GridPane>
             """);
 
-            assertMethodCall(root, ms -> ms.stream().anyMatch(m -> m.getName().equals("valueOf")));
+            assertMethodCall(root, ms -> ms.stream().anyMatch(m -> m.name().equals("valueOf")));
             assertEquals("123.0", root.getId());
         }
 

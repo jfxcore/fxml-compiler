@@ -1,26 +1,22 @@
-// Copyright (c) 2023, 2025, JFXcore. All rights reserved.
+// Copyright (c) 2023, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.generate.collections;
 
-import javassist.CtClass;
-import javassist.CtConstructor;
-import javassist.CtField;
-import javassist.CtMethod;
-import javassist.Modifier;
-import javassist.bytecode.MethodInfo;
 import org.jfxcore.compiler.ast.emit.BytecodeEmitContext;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.generate.ClassGenerator;
+import org.jfxcore.compiler.type.ConstructorDeclaration;
+import org.jfxcore.compiler.type.Resolver;
+import org.jfxcore.compiler.type.TypeDeclaration;
+import org.jfxcore.compiler.type.TypeInstance;
+import org.jfxcore.compiler.type.TypeInvoker;
+import org.jfxcore.compiler.util.Bytecode;
 import org.jfxcore.compiler.util.NameHelper;
-import org.jfxcore.compiler.util.Resolver;
-import org.jfxcore.compiler.util.TypeInstance;
-import org.jfxcore.compiler.util.TypeInvoker;
+import java.lang.reflect.Modifier;
 
-import static javassist.CtClass.*;
 import static org.jfxcore.compiler.generate.SharedMethodImpls.*;
-import static org.jfxcore.compiler.util.Classes.*;
-import static org.jfxcore.compiler.util.Descriptors.*;
+import static org.jfxcore.compiler.type.Types.*;
 
 public class ListAddRemoveChangeGenerator extends ClassGenerator {
 
@@ -31,7 +27,7 @@ public class ListAddRemoveChangeGenerator extends ClassGenerator {
     private static final String TO_FIELD = "to";
     private static final String INVALID_FIELD = "invalid";
 
-    private CtConstructor constructor;
+    private ConstructorDeclaration constructor;
 
     @Override
     public String getClassName() {
@@ -40,137 +36,121 @@ public class ListAddRemoveChangeGenerator extends ClassGenerator {
 
     @Override
     public TypeInstance getTypeInstance() {
-        return new TypeInvoker(SourceInfo.none()).invokeType(ListChangeListenerChangeType());
+        return new TypeInvoker(SourceInfo.none()).invokeType(ListChangeListenerChangeDecl());
     }
 
     @Override
-    public void emitClass(BytecodeEmitContext context) throws Exception {
-        generatedClass = context.getNestedClasses().create(getClassName());
-        generatedClass.setModifiers(Modifier.PRIVATE | Modifier.FINAL);
-        generatedClass.setSuperclass(ListChangeListenerChangeType());
+    public TypeDeclaration emitClass(BytecodeEmitContext context) {
+        return super.emitClass(context)
+            .setModifiers(Modifier.PRIVATE | Modifier.FINAL)
+            .setSuperClass(ListChangeListenerChangeDecl());
     }
 
     @Override
-    public void emitFields(BytecodeEmitContext context) throws Exception {
-        CtField field = new CtField(ListType(), REMOVED_FIELD, generatedClass);
-        field.setModifiers(Modifier.PRIVATE | Modifier.FINAL);
-        generatedClass.addField(field);
-
-        field = new CtField(intType, FROM_FIELD, generatedClass);
-        field.setModifiers(Modifier.PRIVATE | Modifier.FINAL);
-        generatedClass.addField(field);
-
-        field = new CtField(intType, TO_FIELD, generatedClass);
-        field.setModifiers(Modifier.PRIVATE | Modifier.FINAL);
-        generatedClass.addField(field);
-
-        field = new CtField(booleanType, INVALID_FIELD, generatedClass);
-        field.setModifiers(Modifier.PRIVATE);
-        generatedClass.addField(field);
+    public void emitFields(BytecodeEmitContext context) {
+        createField(REMOVED_FIELD, ListDecl()).setModifiers(Modifier.PRIVATE | Modifier.FINAL);
+        createField(FROM_FIELD, intDecl()).setModifiers(Modifier.PRIVATE | Modifier.FINAL);
+        createField(TO_FIELD, intDecl()).setModifiers(Modifier.PRIVATE | Modifier.FINAL);
+        createField(INVALID_FIELD, booleanDecl()).setModifiers(Modifier.PRIVATE);
     }
 
     @Override
-    public void emitMethods(BytecodeEmitContext context) throws Exception {
+    public void emitMethods(BytecodeEmitContext context) {
         super.emitMethods(context);
 
-        constructor = new CtConstructor( new CtClass[] {intType, intType, ListType(), ObservableListType()}, generatedClass);
-        generatedClass.addConstructor(constructor);
+        constructor = createConstructor(intDecl(), intDecl(), ListDecl(), ObservableListDecl());
     }
 
     @Override
-    public void emitCode(BytecodeEmitContext context) throws Exception {
-        super.emitCode(context);
+    public void emitCode(BytecodeEmitContext context) {
+        emitConstructor(constructor);
 
-        emitConstructor(context, constructor);
-
-        createBehavior(context, generatedClass, new CtMethod(voidType, "checkState", new CtClass[0], generatedClass), 1, code -> {
-            code.aload(0)
-                .getfield(generatedClass, INVALID_FIELD, booleanType)
-                .ifne(() -> {
-                    code.anew(IllegalStateExceptionType())
-                        .dup()
-                        .ldc("next() must be called before inspecting the change")
-                        .invokespecial(IllegalStateExceptionType(), MethodInfo.nameInit, constructor(StringType()))
-                        .athrow();
-                })
-                .vreturn();
-        });
-
-        createBehavior(context, generatedClass, new CtMethod(intType, "getFrom", new CtClass[0], generatedClass), 1, code -> {
-            code.aload(0)
-                .invokevirtual(generatedClass, "checkState", function(voidType))
-                .aload(0)
-                .getfield(generatedClass, FROM_FIELD, intType)
-                .ireturn();
-        });
-
-        createBehavior(context, generatedClass, new CtMethod(intType, "getTo", new CtClass[0], generatedClass), 1, code -> {
-            code.aload(0)
-                .invokevirtual(generatedClass, "checkState", function(voidType))
-                .aload(0)
-                .getfield(generatedClass, TO_FIELD, intType)
-                .ireturn();
-        });
-
-        CtClass intArrayType = new Resolver(SourceInfo.none()).resolveClass("int[]");
-        createBehavior(context, generatedClass, new CtMethod(intArrayType, "getPermutation", new CtClass[0], generatedClass), 1, code -> {
-            code.aload(0)
-                .invokevirtual(generatedClass, "checkState", function(voidType))
-                .newarray(intType, 0)
-                .areturn();
-        });
-
-        createBehavior(context, generatedClass, new CtMethod(ListType(), "getRemoved", new CtClass[0], generatedClass), 1, code -> {
-            code.aload(0)
-                .invokevirtual(generatedClass, "checkState", function(voidType))
-                .aload(0)
-                .getfield(generatedClass, REMOVED_FIELD, ListType())
-                .areturn();
-        });
-
-        createBehavior(context, generatedClass, new CtMethod(voidType, "reset", new CtClass[0], generatedClass), 1, code -> {
-            code.aload(0)
-                .iconst(1)
-                .putfield(generatedClass, INVALID_FIELD, booleanType)
-                .vreturn();
-        });
-
-        createBehavior(context, generatedClass, new CtMethod(booleanType, "next", new CtClass[0], generatedClass), 1, code -> {
-            code.aload(0)
-                .getfield(generatedClass, INVALID_FIELD, booleanType)
-                .ifne(
-                    () -> code
-                        .aload(0)
-                        .iconst(0)
-                        .putfield(generatedClass, INVALID_FIELD, booleanType)
-                        .iconst(1),
-                    () -> code
-                        .iconst(0))
-                .ireturn();
-        });
-    }
-
-    private void emitConstructor(BytecodeEmitContext parentContext, CtConstructor constructor) throws Exception {
-        var context = new BytecodeEmitContext(parentContext, generatedClass, 5, -1);
-        context.getOutput()
+        createBehavior(createMethod("checkState", voidDecl()), code -> code
             .aload(0)
-            .aload(4)
-            .invokespecial(generatedClass.getSuperclass(), MethodInfo.nameInit, constructor(ObservableListType()))
+            .getfield(requireDeclaredField(INVALID_FIELD))
+            .ifne(() -> code
+                .anew(IllegalStateExceptionDecl())
+                .dup()
+                .ldc("next() must be called before inspecting the change")
+                .invoke(IllegalStateExceptionDecl().requireConstructor(StringDecl()))
+                .athrow())
+            .vreturn()
+        );
+
+        createBehavior(createMethod("getFrom", intDecl()), code -> code
             .aload(0)
-            .aload(3)
-            .putfield(generatedClass, REMOVED_FIELD, ListType())
+            .invoke(requireDeclaredMethod("checkState"))
             .aload(0)
-            .iload(1)
-            .putfield(generatedClass, FROM_FIELD, intType)
+            .getfield(requireDeclaredField(FROM_FIELD))
+            .ireturn()
+        );
+
+        createBehavior(createMethod("getTo", intDecl()), code -> code
             .aload(0)
-            .iload(2)
-            .putfield(generatedClass, TO_FIELD, intType)
+            .invoke(requireDeclaredMethod("checkState"))
+            .aload(0)
+            .getfield(requireDeclaredField(TO_FIELD))
+            .ireturn()
+        );
+
+        createBehavior(createMethod("getPermutation",
+                new Resolver(SourceInfo.none()).resolveClass("int[]")), code -> code
+            .aload(0)
+            .invoke(requireDeclaredMethod("checkState"))
+            .newarray(intDecl(), 0)
+            .areturn()
+        );
+
+        createBehavior(createMethod("getRemoved", ListDecl()), code -> code
+            .aload(0)
+            .invoke(requireDeclaredMethod("checkState"))
+            .aload(0)
+            .getfield(requireDeclaredField(REMOVED_FIELD))
+            .areturn()
+        );
+
+        createBehavior(createMethod("reset", voidDecl()), code -> code
             .aload(0)
             .iconst(1)
-            .putfield(generatedClass, INVALID_FIELD, booleanType)
+            .putfield(requireDeclaredField(INVALID_FIELD))
+            .vreturn()
+        );
+
+        createBehavior(createMethod("next", booleanDecl()), code -> code
+            .aload(0)
+            .getfield(requireDeclaredField(INVALID_FIELD))
+            .ifne(
+                () -> code
+                    .aload(0)
+                    .iconst(0)
+                    .putfield(requireDeclaredField(INVALID_FIELD))
+                    .iconst(1),
+                () -> code
+                    .iconst(0))
+            .ireturn()
+        );
+    }
+
+    private void emitConstructor(ConstructorDeclaration constructor) {
+        var code = new Bytecode(constructor);
+
+        code.aload(0)
+            .aload(4)
+            .invoke(requireSuperClass().requireDeclaredConstructor(ObservableListDecl()))
+            .aload(0)
+            .aload(3)
+            .putfield(requireDeclaredField(REMOVED_FIELD))
+            .aload(0)
+            .iload(1)
+            .putfield(requireDeclaredField(FROM_FIELD))
+            .aload(0)
+            .iload(2)
+            .putfield(requireDeclaredField(TO_FIELD))
+            .aload(0)
+            .iconst(1)
+            .putfield(requireDeclaredField(INVALID_FIELD))
             .vreturn();
 
-        constructor.getMethodInfo().setCodeAttribute(context.getOutput().toCodeAttribute());
-        constructor.getMethodInfo().rebuildStackMap(generatedClass.getClassPool());
+        constructor.setCode(code);
     }
 }

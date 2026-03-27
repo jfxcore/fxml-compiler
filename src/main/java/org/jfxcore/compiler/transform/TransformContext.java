@@ -1,15 +1,15 @@
-// Copyright (c) 2021, 2024, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.transform;
 
 import javassist.ClassPool;
-import javassist.CtClass;
 import org.jetbrains.annotations.Nullable;
 import org.jfxcore.compiler.ast.DocumentNode;
 import org.jfxcore.compiler.ast.Node;
 import org.jfxcore.compiler.ast.TemplateContentNode;
 import org.jfxcore.compiler.ast.Visitor;
+import org.jfxcore.compiler.type.TypeDeclaration;
 import org.jfxcore.compiler.util.ArrayStack;
 import org.jfxcore.compiler.util.CompilationContext;
 import java.util.ArrayDeque;
@@ -23,14 +23,14 @@ public class TransformContext {
 
     private final ArrayStack<Node> parents = new ArrayStack<>();
     private final List<String> ids = new ArrayList<>();
-    private final CtClass markupClass;
-    private final CtClass codeBehindClass;
+    private final TypeDeclaration markupClass;
+    private final TypeDeclaration codeBehindClass;
 
     public TransformContext(
             List<String> imports,
             ClassPool classPool,
-            @Nullable CtClass codeBehindClass,
-            @Nullable CtClass markupClass) {
+            @Nullable TypeDeclaration codeBehindClass,
+            @Nullable TypeDeclaration markupClass) {
         this.markupClass = markupClass;
         this.codeBehindClass = codeBehindClass;
         CompilationContext context = CompilationContext.getCurrent();
@@ -42,11 +42,11 @@ public class TransformContext {
         return ids;
     }
 
-    public CtClass getMarkupClass() {
+    public TypeDeclaration getMarkupClass() {
         return markupClass;
     }
 
-    public @Nullable CtClass getCodeBehindOrMarkupClass() {
+    public @Nullable TypeDeclaration getCodeBehindOrMarkupClass() {
         return codeBehindClass != null ? codeBehindClass : markupClass;
     }
 
@@ -161,5 +161,4 @@ public class TransformContext {
 
         return null;
     }
-
 }

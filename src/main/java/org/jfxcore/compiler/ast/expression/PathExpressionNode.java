@@ -1,9 +1,8 @@
-// Copyright (c) 2021, 2025, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.expression;
 
-import javassist.CtClass;
 import org.jfxcore.compiler.ast.AbstractNode;
 import org.jfxcore.compiler.ast.BindingMode;
 import org.jfxcore.compiler.ast.Visitor;
@@ -16,9 +15,10 @@ import org.jfxcore.compiler.ast.text.TextSegmentNode;
 import org.jfxcore.compiler.diagnostic.MarkupException;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.diagnostic.errors.ParserErrors;
-import org.jfxcore.compiler.util.Resolver;
-import org.jfxcore.compiler.util.TypeInstance;
-import org.jfxcore.compiler.util.TypeInvoker;
+import org.jfxcore.compiler.type.Resolver;
+import org.jfxcore.compiler.type.TypeDeclaration;
+import org.jfxcore.compiler.type.TypeInstance;
+import org.jfxcore.compiler.type.TypeInvoker;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -113,7 +113,7 @@ public class PathExpressionNode extends AbstractNode implements ExpressionNode {
             // that the path begins with the name of a (possibly fully qualified) class.
             Resolver resolver = new Resolver(SourceInfo.none());
             StringBuilder classBuilder = new StringBuilder();
-            CtClass type = null;
+            TypeDeclaration type = null;
             int staticLimit = 0;
 
             while (staticLimit < segments.size() - 1) {
@@ -130,7 +130,7 @@ public class PathExpressionNode extends AbstractNode implements ExpressionNode {
 
                 classBuilder.append(segment.getText());
 
-                type = resolver.tryResolveNestedClass(bindingContext.getType().getJvmType(), classBuilder.toString());
+                type = resolver.tryResolveNestedClass(bindingContext.getType().getTypeDeclaration(), classBuilder.toString());
 
                 if (type == null && mayResolveAgainstImports) {
                     type = resolver.tryResolveClassAgainstImports(classBuilder.toString());

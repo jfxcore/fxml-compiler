@@ -1,9 +1,8 @@
-// Copyright (c) 2021, 2025, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.transform.markup;
 
-import javassist.CtClass;
 import org.jfxcore.compiler.ast.Node;
 import org.jfxcore.compiler.ast.ObjectNode;
 import org.jfxcore.compiler.ast.PropertyNode;
@@ -12,11 +11,13 @@ import org.jfxcore.compiler.ast.intrinsic.Intrinsics;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.transform.Transform;
 import org.jfxcore.compiler.transform.TransformContext;
-import org.jfxcore.compiler.util.Classes;
-import org.jfxcore.compiler.util.Resolver;
-import org.jfxcore.compiler.util.TypeInstance;
-import org.jfxcore.compiler.util.TypeInvoker;
+import org.jfxcore.compiler.type.Resolver;
+import org.jfxcore.compiler.type.TypeDeclaration;
+import org.jfxcore.compiler.type.TypeInstance;
+import org.jfxcore.compiler.type.TypeInvoker;
 import java.util.List;
+
+import static org.jfxcore.compiler.type.Types.*;
 
 /**
  * Transforms the fx:type intrinsic into a class literal.
@@ -33,12 +34,12 @@ public class TypeIntrinsicTransform implements Transform {
         SourceInfo sourceInfo = propertyNode.getTrimmedTextSourceInfo(context);
         Resolver resolver = new Resolver(sourceInfo);
         TypeInvoker invoker = new TypeInvoker(sourceInfo);
-        CtClass clazz = resolver.resolveClassAgainstImports(propertyNode.getTrimmedTextNotEmpty(context));
+        TypeDeclaration clazz = resolver.resolveClassAgainstImports(propertyNode.getTrimmedTextNotEmpty(context));
         TypeInstance typeInstance = invoker.invokeType(clazz);
 
         return new EmitLiteralNode(
-            invoker.invokeType(Classes.ClassType(), List.of(typeInstance)),
-            clazz.getName(),
+            invoker.invokeType(ClassDecl(), List.of(typeInstance)),
+            clazz.name(),
             node.getSourceInfo());
     }
 }

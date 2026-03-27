@@ -1,10 +1,8 @@
-// Copyright (c) 2021, 2025, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.transform.markup;
 
-import javassist.CtClass;
-import javassist.Modifier;
 import org.jfxcore.compiler.ast.Node;
 import org.jfxcore.compiler.ast.ObjectNode;
 import org.jfxcore.compiler.ast.PropertyNode;
@@ -15,20 +13,23 @@ import org.jfxcore.compiler.diagnostic.errors.GeneralErrors;
 import org.jfxcore.compiler.diagnostic.errors.PropertyAssignmentErrors;
 import org.jfxcore.compiler.transform.Transform;
 import org.jfxcore.compiler.transform.TransformContext;
-import org.jfxcore.compiler.util.Classes;
+import org.jfxcore.compiler.type.Resolver;
+import org.jfxcore.compiler.type.TypeDeclaration;
+import org.jfxcore.compiler.type.TypeHelper;
+import org.jfxcore.compiler.type.TypeInstance;
+import org.jfxcore.compiler.type.TypeInvoker;
 import org.jfxcore.compiler.util.ExceptionHelper;
 import org.jfxcore.compiler.util.NameHelper;
-import org.jfxcore.compiler.util.Resolver;
-import org.jfxcore.compiler.util.TypeHelper;
-import org.jfxcore.compiler.util.TypeInstance;
-import org.jfxcore.compiler.util.TypeInvoker;
+import java.lang.reflect.Modifier;
 import java.util.List;
+
+import static org.jfxcore.compiler.type.Types.*;
 
 public class TemplateContentTransform implements Transform {
 
     @Override
     public Node transform(TransformContext context, Node node) {
-        if (!(node instanceof ObjectNode) || Classes.Core.TemplateType() == null) {
+        if (!(node instanceof ObjectNode) || Core.TemplateDecl() == null) {
             return node;
         }
 
@@ -43,7 +44,7 @@ public class TemplateContentTransform implements Transform {
         }
 
         TypeInstance parentType = TypeHelper.getTypeInstance(parentNode);
-        if (!parentType.subtypeOf(Classes.Core.TemplateType())) {
+        if (!parentType.subtypeOf(Core.TemplateDecl())) {
             return node;
         }
 
@@ -52,50 +53,50 @@ public class TemplateContentTransform implements Transform {
         Node contentNode = contentPropertyNode.getSingleValue(context);
         TypeInstance assignType = TypeHelper.getTypeInstance(contentNode);
 
-        if (!assignType.subtypeOf(Classes.NodeType())) {
+        if (!assignType.subtypeOf(NodeDecl())) {
             throw PropertyAssignmentErrors.incompatiblePropertyType(
                 contentNode.getSourceInfo(),
-                Classes.Core.TemplateType(),
+                Core.TemplateDecl(),
                 contentPropertyNode.getName(),
-                Classes.NodeType(),
+                NodeDecl(),
                 assignType);
         }
 
-        TypeInstance itemType = resolver.tryFindArgument(parentType, Classes.Core.TemplateType());
+        TypeInstance itemType = resolver.tryFindArgument(parentType, Core.TemplateDecl());
         if (itemType == null) {
             throw GeneralErrors.numTypeArgumentsMismatch(
-                parentNode.getSourceInfo(), parentType.jvmType(), 1, 0);
+                parentNode.getSourceInfo(), parentType.declaration(), 1, 0);
         }
 
         TypeInvoker invoker = new TypeInvoker(sourceInfo);
-        TypeInstance templateContentType = invoker.invokeType(Classes.Core.TemplateContentType(), List.of(itemType));
+        TypeInstance templateContentType = invoker.invokeType(Core.TemplateContentDecl(), List.of(itemType));
         ResolvedTypeNode typeNode = new ResolvedTypeNode(templateContentType, sourceInfo);
         TypeInstance contextClass = ExceptionHelper.unchecked(sourceInfo, () -> getContextClass(context, (ObjectNode)node));
 
         return new TemplateContentNode(typeNode, (ObjectNode)node, itemType, contextClass, node.getSourceInfo());
     }
 
-    private TypeInstance getContextClass(TransformContext context, ObjectNode node) throws Exception {
-        CtClass superType = TypeHelper.getJvmType(node);
-        String className = NameHelper.getUniqueName(superType.getSimpleName(), node);
-        CtClass contextClass = findClass(context, className);
+    private TypeInstance getContextClass(TransformContext context, ObjectNode node) {
+        TypeDeclaration superType = TypeHelper.getTypeDeclaration(node);
+        String className = NameHelper.getUniqueName(superType.simpleName(), node);
+        TypeDeclaration contextClass = findClass(context, className);
 
         if (contextClass == null) {
-            if (Modifier.isFinal(superType.getModifiers())) {
+            if (superType.isFinal()) {
                 throw GeneralErrors.rootClassCannotBeFinal(node.getSourceInfo(), superType);
             }
 
-            contextClass = context.getMarkupClass().makeNestedClass(className, true);
-            contextClass.setSuperclass(superType);
+            contextClass = context.getMarkupClass().createNestedClass(className);
+            contextClass.setSuperClass(superType);
             contextClass.setModifiers(Modifier.PRIVATE | Modifier.STATIC | Modifier.FINAL);
         }
 
         return new TypeInvoker(node.getSourceInfo()).invokeType(contextClass);
     }
 
-    private CtClass findClass(TransformContext context, String name) throws Exception {
-        for (CtClass clazz : context.getMarkupClass().getNestedClasses()) {
-            if (clazz.getSimpleName().equals(name)) {
+    private TypeDeclaration findClass(TransformContext context, String name) {
+        for (TypeDeclaration clazz : context.getMarkupClass().nestedClasses()) {
+            if (clazz.simpleName().equals(name)) {
                 return clazz;
             }
         }

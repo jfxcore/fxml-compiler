@@ -1,10 +1,8 @@
-// Copyright (c) 2022, 2025, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.expression.util;
 
-import javassist.CtConstructor;
-import javassist.CtMethod;
 import org.jetbrains.annotations.Nullable;
 import org.jfxcore.compiler.ast.BindingMode;
 import org.jfxcore.compiler.ast.emit.EmitMethodCallNode;
@@ -12,10 +10,12 @@ import org.jfxcore.compiler.ast.emit.EmitObjectNode;
 import org.jfxcore.compiler.ast.emit.ValueEmitterNode;
 import org.jfxcore.compiler.ast.expression.BindingEmitterInfo;
 import org.jfxcore.compiler.ast.expression.FunctionExpressionNode;
+import org.jfxcore.compiler.type.ConstructorDeclaration;
+import org.jfxcore.compiler.type.MethodDeclaration;
+import org.jfxcore.compiler.type.TypeHelper;
+import org.jfxcore.compiler.type.TypeInstance;
+import org.jfxcore.compiler.type.TypeInvoker;
 import org.jfxcore.compiler.util.AccessVerifier;
-import org.jfxcore.compiler.util.TypeHelper;
-import org.jfxcore.compiler.util.TypeInstance;
-import org.jfxcore.compiler.util.TypeInvoker;
 
 public class SimpleFunctionEmitterFactory extends AbstractFunctionEmitterFactory implements EmitterFactory {
 
@@ -39,17 +39,17 @@ public class SimpleFunctionEmitterFactory extends AbstractFunctionEmitterFactory
 
         ValueEmitterNode value;
 
-        if (invocationInfo.function().getBehavior() instanceof CtConstructor constructor) {
+        if (invocationInfo.function().getBehavior() instanceof ConstructorDeclaration constructor) {
             value = EmitObjectNode
                 .constructor(
-                    new TypeInvoker(functionExpression.getSourceInfo()).invokeType(constructor.getDeclaringClass()),
+                    new TypeInvoker(functionExpression.getSourceInfo()).invokeType(constructor.declaringType()),
                     constructor,
                     invocationInfo.arguments(),
                     functionExpression.getSourceInfo())
                 .create();
         } else {
             value = new EmitMethodCallNode(
-                (CtMethod)invocationInfo.function().getBehavior(), invocationInfo.type(),
+                (MethodDeclaration)invocationInfo.function().getBehavior(), invocationInfo.type(),
                 invocationInfo.function().getReceiver(), invocationInfo.arguments(),
                 functionExpression.getSourceInfo());
         }
@@ -60,8 +60,8 @@ public class SimpleFunctionEmitterFactory extends AbstractFunctionEmitterFactory
             value,
             TypeHelper.getTypeInstance(value),
             null,
-            invocationInfo.function().getBehavior().getDeclaringClass(),
-            invocationInfo.function().getBehavior().getName(),
+            invocationInfo.function().getBehavior().declaringType(),
+            invocationInfo.function().getBehavior().name(),
             true,
             false,
             functionExpression.getSourceInfo());

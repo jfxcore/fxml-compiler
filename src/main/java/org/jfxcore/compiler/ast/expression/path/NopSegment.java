@@ -1,17 +1,15 @@
-// Copyright (c) 2021, 2023, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.expression.path;
 
-import javassist.CtClass;
 import org.jfxcore.compiler.ast.AbstractNode;
 import org.jfxcore.compiler.ast.ResolvedTypeNode;
 import org.jfxcore.compiler.ast.emit.BytecodeEmitContext;
 import org.jfxcore.compiler.ast.emit.ValueEmitterNode;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
-import org.jfxcore.compiler.util.ExceptionHelper;
+import org.jfxcore.compiler.type.TypeInstance;
 import org.jfxcore.compiler.util.ObservableKind;
-import org.jfxcore.compiler.util.TypeInstance;
 
 public class NopSegment extends Segment {
 
@@ -19,10 +17,6 @@ public class NopSegment extends Segment {
         super("<nop>", "<nop>", valueType, valueType, ObservableKind.NONE);
     }
 
-    @Override
-    public CtClass getDeclaringClass() {
-        return ExceptionHelper.unchecked(SourceInfo.none(), () -> getValueTypeInstance().jvmType().getDeclaringClass());
-    }
 
     @Override
     public boolean isNullable() {
@@ -55,5 +49,4 @@ public class NopSegment extends Segment {
             return new NopEmitter(type.getTypeInstance(), getSourceInfo());
         }
     }
-
 }

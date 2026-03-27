@@ -3,7 +3,6 @@
 
 package org.jfxcore.compiler.transform.markup;
 
-import javassist.CtClass;
 import org.jfxcore.compiler.ast.BindingNode;
 import org.jfxcore.compiler.ast.ContextNode;
 import org.jfxcore.compiler.ast.Node;
@@ -40,21 +39,22 @@ import org.jfxcore.compiler.transform.TransformContext;
 import org.jfxcore.compiler.transform.markup.util.BindingEmitterFactory;
 import org.jfxcore.compiler.transform.markup.util.MarkupExtensionInfo;
 import org.jfxcore.compiler.transform.markup.util.ValueEmitterFactory;
+import org.jfxcore.compiler.type.Resolver;
+import org.jfxcore.compiler.type.TypeDeclaration;
+import org.jfxcore.compiler.type.TypeHelper;
+import org.jfxcore.compiler.type.TypeInstance;
+import org.jfxcore.compiler.type.TypeInvoker;
+import org.jfxcore.compiler.type.Types;
 import org.jfxcore.compiler.util.NameHelper;
 import org.jfxcore.compiler.util.ObservableKind;
 import org.jfxcore.compiler.util.PropertyInfo;
-import org.jfxcore.compiler.util.Resolver;
-import org.jfxcore.compiler.util.TypeHelper;
-import org.jfxcore.compiler.util.TypeInstance;
-import org.jfxcore.compiler.util.TypeInvoker;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
-import static org.jfxcore.compiler.util.Classes.*;
-import static org.jfxcore.compiler.util.ExceptionHelper.*;
+import static org.jfxcore.compiler.type.Types.*;
 
 /**
  * Replaces all instances of {@link PropertyNode} in the AST with nodes that represent property assignments
@@ -105,7 +105,7 @@ public class PropertyAssignmentTransform implements Transform {
                     // entire chain of names. This makes for a better diagnostic in case the user meant
                     // to specify the name of a static property that couldn't be resolved.
                     String name = i == 0 ? propertyNode.getName() : names[i];
-                    throw SymbolResolutionErrors.propertyNotFound(sourceInfo, declaringType.jvmType(), name);
+                    throw SymbolResolutionErrors.propertyNotFound(sourceInfo, declaringType.declaration(), name);
                 }
 
                 boolean hasGetter = targetProperty.getGetter() != null;
@@ -140,7 +140,7 @@ public class PropertyAssignmentTransform implements Transform {
             if (propertyNode.isAllowQualifiedName() && propertyNode.getNames().length > 1) {
                 String[] names = propertyNode.getNames();
                 String className = String.join(".", Arrays.copyOf(names, names.length - 1));
-                CtClass type = resolver.tryResolveClassAgainstImports(className);
+                TypeDeclaration type = resolver.tryResolveClassAgainstImports(className);
 
                 if (type != null && TypeHelper.getTypeInstance(parentNode).subtypeOf(type)) {
                     throw SymbolResolutionErrors.propertyNotFound(
@@ -156,12 +156,12 @@ public class PropertyAssignmentTransform implements Transform {
             }
 
             throw SymbolResolutionErrors.propertyNotFound(
-                propertyNode.getSourceInfo(), declaringType.jvmType(), propertyNode.getName());
+                propertyNode.getSourceInfo(), declaringType.declaration(), propertyNode.getName());
         }
 
         if (propertyNode.getValues().isEmpty()) {
             throw PropertyAssignmentErrors.propertyCannotBeEmpty(
-                propertyNode.getSourceInfo(), declaringType.jvmType(), propertyNode.getMarkupName());
+                propertyNode.getSourceInfo(), declaringType.declaration(), propertyNode.getMarkupName());
         }
 
         MarkupException storedException = null;
@@ -197,7 +197,7 @@ public class PropertyAssignmentTransform implements Transform {
 
         if (propertyNode.getValues().size() > 1) {
             throw PropertyAssignmentErrors.propertyCannotHaveMultipleValues(
-                propertyNode.getSourceInfo(), declaringType.jvmType(), propertyNode.getMarkupName());
+                propertyNode.getSourceInfo(), declaringType.declaration(), propertyNode.getMarkupName());
         }
 
         if (targetProperty.isReadOnly()) {
@@ -274,19 +274,19 @@ public class PropertyAssignmentTransform implements Transform {
                              PropertyNode propertyNode,
                              PropertyInfo targetProperty,
                              TypeInstance declaringType) {
-        boolean isMap = targetProperty.getType().subtypeOf(MapType());
-        if (!isMap && !targetProperty.getType().subtypeOf(CollectionType())) {
+        boolean isMap = targetProperty.getType().subtypeOf(MapDecl());
+        if (!isMap && !targetProperty.getType().subtypeOf(CollectionDecl())) {
             return null;
         }
 
         TypeInstance keyType, itemType;
 
         if (isMap) {
-            List<TypeInstance> itemTypes = TypeHelper.getTypeArguments(targetProperty.getType(), MapType());
+            List<TypeInstance> itemTypes = TypeHelper.getTypeArguments(targetProperty.getType(), MapDecl());
             keyType = itemTypes.isEmpty() ? TypeInstance.ObjectType() : itemTypes.get(0);
             itemType = itemTypes.isEmpty() ? TypeInstance.ObjectType() : itemTypes.get(1);
         } else {
-            List<TypeInstance> itemTypes = TypeHelper.getTypeArguments(targetProperty.getType(), CollectionType());
+            List<TypeInstance> itemTypes = TypeHelper.getTypeArguments(targetProperty.getType(), CollectionDecl());
             keyType = null;
             itemType = itemTypes.isEmpty() ? TypeInstance.ObjectType() : itemTypes.get(0);
         }
@@ -305,7 +305,7 @@ public class PropertyAssignmentTransform implements Transform {
                 throw err.error();
             } else if (result instanceof MarkupExtensionResolution.ConsumeProperty) {
                 throw GeneralErrors.cannotAddItemIncompatibleValue(
-                    child.getSourceInfo(), declaringType.jvmType(), propertyNode.getMarkupName(),
+                    child.getSourceInfo(), declaringType.declaration(), propertyNode.getMarkupName(),
                     child.getSourceInfo().getText());
             }
 
@@ -344,7 +344,7 @@ public class PropertyAssignmentTransform implements Transform {
                     if (child instanceof EmitLiteralNode
                             || child instanceof EmitObjectNode
                             || child instanceof EmitClassConstantNode) {
-                        ValueNode key = tryCreateKey(context, (ValueEmitterNode)child, keyType.jvmType());
+                        ValueNode key = tryCreateKey(context, (ValueEmitterNode)child, keyType);
                         if (key == null) {
                             throw GeneralErrors.unsupportedMapKeyType(child.getSourceInfo(), targetProperty);
                         }
@@ -352,7 +352,7 @@ public class PropertyAssignmentTransform implements Transform {
                         keys.add(key);
                     } else {
                         throw GeneralErrors.cannotAddItemIncompatibleValue(
-                            child.getSourceInfo(), declaringType.jvmType(), propertyNode.getMarkupName(),
+                            child.getSourceInfo(), declaringType.declaration(), propertyNode.getMarkupName(),
                             child.getSourceInfo().getText());
                     }
                 }
@@ -371,8 +371,8 @@ public class PropertyAssignmentTransform implements Transform {
         return new EmitPropertyAdderNode(targetProperty, keys, values, itemType, propertyNode.getSourceInfo());
     }
 
-    private ValueNode tryCreateKey(TransformContext context, ValueEmitterNode node, CtClass keyType) {
-        if (!TypeHelper.equals(keyType, StringType()) && !TypeHelper.equals(keyType, ObjectType())) {
+    private ValueNode tryCreateKey(TransformContext context, ValueEmitterNode node, TypeInstance keyType) {
+        if (!keyType.equals(StringDecl()) && !keyType.equals(ObjectDecl())) {
             return null;
         }
 
@@ -383,7 +383,7 @@ public class PropertyAssignmentTransform implements Transform {
             }
         }
 
-        if (TypeHelper.equals(keyType, StringType())) {
+        if (keyType.equals(StringDecl())) {
             StringBuilder builder = new StringBuilder();
             for (Node parent : context.getParents()) {
                 if (parent instanceof ValueNode) {
@@ -400,20 +400,20 @@ public class PropertyAssignmentTransform implements Transform {
         // The key of unnamed templates is their data item class literal, which is used by the
         // templating system to match templates to data items at runtime.
         TypeInstance nodeType = TypeHelper.getTypeInstance(node);
-        if (Core.TemplateType() != null && nodeType.subtypeOf(Core.TemplateType())) {
+        if (Core.TemplateDecl() != null && nodeType.subtypeOf(Core.TemplateDecl())) {
             Resolver resolver = new Resolver(node.getSourceInfo());
-            TypeInstance itemType = resolver.tryFindArgument(nodeType, Core.TemplateType());
+            TypeInstance itemType = resolver.tryFindArgument(nodeType, Core.TemplateDecl());
 
             return new EmitLiteralNode(
-                new TypeInvoker(node.getSourceInfo()).invokeType(ClassType(), List.of(itemType)),
-                itemType.getName(),
+                new TypeInvoker(node.getSourceInfo()).invokeType(ClassDecl(), List.of(itemType)),
+                itemType.name(),
                 node.getSourceInfo());
         }
 
         return EmitObjectNode
             .constructor(
                 TypeInstance.ObjectType(),
-                unchecked(node.getSourceInfo(), () -> ObjectType().getConstructor("()V")),
+                Types.ObjectDecl().requireDeclaredConstructor(),
                 Collections.emptyList(),
                 node.getSourceInfo())
             .create();
@@ -429,7 +429,7 @@ public class PropertyAssignmentTransform implements Transform {
         if (extensionInfo instanceof MarkupExtensionInfo.Supplier supplierInfo) {
             if (supplierInfo.providedTypes().stream().noneMatch(targetType::isAssignableFrom)) {
                 return new MarkupExtensionResolution.Error(PropertyAssignmentErrors.markupExtensionNotApplicable(
-                    node.getSourceInfo(), targetProperty, TypeHelper.getJvmType(node),
+                    node.getSourceInfo(), targetProperty, TypeHelper.getTypeDeclaration(node),
                     supplierInfo.providedTypes().toArray(TypeInstance[]::new)));
             }
 
@@ -442,7 +442,7 @@ public class PropertyAssignmentTransform implements Transform {
             if (targetProperty.getObservableType() == null
                     || !propertyConsumerInfo.propertyType().isAssignableFrom(targetProperty.getObservableType())) {
                 return new MarkupExtensionResolution.Error(PropertyAssignmentErrors.markupExtensionNotApplicable(
-                    node.getSourceInfo(), targetProperty, TypeHelper.getJvmType(node),
+                    node.getSourceInfo(), targetProperty, TypeHelper.getTypeDeclaration(node),
                     new TypeInstance[] {propertyConsumerInfo.propertyType()}));
             }
 
@@ -455,7 +455,7 @@ public class PropertyAssignmentTransform implements Transform {
     }
 
     private ValueEmitterNode createEventHandlerNode(TransformContext context, ValueNode node, TypeInstance targetType) {
-        if (targetType.subtypeOf(EventHandlerType()) && node instanceof TextNode textNode) {
+        if (targetType.subtypeOf(EventHandlerDecl()) && node instanceof TextNode textNode) {
             String text = textNode.getText().trim();
             if (!text.startsWith("#")) {
                 return null;
@@ -463,7 +463,7 @@ public class PropertyAssignmentTransform implements Transform {
 
             return new EmitEventHandlerNode(
                 context.getCodeBehindOrMarkupClass(),
-                targetType.getArguments().get(0),
+                targetType.arguments().get(0),
                 text.substring(1),
                 textNode.getSourceInfo().getTrimmed());
         }
@@ -473,8 +473,8 @@ public class PropertyAssignmentTransform implements Transform {
 
     private ValueEmitterNode createTemplateContentNode(ValueNode node, TypeInstance targetType) {
         if (node instanceof TemplateContentNode templateContentNode
-                && Core.TemplateContentType() != null
-                && targetType.subtypeOf(Core.TemplateContentType())) {
+                && Core.TemplateContentDecl() != null
+                && targetType.subtypeOf(Core.TemplateContentDecl())) {
             return new EmitTemplateContentNode(
                 targetType,
                 templateContentNode.getItemType(),

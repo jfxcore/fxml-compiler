@@ -1,9 +1,8 @@
-// Copyright (c) 2022, 2025, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.transform.markup;
 
-import javassist.CtClass;
 import org.jfxcore.compiler.ast.Node;
 import org.jfxcore.compiler.ast.ObjectNode;
 import org.jfxcore.compiler.ast.PropertyNode;
@@ -14,11 +13,13 @@ import org.jfxcore.compiler.ast.intrinsic.Intrinsics;
 import org.jfxcore.compiler.diagnostic.errors.SymbolResolutionErrors;
 import org.jfxcore.compiler.transform.Transform;
 import org.jfxcore.compiler.transform.TransformContext;
+import org.jfxcore.compiler.type.AccessModifier;
+import org.jfxcore.compiler.type.Resolver;
+import org.jfxcore.compiler.type.TypeDeclaration;
+import org.jfxcore.compiler.type.TypeHelper;
+import org.jfxcore.compiler.type.TypeInstance;
+import org.jfxcore.compiler.type.TypeInvoker;
 import org.jfxcore.compiler.util.PropertyInfo;
-import org.jfxcore.compiler.util.Resolver;
-import org.jfxcore.compiler.util.TypeHelper;
-import org.jfxcore.compiler.util.TypeInstance;
-import org.jfxcore.compiler.util.TypeInvoker;
 import java.util.Arrays;
 
 /**
@@ -80,7 +81,7 @@ public class ObjectToPropertyTransform implements Transform {
                 names = Arrays.copyOf(names, names.length - 1);
 
                 if (propertyInfo == null && names.length > 0) {
-                    CtClass type = resolver.tryResolveClassAgainstImports(String.join(".", names));
+                    TypeDeclaration type = resolver.tryResolveClassAgainstImports(String.join(".", names));
                     if (type != null && parentType.subtypeOf(type)) {
                         throw SymbolResolutionErrors.propertyNotFound(
                             objectNode.getType().getSourceInfo(), type, propertyNames[names.length]);
@@ -93,7 +94,7 @@ public class ObjectToPropertyTransform implements Transform {
             if (propertyInfo == null && propertyNames.length > 1) {
                 names = Arrays.copyOf(propertyNames, propertyNames.length - 1);
                 String staticPropertyClassName = String.join(".", names);
-                CtClass staticPropertyClass = resolver.tryResolveClassAgainstImports(staticPropertyClassName);
+                TypeDeclaration staticPropertyClass = resolver.tryResolveClassAgainstImports(staticPropertyClassName);
                 if (staticPropertyClass != null) {
                     String staticPropertyName = propertyNames[propertyNames.length - 1];
                     propertyInfo = resolver.tryResolveProperty(
@@ -101,7 +102,9 @@ public class ObjectToPropertyTransform implements Transform {
                 }
             }
 
-            if (propertyInfo == null && !TypeHelper.hasNamedConstructorParam(parentType.jvmType(), propertyName)) {
+            if (propertyInfo == null && parentType.declaration().constructors().stream().noneMatch(c ->
+                    c.accessModifier() == AccessModifier.PUBLIC
+                    && c.parameters().stream().anyMatch(p -> propertyName.equals(p.name())))) {
                 return objectNode;
             }
         } else if (intrinsic.getProperties().stream().noneMatch(p -> p.getName().equals(propertyName))) {

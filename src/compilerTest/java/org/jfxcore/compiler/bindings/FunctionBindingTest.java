@@ -1,4 +1,4 @@
-// Copyright (c) 2022, 2025, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.bindings;
@@ -20,9 +20,9 @@ import javafx.scene.layout.Pane;
 import org.jfxcore.compiler.diagnostic.ErrorCode;
 import org.jfxcore.compiler.diagnostic.MarkupException;
 import org.jfxcore.compiler.util.CompilerTestBase;
-import org.jfxcore.compiler.util.InverseMethod;
 import org.jfxcore.compiler.util.NameHelper;
 import org.jfxcore.compiler.util.TestExtension;
+import org.jfxcore.markup.InverseMethod;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import java.text.DecimalFormat;
@@ -130,8 +130,8 @@ public class FunctionBindingTest extends CompilerTestBase {
 
         assertEquals(ErrorCode.CANNOT_BIND_FUNCTION, ex.getDiagnostic().getCode());
         assertEquals(2, ex.getDiagnostic().getCauses().length);
-        assertEquals(ErrorCode.NUM_FUNCTION_ARGUMENTS_MISMATCH, ex.getDiagnostic().getCauses()[0].getCode());
-        assertEquals(ErrorCode.INCOMPATIBLE_RETURN_VALUE, ex.getDiagnostic().getCauses()[1].getCode());
+        assertEquals(ErrorCode.INCOMPATIBLE_RETURN_VALUE, ex.getDiagnostic().getCauses()[0].getCode());
+        assertEquals(ErrorCode.NUM_FUNCTION_ARGUMENTS_MISMATCH, ex.getDiagnostic().getCauses()[1].getCode());
         assertCodeHighlight("String.format", ex);
     }
 
@@ -183,8 +183,8 @@ public class FunctionBindingTest extends CompilerTestBase {
         root.doubleProp.set(2);
         assertEquals("foo-1.0", root.getId());
 
-        assertMethodCall(root, ms -> ms.stream().anyMatch(m -> m.getName().equals("requireNonNull")));
-        assertMethodCall(root, ms -> ms.stream().anyMatch(m -> m.getName().equals("doubleValue")));
+        assertMethodCall(root, ms -> ms.stream().anyMatch(m -> m.name().equals("requireNonNull")));
+        assertMethodCall(root, ms -> ms.stream().anyMatch(m -> m.name().equals("doubleValue")));
     }
 
     @Test
@@ -198,8 +198,8 @@ public class FunctionBindingTest extends CompilerTestBase {
         assertFalse(root.idProperty().isBound());
         assertEquals("foo-1.0-bar", root.getId());
 
-        assertMethodCall(root, ms -> ms.stream().noneMatch(m -> m.getName().equals("requireNonNull")));
-        assertMethodCall(root, ms -> ms.stream().noneMatch(m -> m.getName().equals("doubleValue")));
+        assertMethodCall(root, ms -> ms.stream().noneMatch(m -> m.name().equals("requireNonNull")));
+        assertMethodCall(root, ms -> ms.stream().noneMatch(m -> m.name().equals("doubleValue")));
     }
 
     @Test
@@ -217,9 +217,9 @@ public class FunctionBindingTest extends CompilerTestBase {
         root.stringProp.set("baz");
         assertEquals("foo-1.0-bar", root.getId());
 
-        assertMethodCall(root, ms -> ms.stream().anyMatch(m -> m.getName().equals("requireNonNull")));
-        assertMethodCall(root, ms -> ms.stream().anyMatch(m -> m.getName().equals("doubleValue")));
-        assertMethodCall(root, ms -> ms.stream().anyMatch(m -> m.getName().equals("getValue")));
+        assertMethodCall(root, ms -> ms.stream().anyMatch(m -> m.name().equals("requireNonNull")));
+        assertMethodCall(root, ms -> ms.stream().anyMatch(m -> m.name().equals("doubleValue")));
+        assertMethodCall(root, ms -> ms.stream().anyMatch(m -> m.name().equals("getValue")));
     }
 
     @Test
@@ -494,8 +494,8 @@ public class FunctionBindingTest extends CompilerTestBase {
 
         assertEquals(ErrorCode.CANNOT_BIND_FUNCTION, ex.getDiagnostic().getCode());
         assertEquals(2, ex.getDiagnostic().getCauses().length);
-        assertEquals(ErrorCode.NUM_FUNCTION_ARGUMENTS_MISMATCH, ex.getDiagnostic().getCauses()[0].getCode());
-        assertEquals(ErrorCode.INCOMPATIBLE_RETURN_VALUE, ex.getDiagnostic().getCauses()[1].getCode());
+        assertEquals(ErrorCode.INCOMPATIBLE_RETURN_VALUE, ex.getDiagnostic().getCauses()[0].getCode());
+        assertEquals(ErrorCode.NUM_FUNCTION_ARGUMENTS_MISMATCH, ex.getDiagnostic().getCauses()[1].getCode());
         assertCodeHighlight("String.format", ex);
     }
 
@@ -1014,8 +1014,8 @@ public class FunctionBindingTest extends CompilerTestBase {
 
         assertEquals(ErrorCode.CANNOT_BIND_FUNCTION, ex.getDiagnostic().getCode());
         assertEquals(2, ex.getDiagnostic().getCauses().length);
-        assertEquals(ErrorCode.NUM_FUNCTION_ARGUMENTS_MISMATCH, ex.getDiagnostic().getCauses()[0].getCode());
-        assertEquals(ErrorCode.INCOMPATIBLE_RETURN_VALUE, ex.getDiagnostic().getCauses()[1].getCode());
+        assertEquals(ErrorCode.INCOMPATIBLE_RETURN_VALUE, ex.getDiagnostic().getCauses()[0].getCode());
+        assertEquals(ErrorCode.NUM_FUNCTION_ARGUMENTS_MISMATCH, ex.getDiagnostic().getCauses()[1].getCode());
         assertCodeHighlight("String.format", ex);
     }
 

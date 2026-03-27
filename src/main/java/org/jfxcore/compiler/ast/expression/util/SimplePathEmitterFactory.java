@@ -1,4 +1,4 @@
-// Copyright (c) 2021, 2025, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.expression.util;
@@ -10,7 +10,7 @@ import org.jfxcore.compiler.ast.expression.BindingEmitterInfo;
 import org.jfxcore.compiler.ast.expression.PathExpressionNode;
 import org.jfxcore.compiler.ast.expression.path.ResolvedPath;
 import org.jfxcore.compiler.ast.expression.path.Segment;
-import org.jfxcore.compiler.util.TypeHelper;
+import org.jfxcore.compiler.type.TypeHelper;
 
 public class SimplePathEmitterFactory implements EmitterFactory {
 
@@ -35,7 +35,7 @@ public class SimplePathEmitterFactory implements EmitterFactory {
             value,
             TypeHelper.getTypeInstance(value),
             null,
-            lastSegment.getDeclaringClass(),
+            lastSegment.getDeclaringType(),
             lastSegment.getDisplayName(),
             false,
             false,

@@ -4,7 +4,8 @@
 package org.jfxcore.compiler.util;
 
 import javassist.ClassPool;
-import javassist.CtClass;
+import org.jfxcore.compiler.type.TypeDeclaration;
+import org.jfxcore.compiler.type.Types;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.List;
@@ -53,7 +54,7 @@ public class CompilationContext extends HashMap<Object, Object> {
     public boolean useSharedImplementation() {
         return get(CompilationContext.USE_SHARED_IMPLEMENTATION) instanceof Boolean value
             ? value
-            : Classes.Markup.isAvailable();
+            : Types.Markup.isAvailable();
     }
 
     public CompilationSource getCompilationSource() {
@@ -64,12 +65,12 @@ public class CompilationContext extends HashMap<Object, Object> {
         return compilationSource;
     }
 
-    public void addModifiedClass(CtClass ctclass) {
-        modifiedClasses.put(ctclass.getName(), null);
+    public void addModifiedClass(TypeDeclaration ctclass) {
+        modifiedClasses.put(ctclass.jvmType().getName(), null);
     }
 
-    public void addModifiedClass(CtClass ctclass, Path outDir) {
-        modifiedClasses.put(ctclass.getName(), outDir);
+    public void addModifiedClass(TypeDeclaration ctclass, Path outDir) {
+        modifiedClasses.put(ctclass.jvmType().getName(), outDir);
     }
 
     public Map<String, Path> getModifiedClasses() {
@@ -91,5 +92,4 @@ public class CompilationContext extends HashMap<Object, Object> {
     public void setImports(List<String> imports) {
         this.imports = imports;
     }
-
 }

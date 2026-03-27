@@ -1,20 +1,19 @@
 // Copyright (c) 2022, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
-package org.jfxcore.compiler.util;
+package org.jfxcore.compiler.type;
 
-import javassist.CtClass;
-import javassist.CtMethod;
+import org.jfxcore.compiler.TestBase;
 import org.jfxcore.compiler.diagnostic.ErrorCode;
 import org.jfxcore.compiler.diagnostic.MarkupException;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.parse.TypeParser;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.jfxcore.compiler.TestBase;
 import java.util.Collections;
 import java.util.List;
 
+import static org.jfxcore.compiler.type.Types.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 @SuppressWarnings("unused")
@@ -621,8 +620,8 @@ public class TypeInstanceTest extends TestBase {
         TypeInstance typeInstance = invoker.invokeType(resolver.resolveClass(Type3.class.getName()));
 
         assertEquals("TypeInstanceTest$Type3", typeInstance.toString());
-        assertEquals("TypeInstanceTest$Type2<String>", typeInstance.getSuperTypes().get(0).toString());
-        assertEquals("TypeInstanceTest$Type1<String>", typeInstance.getSuperTypes().get(0).getSuperTypes().get(0).toString());
+        assertEquals("TypeInstanceTest$Type2<String>", typeInstance.superTypes().get(0).toString());
+        assertEquals("TypeInstanceTest$Type1<String>", typeInstance.superTypes().get(0).superTypes().get(0).toString());
     }
 
     public static class RecurringType<T> implements Comparable<RecurringType<String>> {
@@ -637,8 +636,8 @@ public class TypeInstanceTest extends TestBase {
         TypeInstance typeInstance = invoker.invokeType(resolver.resolveClass(RecurringType.class.getName()));
 
         assertEquals("TypeInstanceTest$RecurringType", typeInstance.toString());
-        assertEquals("Object", typeInstance.getSuperTypes().get(0).toString());
-        assertEquals("Comparable<TypeInstanceTest$RecurringType<String>>", typeInstance.getSuperTypes().get(1).toString());
+        assertEquals("Object", typeInstance.superTypes().get(0).toString());
+        assertEquals("Comparable<TypeInstanceTest$RecurringType<String>>", typeInstance.superTypes().get(1).toString());
     }
 
     public static class Type4<D, S> {}
@@ -651,7 +650,7 @@ public class TypeInstanceTest extends TestBase {
             List.of(TypeInstance.StringType(), TypeInstance.DoubleType()));
 
         assertEquals("TypeInstanceTest$Type5<String,Double>", typeInstance.toString());
-        assertEquals("TypeInstanceTest$Type4<Double,String>", typeInstance.getSuperTypes().get(0).toString());
+        assertEquals("TypeInstanceTest$Type4<Double,String>", typeInstance.superTypes().get(0).toString());
     }
 
     public static class Type13<T extends Type1<R>, R> {}
@@ -717,8 +716,8 @@ public class TypeInstanceTest extends TestBase {
     public void IsAssignableFrom_Wildcard_GenericType() {
         TypeInstance t0 = new TypeParser("java.lang.Comparable<?>").parse().get(0);
         TypeInstance t1 = new TypeParser("java.lang.Comparable<java.lang.Double>").parse().get(0);
-        assertEquals("java.lang.Comparable<?>", t0.getJavaName());
-        assertEquals("java.lang.Comparable<java.lang.Double>", t1.getJavaName());
+        assertEquals("java.lang.Comparable<?>", t0.javaName());
+        assertEquals("java.lang.Comparable<java.lang.Double>", t1.javaName());
         assertTrue(t0.isAssignableFrom(t1));
     }
 
@@ -726,8 +725,8 @@ public class TypeInstanceTest extends TestBase {
     public void IsAssignableFrom_Wildcard_UpperBound() {
         TypeInstance t0 = new TypeParser("java.lang.Comparable<? extends Number>").parse().get(0);
         TypeInstance t1 = new TypeParser("java.lang.Comparable<Double>").parse().get(0);
-        assertEquals("java.lang.Comparable<? extends java.lang.Number>", t0.getJavaName());
-        assertEquals("java.lang.Comparable<java.lang.Double>", t1.getJavaName());
+        assertEquals("java.lang.Comparable<? extends java.lang.Number>", t0.javaName());
+        assertEquals("java.lang.Comparable<java.lang.Double>", t1.javaName());
         assertTrue(t0.isAssignableFrom(t1));
         assertFalse(t1.isAssignableFrom(t0));
     }
@@ -736,8 +735,8 @@ public class TypeInstanceTest extends TestBase {
     public void IsAssignableFrom_Wildcard_LowerBound() {
         TypeInstance t0 = new TypeParser("java.lang.Comparable<? super Number>").parse().get(0);
         TypeInstance t1 = new TypeParser("java.lang.Comparable<Double>").parse().get(0);
-        assertEquals("java.lang.Comparable<? super java.lang.Number>", t0.getJavaName());
-        assertEquals("java.lang.Comparable<java.lang.Double>", t1.getJavaName());
+        assertEquals("java.lang.Comparable<? super java.lang.Number>", t0.javaName());
+        assertEquals("java.lang.Comparable<java.lang.Double>", t1.javaName());
         assertFalse(t0.isAssignableFrom(t1));
         assertFalse(t1.isAssignableFrom(t0));
     }
@@ -746,8 +745,8 @@ public class TypeInstanceTest extends TestBase {
     public void IsAssignableFrom_Object_DoubleArray() {
         TypeInstance t0 = new TypeParser("java.lang.Object").parse().get(0);
         TypeInstance t1 = new TypeParser("java.lang.Double[]").parse().get(0);
-        assertEquals("java.lang.Object", t0.getJavaName());
-        assertEquals("java.lang.Double[]", t1.getJavaName());
+        assertEquals("java.lang.Object", t0.javaName());
+        assertEquals("java.lang.Double[]", t1.javaName());
         assertTrue(t0.isAssignableFrom(t1));
         assertFalse(t1.isAssignableFrom(t0));
     }
@@ -756,8 +755,8 @@ public class TypeInstanceTest extends TestBase {
     public void IsAssignableFrom_Object_DoubleMultiArray() {
         TypeInstance t0 = new TypeParser("java.lang.Object").parse().get(0);
         TypeInstance t1 = new TypeParser("java.lang.Double[][][]").parse().get(0);
-        assertEquals("java.lang.Object", t0.getJavaName());
-        assertEquals("java.lang.Double[][][]", t1.getJavaName());
+        assertEquals("java.lang.Object", t0.javaName());
+        assertEquals("java.lang.Double[][][]", t1.javaName());
         assertTrue(t0.isAssignableFrom(t1));
         assertFalse(t1.isAssignableFrom(t0));
     }
@@ -766,8 +765,8 @@ public class TypeInstanceTest extends TestBase {
     public void IsAssignableFrom_Integer_DoubleMultiArray() {
         TypeInstance t0 = new TypeParser("java.lang.Integer").parse().get(0);
         TypeInstance t1 = new TypeParser("java.lang.Double[][][]").parse().get(0);
-        assertEquals("java.lang.Integer", t0.getJavaName());
-        assertEquals("java.lang.Double[][][]", t1.getJavaName());
+        assertEquals("java.lang.Integer", t0.javaName());
+        assertEquals("java.lang.Double[][][]", t1.javaName());
         assertFalse(t0.isAssignableFrom(t1));
         assertFalse(t1.isAssignableFrom(t0));
     }
@@ -776,8 +775,8 @@ public class TypeInstanceTest extends TestBase {
     public void IsAssignableFrom_Object_primitiveDoubleArray() {
         TypeInstance t0 = new TypeParser("java.lang.Object").parse().get(0);
         TypeInstance t1 = new TypeParser("double[]").parse().get(0);
-        assertEquals("java.lang.Object", t0.getJavaName());
-        assertEquals("double[]", t1.getJavaName());
+        assertEquals("java.lang.Object", t0.javaName());
+        assertEquals("double[]", t1.javaName());
         assertTrue(t0.isAssignableFrom(t1));
         assertFalse(t1.isAssignableFrom(t0));
     }
@@ -786,8 +785,8 @@ public class TypeInstanceTest extends TestBase {
     public void IsAssignableFrom_Object_primitiveDoubleMultiArray() {
         TypeInstance t0 = new TypeParser("java.lang.Object").parse().get(0);
         TypeInstance t1 = new TypeParser("double[][][]").parse().get(0);
-        assertEquals("java.lang.Object", t0.getJavaName());
-        assertEquals("double[][][]", t1.getJavaName());
+        assertEquals("java.lang.Object", t0.javaName());
+        assertEquals("double[][][]", t1.javaName());
         assertTrue(t0.isAssignableFrom(t1));
         assertFalse(t1.isAssignableFrom(t0));
     }
@@ -796,8 +795,8 @@ public class TypeInstanceTest extends TestBase {
     public void IsAssignableFrom_ObjectArray_DoubleArray() {
         TypeInstance t0 = new TypeParser("java.lang.Object[]").parse().get(0);
         TypeInstance t1 = new TypeParser("java.lang.Double[]").parse().get(0);
-        assertEquals("java.lang.Object[]", t0.getJavaName());
-        assertEquals("java.lang.Double[]", t1.getJavaName());
+        assertEquals("java.lang.Object[]", t0.javaName());
+        assertEquals("java.lang.Double[]", t1.javaName());
         assertTrue(t0.isAssignableFrom(t1));
         assertFalse(t1.isAssignableFrom(t0));
     }
@@ -806,8 +805,8 @@ public class TypeInstanceTest extends TestBase {
     public void IsAssignableFrom_ObjectArray_DoubleMultiArray() {
         TypeInstance t0 = new TypeParser("java.lang.Object[][][]").parse().get(0);
         TypeInstance t1 = new TypeParser("java.lang.Double[][][]").parse().get(0);
-        assertEquals("java.lang.Object[][][]", t0.getJavaName());
-        assertEquals("java.lang.Double[][][]", t1.getJavaName());
+        assertEquals("java.lang.Object[][][]", t0.javaName());
+        assertEquals("java.lang.Double[][][]", t1.javaName());
         assertTrue(t0.isAssignableFrom(t1));
         assertFalse(t1.isAssignableFrom(t0));
     }
@@ -816,8 +815,8 @@ public class TypeInstanceTest extends TestBase {
     public void IsAssignableFrom_ObjectArray_primitiveDoubleArray() {
         TypeInstance t0 = new TypeParser("java.lang.Object[]").parse().get(0);
         TypeInstance t1 = new TypeParser("double[]").parse().get(0);
-        assertEquals("java.lang.Object[]", t0.getJavaName());
-        assertEquals("double[]", t1.getJavaName());
+        assertEquals("java.lang.Object[]", t0.javaName());
+        assertEquals("double[]", t1.javaName());
         assertFalse(t0.isAssignableFrom(t1));
     }
 
@@ -825,8 +824,8 @@ public class TypeInstanceTest extends TestBase {
     public void IsAssignableFrom_ObjectArray_primitiveDoubleMultiArray() {
         TypeInstance t0 = new TypeParser("java.lang.Object[][][]").parse().get(0);
         TypeInstance t1 = new TypeParser("double[][][]").parse().get(0);
-        assertEquals("java.lang.Object[][][]", t0.getJavaName());
-        assertEquals("double[][][]", t1.getJavaName());
+        assertEquals("java.lang.Object[][][]", t0.javaName());
+        assertEquals("double[][][]", t1.javaName());
         assertFalse(t0.isAssignableFrom(t1));
     }
 
@@ -834,8 +833,8 @@ public class TypeInstanceTest extends TestBase {
     public void IsAssignableFrom_primitiveDoubleArray_primitiveDoubleArray() {
         TypeInstance t0 = new TypeParser("double[]").parse().get(0);
         TypeInstance t1 = new TypeParser("double[]").parse().get(0);
-        assertEquals("double[]", t0.getJavaName());
-        assertEquals("double[]", t1.getJavaName());
+        assertEquals("double[]", t0.javaName());
+        assertEquals("double[]", t1.javaName());
         assertTrue(t0.isAssignableFrom(t1));
     }
 
@@ -843,14 +842,14 @@ public class TypeInstanceTest extends TestBase {
     public void IsAssignableFrom_primitiveDoubleMultiArray2_primitiveDoubleMultiArray3() {
         TypeInstance t0 = new TypeParser("double[][]").parse().get(0);
         TypeInstance t1 = new TypeParser("double[][][]").parse().get(0);
-        assertEquals("double[][]", t0.getJavaName());
-        assertEquals("double[][][]", t1.getJavaName());
+        assertEquals("double[][]", t0.javaName());
+        assertEquals("double[][][]", t1.javaName());
         assertFalse(t0.isAssignableFrom(t1));
     }
 
     @Test
     public void IsAssignableFrom_BottomType() {
-        var bottomType = TypeInstance.of(Classes.BottomType());
+        var bottomType = TypeInstance.of(BottomTypeDecl());
         assertTrue(TypeInstance.booleanType().isAssignableFrom(bottomType));
         assertTrue(TypeInstance.StringType().isAssignableFrom(bottomType));
         assertTrue(new TypeParser("double[][]").parse().get(0).isAssignableFrom(bottomType));
@@ -869,8 +868,9 @@ public class TypeInstanceTest extends TestBase {
 
     @Test
     public void IsAssignableFrom_Subtype_ArgUpperBound() {
-        CtMethod method = resolver.tryResolveMethod(Classes.ParentType(), m -> m.getName().equals("getChildrenUnmodifiable"));
-        TypeInstance t0 = invoker.invokeReturnType(method, Collections.emptyList()).getArguments().get(0);
+        MethodDeclaration method = resolver.tryResolveMethod(
+            Types.ParentDecl(), m -> m.name().equals("getChildrenUnmodifiable"));
+        TypeInstance t0 = invoker.invokeReturnType(method, Collections.emptyList()).arguments().get(0);
         TypeInstance t1 = new TypeParser("javafx.scene.Parent").parse().get(0);
         assertTrue(t0.isAssignableFrom(t1));
     }
@@ -894,7 +894,7 @@ public class TypeInstanceTest extends TestBase {
     @Test
     public void Scalar_Not_SubtypeOf_Array() {
         TypeInstance t0 = new TypeParser("java.lang.Object[]").parse().get(0);
-        TypeInstance t1 = invoker.invokeType(Classes.NodeType());
+        TypeInstance t1 = invoker.invokeType(NodeDecl());
         assertFalse(t1.subtypeOf(t0));
     }
 
@@ -939,7 +939,7 @@ public class TypeInstanceTest extends TestBase {
         var stringType = TypeInstance.StringType();
 
         assertTrue(rawType.isRaw());
-        assertTrue(stringType.isAssignableFrom(rawType.getArguments().get(0)));
+        assertTrue(stringType.isAssignableFrom(rawType.arguments().get(0)));
     }
 
     @Test
@@ -956,17 +956,17 @@ public class TypeInstanceTest extends TestBase {
     }
 
     @Test
-    public void WithDimensions_Returns_Correct_ArrayType() throws Exception {
+    public void WithDimensions_Returns_Correct_ArrayType() {
         TypeInstance type = new TypeParser("java.lang.String").parse().get(0);
 
-        CtClass jvmType = type.withDimensions(1).jvmType();
-        assertTrue(jvmType.isArray());
-        assertEquals("java.lang.String[]", jvmType.getName());
-        assertEquals("java.lang.String", jvmType.getComponentType().getName());
+        TypeDeclaration type1 = type.withDimensions(1).declaration();
+        assertTrue(type1.isArray());
+        assertEquals("java.lang.String[]", type1.name());
+        assertEquals("java.lang.String", type1.requireComponentType().name());
 
-        jvmType = type.withDimensions(2).jvmType();
-        assertTrue(jvmType.isArray());
-        assertEquals("java.lang.String[][]", jvmType.getName());
-        assertEquals("java.lang.String[]", jvmType.getComponentType().getName());
+        TypeDeclaration type2 = type.withDimensions(2).declaration();
+        assertTrue(type2.isArray());
+        assertEquals("java.lang.String[][]", type2.name());
+        assertEquals("java.lang.String[]", type2.requireComponentType().name());
     }
 }

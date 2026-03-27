@@ -139,7 +139,7 @@ public class PropertyAssignmentTest {
                           StaticProperties.prop1="foo"/>
             """);
 
-            assertMethodCall(root, methods -> methods.stream().anyMatch(m -> m.getName().equals("setProp1")));
+            assertMethodCall(root, methods -> methods.stream().anyMatch(m -> m.name().equals("setProp1")));
         }
 
         @Test
@@ -163,8 +163,8 @@ public class PropertyAssignmentTest {
             """);
 
             assertMethodCall(root, methods ->
-                methods.stream().noneMatch(m -> m.getName().equals("setProp2"))
-                && methods.stream().anyMatch(m -> m.getName().equals("setValue")));
+                methods.stream().noneMatch(m -> m.name().equals("setProp2"))
+                && methods.stream().anyMatch(m -> m.name().equals("setValue")));
         }
     }
 

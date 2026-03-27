@@ -1,32 +1,27 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.expression.util;
 
-import javassist.CtClass;
-import javassist.CtField;
-import javassist.CtMethod;
-import javassist.Modifier;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
+import org.jfxcore.compiler.type.FieldDeclaration;
+import org.jfxcore.compiler.type.MethodDeclaration;
+import org.jfxcore.compiler.type.Resolver;
+import org.jfxcore.compiler.type.TypeDeclaration;
 import org.jfxcore.compiler.util.Bytecode;
 import org.jfxcore.compiler.util.CompilationContext;
-import org.jfxcore.compiler.util.ExceptionHelper;
-import org.jfxcore.compiler.util.Resolver;
+import java.lang.reflect.Modifier;
 
 public class KotlinDelegateHelper {
 
-    public static CtMethod getKotlinDelegateGetter(SourceInfo sourceInfo, CtField delegateField) {
-        return ExceptionHelper.unchecked(sourceInfo, () -> getKotlinDelegateGetter(delegateField));
-    }
-
-    private static CtMethod getKotlinDelegateGetter(CtField delegateField) throws Exception {
-        CtClass declaringClass = delegateField.getDeclaringClass();
-        String getterName = delegateField.getName();
+    public static MethodDeclaration getKotlinDelegateGetter(FieldDeclaration delegateField) {
+        TypeDeclaration declaringClass = delegateField.declaringType();
+        String getterName = delegateField.name();
 
         // We need to disable the resolver cache because tryResolveGetter will return a different result
         // when calling it with the same arguments for a second time.
         Resolver resolver = new Resolver(SourceInfo.none(), false);
-        CtMethod getter = resolver.tryResolveGetter(declaringClass, getterName, true, delegateField.getType());
+        MethodDeclaration getter = resolver.tryResolveGetter(declaringClass, getterName, true, delegateField.type());
         if (getter != null) {
             return getter;
         }
@@ -34,22 +29,20 @@ public class KotlinDelegateHelper {
         return addKotlinDelegateGetter(delegateField, getterName);
     }
 
-    private static CtMethod addKotlinDelegateGetter(CtField delegateField, String getterName) throws Exception {
-        CtClass declaringClass = delegateField.getDeclaringClass();
+    private static MethodDeclaration addKotlinDelegateGetter(FieldDeclaration delegateField, String getterName) {
+        TypeDeclaration declaringClass = delegateField.declaringType();
 
         Bytecode code = new Bytecode(declaringClass, 1);
         code.aload(0)
-            .getfield(declaringClass, delegateField.getName(), delegateField.getType())
+            .getfield(declaringClass.requireDeclaredField(delegateField.name()))
             .areturn();
 
-        CtMethod getter = new CtMethod(delegateField.getType(), getterName, new CtClass[0], declaringClass);
-        getter.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
-        getter.getMethodInfo().setCodeAttribute(code.toCodeAttribute());
-        getter.getMethodInfo().rebuildStackMap(declaringClass.getClassPool());
-        declaringClass.addMethod(getter);
+        MethodDeclaration getter = declaringClass
+            .createMethod(getterName, delegateField.type())
+            .setModifiers(Modifier.PUBLIC | Modifier.FINAL)
+            .setCode(code);
 
         CompilationContext.getCurrent().addModifiedClass(declaringClass);
         return getter;
     }
-
 }

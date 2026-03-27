@@ -1,13 +1,13 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.emit;
 
 import org.jfxcore.compiler.ast.AbstractNode;
-import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.ast.ResolvedTypeNode;
+import org.jfxcore.compiler.diagnostic.SourceInfo;
+import org.jfxcore.compiler.type.TypeInstance;
 import org.jfxcore.compiler.util.Bytecode;
-import org.jfxcore.compiler.util.TypeInstance;
 import java.util.Objects;
 
 /**
@@ -51,7 +51,7 @@ public class EmitLoadLocalNode extends AbstractNode implements ValueEmitterNode,
             default -> throw new IllegalArgumentException();
         }
 
-        code.checkcast(type.getJvmType());
+        code.checkcast(type.getTypeDeclaration());
     }
 
     @Override
@@ -71,5 +71,4 @@ public class EmitLoadLocalNode extends AbstractNode implements ValueEmitterNode,
     public int hashCode() {
         return Objects.hash(variable, type);
     }
-
 }

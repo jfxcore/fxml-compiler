@@ -1,11 +1,11 @@
 // Copyright (c) 2022, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
-package org.jfxcore.compiler.util;
+package org.jfxcore.compiler.type;
 
-import javassist.CtClass;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.diagnostic.errors.GeneralErrors;
+import org.jfxcore.compiler.util.CompilationContext;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -13,19 +13,19 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
-import static org.jfxcore.compiler.util.ExceptionHelper.*;
+import static org.jfxcore.compiler.type.Types.*;
 
 /**
  * Represents the instantiation tree of a type, in which all generic arguments are replaced with concrete types.
  */
 public class TypeInstance {
 
-    private static class ErasedTypeInstance extends TypeInstance {
+    private static final class ErasedTypeInstance extends TypeInstance {
         ErasedTypeInstance(TypeInstance source) {
-            super(source.jvmType(), source.getArguments(), source.getSuperTypes(), source.getWildcardType());
+            super(source.declaration(), source.arguments(), source.superTypes(), source.wildcardType());
         }
 
-        ErasedTypeInstance(CtClass type,
+        ErasedTypeInstance(TypeDeclaration type,
                            int dimensions,
                            List<TypeInstance> arguments,
                            List<TypeInstance> superTypes,
@@ -34,9 +34,9 @@ public class TypeInstance {
         }
     }
 
-    private static class NullTypeInstance extends TypeInstance {
+    private static final class NullTypeInstance extends TypeInstance {
         NullTypeInstance() {
-            super(Classes.ObjectType(), 0, List.of(), List.of(), WildcardType.NONE);
+            super(ObjectDecl(), 0, List.of(), List.of(), WildcardType.NONE);
         }
 
         @Override
@@ -50,11 +50,11 @@ public class TypeInstance {
         }
     }
 
-    private static class UnionTypeInstance extends TypeInstance {
+    private static final class UnionTypeInstance extends TypeInstance {
         final List<TypeInstance> types;
 
         UnionTypeInstance(List<TypeInstance> types) {
-            super(CtClass.voidType, List.of(), List.of(), WildcardType.NONE);
+            super(voidDecl(), List.of(), List.of(), WildcardType.NONE);
             this.types = types;
         }
 
@@ -69,7 +69,7 @@ public class TypeInstance {
         }
 
         @Override
-        public boolean subtypeOf(CtClass other) {
+        public boolean subtypeOf(TypeDeclaration other) {
             return false;
         }
 
@@ -79,27 +79,27 @@ public class TypeInstance {
         }
     }
 
-    public static TypeInstance voidType() { return resolveTypeInstance(CtClass.voidType); }
-    public static TypeInstance booleanType() { return resolveTypeInstance(CtClass.booleanType); }
-    public static TypeInstance charType() { return resolveTypeInstance(CtClass.charType); }
-    public static TypeInstance byteType() { return resolveTypeInstance(CtClass.byteType); }
-    public static TypeInstance shortType() { return resolveTypeInstance(CtClass.shortType); }
-    public static TypeInstance intType() { return resolveTypeInstance(CtClass.intType); }
-    public static TypeInstance longType() { return resolveTypeInstance(CtClass.longType); }
-    public static TypeInstance floatType() { return resolveTypeInstance(CtClass.floatType); }
-    public static TypeInstance doubleType() { return resolveTypeInstance(CtClass.doubleType); }
-    public static TypeInstance BooleanType() { return resolveTypeInstance(Classes.BooleanType()); }
-    public static TypeInstance CharacterType() { return resolveTypeInstance(Classes.CharacterType()); }
-    public static TypeInstance ByteType() { return resolveTypeInstance(Classes.ByteType()); }
-    public static TypeInstance ShortType() { return resolveTypeInstance(Classes.ShortType()); }
-    public static TypeInstance IntegerType() { return resolveTypeInstance(Classes.IntegerType()); }
-    public static TypeInstance LongType() { return resolveTypeInstance(Classes.LongType()); }
-    public static TypeInstance FloatType() { return resolveTypeInstance(Classes.FloatType()); }
-    public static TypeInstance DoubleType() { return resolveTypeInstance(Classes.DoubleType()); }
-    public static TypeInstance NumberType() { return resolveTypeInstance(Classes.NumberType()); }
-    public static TypeInstance StringType() { return resolveTypeInstance(Classes.StringType()); }
-    public static TypeInstance ObjectType() { return resolveTypeInstance(Classes.ObjectType()); }
-    public static TypeInstance bottomType() { return resolveTypeInstance(Classes.BottomType()); }
+    public static TypeInstance voidType() { return resolveTypeInstance(voidDecl()); }
+    public static TypeInstance booleanType() { return resolveTypeInstance(booleanDecl()); }
+    public static TypeInstance charType() { return resolveTypeInstance(charDecl()); }
+    public static TypeInstance byteType() { return resolveTypeInstance(byteDecl()); }
+    public static TypeInstance shortType() { return resolveTypeInstance(shortDecl()); }
+    public static TypeInstance intType() { return resolveTypeInstance(intDecl()); }
+    public static TypeInstance longType() { return resolveTypeInstance(longDecl()); }
+    public static TypeInstance floatType() { return resolveTypeInstance(floatDecl()); }
+    public static TypeInstance doubleType() { return resolveTypeInstance(doubleDecl()); }
+    public static TypeInstance BooleanType() { return resolveTypeInstance(BooleanDecl()); }
+    public static TypeInstance CharacterType() { return resolveTypeInstance(CharacterDecl()); }
+    public static TypeInstance ByteType() { return resolveTypeInstance(ByteDecl()); }
+    public static TypeInstance ShortType() { return resolveTypeInstance(ShortDecl()); }
+    public static TypeInstance IntegerType() { return resolveTypeInstance(IntegerDecl()); }
+    public static TypeInstance LongType() { return resolveTypeInstance(LongDecl()); }
+    public static TypeInstance FloatType() { return resolveTypeInstance(FloatDecl()); }
+    public static TypeInstance DoubleType() { return resolveTypeInstance(DoubleDecl()); }
+    public static TypeInstance NumberType() { return resolveTypeInstance(NumberDecl()); }
+    public static TypeInstance StringType() { return resolveTypeInstance(StringDecl()); }
+    public static TypeInstance ObjectType() { return resolveTypeInstance(ObjectDecl()); }
+    public static TypeInstance bottomType() { return resolveTypeInstance(BottomTypeDecl()); }
     public static TypeInstance nullType() {
         TypeInstance typeInstance = getClassCache().get(null);
         if (typeInstance == null) {
@@ -110,21 +110,21 @@ public class TypeInstance {
         return typeInstance;
     }
 
-    private static TypeInstance resolveTypeInstance(CtClass clazz) {
-        Objects.requireNonNull(clazz);
-        TypeInstance typeInstance = getClassCache().get(clazz);
+    private static TypeInstance resolveTypeInstance(TypeDeclaration declaration) {
+        Objects.requireNonNull(declaration);
+        TypeInstance typeInstance = getClassCache().get(declaration);
         if (typeInstance == null) {
-            typeInstance = new TypeInvoker(SourceInfo.none()).invokeType(clazz);
-            getClassCache().put(clazz, typeInstance);
+            typeInstance = new TypeInvoker(SourceInfo.none()).invokeType(declaration);
+            getClassCache().put(declaration, typeInstance);
         }
 
         return typeInstance;
     }
 
     @SuppressWarnings("unchecked")
-    private static Map<CtClass, TypeInstance> getClassCache() {
-        return (Map<CtClass, TypeInstance>)CompilationContext.getCurrent()
-            .computeIfAbsent(TypeInstance.class, key -> new HashMap<CtClass, TypeInstance>());
+    private static Map<TypeDeclaration, TypeInstance> getClassCache() {
+        return (Map<TypeDeclaration, TypeInstance>) CompilationContext.getCurrent()
+            .computeIfAbsent(TypeInstance.class, key -> new HashMap<TypeDeclaration, TypeInstance>());
     }
 
     public enum WildcardType {
@@ -149,14 +149,14 @@ public class TypeInstance {
         LOOSE
     }
 
-    private final CtClass type;
+    private final TypeDeclaration type;
     private final int dimensions;
     private final WildcardType wildcard;
     private List<TypeInstance> arguments;
     private List<TypeInstance> superTypes;
     private TypeInstance componentType;
 
-    public static TypeInstance of(CtClass type) {
+    public static TypeInstance of(TypeDeclaration type) {
         return resolveTypeInstance(type);
     }
 
@@ -170,12 +170,12 @@ public class TypeInstance {
         return new ErasedTypeInstance(type);
     }
 
-    TypeInstance(CtClass type,
+    TypeInstance(TypeDeclaration type,
                  List<TypeInstance> arguments,
                  List<TypeInstance> superTypes,
                  WildcardType wildcard) {
-        this.type = type;
-        this.dimensions = TypeHelper.getDimensions(type);
+        this.type = Objects.requireNonNull(type);
+        this.dimensions = type.dimensions();
         this.arguments = arguments;
         this.superTypes = superTypes;
         this.wildcard = wildcard;
@@ -185,12 +185,12 @@ public class TypeInstance {
         }
     }
 
-    private TypeInstance(CtClass type,
+    private TypeInstance(TypeDeclaration type,
                          int dimensions,
                          List<TypeInstance> arguments,
                          List<TypeInstance> superTypes,
                          WildcardType wildcard) {
-        this.type = type;
+        this.type = Objects.requireNonNull(type);
         this.dimensions = dimensions;
         this.arguments = arguments;
         this.superTypes = superTypes;
@@ -226,8 +226,8 @@ public class TypeInstance {
             return this;
         }
 
-        CtClass type = new Resolver(SourceInfo.none())
-            .resolveClass(this.type.getName() + "[]".repeat(dimensions));
+        TypeDeclaration type = new Resolver(SourceInfo.none())
+            .resolveClass(this.type.name() + "[]".repeat(dimensions));
 
         return this instanceof ErasedTypeInstance ?
             new ErasedTypeInstance(type, dimensions, arguments, superTypes, wildcard) :
@@ -258,7 +258,7 @@ public class TypeInstance {
         return dimensions > 0;
     }
 
-    public int getDimensions() {
+    public int dimensions() {
         return dimensions;
     }
 
@@ -266,35 +266,35 @@ public class TypeInstance {
         return type.isPrimitive() && dimensions == 0;
     }
 
-    public CtClass jvmType() {
+    public TypeDeclaration declaration() {
         return type;
     }
 
-    public String getName() {
+    public String name() {
         return toString(false, false);
     }
 
-    public String getJavaName() {
+    public String javaName() {
         return toString(false, true);
     }
 
-    public String getSimpleName() {
+    public String simpleName() {
         return toString(true, false);
     }
 
-    public List<TypeInstance> getArguments() {
+    public List<TypeInstance> arguments() {
         return arguments;
     }
 
-    public List<TypeInstance> getSuperTypes() {
+    public List<TypeInstance> superTypes() {
         return superTypes;
     }
 
-    public WildcardType getWildcardType() {
+    public WildcardType wildcardType() {
         return wildcard;
     }
 
-    public TypeInstance getComponentType() {
+    public TypeInstance componentType() {
         if (!isArray()) {
             return this;
         }
@@ -304,7 +304,7 @@ public class TypeInstance {
         }
 
         return componentType = new TypeInstance(
-            unchecked(SourceInfo.none(), this.type::getComponentType), arguments, superTypes, wildcard);
+            type.requireComponentType(), arguments, superTypes, wildcard);
     }
 
     /**
@@ -333,7 +333,7 @@ public class TypeInstance {
      */
     public boolean isAssignableFrom(TypeInstance from, AssignmentContext context) {
         // Any type is assignable from the bottom type
-        if (from.equals(Classes.BottomType())) {
+        if (from.equals(BottomTypeDecl())) {
             return true;
         }
 
@@ -359,79 +359,76 @@ public class TypeInstance {
 
         // Widening primitive conversion
         if (dimensions == 0 && from.dimensions == 0
-                && TypeHelper.isNumericPrimitive(type) && TypeHelper.isNumeric(from.type)) {
+                && type.isNumericPrimitive() && from.type.isNumeric()) {
             // In a loose assignment context, we assume an unboxing conversion has occurred
-            CtClass fromType = context == AssignmentContext.LOOSE ? TypeHelper.getPrimitiveType(from.type) : from.type;
+            TypeDeclaration fromType = context == AssignmentContext.LOOSE ?
+                from.declaration().primitive().orElse(null) : from.declaration();
 
-            if (TypeHelper.equals(type, CtClass.charType)) {
-                return TypeHelper.equals(fromType, CtClass.charType);
+            if (charDecl().equals(type)) {
+                return charDecl().equals(fromType);
             }
 
-            if (TypeHelper.equals(type, CtClass.byteType)) {
-                return TypeHelper.equals(fromType, CtClass.byteType);
+            if (byteDecl().equals(type)) {
+                return byteDecl().equals(fromType);
             }
 
-            if (TypeHelper.equals(type, CtClass.shortType)) {
-                return TypeHelper.equals(fromType, CtClass.shortType)
-                    || TypeHelper.equals(fromType, CtClass.byteType);
+            if (shortDecl().equals(type)) {
+                return shortDecl().equals(fromType)
+                    || byteDecl().equals(fromType);
             }
 
-            if (TypeHelper.equals(type, CtClass.intType)) {
-                return TypeHelper.equals(fromType, CtClass.intType)
-                    || TypeHelper.equals(fromType, CtClass.shortType)
-                    || TypeHelper.equals(fromType, CtClass.charType)
-                    || TypeHelper.equals(fromType, CtClass.byteType);
+            if (intDecl().equals(type)) {
+                return intDecl().equals(fromType)
+                    || shortDecl().equals(fromType)
+                    || charDecl().equals(fromType)
+                    || byteDecl().equals(fromType);
             }
 
-            if (TypeHelper.equals(type, CtClass.longType)) {
-                return TypeHelper.equals(fromType, CtClass.longType)
-                    || TypeHelper.equals(fromType, CtClass.intType)
-                    || TypeHelper.equals(fromType, CtClass.shortType)
-                    || TypeHelper.equals(fromType, CtClass.charType)
-                    || TypeHelper.equals(fromType, CtClass.byteType);
+            if (longDecl().equals(type)) {
+                return longDecl().equals(fromType)
+                    || intDecl().equals(fromType)
+                    || shortDecl().equals(fromType)
+                    || charDecl().equals(fromType)
+                    || byteDecl().equals(fromType);
             }
 
-            if (TypeHelper.equals(type, CtClass.floatType)) {
-                return TypeHelper.equals(fromType, CtClass.floatType)
-                    || TypeHelper.equals(fromType, CtClass.longType)
-                    || TypeHelper.equals(fromType, CtClass.intType)
-                    || TypeHelper.equals(fromType, CtClass.shortType)
-                    || TypeHelper.equals(fromType, CtClass.charType)
-                    || TypeHelper.equals(fromType, CtClass.byteType);
+            if (floatDecl().equals(type)) {
+                return floatDecl().equals(fromType)
+                    || longDecl().equals(fromType)
+                    || intDecl().equals(fromType)
+                    || shortDecl().equals(fromType)
+                    || charDecl().equals(fromType)
+                    || byteDecl().equals(fromType);
             }
 
-            if (TypeHelper.equals(type, CtClass.doubleType)) {
-                return TypeHelper.equals(fromType, CtClass.doubleType)
-                    || TypeHelper.equals(fromType, CtClass.floatType)
-                    || TypeHelper.equals(fromType, CtClass.longType)
-                    || TypeHelper.equals(fromType, CtClass.intType)
-                    || TypeHelper.equals(fromType, CtClass.shortType)
-                    || TypeHelper.equals(fromType, CtClass.charType)
-                    || TypeHelper.equals(fromType, CtClass.byteType);
+            if (doubleDecl().equals(type)) {
+                return doubleDecl().equals(fromType)
+                    || floatDecl().equals(fromType)
+                    || longDecl().equals(fromType)
+                    || intDecl().equals(fromType)
+                    || shortDecl().equals(fromType)
+                    || charDecl().equals(fromType)
+                    || byteDecl().equals(fromType);
             }
 
             return false;
         }
 
         // Unboxing conversion
-        if (context == AssignmentContext.LOOSE && TypeHelper.isPrimitiveBox(from.type, type)) {
-            return TypeHelper.equals(type, TypeHelper.getPrimitiveType(from.type));
+        if (context == AssignmentContext.LOOSE && from.type.isBoxOf(type)) {
+            return type.equals(from.type.primitive().orElse(null));
         }
 
         // Boxing conversion, followed by optional widening reference conversion
         if (context == AssignmentContext.LOOSE && from.isPrimitive()) {
-            return dimensions == 0 && unchecked(SourceInfo.none(),
-                () -> TypeHelper.getBoxedType(from.type).subtypeOf(type));
+            return dimensions == 0 && from.type.boxed().subtypeOf(type);
         }
 
         if (dimensions != from.dimensions) {
-            return dimensions == 0 && (
-                equals(Classes.ObjectType())
-                || equals(Classes.CloneableType())
-                || equals(Classes.SerializableType()));
+            return dimensions == 0 && (equals(ObjectDecl()) || equals(CloneableDecl()) || equals(SerializableDecl()));
         }
 
-        if (!unchecked(SourceInfo.none(), () -> from.type.subtypeOf(type))) {
+        if (!from.type.subtypeOf(type)) {
             return false;
         }
 
@@ -439,7 +436,7 @@ public class TypeInstance {
             return true;
         }
 
-        if (TypeHelper.equals(type, from.type)) {
+        if (type.equals(from.type)) {
             if (arguments.size() != from.arguments.size()) {
                 return false;
             }
@@ -462,7 +459,7 @@ public class TypeInstance {
 
             return true;
         } else if (isArray() && from.isArray()) {
-            return getComponentType().isAssignableFrom(from.getComponentType(), context);
+            return componentType().isAssignableFrom(from.componentType(), context);
         }
 
         for (TypeInstance fromSuperType : from.superTypes) {
@@ -485,31 +482,26 @@ public class TypeInstance {
             return false;
         }
 
-        return unchecked(SourceInfo.none(), () -> {
-            if (other.dimensions == 0 && other.equals(Classes.ObjectType())) {
-                return true;
-            }
+        if (other.dimensions == 0 && other.equals(ObjectDecl())) {
+            return true;
+        }
 
-            return other.dimensions == dimensions && type.subtypeOf(other.type);
-        });
+        return other.dimensions == dimensions && type.subtypeOf(other.type);
     }
 
-    public boolean subtypeOf(CtClass other) {
-        return unchecked(SourceInfo.none(), () -> {
-            int otherDimensions = 0;
-            CtClass o = other;
+    public boolean subtypeOf(TypeDeclaration other) {
+        int otherDimensions = 0;
 
-            while (o.isArray()) {
-                o = o.getComponentType();
-                ++otherDimensions;
-            }
+        while (other.isArray()) {
+            other = other.componentType().orElseThrow();
+            ++otherDimensions;
+        }
 
-            if (otherDimensions == 0 && other.equals(Classes.ObjectType())) {
-                return true;
-            }
+        if (otherDimensions == 0 && other.equals(ObjectDecl())) {
+            return true;
+        }
 
-            return dimensions == otherDimensions && type.subtypeOf(o);
-        });
+        return dimensions == otherDimensions && type.subtypeOf(other);
     }
 
     public TypeInstance boxed() {
@@ -524,8 +516,8 @@ public class TypeInstance {
         return this;
     }
 
-    public boolean equals(CtClass other) {
-        return TypeHelper.equals(type, other);
+    public boolean equals(TypeDeclaration other) {
+        return type.equals(other);
     }
 
     @Override
@@ -535,7 +527,7 @@ public class TypeInstance {
         if (arguments.size() != that.arguments.size()) return false;
         if (dimensions != that.dimensions) return false;
         if (wildcard != that.wildcard) return false;
-        return arguments.isEmpty() ? TypeHelper.equals(type, that.type) : equals(new HashSet<>(), that);
+        return arguments.isEmpty() ? type.equals(that.type) : equals(new HashSet<>(), that);
     }
 
     private boolean equals(Set<TypeInstance> set, TypeInstance other) {
@@ -545,7 +537,7 @@ public class TypeInstance {
 
         set.add(this);
 
-        if (!TypeHelper.equals(type, other.type)
+        if (!type.equals(other.type)
                 || arguments.size() != other.arguments.size()
                 || wildcard != other.wildcard) {
             return false;
@@ -576,11 +568,11 @@ public class TypeInstance {
         String className;
 
         if (javaNames) {
-            className = NameHelper.getJavaClassName(SourceInfo.none(), type);
+            className = type.javaName();
         } else if (simpleNames) {
-            className = type.getSimpleName();
+            className = type.simpleName();
         } else {
-            className = type.getName();
+            className = type.name();
         }
 
         while (className.endsWith("[]")) {
@@ -610,11 +602,11 @@ public class TypeInstance {
 
     @Override
     public int hashCode() {
-        return Objects.hash(TypeHelper.hashCode(type), arguments.size(), superTypes.size(), dimensions, wildcard);
+        return Objects.hash(type, arguments.size(), superTypes.size(), dimensions, wildcard);
     }
 
     @Override
     public String toString() {
-        return getSimpleName();
+        return simpleName();
     }
 }

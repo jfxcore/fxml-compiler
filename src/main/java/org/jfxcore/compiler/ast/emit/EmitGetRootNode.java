@@ -1,4 +1,4 @@
-// Copyright (c) 2021, 2025, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.emit;
@@ -8,10 +8,7 @@ import org.jfxcore.compiler.ast.ResolvedTypeNode;
 import org.jfxcore.compiler.ast.Visitor;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.generate.RuntimeContextGenerator;
-import org.jfxcore.compiler.util.Descriptors;
-import org.jfxcore.compiler.util.TypeInstance;
-
-import static org.jfxcore.compiler.util.Classes.*;
+import org.jfxcore.compiler.type.TypeInstance;
 
 public class EmitGetRootNode
         extends AbstractNode
@@ -28,10 +25,9 @@ public class EmitGetRootNode
     public void emit(BytecodeEmitContext context) {
         context.getOutput()
             .aload(context.getRuntimeContextLocal())
-            .invokevirtual(context.getRuntimeContextClass(),
-                           RuntimeContextGenerator.GET_ROOT_METHOD,
-                           Descriptors.function(ObjectType()))
-            .checkcast(type.getJvmType());
+            .invoke(context.getRuntimeContextClass()
+                           .requireDeclaredMethod(RuntimeContextGenerator.GET_ROOT_METHOD))
+            .checkcast(type.getTypeDeclaration());
     }
 
     @Override

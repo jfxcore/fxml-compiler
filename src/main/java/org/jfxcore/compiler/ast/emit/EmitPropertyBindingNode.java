@@ -3,28 +3,26 @@
 
 package org.jfxcore.compiler.ast.emit;
 
-import javassist.CtClass;
 import org.jetbrains.annotations.Nullable;
 import org.jfxcore.compiler.ast.AbstractNode;
 import org.jfxcore.compiler.ast.BindingMode;
 import org.jfxcore.compiler.ast.GeneratorEmitterNode;
 import org.jfxcore.compiler.ast.NodeDataKey;
-import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.ast.Visitor;
+import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.generate.Generator;
 import org.jfxcore.compiler.generate.InvertBooleanBindingGenerator;
 import org.jfxcore.compiler.generate.ReferenceTrackerGenerator;
+import org.jfxcore.compiler.type.TypeDeclaration;
+import org.jfxcore.compiler.type.TypeInstance;
 import org.jfxcore.compiler.util.Bytecode;
 import org.jfxcore.compiler.util.CompilationContext;
 import org.jfxcore.compiler.util.Local;
 import org.jfxcore.compiler.util.PropertyInfo;
-import org.jfxcore.compiler.util.TypeInstance;
 import java.util.List;
 import java.util.Objects;
 
-import static javassist.CtClass.*;
-import static org.jfxcore.compiler.util.Classes.*;
-import static org.jfxcore.compiler.util.Descriptors.*;
+import static org.jfxcore.compiler.type.Types.*;
 
 /**
  * Emits code to establish a binding between the value that is currently on top of the
@@ -123,7 +121,7 @@ public class EmitPropertyBindingNode extends AbstractNode implements EmitterNode
         Bytecode code = context.getOutput();
 
         code.dup()
-            .ext_invoke(checkNotNull(propertyInfo.getPropertyGetter()))
+            .invoke(checkNotNull(propertyInfo.getPropertyGetter()))
             .aload(param1);
 
         if (param2 != null) {
@@ -132,23 +130,22 @@ public class EmitPropertyBindingNode extends AbstractNode implements EmitterNode
 
         if (child.getNodeData(NodeDataKey.BIND_BIDIRECTIONAL_INVERT_BOOLEAN) == Boolean.TRUE) {
             if (CompilationContext.getCurrent().useSharedImplementation()) {
-                code.invokestatic(Markup.Runtime.BooleanBindingsType(), "bindBidirectionalComplement",
-                                  function(voidType, PropertyType(), PropertyType()));
+                code.invoke(Markup.Runtime.BooleanBindingsDecl()
+                                          .requireDeclaredMethod("bindBidirectionalComplement", PropertyDecl(), PropertyDecl()));
             } else {
-                code.invokestatic(context.getNestedClasses().find(InvertBooleanBindingGenerator.CLASS_NAME),
-                                  "bindBidirectional", function(voidType, PropertyType(), PropertyType()));
+                code.invoke(context.getNestedClasses()
+                                   .find(InvertBooleanBindingGenerator.CLASS_NAME)
+                                   .requireDeclaredMethod("bindBidirectional", PropertyDecl(), PropertyDecl()));
             }
         } else if (bindingMode.isContent()) {
             emitBindContent(context, true);
         } else {
             if (converter != null) {
-                code.invokevirtual(StringPropertyType(), "bindBidirectional",
-                                   function(voidType, PropertyType(), StringConverterType()));
+                code.invoke(StringPropertyDecl().requireDeclaredMethod("bindBidirectional", PropertyDecl(), StringConverterDecl()));
             } else if (format != null) {
-                code.invokevirtual(StringPropertyType(), "bindBidirectional",
-                                   function(voidType, PropertyType(), FormatType()));
+                code.invoke(StringPropertyDecl().requireDeclaredMethod("bindBidirectional", PropertyDecl(), FormatDecl()));
             } else {
-                code.invokeinterface(PropertyType(), "bindBidirectional", function(voidType, PropertyType()));
+                code.invoke(PropertyDecl().requireDeclaredMethod("bindBidirectional", PropertyDecl()));
             }
         }
     }
@@ -160,22 +157,22 @@ public class EmitPropertyBindingNode extends AbstractNode implements EmitterNode
             code.acquireLocal(false);
 
             code.dup()
-                .ext_invoke(checkNotNull(propertyInfo.getPropertyGetterOrGetter()))
+                .invoke(checkNotNull(propertyInfo.getPropertyGetterOrGetter()))
                 .aload(local);
 
             emitBindContent(context, false);
         } else {
             code.dup()
-                .ext_invoke(checkNotNull(propertyInfo.getPropertyGetter()))
+                .invoke(checkNotNull(propertyInfo.getPropertyGetter()))
                 .aload(local)
-                .invokeinterface(PropertyType(), "bind", function(voidType, ObservableValueType()));
+                .invoke(PropertyDecl().requireDeclaredMethod("bind", ObservableValueDecl()));
         }
     }
 
     private void emitBindContent(BytecodeEmitContext context, boolean bidirectional) {
-        if (!tryEmitBindContentImpl(context, ListType(), ObservableListType(), ReadOnlyListPropertyType(), bidirectional) &&
-                !tryEmitBindContentImpl(context, SetType(), ObservableSetType(), ReadOnlySetPropertyType(), bidirectional) &&
-                !tryEmitBindContentImpl(context, MapType(), ObservableMapType(), ReadOnlyMapPropertyType(), bidirectional)) {
+        if (!tryEmitBindContentImpl(context, ListDecl(), ObservableListDecl(), ReadOnlyListPropertyDecl(), bidirectional) &&
+                !tryEmitBindContentImpl(context, SetDecl(), ObservableSetDecl(), ReadOnlySetPropertyDecl(), bidirectional) &&
+                !tryEmitBindContentImpl(context, MapDecl(), ObservableMapDecl(), ReadOnlyMapPropertyDecl(), bidirectional)) {
             throw new IllegalArgumentException(propertyInfo.getType().toString());
         }
     }
@@ -183,9 +180,9 @@ public class EmitPropertyBindingNode extends AbstractNode implements EmitterNode
     @SuppressWarnings("BooleanMethodIsAlwaysInverted")
     private boolean tryEmitBindContentImpl(
             BytecodeEmitContext context,
-            CtClass collectionType,
-            CtClass observableCollectionType,
-            CtClass collectionPropertyType,
+            TypeDeclaration collectionType,
+            TypeDeclaration observableCollectionType,
+            TypeDeclaration collectionPropertyType,
             boolean bidirectional) {
         if (propertyInfo.getType().subtypeOf(collectionType)) {
             TypeInstance observableType = propertyInfo.getObservableType();
@@ -201,13 +198,15 @@ public class EmitPropertyBindingNode extends AbstractNode implements EmitterNode
 
             if (observableType != null && observableType.subtypeOf(collectionPropertyType)) {
                 String methodName = bidirectional ? "bindContentBidirectional" : "bindContent";
-                code.invokevirtual(collectionPropertyType, methodName, function(voidType, observableCollectionType));
+                code.invoke(collectionPropertyType.requireDeclaredMethod(methodName, observableCollectionType));
             } else if (bidirectional) {
-                code.invokestatic(BindingsType(), "bindContentBidirectional",
-                                  function(voidType, observableCollectionType, observableCollectionType));
+                code.invoke(BindingsDecl().requireDeclaredMethod("bindContentBidirectional",
+                                                                 observableCollectionType,
+                                                                 observableCollectionType));
             } else {
-                code.invokestatic(BindingsType(), "bindContent",
-                                  function(voidType, collectionType, observableCollectionType));
+                code.invoke(BindingsDecl().requireDeclaredMethod("bindContent",
+                                                                 collectionType,
+                                                                 observableCollectionType));
             }
 
             if (child instanceof EmitCollectionWrapperNode) {
@@ -228,9 +227,8 @@ public class EmitPropertyBindingNode extends AbstractNode implements EmitterNode
             .aload(0)
             .aload(targetLocal)
             .aload(sourceLocal)
-            .invokevirtual(context.getMarkupClass(), ReferenceTrackerGenerator.ADD_REFERENCE_METHOD,
-                           function(voidType, ObjectType(), ObjectType()));
-
+            .invoke(context.getMarkupClass()
+                                  .requireDeclaredMethod(ReferenceTrackerGenerator.ADD_REFERENCE_METHOD, ObjectDecl(), ObjectDecl()));
     }
 
     @Override

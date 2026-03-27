@@ -1,10 +1,8 @@
 // Copyright (c) 2025, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
-package org.jfxcore.compiler.util;
+package org.jfxcore.compiler.type;
 
-import javassist.CtClass;
-import javassist.CtMethod;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -100,26 +98,10 @@ final class CacheKey {
     }
 
     private static boolean equals(Object item1, Object item2) {
-        if (item1 instanceof CtClass c1 && item2 instanceof CtClass c2) {
-            return TypeHelper.equals(c1, c2);
-        }
-
-        if (item1 instanceof CtMethod m1 && item2 instanceof CtMethod m2) {
-            return TypeHelper.equals(m1, m2);
-        }
-
         return Objects.equals(item1, item2);
     }
 
     private static int hashCode(Object o) {
-        if (o instanceof CtClass c) {
-            return TypeHelper.hashCode(c);
-        }
-
-        if (o instanceof CtMethod m) {
-            return TypeHelper.hashCode(m);
-        }
-
         return o != null ? o.hashCode() : 0;
     }
 }

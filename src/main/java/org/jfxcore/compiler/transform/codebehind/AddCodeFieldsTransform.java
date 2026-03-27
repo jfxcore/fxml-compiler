@@ -1,4 +1,4 @@
-// Copyright (c) 2021, 2025, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.transform.codebehind;
@@ -16,7 +16,8 @@ import org.jfxcore.compiler.ast.text.TextNode;
 import org.jfxcore.compiler.diagnostic.errors.GeneralErrors;
 import org.jfxcore.compiler.transform.Transform;
 import org.jfxcore.compiler.transform.TransformContext;
-import org.jfxcore.compiler.util.Classes;
+
+import static org.jfxcore.compiler.type.Types.*;
 
 /**
  * For every object in the AST that has a fx:id property, adds a corresponding {@link AddCodeFieldNode}
@@ -28,9 +29,9 @@ public class AddCodeFieldsTransform implements Transform {
     public Node transform(TransformContext context, Node node) {
         ObjectNode parentNode = context.getParent() != null ? context.getParent().as(ObjectNode.class) : null;
         if (parentNode != null
-                && Classes.Core.TemplateType() != null
+                && Core.TemplateDecl() != null
                 && parentNode.getType() instanceof ResolvedTypeNode
-                && ((ResolvedTypeNode)parentNode.getType()).getTypeInstance().subtypeOf(Classes.Core.TemplateType())) {
+                && ((ResolvedTypeNode)parentNode.getType()).getTypeInstance().subtypeOf(Core.TemplateDecl())) {
             return Visitor.STOP_SUBTREE;
         }
 
@@ -59,7 +60,7 @@ public class AddCodeFieldsTransform implements Transform {
         TextNode valueNode;
 
         if (objectNode.getType() instanceof ResolvedTypeNode resolvedTypeNode) {
-            valueNode = new TextNode(resolvedTypeNode.getTypeInstance().getJavaName(), idNode.getSourceInfo());
+            valueNode = new TextNode(resolvedTypeNode.getTypeInstance().javaName(), idNode.getSourceInfo());
         } else {
             PropertyNode typeArgsNode = objectNode.findIntrinsicProperty(Intrinsics.TYPE_ARGUMENTS);
             if (typeArgsNode != null) {
@@ -77,5 +78,4 @@ public class AddCodeFieldsTransform implements Transform {
 
         return node;
     }
-
 }

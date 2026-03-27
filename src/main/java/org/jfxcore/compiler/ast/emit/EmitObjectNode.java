@@ -1,35 +1,32 @@
-// Copyright (c) 2022, 2025, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.emit;
 
-import javassist.CtBehavior;
-import javassist.CtClass;
-import javassist.CtConstructor;
-import javassist.CtMethod;
-import javassist.Modifier;
-import javassist.bytecode.MethodInfo;
 import org.jetbrains.annotations.Nullable;
+import org.jfxcore.compiler.ast.Node;
 import org.jfxcore.compiler.ast.NodeDataKey;
 import org.jfxcore.compiler.ast.ObjectNode;
-import org.jfxcore.compiler.ast.ValueNode;
-import org.jfxcore.compiler.diagnostic.SourceInfo;
-import org.jfxcore.compiler.ast.Node;
 import org.jfxcore.compiler.ast.ResolvedTypeNode;
+import org.jfxcore.compiler.ast.ValueNode;
 import org.jfxcore.compiler.ast.Visitor;
+import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.generate.RuntimeContextGenerator;
+import org.jfxcore.compiler.type.BehaviorDeclaration;
+import org.jfxcore.compiler.type.ConstructorDeclaration;
+import org.jfxcore.compiler.type.MethodDeclaration;
+import org.jfxcore.compiler.type.TypeDeclaration;
+import org.jfxcore.compiler.type.TypeHelper;
+import org.jfxcore.compiler.type.TypeInstance;
+import org.jfxcore.compiler.type.TypeInvoker;
 import org.jfxcore.compiler.util.Bytecode;
-import org.jfxcore.compiler.util.Classes;
-import org.jfxcore.compiler.util.TypeHelper;
-import org.jfxcore.compiler.util.TypeInstance;
-import org.jfxcore.compiler.util.TypeInvoker;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
-import static org.jfxcore.compiler.util.Descriptors.*;
+import static org.jfxcore.compiler.type.Types.*;
 
 /**
  * Emits opcodes to construct a new object instance and places it on top of the operand stack.
@@ -46,7 +43,7 @@ public class EmitObjectNode extends ReferenceableNode {
 
     public static class ConstructorBuilder {
         private final TypeInstance type;
-        private final CtConstructor constructor;
+        private final ConstructorDeclaration constructor;
         private final Collection<? extends ValueNode> arguments;
         private final SourceInfo sourceInfo;
         private Collection<? extends Node> children = Collections.emptyList();
@@ -54,7 +51,7 @@ public class EmitObjectNode extends ReferenceableNode {
 
         private ConstructorBuilder(
                 TypeInstance type,
-                CtConstructor constructor,
+                ConstructorDeclaration constructor,
                 Collection<? extends ValueNode> arguments,
                 SourceInfo sourceInfo) {
             this.type = type;
@@ -94,12 +91,12 @@ public class EmitObjectNode extends ReferenceableNode {
     public static class ValueOfBuilder {
         private final TypeInstance type;
         private final SourceInfo sourceInfo;
-        private final CtMethod method;
+        private final MethodDeclaration method;
         private ValueEmitterNode value;
         private Collection<? extends Node> children = Collections.emptyList();
         private String fieldName;
 
-        private ValueOfBuilder(TypeInstance type, CtMethod method, SourceInfo sourceInfo) {
+        private ValueOfBuilder(TypeInstance type, MethodDeclaration method, SourceInfo sourceInfo) {
             this.type = type;
             this.method = method;
             this.sourceInfo = sourceInfo;
@@ -140,11 +137,11 @@ public class EmitObjectNode extends ReferenceableNode {
     public static class FactoryBuilder {
         private final TypeInstance type;
         private final SourceInfo sourceInfo;
-        private final CtMethod factoryMethod;
+        private final MethodDeclaration factoryMethod;
         private Collection<? extends Node> children = Collections.emptyList();
         private String fieldName;
 
-        private FactoryBuilder(TypeInstance type, CtMethod factoryMethod, SourceInfo sourceInfo) {
+        private FactoryBuilder(TypeInstance type, MethodDeclaration factoryMethod, SourceInfo sourceInfo) {
             this.type = type;
             this.factoryMethod = factoryMethod;
             this.sourceInfo = sourceInfo;
@@ -203,21 +200,21 @@ public class EmitObjectNode extends ReferenceableNode {
      * Emits an object by invoking a constructor.
      */
     public static ConstructorBuilder constructor(
-            TypeInstance type, CtConstructor constructor, List<? extends ValueNode> arguments, SourceInfo sourceInfo) {
+            TypeInstance type, ConstructorDeclaration constructor, List<? extends ValueNode> arguments, SourceInfo sourceInfo) {
         return new ConstructorBuilder(type, constructor, arguments, sourceInfo);
     }
 
     /**
      * Emits an object by invoking a T::valueOf(?)->T method.
      */
-    public static ValueOfBuilder valueOf(TypeInstance type, CtMethod valueOfMethod, SourceInfo sourceInfo) {
+    public static ValueOfBuilder valueOf(TypeInstance type, MethodDeclaration valueOfMethod, SourceInfo sourceInfo) {
         return new ValueOfBuilder(type, valueOfMethod, sourceInfo);
     }
 
     /**
      * Emits an object by invoking a parameterless factory method.
      */
-    public static FactoryBuilder factory(TypeInstance type, CtMethod factoryMethod, SourceInfo sourceInfo) {
+    public static FactoryBuilder factory(TypeInstance type, MethodDeclaration factoryMethod, SourceInfo sourceInfo) {
         return new FactoryBuilder(type, factoryMethod, sourceInfo);
     }
 
@@ -244,7 +241,7 @@ public class EmitObjectNode extends ReferenceableNode {
         return new RootObjectBuilder(type, sourceInfo);
     }
 
-    private final CtBehavior constructorOrFactoryMethod;
+    private final BehaviorDeclaration constructorOrFactoryMethod;
     private final List<ValueNode> arguments;
     private final List<Node> children;
     private final CreateKind createKind;
@@ -253,7 +250,7 @@ public class EmitObjectNode extends ReferenceableNode {
     private EmitObjectNode(
             @Nullable String fieldName,
             TypeInstance type,
-            @Nullable CtBehavior constructorOrFactoryMethod,
+            @Nullable BehaviorDeclaration constructorOrFactoryMethod,
             Collection<? extends ValueNode> arguments,
             Collection<? extends Node> children,
             CreateKind createKind,
@@ -265,7 +262,7 @@ public class EmitObjectNode extends ReferenceableNode {
             @Nullable ReferenceableNode referencedNode,
             @Nullable String fieldName,
             TypeInstance type,
-            @Nullable CtBehavior constructorOrFactoryMethod,
+            @Nullable BehaviorDeclaration constructorOrFactoryMethod,
             Collection<? extends ValueNode> arguments,
             Collection<? extends Node> children,
             CreateKind createKind,
@@ -288,7 +285,7 @@ public class EmitObjectNode extends ReferenceableNode {
     }
 
     public boolean addsToParentStack() {
-        return !(Classes.Markup.isAvailable() && type.getTypeInstance().subtypeOf(Classes.Markup.MarkupExtensionType()))
+        return !(Markup.isAvailable() && type.getTypeInstance().subtypeOf(Markup.MarkupExtensionDecl()))
             && (children.stream().anyMatch(RuntimeContextHelper::needsParentStack)
                 || arguments.stream().anyMatch(RuntimeContextHelper::needsParentStack));
     }
@@ -338,20 +335,20 @@ public class EmitObjectNode extends ReferenceableNode {
                 emitPushNode(context);
             }
 
-            emitCore(type.getJvmType(), context);
+            emitCore(type.getTypeDeclaration(), context);
 
             if (parentStack) {
                 emitPopNode(context);
             }
 
             code.dup_x1()
-                .putfield(context.getLocalMarkupClass(), getId(), type.getJvmType());
+                .putfield(context.getLocalMarkupClass().requireDeclaredField(getId()));
 
-            storeLocal(code, type.getJvmType());
+            storeLocal(code, type.getTypeDeclaration());
         } else {
-            boolean parentStack = addsToParentStack() && type.getTypeInstance().subtypeOf(Classes.ObjectType());
+            boolean parentStack = addsToParentStack() && type.getTypeInstance().subtypeOf(ObjectDecl());
 
-            emitCore(type.getJvmType(), context);
+            emitCore(type.getTypeDeclaration(), context);
 
             if (parentStack) {
                 emitPushNode(context);
@@ -373,35 +370,31 @@ public class EmitObjectNode extends ReferenceableNode {
             .aload(context.getRuntimeContextLocal())
             .dup_x1()
             .pop()
-            .invokevirtual(
-                context.getRuntimeContextClass(),
-                RuntimeContextGenerator.PUSH_PARENT_METHOD,
-                function(CtClass.voidType, Classes.ObjectType()));
+            .invoke(context.getRuntimeContextClass()
+                           .requireDeclaredMethod(RuntimeContextGenerator.PUSH_PARENT_METHOD, ObjectDecl()));
     }
 
     private void emitPopNode(BytecodeEmitContext context) {
         context.getOutput()
             .aload(context.getRuntimeContextLocal())
-            .invokevirtual(
-                context.getRuntimeContextClass(),
-                RuntimeContextGenerator.POP_PARENT_METHOD,
-                function(CtClass.voidType));
+            .invoke(context.getRuntimeContextClass()
+                           .requireDeclaredMethod(RuntimeContextGenerator.POP_PARENT_METHOD));
     }
 
-    private void emitCore(CtClass typeClass, BytecodeEmitContext context) {
+    private void emitCore(TypeDeclaration typeClass, BytecodeEmitContext context) {
         switch (createKind) {
             case NONE:
                 context.getOutput().aload(0);
                 break;
             case LOAD_LOCAL:
                 getReferencedNode().loadLocal(context.getOutput());
-                context.getOutput().ext_autoconv(getSourceInfo(), TypeHelper.getJvmType(getReferencedNode()), typeClass);
+                context.getOutput().autoconv(getReferencedNode().getType().getTypeDeclaration(), typeClass);
                 break;
             case CONSTRUCTOR:
                 emitInvokeConstructor(typeClass, context);
                 break;
             case VALUE_OF:
-                emitInvokeValueOf(typeClass, context);
+                emitInvokeValueOf(context);
                 break;
             case FACTORY:
                 emitInvokeFactoryMethod(context.getOutput());
@@ -411,13 +404,11 @@ public class EmitObjectNode extends ReferenceableNode {
         }
     }
 
-    private void emitInvokeConstructor(CtClass type, BytecodeEmitContext context) {
+    private void emitInvokeConstructor(TypeDeclaration type, BytecodeEmitContext context) {
         Bytecode code = context.getOutput();
-
-        TypeInstance[] paramTypes = new TypeInvoker(getSourceInfo())
-            .invokeParameterTypes(constructorOrFactoryMethod, Collections.emptyList());
-
-        boolean varargs = Modifier.isVarArgs(constructorOrFactoryMethod.getModifiers());
+        ConstructorDeclaration constructor = (ConstructorDeclaration)constructorOrFactoryMethod;
+        TypeInstance[] paramTypes = new TypeInvoker(getSourceInfo()).invokeParameterTypes(constructor, List.of());
+        boolean varargs = constructor.isVarArgs();
 
         code.anew(type)
             .dup();
@@ -426,11 +417,11 @@ public class EmitObjectNode extends ReferenceableNode {
             boolean lastParam = i == paramTypes.length - 1;
 
             if (varargs && lastParam) {
-                TypeInstance componentType = paramTypes[i].getComponentType();
+                TypeDeclaration componentType = paramTypes[i].componentType().declaration();
                 TypeInstance argType = TypeHelper.getTypeInstance(arguments.get(i));
 
                 if (arguments.size() > paramTypes.length || !argType.subtypeOf(paramTypes[i])) {
-                    code.newarray(componentType.jvmType(), arguments.size() - paramTypes.length + 1);
+                    code.newarray(componentType, arguments.size() - paramTypes.length + 1);
 
                     for (int j = i; j < arguments.size(); ++j) {
                         argType = TypeHelper.getTypeInstance(arguments.get(j));
@@ -440,36 +431,33 @@ public class EmitObjectNode extends ReferenceableNode {
 
                         context.emit(arguments.get(j));
 
-                        code.ext_castconv(arguments.get(i).getSourceInfo(), argType.jvmType(), componentType.jvmType())
-                            .ext_arraystore(componentType.jvmType());
+                        code.castconv(argType.declaration(), componentType)
+                            .arraystore(componentType);
                     }
                 } else {
                     context.emit(arguments.get(i));
-                    code.ext_castconv(arguments.get(i).getSourceInfo(), argType.jvmType(), paramTypes[i].jvmType());
+                    code.castconv(argType.declaration(), paramTypes[i].declaration());
                 }
             } else {
                 context.emit(arguments.get(i));
-                code.ext_castconv(arguments.get(i).getSourceInfo(), TypeHelper.getJvmType(arguments.get(i)),
-                                  paramTypes[i].jvmType());
+                code.castconv(TypeHelper.getTypeDeclaration(arguments.get(i)), paramTypes[i].declaration());
             }
         }
 
-        code.invokespecial(type, MethodInfo.nameInit, constructorOrFactoryMethod.getSignature());
+        code.invoke(constructor);
     }
 
-    private void emitInvokeValueOf(CtClass type, BytecodeEmitContext context) {
-        CtClass argType = unchecked(() -> constructorOrFactoryMethod.getParameterTypes()[0]);
+    private void emitInvokeValueOf(BytecodeEmitContext context) {
+        MethodDeclaration valueOfMethod = (MethodDeclaration)constructorOrFactoryMethod;
+        TypeDeclaration argType = valueOfMethod.parameters().get(0).type();
         context.emit(arguments.get(0));
         context.getOutput()
-            .ext_castconv(getSourceInfo(), TypeHelper.getJvmType(arguments.get(0)), argType)
-            .invokestatic(type, constructorOrFactoryMethod.getName(), function(type, argType));
+            .castconv(TypeHelper.getTypeDeclaration(arguments.get(0)), argType)
+            .invoke(valueOfMethod);
     }
 
     private void emitInvokeFactoryMethod(Bytecode code) {
-        code.invokestatic(
-            constructorOrFactoryMethod.getDeclaringClass(),
-            constructorOrFactoryMethod.getName(),
-            constructorOrFactoryMethod.getSignature());
+        code.invoke(constructorOrFactoryMethod);
     }
 
     @Override
@@ -499,7 +487,7 @@ public class EmitObjectNode extends ReferenceableNode {
         if (o == null || getClass() != o.getClass()) return false;
         EmitObjectNode that = (EmitObjectNode)o;
         return Objects.equals(getId(), that.getId()) &&
-            TypeHelper.equals(constructorOrFactoryMethod, that.constructorOrFactoryMethod) &&
+            Objects.equals(constructorOrFactoryMethod, that.constructorOrFactoryMethod) &&
             arguments.equals(that.arguments) &&
             children.equals(that.children) &&
             createKind == that.createKind &&
@@ -509,6 +497,6 @@ public class EmitObjectNode extends ReferenceableNode {
     @Override
     public int hashCode() {
         return Objects.hash(
-            getId(), TypeHelper.hashCode(constructorOrFactoryMethod), arguments, children, createKind, type);
+            getId(), constructorOrFactoryMethod, arguments, children, createKind, type);
     }
 }

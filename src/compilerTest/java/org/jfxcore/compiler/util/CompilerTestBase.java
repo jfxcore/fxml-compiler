@@ -4,13 +4,13 @@
 package org.jfxcore.compiler.util;
 
 import javassist.ClassPool;
-import javassist.CtConstructor;
-import javassist.CtMethod;
 import javassist.NotFoundException;
 import javassist.expr.ExprEditor;
 import javassist.expr.FieldAccess;
 import javassist.expr.MethodCall;
 import javassist.expr.NewExpr;
+import org.jfxcore.compiler.type.ConstructorDeclaration;
+import org.jfxcore.compiler.type.MethodDeclaration;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -141,49 +141,49 @@ public class CompilerTestBase {
         return cachedFileName = String.join("_", names);
     }
 
-    public void assertMethodCall(Object root, Predicate<List<CtMethod>> predicate) {
+    public void assertMethodCall(Object root, Predicate<List<MethodDeclaration>> predicate) {
         assertTrue(testMethodExpr(root, predicate), "MethodCall assertion failed");
     }
 
     public void assertMethodCall(Object root, String... methodNames) {
         List<String> methodNameList = Arrays.asList(methodNames);
-        assertMethodCall(root, list -> list.stream().anyMatch(m -> methodNameList.contains(m.getName())));
+        assertMethodCall(root, list -> list.stream().anyMatch(m -> methodNameList.contains(m.name())));
     }
 
     public void assertNotMethodCall(Object root, String... methodNames) {
         List<String> methodNameList = Arrays.asList(methodNames);
-        assertMethodCall(root, list -> list.stream().noneMatch(m -> methodNameList.contains(m.getName())));
+        assertMethodCall(root, list -> list.stream().noneMatch(m -> methodNameList.contains(m.name())));
     }
 
-    public void assertNewExpr(Object root, Predicate<List<CtConstructor>> predicate) {
+    public void assertNewExpr(Object root, Predicate<List<ConstructorDeclaration>> predicate) {
         assertTrue(testNewExpr(root, predicate), "NewExpr assertion failed");
     }
 
     public void assertNewExpr(Object root, String... classNameFragments) {
         assertNewExpr(root, ctors -> ctors.stream().anyMatch(
             ctor -> Arrays.stream(classNameFragments).anyMatch(
-                cn -> ctor.getDeclaringClass().getSimpleName().contains(cn))));
+                cn -> ctor.declaringType().simpleName().contains(cn))));
     }
 
     public void assertNotNewExpr(Object root, String... classNameFragments) {
         assertNewExpr(root, ctors -> ctors.stream().noneMatch(
             ctor -> Arrays.stream(classNameFragments).anyMatch(
-                cn -> ctor.getDeclaringClass().getSimpleName().contains(cn))));
+                cn -> ctor.declaringType().simpleName().contains(cn))));
     }
 
     public void assertFieldAccess(Object root, String className, String fieldName, String signature) {
         assertTrue(testFieldAccess(root, className, fieldName, signature), "FieldAccess assertion failed");
     }
 
-    private synchronized boolean testMethodExpr(Object root, Predicate<List<CtMethod>> predicate) {
-        try {
+    private synchronized boolean testMethodExpr(Object root, Predicate<List<MethodDeclaration>> predicate) {
+        try (var ignored = new CompilationScope(new CompilationContext(new CompilationSource.InMemory("")))) {
             if (classPool == null) {
                 classPool = new ClassPool();
                 classPool.appendSystemPath();
                 classPool.appendClassPath(root.getClass().getProtectionDomain().getCodeSource().getLocation().toExternalForm());
             }
 
-            List<CtMethod> methodCalls = new ArrayList<>();
+            List<MethodDeclaration> methodCalls = new ArrayList<>();
 
             classPool
                 .get(root.getClass().getName())
@@ -191,7 +191,7 @@ public class CompilerTestBase {
                     @Override
                     public void edit(MethodCall c) {
                         try {
-                            methodCalls.add(c.getMethod());
+                            methodCalls.add(MethodDeclaration.of(c.getMethod()));
                         } catch (NotFoundException ignored) {
                         }
                     }
@@ -203,15 +203,15 @@ public class CompilerTestBase {
         }
     }
 
-    private synchronized boolean testNewExpr(Object root, Predicate<List<CtConstructor>> predicate) {
-        try {
+    private synchronized boolean testNewExpr(Object root, Predicate<List<ConstructorDeclaration>> predicate) {
+        try (var ignored = new CompilationScope(new CompilationContext(new CompilationSource.InMemory("")))) {
             if (classPool == null) {
                 classPool = new ClassPool();
                 classPool.appendSystemPath();
                 classPool.appendClassPath(root.getClass().getProtectionDomain().getCodeSource().getLocation().toExternalForm());
             }
 
-            List<CtConstructor> constructorCalls = new ArrayList<>();
+            List<ConstructorDeclaration> constructorCalls = new ArrayList<>();
 
             classPool
                 .get(root.getClass().getName())
@@ -219,7 +219,7 @@ public class CompilerTestBase {
                     @Override
                     public void edit(NewExpr e) {
                         try {
-                            constructorCalls.add(e.getConstructor());
+                            constructorCalls.add(ConstructorDeclaration.of(e.getConstructor()));
                         } catch (NotFoundException ignored) {
                         }
                     }
@@ -258,5 +258,4 @@ public class CompilerTestBase {
     }
 
     private ClassPool classPool;
-
 }

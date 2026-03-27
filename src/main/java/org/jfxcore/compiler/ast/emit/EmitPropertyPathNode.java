@@ -1,4 +1,4 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.emit;
@@ -28,7 +28,7 @@ public class EmitPropertyPathNode extends AbstractNode implements ValueEmitterNo
             SourceInfo sourceInfo) {
         super(sourceInfo);
         this.propertyGetters = new ArrayList<>(checkNotNull(propertyGetters));
-        this.type = (ResolvedTypeNode)this.propertyGetters.get(this.propertyGetters.size() - 1).getType();
+        this.type = this.propertyGetters.get(this.propertyGetters.size() - 1).getType();
         this.property = checkNotNull(property);
     }
 
@@ -73,5 +73,4 @@ public class EmitPropertyPathNode extends AbstractNode implements ValueEmitterNo
     public int hashCode() {
         return Objects.hash(propertyGetters, property);
     }
-
 }

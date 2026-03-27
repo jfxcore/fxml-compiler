@@ -1,19 +1,18 @@
-// Copyright (c) 2022, 2025, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.diagnostic.errors;
 
-import javassist.CtBehavior;
-import javassist.CtClass;
 import org.jfxcore.compiler.diagnostic.Diagnostic;
 import org.jfxcore.compiler.diagnostic.ErrorCode;
 import org.jfxcore.compiler.diagnostic.MarkupException;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
-import org.jfxcore.compiler.util.NameHelper;
+import org.jfxcore.compiler.type.BehaviorDeclaration;
+import org.jfxcore.compiler.type.TypeDeclaration;
+import org.jfxcore.compiler.type.TypeInstance;
 import org.jfxcore.compiler.util.PropertyInfo;
-import org.jfxcore.compiler.util.TypeInstance;
 
-import static org.jfxcore.compiler.util.NameHelper.formatPropertyName;
+import static org.jfxcore.compiler.util.NameHelper.*;
 
 public class GeneralErrors {
 
@@ -71,28 +70,28 @@ public class GeneralErrors {
             SourceInfo sourceInfo, PropertyInfo propertyInfo, TypeInstance addType, TypeInstance requiredType) {
         return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
             ErrorCode.CANNOT_ADD_ITEM_INCOMPATIBLE_TYPE,
-            formatPropertyName(propertyInfo), addType.getJavaName(), requiredType.getJavaName()));
+            formatPropertyName(propertyInfo), addType.javaName(), requiredType.javaName()));
     }
 
     public static MarkupException cannotAddItemIncompatibleType(
             SourceInfo sourceInfo, TypeInstance collectionType, TypeInstance addType, TypeInstance requiredType) {
         return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
             ErrorCode.CANNOT_ADD_ITEM_INCOMPATIBLE_TYPE,
-            collectionType.getJavaName(), addType.getJavaName(), requiredType.getJavaName()));
+            collectionType.javaName(), addType.javaName(), requiredType.javaName()));
     }
 
     public static MarkupException cannotAddItemIncompatibleValue(
-            SourceInfo sourceInfo, CtClass collectionType, String value) {
+            SourceInfo sourceInfo, TypeInstance collectionType, String value) {
         return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
             ErrorCode.CANNOT_ADD_ITEM_INCOMPATIBLE_VALUE,
-            NameHelper.getJavaClassName(sourceInfo, collectionType), value));
+            collectionType.javaName(), value));
     }
 
     public static MarkupException cannotAddItemIncompatibleValue(
-            SourceInfo sourceInfo, CtClass declaringType, String propertyName, String value) {
+            SourceInfo sourceInfo, TypeDeclaration declaringType, String propertyName, String value) {
         return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
             ErrorCode.CANNOT_ADD_ITEM_INCOMPATIBLE_VALUE,
-            declaringType.getSimpleName(), propertyName, value));
+            declaringType.simpleName(), propertyName, value));
     }
 
     public static MarkupException unsupportedMapKeyType(SourceInfo sourceInfo, PropertyInfo propertyInfo) {
@@ -100,47 +99,46 @@ public class GeneralErrors {
             ErrorCode.UNSUPPORTED_MAP_KEY_TYPE, formatPropertyName(propertyInfo)));
     }
 
-    public static MarkupException unsupportedMapKeyType(SourceInfo sourceInfo, CtClass mapType) {
+    public static MarkupException unsupportedMapKeyType(SourceInfo sourceInfo, TypeInstance mapType) {
         return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
-            ErrorCode.UNSUPPORTED_MAP_KEY_TYPE, NameHelper.getJavaClassName(sourceInfo, mapType)));
+            ErrorCode.UNSUPPORTED_MAP_KEY_TYPE, mapType.javaName()));
     }
 
     public static MarkupException typeArgumentOutOfBound(SourceInfo sourceInfo, TypeInstance typeArg, TypeInstance requiredType) {
         return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
-            ErrorCode.TYPE_ARGUMENT_OUT_OF_BOUND, typeArg.getJavaName(), requiredType.getJavaName()));
+            ErrorCode.TYPE_ARGUMENT_OUT_OF_BOUND, typeArg.javaName(), requiredType.javaName()));
     }
 
-    public static MarkupException typeArgumentNotReference(SourceInfo sourceInfo, CtClass type, TypeInstance typeArg) {
+    public static MarkupException typeArgumentNotReference(SourceInfo sourceInfo, TypeDeclaration type, TypeInstance typeArg) {
         return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
             ErrorCode.TYPE_ARGUMENT_NOT_REFERENCE,
-            NameHelper.getJavaClassName(sourceInfo, type),
-            typeArg.getJavaName()));
+            type.javaName(), typeArg.javaName()));
     }
 
     public static MarkupException numTypeArgumentsMismatch(
-            SourceInfo sourceInfo, CtClass declaringType, int expected, int actual) {
+            SourceInfo sourceInfo, TypeDeclaration declaringType, int expected, int actual) {
         return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
             ErrorCode.NUM_TYPE_ARGUMENTS_MISMATCH,
-            NameHelper.getJavaClassName(sourceInfo, declaringType), expected, actual));
+            declaringType.javaName(), expected, actual));
     }
 
     public static MarkupException numTypeArgumentsMismatch(
-            SourceInfo sourceInfo, CtBehavior behavior, int expected, int actual) {
+            SourceInfo sourceInfo, BehaviorDeclaration behavior, int expected, int actual) {
         return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
             ErrorCode.NUM_TYPE_ARGUMENTS_MISMATCH,
-            NameHelper.getJavaMemberName(sourceInfo, behavior), expected, actual));
+            behavior.declaringType().javaName() + "." + behavior.name(), expected, actual));
     }
 
-    public static MarkupException rootClassCannotBeFinal(SourceInfo sourceInfo, CtClass rootClass) {
+    public static MarkupException rootClassCannotBeFinal(SourceInfo sourceInfo, TypeDeclaration rootClass) {
         return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
-            ErrorCode.ROOT_CLASS_CANNOT_BE_FINAL, NameHelper.getJavaClassName(sourceInfo, rootClass)));
+            ErrorCode.ROOT_CLASS_CANNOT_BE_FINAL, rootClass.javaName()));
     }
 
     public static MarkupException incompatibleReturnValue(
-            SourceInfo sourceInfo, CtBehavior behavior, TypeInstance requiredType) {
+            SourceInfo sourceInfo, BehaviorDeclaration behavior, TypeInstance requiredType) {
         return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
             ErrorCode.INCOMPATIBLE_RETURN_VALUE,
-            NameHelper.getLongMethodSignature(behavior), requiredType.getJavaName()));
+            behavior.displaySignature(false, false), requiredType.javaName()));
     }
 
     public static MarkupException cannotAssignFunctionArgument(

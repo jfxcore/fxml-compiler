@@ -1,37 +1,30 @@
-// Copyright (c) 2023, 2025, JFXcore. All rights reserved.
+// Copyright (c) 2023, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.generate.collections;
 
-import javassist.CtClass;
-import javassist.CtConstructor;
-import javassist.CtField;
-import javassist.CtMethod;
-import javassist.Modifier;
-import javassist.bytecode.MethodInfo;
+import javafx.beans.value.ObservableSetValue;
+import javafx.beans.value.ObservableValue;
+import javafx.collections.ObservableSet;
 import org.jfxcore.compiler.ast.emit.BytecodeEmitContext;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.generate.ClassGenerator;
 import org.jfxcore.compiler.generate.Generator;
 import org.jfxcore.compiler.generate.ReferenceTrackerGenerator;
+import org.jfxcore.compiler.type.FieldDeclaration;
+import org.jfxcore.compiler.type.Resolver;
+import org.jfxcore.compiler.type.TypeDeclaration;
+import org.jfxcore.compiler.type.TypeInstance;
+import org.jfxcore.compiler.type.TypeInvoker;
 import org.jfxcore.compiler.util.Bytecode;
 import org.jfxcore.compiler.util.Local;
 import org.jfxcore.compiler.util.NameHelper;
-import org.jfxcore.compiler.util.Resolver;
-import org.jfxcore.compiler.util.TypeHelper;
-import org.jfxcore.compiler.util.TypeInstance;
-import org.jfxcore.compiler.util.TypeInvoker;
-import javafx.beans.value.ObservableSetValue;
-import javafx.beans.value.ObservableValue;
-import javafx.collections.ObservableSet;
-import java.util.Arrays;
+import java.lang.reflect.Modifier;
 import java.util.List;
 import java.util.Set;
 
-import static javassist.CtClass.*;
 import static org.jfxcore.compiler.generate.SharedMethodImpls.*;
-import static org.jfxcore.compiler.util.Classes.*;
-import static org.jfxcore.compiler.util.Descriptors.*;
+import static org.jfxcore.compiler.type.Types.*;
 
 /**
  * Implements an {@link ObservableSetValue} that wraps a {@link Set} contained in an {@link ObservableValue}.
@@ -62,7 +55,7 @@ public class SetObservableValueWrapperGenerator extends ClassGenerator {
     private final TypeInstance observableType;
 
     public SetObservableValueWrapperGenerator() {
-        observableType = new TypeInvoker(SourceInfo.none()).invokeType(ObservableSetValueType());
+        observableType = new TypeInvoker(SourceInfo.none()).invokeType(ObservableSetValueDecl());
     }
 
     @Override
@@ -83,228 +76,197 @@ public class SetObservableValueWrapperGenerator extends ClassGenerator {
     }
 
     @Override
-    public final void emitClass(BytecodeEmitContext context) throws Exception {
-        generatedClass = context.getNestedClasses().create(getClassName());
-        generatedClass.setModifiers(Modifier.PRIVATE | Modifier.FINAL);
-        generatedClass.addInterface(ObservableSetValueType());
-        generatedClass.addInterface(SetChangeListenerType());
-        generatedClass.addInterface(InvalidationListenerType());
+    public final TypeDeclaration emitClass(BytecodeEmitContext context) {
+        return super.emitClass(context)
+            .setModifiers(Modifier.PRIVATE | Modifier.FINAL)
+            .addInterface(ObservableSetValueDecl())
+            .addInterface(SetChangeListenerDecl())
+            .addInterface(InvalidationListenerDecl());
     }
 
     @Override
-    public void emitFields(BytecodeEmitContext context) throws Exception {
-        CtField field = new CtField(context.getMarkupClass(), ROOT_REF, generatedClass);
-        field.setModifiers(Modifier.PRIVATE | Modifier.FINAL);
-        generatedClass.addField(field);
-
-        field = new CtField(ObservableValueType(), OBSERVABLE_FIELD, generatedClass);
-        field.setModifiers(Modifier.PRIVATE | Modifier.FINAL);
-        generatedClass.addField(field);
-
-        field = new CtField(WeakSetChangeListenerType(), WEAK_SET_CHANGE_LISTENER_FIELD, generatedClass);
-        field.setModifiers(Modifier.PRIVATE | Modifier.FINAL);
-        generatedClass.addField(field);
-
-        field = new CtField(context.getNestedClasses().find(SetSourceAdapterChangeGenerator.CLASS_NAME),
-                            ADAPTER_CHANGE_FIELD, generatedClass);
-        field.setModifiers(Modifier.PRIVATE | Modifier.FINAL);
-        generatedClass.addField(field);
-
-        field = new CtField(ObservableSetType(), VALUE_FIELD, generatedClass);
-        field.setModifiers(Modifier.PRIVATE);
-        generatedClass.addField(field);
-
-        field = new CtField(booleanType, VALID_FIELD, generatedClass);
-        field.setModifiers(Modifier.PRIVATE);
-        generatedClass.addField(field);
-
-        field = new CtField(InvalidationListenerType(), INVALIDATION_LISTENER_FIELD, generatedClass);
-        field.setModifiers(Modifier.PRIVATE);
-        generatedClass.addField(field);
-
-        field = new CtField(ChangeListenerType(), CHANGE_LISTENER_FIELD, generatedClass);
-        field.setModifiers(Modifier.PRIVATE);
-        generatedClass.addField(field);
-
-        field = new CtField(SetChangeListenerType(), SET_CHANGE_LISTENER_FIELD, generatedClass);
-        field.setModifiers(Modifier.PRIVATE);
-        generatedClass.addField(field);
+    public void emitFields(BytecodeEmitContext context) {
+        TypeDeclaration adapterChangeType = context.getNestedClasses().find(SetSourceAdapterChangeGenerator.CLASS_NAME);
+        createField(ROOT_REF, context.getMarkupClass()).setModifiers(Modifier.PRIVATE | Modifier.FINAL);
+        createField(OBSERVABLE_FIELD, ObservableValueDecl()).setModifiers(Modifier.PRIVATE | Modifier.FINAL);
+        createField(WEAK_SET_CHANGE_LISTENER_FIELD, WeakSetChangeListenerDecl()).setModifiers(Modifier.PRIVATE | Modifier.FINAL);
+        createField(ADAPTER_CHANGE_FIELD, adapterChangeType).setModifiers(Modifier.PRIVATE | Modifier.FINAL);
+        createField(VALUE_FIELD, ObservableSetDecl()).setModifiers(Modifier.PRIVATE);
+        createField(VALID_FIELD, booleanDecl()).setModifiers(Modifier.PRIVATE);
+        createField(INVALIDATION_LISTENER_FIELD, InvalidationListenerDecl()).setModifiers(Modifier.PRIVATE);
+        createField(CHANGE_LISTENER_FIELD, ChangeListenerDecl()).setModifiers(Modifier.PRIVATE);
+        createField(SET_CHANGE_LISTENER_FIELD, SetChangeListenerDecl()).setModifiers(Modifier.PRIVATE);
     }
 
     @Override
-    public void emitCode(BytecodeEmitContext context) throws Exception {
-        super.emitCode(context);
-
+    public void emitCode(BytecodeEmitContext context) {
         createConstructor(context);
-        createSetMethods(context);
-        createGetValueMethod(context);
-        createGetMethod(context);
+        createSetMethods();
+        createGetValueMethod();
+        createGetMethod();
         createInvalidatedMethod(context);
         createOnChangedMethod(context);
-        createListenerMethods(context, generatedClass, INVALIDATION_LISTENER_FIELD, InvalidationListenerType());
-        createListenerMethods(context, generatedClass, CHANGE_LISTENER_FIELD, ChangeListenerType());
-        createListenerMethods(context, generatedClass, SET_CHANGE_LISTENER_FIELD, SetChangeListenerType());
+
+        createListenerMethods(this, INVALIDATION_LISTENER_FIELD, InvalidationListenerDecl());
+        createListenerMethods(this, CHANGE_LISTENER_FIELD, ChangeListenerDecl());
+        createListenerMethods(this, SET_CHANGE_LISTENER_FIELD, SetChangeListenerDecl());
     }
 
-    private void createSetMethods(BytecodeEmitContext context) throws Exception {
-        CtClass arrayType = new Resolver(SourceInfo.none()).resolveClass("java.lang.Object[]");
-        CtClass delegateType = SetType();
+    private void createSetMethods() {
+        TypeDeclaration arrayType = new Resolver(SourceInfo.none()).resolveClass("java.lang.Object[]");
+        TypeDeclaration delegateType = SetDecl();
 
-        createDelegateMethod(context, intType, delegateType, "size");
-        createDelegateMethod(context, booleanType, delegateType, "isEmpty");
-        createDelegateMethod(context, booleanType, delegateType, "contains", ObjectType());
-        createDelegateMethod(context, IteratorType(), delegateType, "iterator");
-        createDelegateMethod(context, arrayType, delegateType, "toArray");
-        createDelegateMethod(context, arrayType, delegateType, "toArray", arrayType);
-        createDelegateMethod(context, booleanType, delegateType, "add", ObjectType());
-        createDelegateMethod(context, booleanType, delegateType, "remove", ObjectType());
-        createDelegateMethod(context, booleanType, delegateType, "containsAll", CollectionType());
-        createDelegateMethod(context, booleanType, delegateType, "addAll", CollectionType());
-        createDelegateMethod(context, booleanType, delegateType, "removeAll", CollectionType());
-        createDelegateMethod(context, booleanType, delegateType, "retainAll", CollectionType());
-        createDelegateMethod(context, voidType, delegateType, "clear");
+        createDelegateMethod(intDecl(), delegateType, "size");
+        createDelegateMethod(booleanDecl(), delegateType, "isEmpty");
+        createDelegateMethod(booleanDecl(), delegateType, "contains", ObjectDecl());
+        createDelegateMethod(IteratorDecl(), delegateType, "iterator");
+        createDelegateMethod(arrayType, delegateType, "toArray");
+        createDelegateMethod(arrayType, delegateType, "toArray", arrayType);
+        createDelegateMethod(booleanDecl(), delegateType, "add", ObjectDecl());
+        createDelegateMethod(booleanDecl(), delegateType, "remove", ObjectDecl());
+        createDelegateMethod(booleanDecl(), delegateType, "containsAll", CollectionDecl());
+        createDelegateMethod(booleanDecl(), delegateType, "addAll", CollectionDecl());
+        createDelegateMethod(booleanDecl(), delegateType, "removeAll", CollectionDecl());
+        createDelegateMethod(booleanDecl(), delegateType, "retainAll", CollectionDecl());
+        createDelegateMethod(voidDecl(), delegateType, "clear");
     }
 
-    private void createGetValueMethod(BytecodeEmitContext context) throws Exception {
-        CtMethod method = new CtMethod(ObjectType(), "getValue", new CtClass[0], generatedClass);
-        method.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
-        generatedClass.addMethod(method);
-        var ctx = new BytecodeEmitContext(context, generatedClass, 1, -1);
-        ctx.getOutput()
+    private void createGetValueMethod() {
+        createBehavior(createMethod("getValue", ObjectDecl()), code -> code
             .aload(0)
-            .invokeinterface(ObservableObjectValueType(), "get", function(ObjectType()))
-            .areturn();
-        method.getMethodInfo().setCodeAttribute(ctx.getOutput().toCodeAttribute());
-        method.getMethodInfo().rebuildStackMap(generatedClass.getClassPool());
+            .invoke(ObservableObjectValueDecl().requireDeclaredMethod("get"))
+            .areturn());
     }
 
-    private void createGetMethod(BytecodeEmitContext context) throws Exception {
-        CtMethod method = new CtMethod(ObjectType(), "get", new CtClass[0], generatedClass);
-        method.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
-        generatedClass.addMethod(method);
-        var ctx = new BytecodeEmitContext(context, generatedClass, 1, -1);
-        Bytecode code = ctx.getOutput();
-        Local listLocal = code.acquireLocal(false);
+    private void createGetMethod() {
+        var method = createMethod("get", ObjectDecl());
+        var code = new Bytecode(method);
+
+        Local setLocal = code.acquireLocal(false);
+        FieldDeclaration validField = requireDeclaredField(VALID_FIELD);
+        FieldDeclaration valueField = requireDeclaredField(VALUE_FIELD);
+        FieldDeclaration weakSetChangeListenerField = requireDeclaredField(WEAK_SET_CHANGE_LISTENER_FIELD);
+        FieldDeclaration observableField = requireDeclaredField(OBSERVABLE_FIELD);
 
         code.aload(0)
-            .getfield(generatedClass, VALID_FIELD, booleanType)
+            .getfield(validField)
             .ifeq(() -> {
                 // if (this.set != null)
                 code.aload(0)
-                    .getfield(generatedClass, VALUE_FIELD, ObservableSetType())
-                    .ifnonnull(() -> {
+                    .getfield(valueField)
+                    .ifnonnull(() -> code
                         // this.set.removeListener(weakSetChangeListener);
-                        code.aload(0)
-                            .getfield(generatedClass, VALUE_FIELD, ObservableSetType())
-                            .aload(0)
-                            .getfield(generatedClass, WEAK_SET_CHANGE_LISTENER_FIELD, WeakSetChangeListenerType())
-                            .invokeinterface(ObservableSetType(), "removeListener",
-                                             function(voidType, SetChangeListenerType()));
-                    });
+                        .aload(0)
+                        .getfield(valueField)
+                        .aload(0)
+                        .getfield(weakSetChangeListenerField)
+                        .invoke(ObservableSetDecl().requireDeclaredMethod("removeListener", SetChangeListenerDecl()))
+                    );
 
                 // valid = true;
                 // Set set = source.getValue();
                 code.aload(0)
                     .iconst(1)
-                    .putfield(generatedClass, VALID_FIELD, booleanType)
+                    .putfield(validField)
                     .aload(0)
-                    .getfield(generatedClass, OBSERVABLE_FIELD, ObservableValueType())
-                    .invokeinterface(ObservableValueType(), "getValue", function(ObjectType()))
-                    .astore(listLocal);
+                    .getfield(observableField)
+                    .invoke(ObservableValueDecl().requireDeclaredMethod("getValue"))
+                    .astore(setLocal);
 
                 // if (set instanceof ObservableSet)
-                code.aload(listLocal)
-                    .isinstanceof(ObservableSetType())
+                code.aload(setLocal)
+                    .isinstanceof(ObservableSetDecl())
                     .ifne(() -> code
                         // this.set = (ObservableSet)set;
                         // this.set.addListener(weakSetChangeListener);
                         .aload(0)
-                        .aload(listLocal)
-                        .checkcast(ObservableSetType())
-                        .putfield(generatedClass, VALUE_FIELD, ObservableSetType())
+                        .aload(setLocal)
+                        .checkcast(ObservableSetDecl())
+                        .putfield(valueField)
                         .aload(0)
-                        .getfield(generatedClass, VALUE_FIELD, ObservableSetType())
+                        .getfield(valueField)
                         .aload(0)
-                        .getfield(generatedClass, WEAK_SET_CHANGE_LISTENER_FIELD, WeakSetChangeListenerType())
-                        .invokeinterface(ObservableSetType(), "addListener",
-                                         function(voidType, SetChangeListenerType())),
+                        .getfield(weakSetChangeListenerField)
+                        .invoke(ObservableSetDecl().requireDeclaredMethod("addListener", SetChangeListenerDecl())),
                     /*else*/ () -> code
                         // else if (set != null)
-                        .aload(listLocal)
+                        .aload(setLocal)
                         .ifnonnull(() -> code
                             // this.set = FXCollections.observableSet(set);
                             .aload(0)
-                            .aload(listLocal)
-                            .invokestatic(FXCollectionsType(), "observableSet",
-                                          function(ObservableSetType(), SetType()))
-                            .putfield(generatedClass, VALUE_FIELD, ObservableSetType()),
+                            .aload(setLocal)
+                            .invoke(FXCollectionsDecl().requireDeclaredMethod("observableSet", SetDecl()))
+                            .putfield(valueField),
                         /*else*/ () -> code
                             // else this.set = null;
                             .aload(0)
                             .aconst_null()
-                            .putfield(generatedClass, VALUE_FIELD, ObservableSetType())
+                            .putfield(valueField)
                         )
                     );
             })
             .aload(0)
-            .getfield(generatedClass, VALUE_FIELD, ObservableSetType())
+            .getfield(valueField)
             .areturn()
-            .releaseLocal(listLocal);
+            .releaseLocal(setLocal);
 
-        method.getMethodInfo().setCodeAttribute(code.toCodeAttribute());
-        method.getMethodInfo().rebuildStackMap(generatedClass.getClassPool());
+        method.setCode(code)
+              .setModifiers(Modifier.PUBLIC | Modifier.FINAL);
     }
 
     /**
      * The {@code invalidated} method is called when the value of the ObservableValue changes,
      * i.e. when the set wrapped by the ObservableValue is replaced entirely.
      */
-    private void createInvalidatedMethod(BytecodeEmitContext context) throws Exception {
-        CtMethod method = new CtMethod(voidType, "invalidated", new CtClass[]{ObservableType()}, generatedClass);
-        method.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
-        generatedClass.addMethod(method);
-        var ctx = new BytecodeEmitContext(context, generatedClass, 2, -1);
-        Bytecode code = ctx.getOutput();
+    private void createInvalidatedMethod(BytecodeEmitContext context) {
+        var method = createMethod("invalidated", voidDecl(), ObservableDecl());
+        var code = new Bytecode(method);
+
+        FieldDeclaration rootRefField = requireDeclaredField(ROOT_REF);
+        FieldDeclaration validField = requireDeclaredField(VALID_FIELD);
+        FieldDeclaration invalidationListenerField = requireDeclaredField(INVALIDATION_LISTENER_FIELD);
+        FieldDeclaration changeListenerField = requireDeclaredField(CHANGE_LISTENER_FIELD);
+        FieldDeclaration setChangeListenerField = requireDeclaredField(SET_CHANGE_LISTENER_FIELD);
+        FieldDeclaration valueField = requireDeclaredField(VALUE_FIELD);
         Local oldValueLocal = code.acquireLocal(false);
         Local currentValueLocal = code.acquireLocal(false);
         Local iteratorLocal = code.acquireLocal(false);
         Local elementLocal = code.acquireLocal(false);
         Local addRemoveChangeLocal = code.acquireLocal(false);
-        CtClass addRemoveChangeType = context.getNestedClasses().find(SetAddRemoveChangeGenerator.CLASS_NAME);
+        TypeDeclaration addRemoveChangeType = context.getNestedClasses().find(SetAddRemoveChangeGenerator.CLASS_NAME);
 
         if (context.isGeneratorActive(ReferenceTrackerGenerator.class)) {
             // markupRef.clearStaleReferences();
             code.aload(0)
-                .getfield(generatedClass, ROOT_REF, context.getMarkupClass())
-                .invokevirtual(context.getMarkupClass(), ReferenceTrackerGenerator.CLEAR_STALE_REFERENCES_METHOD,
-                               function(voidType));
+                .getfield(rootRefField)
+                .invoke(context.getMarkupClass()
+                               .requireDeclaredMethod(ReferenceTrackerGenerator.CLEAR_STALE_REFERENCES_METHOD));
         }
 
         // this.valid = false;
         code.aload(0)
             .iconst(0)
-            .putfield(generatedClass, VALID_FIELD, booleanType);
+            .putfield(validField);
 
         // if (invalidationListener != null)
         code.aload(0)
-            .getfield(generatedClass, INVALIDATION_LISTENER_FIELD, InvalidationListenerType())
+            .getfield(invalidationListenerField)
             .ifnonnull(() -> code
                 // invalidationListener.invalidated(this);
                 .aload(0)
-                .getfield(generatedClass, INVALIDATION_LISTENER_FIELD, InvalidationListenerType())
+                .getfield(invalidationListenerField)
                 .aload(0)
-                .invokeinterface(InvalidationListenerType(), "invalidated",
-                                 function(voidType, ObservableType()))
+                .invoke(InvalidationListenerDecl().requireDeclaredMethod("invalidated", ObservableDecl()))
             );
 
         // if (changeListener != null || setChangeListener != null)
         code.aload(0)
-            .getfield(generatedClass, CHANGE_LISTENER_FIELD, ChangeListenerType())
+            .getfield(changeListenerField)
             .ifnonnull(
                 () -> code.iconst(1),
                 () -> code
                     .aload(0)
-                    .getfield(generatedClass, SET_CHANGE_LISTENER_FIELD, SetChangeListenerType())
+                    .getfield(setChangeListenerField)
                     .ifnonnull(
                         () -> code.iconst(1),
                         () -> code.iconst(0)))
@@ -312,11 +274,11 @@ public class SetObservableValueWrapperGenerator extends ClassGenerator {
                 // ObservableSet oldValue = this.value;
                 // ObservableSet currentValue = this.get();
                 .aload(0)
-                .getfield(generatedClass, VALUE_FIELD, ObservableSetType())
+                .getfield(valueField)
                 .astore(oldValueLocal)
                 .aload(0)
-                .invokeinterface(ObservableObjectValueType(), "get", function(ObjectType()))
-                .checkcast(ObservableSetType())
+                .invoke(ObservableObjectValueDecl().requireDeclaredMethod("get"))
+                .checkcast(ObservableSetDecl())
                 .astore(currentValueLocal)
                 // if (oldValue != currentValue) {
                 .aload(oldValueLocal)
@@ -324,25 +286,24 @@ public class SetObservableValueWrapperGenerator extends ClassGenerator {
                 .if_acmpne(() -> code
                     // if (changeListener != null)
                     .aload(0)
-                    .getfield(generatedClass, CHANGE_LISTENER_FIELD, ChangeListenerType())
+                    .getfield(changeListenerField)
                     .ifnonnull(() -> code
                         // changeListener.changed(this, oldValue, currentValue);
                         .aload(0)
-                        .getfield(generatedClass, CHANGE_LISTENER_FIELD, ChangeListenerType())
+                        .getfield(changeListenerField)
                         .aload(0)
                         .aload(oldValueLocal)
                         .aload(currentValueLocal)
-                        .invokeinterface(ChangeListenerType(), "changed",
-                                         function(voidType, ObservableValueType(), ObjectType(), ObjectType())))
+                        .invoke(ChangeListenerDecl().requireDeclaredMethod("changed", ObservableValueDecl(), ObjectDecl(), ObjectDecl())))
                     // if (setChangeListener != null)
                     .aload(0)
-                    .getfield(generatedClass, SET_CHANGE_LISTENER_FIELD, SetChangeListenerType())
+                    .getfield(setChangeListenerField)
                     .ifnonnull(() -> code
                         // var change = new SetAddRemoveChange(this)
                         .anew(addRemoveChangeType)
                         .dup()
                         .aload(0)
-                        .invokespecial(addRemoveChangeType, MethodInfo.nameInit, constructor(ObservableSetType()))
+                        .invoke(addRemoveChangeType.requireDeclaredConstructor(ObservableSetDecl()))
                         .astore(addRemoveChangeLocal)
                         // if (currentValue == null)
                         .aload(currentValueLocal)
@@ -352,25 +313,25 @@ public class SetObservableValueWrapperGenerator extends ClassGenerator {
                             //     setChangeListener.onChanged(addRemoveChange);
                             // }
                             code.aload(oldValueLocal)
-                                .invokeinterface(SetType(), "iterator", function(IteratorType()))
+                                .invoke(SetDecl().requireDeclaredMethod("iterator"))
                                 .astore(iteratorLocal);
 
                             int position = code.position() + 1;
 
                             code.aload(iteratorLocal)
-                                .invokeinterface(IteratorType(), "hasNext", function(booleanType))
+                                .invoke(IteratorDecl().requireDeclaredMethod("hasNext"))
                                 .ifne(() -> code
                                     .aload(addRemoveChangeLocal)
                                     .aload(iteratorLocal)
-                                    .invokeinterface(IteratorType(), "next", function(ObjectType()))
+                                    .invoke(IteratorDecl().requireDeclaredMethod("next"))
                                     .iconst(0)
-                                    .invokevirtual(addRemoveChangeType, SetAddRemoveChangeGenerator.INIT_METHOD_NAME,
-                                                   function(voidType, ObjectType(), booleanType))
+                                    .invoke(addRemoveChangeType.requireDeclaredMethod(
+                                        SetAddRemoveChangeGenerator.INIT_METHOD_NAME, ObjectDecl(), booleanDecl()))
                                     .aload(0)
-                                    .getfield(generatedClass, SET_CHANGE_LISTENER_FIELD, SetChangeListenerType())
+                                    .getfield(setChangeListenerField)
                                     .aload(addRemoveChangeLocal)
-                                    .invokeinterface(SetChangeListenerType(), "onChanged",
-                                                     function(voidType, SetChangeListenerChangeType()))
+                                    .invoke(SetChangeListenerDecl().requireDeclaredMethod(
+                                        "onChanged", SetChangeListenerChangeDecl()))
                                     .goto_position(position)
                                 );
                             },
@@ -383,25 +344,25 @@ public class SetObservableValueWrapperGenerator extends ClassGenerator {
                                 //     setChangeListener.onChanged(addRemoveChange);
                                 // }
                                 code.aload(currentValueLocal)
-                                    .invokeinterface(SetType(), "iterator", function(IteratorType()))
+                                    .invoke(SetDecl().requireDeclaredMethod("iterator"))
                                     .astore(iteratorLocal);
 
                                 int position = code.position() + 1;
 
                                 code.aload(iteratorLocal)
-                                    .invokeinterface(IteratorType(), "hasNext", function(booleanType))
+                                    .invoke(IteratorDecl().requireDeclaredMethod("hasNext"))
                                     .ifne(() -> code
                                         .aload(addRemoveChangeLocal)
                                         .aload(iteratorLocal)
-                                        .invokeinterface(IteratorType(), "next", function(ObjectType()))
+                                        .invoke(IteratorDecl().requireDeclaredMethod("next"))
                                         .iconst(1)
-                                        .invokevirtual(addRemoveChangeType, SetAddRemoveChangeGenerator.INIT_METHOD_NAME,
-                                                       function(voidType, ObjectType(), booleanType))
+                                        .invoke(addRemoveChangeType.requireDeclaredMethod(
+                                            SetAddRemoveChangeGenerator.INIT_METHOD_NAME, ObjectDecl(), booleanDecl()))
                                         .aload(0)
-                                        .getfield(generatedClass, SET_CHANGE_LISTENER_FIELD, SetChangeListenerType())
+                                        .getfield(setChangeListenerField)
                                         .aload(addRemoveChangeLocal)
-                                        .invokeinterface(SetChangeListenerType(), "onChanged",
-                                                         function(voidType, SetChangeListenerChangeType()))
+                                        .invoke(SetChangeListenerDecl().requireDeclaredMethod(
+                                            "onChanged", SetChangeListenerChangeDecl()))
                                         .goto_position(position)
                                     );
                                 },
@@ -413,32 +374,31 @@ public class SetObservableValueWrapperGenerator extends ClassGenerator {
                                 //     }
                                 // }
                                 code.aload(oldValueLocal)
-                                    .invokeinterface(SetType(), "iterator", function(IteratorType()))
+                                    .invoke(SetDecl().requireDeclaredMethod("iterator"))
                                     .astore(iteratorLocal);
 
                                 int position1 = code.position() + 1;
 
                                 code.aload(iteratorLocal)
-                                    .invokeinterface(IteratorType(), "hasNext", function(booleanType))
+                                    .invoke(IteratorDecl().requireDeclaredMethod("hasNext"))
                                     .ifne(() -> code
                                         .aload(iteratorLocal)
-                                        .invokeinterface(IteratorType(), "next", function(ObjectType()))
+                                        .invoke(IteratorDecl().requireDeclaredMethod("next"))
                                         .astore(elementLocal)
                                         .aload(currentValueLocal)
                                         .aload(elementLocal)
-                                        .invokeinterface(SetType(), "contains",
-                                                         function(booleanType, ObjectType()))
+                                        .invoke(SetDecl().requireDeclaredMethod("contains", ObjectDecl()))
                                         .ifeq(() -> code
                                             .aload(addRemoveChangeLocal)
                                             .aload(elementLocal)
                                             .iconst(0)
-                                            .invokevirtual(addRemoveChangeType, SetAddRemoveChangeGenerator.INIT_METHOD_NAME,
-                                                           function(voidType, ObjectType(), booleanType))
+                                            .invoke(addRemoveChangeType.requireDeclaredMethod(
+                                                SetAddRemoveChangeGenerator.INIT_METHOD_NAME, ObjectDecl(), booleanDecl()))
                                             .aload(0)
-                                            .getfield(generatedClass, SET_CHANGE_LISTENER_FIELD, SetChangeListenerType())
+                                            .getfield(setChangeListenerField)
                                             .aload(addRemoveChangeLocal)
-                                            .invokeinterface(SetChangeListenerType(), "onChanged",
-                                                             function(voidType, SetChangeListenerChangeType()))
+                                            .invoke(SetChangeListenerDecl().requireDeclaredMethod(
+                                                "onChanged", SetChangeListenerChangeDecl()))
                                         )
                                         .goto_position(position1)
                                     );
@@ -450,32 +410,31 @@ public class SetObservableValueWrapperGenerator extends ClassGenerator {
                                 //     }
                                 // }
                                 code.aload(currentValueLocal)
-                                    .invokeinterface(SetType(), "iterator", function(IteratorType()))
+                                    .invoke(SetDecl().requireDeclaredMethod("iterator"))
                                     .astore(iteratorLocal);
 
                                 int position2 = code.position() + 1;
 
                                 code.aload(iteratorLocal)
-                                    .invokeinterface(IteratorType(), "hasNext", function(booleanType))
+                                    .invoke(IteratorDecl().requireDeclaredMethod("hasNext"))
                                     .ifne(() -> code
                                         .aload(iteratorLocal)
-                                        .invokeinterface(IteratorType(), "next", function(ObjectType()))
+                                        .invoke(IteratorDecl().requireDeclaredMethod("next"))
                                         .astore(elementLocal)
                                         .aload(oldValueLocal)
                                         .aload(elementLocal)
-                                        .invokeinterface(SetType(), "contains",
-                                                         function(booleanType, ObjectType()))
+                                        .invoke(SetDecl().requireDeclaredMethod("contains", ObjectDecl()))
                                         .ifeq(() -> code
                                             .aload(addRemoveChangeLocal)
                                             .aload(elementLocal)
                                             .iconst(1)
-                                            .invokevirtual(addRemoveChangeType, SetAddRemoveChangeGenerator.INIT_METHOD_NAME,
-                                                           function(voidType, ObjectType(), booleanType))
+                                            .invoke(addRemoveChangeType.requireDeclaredMethod(
+                                                SetAddRemoveChangeGenerator.INIT_METHOD_NAME, ObjectDecl(), booleanDecl()))
                                             .aload(0)
-                                            .getfield(generatedClass, SET_CHANGE_LISTENER_FIELD, SetChangeListenerType())
+                                            .getfield(setChangeListenerField)
                                             .aload(addRemoveChangeLocal)
-                                            .invokeinterface(SetChangeListenerType(), "onChanged",
-                                                             function(voidType, SetChangeListenerChangeType()))
+                                            .invoke(SetChangeListenerDecl().requireDeclaredMethod(
+                                                "onChanged", SetChangeListenerChangeDecl()))
                                         )
                                         .goto_position(position2)
                                     );
@@ -488,129 +447,129 @@ public class SetObservableValueWrapperGenerator extends ClassGenerator {
         code.releaseLocal(currentValueLocal);
         code.vreturn();
 
-        method.getMethodInfo().setCodeAttribute(code.toCodeAttribute());
-        method.getMethodInfo().rebuildStackMap(generatedClass.getClassPool());
+        method.setCode(code)
+              .setModifiers(Modifier.PUBLIC | Modifier.FINAL);
     }
 
-    private void createOnChangedMethod(BytecodeEmitContext context) throws Exception {
-        CtMethod method = new CtMethod(
-            voidType, "onChanged", new CtClass[] {SetChangeListenerChangeType()}, generatedClass);
-        method.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
-        generatedClass.addMethod(method);
-        BytecodeEmitContext ctx = new BytecodeEmitContext(context, generatedClass, 2, -1);
-        Bytecode code = ctx.getOutput();
-        CtClass adapterChangeType = context.getNestedClasses().find(SetSourceAdapterChangeGenerator.CLASS_NAME);
+    private void createOnChangedMethod(BytecodeEmitContext context) {
+        var method = createMethod("onChanged", voidDecl(), SetChangeListenerChangeDecl());
+        var code = new Bytecode(method);
+
+        FieldDeclaration rootRefField = requireDeclaredField(ROOT_REF);
+        FieldDeclaration invalidationListenerField = requireDeclaredField(INVALIDATION_LISTENER_FIELD);
+        FieldDeclaration changeListenerField = requireDeclaredField(CHANGE_LISTENER_FIELD);
+        FieldDeclaration valueField = requireDeclaredField(VALUE_FIELD);
+        FieldDeclaration setChangeListenerField = requireDeclaredField(SET_CHANGE_LISTENER_FIELD);
+        FieldDeclaration adapterChangeField = requireDeclaredField(ADAPTER_CHANGE_FIELD);
+        TypeDeclaration adapterChangeType = context.getNestedClasses().find(SetSourceAdapterChangeGenerator.CLASS_NAME);
 
         if (context.isGeneratorActive(ReferenceTrackerGenerator.class)) {
             code.aload(0)
-                .getfield(generatedClass, ROOT_REF, context.getMarkupClass())
-                .invokevirtual(context.getMarkupClass(), ReferenceTrackerGenerator.CLEAR_STALE_REFERENCES_METHOD,
-                               function(voidType));
+                .getfield(rootRefField)
+                .invoke(context.getMarkupClass()
+                               .requireDeclaredMethod(ReferenceTrackerGenerator.CLEAR_STALE_REFERENCES_METHOD));
         }
 
         code.aload(0)
-            .getfield(generatedClass, INVALIDATION_LISTENER_FIELD, InvalidationListenerType())
+            .getfield(invalidationListenerField)
             .ifnonnull(() -> code
                 .aload(0)
-                .getfield(generatedClass, INVALIDATION_LISTENER_FIELD, InvalidationListenerType())
+                .getfield(invalidationListenerField)
                 .aload(0)
-                .invokeinterface(InvalidationListenerType(), "invalidated",
-                                 function(voidType, ObservableType()))
+                .invoke(InvalidationListenerDecl().requireDeclaredMethod("invalidated", ObservableDecl()))
             );
 
         code.aload(0)
-            .getfield(generatedClass, CHANGE_LISTENER_FIELD, ChangeListenerType())
+            .getfield(changeListenerField)
             .ifnonnull(() -> code
                 .aload(0)
-                .getfield(generatedClass, CHANGE_LISTENER_FIELD, ChangeListenerType())
+                .getfield(changeListenerField)
                 .aload(0)
                 .aload(0)
-                .getfield(generatedClass, VALUE_FIELD, ObservableSetType())
+                .getfield(valueField)
                 .aload(0)
-                .getfield(generatedClass, VALUE_FIELD, ObservableSetType())
-                .invokeinterface(ChangeListenerType(), "changed",
-                                 function(voidType, ObservableValueType(), ObjectType(), ObjectType()))
+                .getfield(valueField)
+                .invoke(ChangeListenerDecl().requireDeclaredMethod(
+                    "changed", ObservableValueDecl(), ObjectDecl(), ObjectDecl()))
             );
 
         code.aload(0)
-            .getfield(generatedClass, SET_CHANGE_LISTENER_FIELD, SetChangeListenerType())
+            .getfield(setChangeListenerField)
             .ifnonnull(() -> code
                 .aload(0)
-                .getfield(generatedClass, ADAPTER_CHANGE_FIELD, adapterChangeType)
+                .getfield(adapterChangeField)
                 .aload(1)
-                .invokevirtual(adapterChangeType, SetSourceAdapterChangeGenerator.INIT_CHANGE_METHOD_NAME,
-                               function(voidType, SetChangeListenerChangeType()))
+                .invoke(adapterChangeType.requireDeclaredMethod(
+                    SetSourceAdapterChangeGenerator.INIT_CHANGE_METHOD_NAME, SetChangeListenerChangeDecl()))
                 .aload(0)
-                .getfield(generatedClass, SET_CHANGE_LISTENER_FIELD, SetChangeListenerType())
+                .getfield(setChangeListenerField)
                 .aload(0)
-                .getfield(generatedClass, ADAPTER_CHANGE_FIELD, adapterChangeType)
-                .invokeinterface(SetChangeListenerType(), "onChanged",
-                                 function(voidType, SetChangeListenerChangeType()))
+                .getfield(adapterChangeField)
+                .invoke(SetChangeListenerDecl().requireDeclaredMethod(
+                    "onChanged", SetChangeListenerChangeDecl()))
             );
 
         code.vreturn();
 
-        method.getMethodInfo().setCodeAttribute(code.toCodeAttribute());
-        method.getMethodInfo().rebuildStackMap(generatedClass.getClassPool());
+        method.setCode(code)
+              .setModifiers(Modifier.PUBLIC | Modifier.FINAL);
     }
 
-    private void createConstructor(BytecodeEmitContext context) throws Exception {
-        CtConstructor constructor = new CtConstructor(
-                new CtClass[]{context.getMarkupClass(), ObservableValueType()}, generatedClass);
-        constructor.setModifiers(Modifier.PUBLIC);
-        generatedClass.addConstructor(constructor);
-        BytecodeEmitContext ctx = new BytecodeEmitContext(context, generatedClass, 3, -1);
-        CtClass adapterChangeType = context.getNestedClasses().find(SetSourceAdapterChangeGenerator.CLASS_NAME);
-        Bytecode code = ctx.getOutput();
+    private void createConstructor(BytecodeEmitContext context) {
+        var constructor = createConstructor(context.getMarkupClass(), ObservableValueDecl());
+        var code = new Bytecode(constructor);
+
+        FieldDeclaration rootRefField = requireDeclaredField(ROOT_REF);
+        FieldDeclaration observableField = requireDeclaredField(OBSERVABLE_FIELD);
+        FieldDeclaration weakSetChangeListenerField = requireDeclaredField(WEAK_SET_CHANGE_LISTENER_FIELD);
+        FieldDeclaration adapterChangeField = requireDeclaredField(ADAPTER_CHANGE_FIELD);
+        TypeDeclaration adapterChangeType = context.getNestedClasses().find(SetSourceAdapterChangeGenerator.CLASS_NAME);
 
         // super()
         code.aload(0)
-            .invokespecial(generatedClass.getSuperclass(), MethodInfo.nameInit, constructor());
+            .invoke(requireSuperClass().requireDeclaredConstructor());
 
         // markupRef = $1
         code.aload(0)
             .aload(1)
-            .putfield(generatedClass, ROOT_REF, context.getMarkupClass());
+            .putfield(rootRefField);
 
         // observable = $2
         code.aload(0)
             .aload(2)
-            .putfield(generatedClass, OBSERVABLE_FIELD, ObservableValueType());
+            .putfield(observableField);
 
         // weakSetChangeListener = new WeakSetChangeListener(this);
         code.aload(0)
-            .anew(WeakSetChangeListenerType())
+            .anew(WeakSetChangeListenerDecl())
             .dup()
             .aload(0)
-            .invokespecial(WeakSetChangeListenerType(), MethodInfo.nameInit,
-                           constructor(SetChangeListenerType()))
-            .putfield(generatedClass, WEAK_SET_CHANGE_LISTENER_FIELD, WeakSetChangeListenerType());
+            .invoke(WeakSetChangeListenerDecl().requireConstructor(SetChangeListenerDecl()))
+            .putfield(weakSetChangeListenerField);
 
         // setAdapterChange = new SetAdapterChange(this);
         code.aload(0)
             .anew(adapterChangeType)
             .dup()
             .aload(0)
-            .invokespecial(adapterChangeType, MethodInfo.nameInit, constructor(ObservableSetType()))
-            .putfield(generatedClass, ADAPTER_CHANGE_FIELD, adapterChangeType);
+            .invoke(adapterChangeType.requireDeclaredConstructor(ObservableSetDecl()))
+            .putfield(adapterChangeField);
 
         // $1.addListener(new WeakInvalidationListener(this));
         code.aload(2)
-            .anew(WeakInvalidationListenerType())
+            .anew(WeakInvalidationListenerDecl())
             .dup()
             .aload(0)
-            .invokespecial(WeakInvalidationListenerType(), MethodInfo.nameInit,
-                           constructor(InvalidationListenerType()))
-            .invokeinterface(ObservableType(), "addListener",
-                             function(voidType, InvalidationListenerType()));
+            .invoke(WeakInvalidationListenerDecl().requireConstructor(InvalidationListenerDecl()))
+            .invoke(ObservableDecl().requireDeclaredMethod("addListener", InvalidationListenerDecl()));
 
         code.aload(0)
-            .invokeinterface(ObservableSetValueType(), "get", function(ObjectType()))
+            .invoke(ObservableObjectValueDecl().requireDeclaredMethod("get"))
             .pop()
             .vreturn();
 
-        constructor.getMethodInfo().setCodeAttribute(code.toCodeAttribute());
-        constructor.getMethodInfo().rebuildStackMap(generatedClass.getClassPool());
+        constructor.setCode(code)
+                   .setModifiers(Modifier.PUBLIC);
     }
 
     /**
@@ -623,69 +582,70 @@ public class SetObservableValueWrapperGenerator extends ClassGenerator {
      *     }
      * }</pre>
      */
-    private void createDelegateMethod(BytecodeEmitContext context, CtClass retType, CtClass delegateType,
-                                      String methodName, CtClass... params) throws Exception {
-        boolean delegatesToObservableSet = delegateType.subtypeOf(ObservableSetType());
+    private void createDelegateMethod(TypeDeclaration retType,
+                                      TypeDeclaration delegateType,
+                                      String methodName,
+                                      TypeDeclaration... params) {
+        boolean delegatesToObservableSet = delegateType.subtypeOf(ObservableSetDecl());
 
         createBehavior(
-            context, generatedClass, new CtMethod(retType, methodName, params, generatedClass),
-            Arrays.stream(params).mapToInt(TypeHelper::getSlots).sum() + 1,
+            createMethod(methodName, retType, params),
             code -> {
-                Local listLocal = code.acquireLocal(false);
+                Local setLocal = code.acquireLocal(false);
                 Local retLocal = code.acquireLocal(retType);
 
                 Runnable branch = () -> {
                     int slot = 1;
-                    for (CtClass param : params) {
-                        code.ext_load(param, slot);
-                        slot += TypeHelper.getSlots(param);
+                    for (TypeDeclaration param : params) {
+                        code.load(param, slot);
+                        slot += param.slots();
                     }
 
-                    code.invokeinterface(delegateType, methodName, function(retType, params));
+                    code.invoke(delegateType.requireDeclaredMethod(methodName, params));
 
-                    if (retType != CtClass.voidType) {
-                        code.ext_store(retType, retLocal);
+                    if (!retType.equals(voidDecl())) {
+                        code.store(retType, retLocal);
                     }
                 };
 
                 code.aload(0)
-                    .invokeinterface(ObservableObjectValueType(), "get", function(ObjectType()))
-                    .checkcast(ObservableSetType())
-                    .astore(listLocal)
-                    .aload(listLocal)
+                    .invoke(ObservableObjectValueDecl().requireDeclaredMethod("get"))
+                    .checkcast(ObservableSetDecl())
+                    .astore(setLocal)
+                    .aload(setLocal)
                     .ifnull(
                         () -> {
                             if (delegatesToObservableSet) {
-                                code.invokestatic(FXCollectionsType(), "emptyObservableSet", function(SetType()));
+                                code.invoke(FXCollectionsDecl().requireDeclaredMethod("emptyObservableSet"));
                             } else {
-                                code.invokestatic(CollectionsType(), "emptySet", function(SetType()));
+                                code.invoke(CollectionsDecl().requireDeclaredMethod("emptySet"));
                             }
                             branch.run();
                         },
                         () -> {
-                            code.aload(listLocal);
+                            code.aload(setLocal);
                             branch.run();
                         });
 
-                if (retType == CtClass.voidType) {
+                if (retType.equals(voidDecl())) {
                     code.vreturn();
                 } else {
-                    code.ext_load(retType, retLocal);
+                    code.load(retType, retLocal);
 
-                    if (retType == CtClass.longType) {
+                    if (retType.equals(longDecl())) {
                         code.lreturn();
-                    } else if (retType == CtClass.booleanType || TypeHelper.isIntegralPrimitive(retType)) {
+                    } else if (retType.equals(booleanDecl()) || retType.isIntegralPrimitive()) {
                         code.ireturn();
-                    } else if (retType == CtClass.doubleType) {
+                    } else if (retType.equals(doubleDecl())) {
                         code.dreturn();
-                    } else if (retType == CtClass.floatType) {
+                    } else if (retType.equals(floatDecl())) {
                         code.freturn();
                     } else {
                         code.areturn();
                     }
                 }
 
-                code.releaseLocal(listLocal);
+                code.releaseLocal(setLocal);
                 code.releaseLocal(retLocal);
             }
         );

@@ -1,22 +1,20 @@
-// Copyright (c) 2021, 2025, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.generate;
 
-import javassist.CtClass;
-import javassist.CtConstructor;
-import javassist.CtField;
-import javassist.CtMethod;
-import javassist.Modifier;
-import javassist.bytecode.MethodInfo;
-import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.ast.emit.BytecodeEmitContext;
+import org.jfxcore.compiler.diagnostic.SourceInfo;
+import org.jfxcore.compiler.type.ConstructorDeclaration;
+import org.jfxcore.compiler.type.MethodDeclaration;
+import org.jfxcore.compiler.type.Resolver;
+import org.jfxcore.compiler.type.TypeDeclaration;
+import org.jfxcore.compiler.type.TypeInstance;
 import org.jfxcore.compiler.util.Bytecode;
 import org.jfxcore.compiler.util.NameHelper;
-import org.jfxcore.compiler.util.Resolver;
-import org.jfxcore.compiler.util.TypeInstance;
+import java.lang.reflect.Modifier;
 
-import static org.jfxcore.compiler.util.Classes.*;
+import static org.jfxcore.compiler.type.Types.*;
 
 public class RuntimeContextGenerator extends ClassGenerator {
 
@@ -34,17 +32,18 @@ public class RuntimeContextGenerator extends ClassGenerator {
     private static final String TARGET_TYPE_FIELD = "targetType";
 
     private final boolean markupContextSupport;
-    private CtClass parentArrayType;
-    private CtConstructor constructor;
-    private CtMethod getTargetNameMethod;
-    private CtMethod getTargetTypeMethod;
-    private CtMethod getTargetBeanMethod;
-    private CtMethod getRootMethod;
-    private CtMethod pushParentMethod;
-    private CtMethod popParentMethod;
-    private CtMethod getAncestorMethod;
-    private CtMethod getAncestorCountMethod;
-    private CtMethod setTargetInfoMethod;
+
+    private TypeDeclaration parentArrayType;
+    private ConstructorDeclaration constructor;
+    private MethodDeclaration getTargetNameMethod;
+    private MethodDeclaration getTargetTypeMethod;
+    private MethodDeclaration getTargetBeanMethod;
+    private MethodDeclaration getRootMethod;
+    private MethodDeclaration pushParentMethod;
+    private MethodDeclaration popParentMethod;
+    private MethodDeclaration getAncestorMethod;
+    private MethodDeclaration getAncestorCountMethod;
+    private MethodDeclaration setTargetInfoMethod;
 
     public RuntimeContextGenerator(boolean markupContextSupport) {
         this.markupContextSupport = markupContextSupport && Markup.isAvailable();
@@ -61,268 +60,222 @@ public class RuntimeContextGenerator extends ClassGenerator {
     }
 
     @Override
-    public void emitClass(BytecodeEmitContext context) {
-        parentArrayType = new Resolver(SourceInfo.none()).resolveClass(ObjectType().getName() + "[]");
-        generatedClass = context.getNestedClasses().create(getClassName());
-        generatedClass.setModifiers(Modifier.PRIVATE | Modifier.FINAL);
+    public TypeDeclaration emitClass(BytecodeEmitContext context) {
+        parentArrayType = new Resolver(SourceInfo.none()).resolveClass(ObjectDecl().name() + "[]");
+
+        TypeDeclaration generatedClass = super.emitClass(context)
+            .setModifiers(Modifier.PRIVATE | Modifier.FINAL);
 
         if (markupContextSupport) {
-            generatedClass.addInterface(Markup.MarkupContextType());
+            generatedClass.addInterface(Markup.MarkupContextDecl());
+        }
+
+        return generatedClass;
+    }
+
+    @Override
+    public void emitFields(BytecodeEmitContext context) {
+        createField(ANCESTORS_FIELD, parentArrayType).setModifiers(Modifier.PRIVATE | Modifier.FINAL);
+        createField(INDEX_FIELD, intDecl()).setModifiers(Modifier.PRIVATE);
+
+        if (markupContextSupport) {
+            createField(TARGET_BEAN_FIELD, ObjectDecl()).setModifiers(Modifier.PRIVATE);
+            createField(TARGET_TYPE_FIELD, ClassDecl()).setModifiers(Modifier.PRIVATE);
+            createField(TARGET_NAME_FIELD, StringDecl()).setModifiers(Modifier.PRIVATE);
         }
     }
 
     @Override
-    public void emitFields(BytecodeEmitContext context) throws Exception {
-        CtField field = new CtField(parentArrayType, ANCESTORS_FIELD, generatedClass);
-        field.setModifiers(Modifier.PRIVATE | Modifier.FINAL);
-        generatedClass.addField(field);
-
-        field = new CtField(CtClass.intType, INDEX_FIELD, generatedClass);
-        field.setModifiers(Modifier.PRIVATE);
-        generatedClass.addField(field);
-
-        if (markupContextSupport) {
-            field = new CtField(ObjectType(), TARGET_BEAN_FIELD, generatedClass);
-            field.setModifiers(Modifier.PRIVATE);
-            generatedClass.addField(field);
-
-            field = new CtField(ClassType(), TARGET_TYPE_FIELD, generatedClass);
-            field.setModifiers(Modifier.PRIVATE);
-            generatedClass.addField(field);
-
-            field = new CtField(StringType(), TARGET_NAME_FIELD, generatedClass);
-            field.setModifiers(Modifier.PRIVATE);
-            generatedClass.addField(field);
-        }
-    }
-
-    @Override
-    public void emitMethods(BytecodeEmitContext context) throws Exception {
+    public void emitMethods(BytecodeEmitContext context) {
         super.emitMethods(context);
 
-        constructor = new CtConstructor(new CtClass[] {CtClass.intType}, generatedClass);
-        generatedClass.addConstructor(constructor);
+        constructor = createConstructor(intDecl());
 
-        pushParentMethod = new CtMethod(CtClass.voidType, PUSH_PARENT_METHOD, new CtClass[] {ObjectType()}, generatedClass);
-        pushParentMethod.setModifiers(Modifier.FINAL);
-        generatedClass.addMethod(pushParentMethod);
+        pushParentMethod = createMethod(PUSH_PARENT_METHOD, voidDecl(), ObjectDecl())
+            .setModifiers(Modifier.FINAL);
 
-        popParentMethod = new CtMethod(CtClass.voidType, POP_PARENT_METHOD, new CtClass[0], generatedClass);
-        popParentMethod.setModifiers(Modifier.FINAL);
-        generatedClass.addMethod(popParentMethod);
+        popParentMethod = createMethod(POP_PARENT_METHOD, voidDecl())
+            .setModifiers(Modifier.FINAL);
 
-        getAncestorMethod = new CtMethod(ObjectType(), GET_ANCESTOR_METHOD, new CtClass[] { CtClass.intType }, generatedClass);
-        getAncestorMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
-        generatedClass.addMethod(getAncestorMethod);
+        getAncestorMethod = createMethod(GET_ANCESTOR_METHOD, ObjectDecl(), intDecl())
+            .setModifiers(Modifier.PUBLIC | Modifier.FINAL);
 
-        getRootMethod = new CtMethod(ObjectType(), GET_ROOT_METHOD, new CtClass[0], generatedClass);
-        getRootMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
-        generatedClass.addMethod(getRootMethod);
+        getRootMethod = createMethod(GET_ROOT_METHOD, ObjectDecl())
+            .setModifiers(Modifier.PUBLIC | Modifier.FINAL);
 
         if (markupContextSupport) {
-            setTargetInfoMethod = new CtMethod(CtClass.voidType, SET_TARGET_INFO,
-                new CtClass[] {ClassType(), ObjectType(), StringType()}, generatedClass);
-            setTargetInfoMethod.setModifiers(Modifier.FINAL);
-            generatedClass.addMethod(setTargetInfoMethod);
+            setTargetInfoMethod = createMethod(SET_TARGET_INFO, voidDecl(), ClassDecl(), ObjectDecl(), StringDecl())
+                .setModifiers(Modifier.FINAL);
 
-            getTargetTypeMethod = new CtMethod(ClassType(), "getTargetType", new CtClass[0], generatedClass);
-            getTargetTypeMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
-            generatedClass.addMethod(getTargetTypeMethod);
+            getTargetTypeMethod = createMethod("getTargetType", ClassDecl())
+                .setModifiers(Modifier.PUBLIC | Modifier.FINAL);
 
-            getTargetNameMethod = new CtMethod(StringType(), "getTargetName", new CtClass[0], generatedClass);
-            getTargetNameMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
-            generatedClass.addMethod(getTargetNameMethod);
+            getTargetNameMethod = createMethod("getTargetName", StringDecl())
+                .setModifiers(Modifier.PUBLIC | Modifier.FINAL);
 
-            getTargetBeanMethod = new CtMethod(ObjectType(), "getTargetBean", new CtClass[0], generatedClass);
-            getTargetBeanMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
-            generatedClass.addMethod(getTargetBeanMethod);
+            getTargetBeanMethod = createMethod("getTargetBean", ObjectDecl())
+                .setModifiers(Modifier.PUBLIC | Modifier.FINAL);
 
-            getAncestorCountMethod = new CtMethod(CtClass.intType, GET_ANCESTOR_COUNT_METHOD, new CtClass[0], generatedClass);
-            getAncestorCountMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
-            generatedClass.addMethod(getAncestorCountMethod);
+            getAncestorCountMethod = createMethod(GET_ANCESTOR_COUNT_METHOD, intDecl())
+                .setModifiers(Modifier.PUBLIC | Modifier.FINAL);
         }
     }
 
     @Override
-    public void emitCode(BytecodeEmitContext context) throws Exception {
-        super.emitCode(context);
-
-        emitConstructor(context);
-        emitPushParentMethod(context);
-        emitPopParentMethod(context);
-        emitGetRootMethod(context);
-        emitGetParentMethod(context);
+    public void emitCode(BytecodeEmitContext context) {
+        emitConstructor();
+        emitPushParentMethod();
+        emitPopParentMethod();
+        emitGetRootMethod();
+        emitGetParentMethod();
 
         if (markupContextSupport) {
-            emitSetPropertyInfoMethod(context);
-            emitGetTargetTypeMethod(context);
-            emitGetTargetNameMethod(context);
-            emitGetTargetBeanMethod(context);
-            emitGetParentCountMethod(context);
+            emitSetPropertyInfoMethod();
+            emitGetTargetTypeMethod();
+            emitGetTargetNameMethod();
+            emitGetTargetBeanMethod();
+            emitGetParentCountMethod();
         }
     }
 
-    private void emitConstructor(BytecodeEmitContext parentContext) throws Exception {
-        BytecodeEmitContext context = new BytecodeEmitContext(parentContext, generatedClass, 2, -1);
-        Bytecode code = context.getOutput();
+    private void emitConstructor() {
+        Bytecode code = new Bytecode(constructor);
 
         // this.super()
         code.aload(0)
-            .invokespecial(generatedClass.getSuperclass(), MethodInfo.nameInit, "()V");
+            .invoke(requireSuperClass().requireDeclaredConstructor());
 
         // this.parents = new Object[$1]
         code.aload(0)
             .iload(1)
-            .newarray(ObjectType())
-            .putfield(generatedClass, ANCESTORS_FIELD, parentArrayType)
+            .newarray(ObjectDecl())
+            .putfield(requireDeclaredField(ANCESTORS_FIELD))
             .vreturn();
 
-        constructor.getMethodInfo().setCodeAttribute(code.toCodeAttribute());
-        constructor.getMethodInfo().rebuildStackMap(constructor.getDeclaringClass().getClassPool());
+        constructor.setCode(code);
     }
 
-    private void emitPushParentMethod(BytecodeEmitContext parentContext) throws Exception {
-        BytecodeEmitContext context = new BytecodeEmitContext(parentContext, generatedClass, 2, -1);
-        Bytecode code = context.getOutput();
+    private void emitPushParentMethod() {
+        Bytecode code = new Bytecode(pushParentMethod);
 
         code.aload(0)
-            .getfield(generatedClass, ANCESTORS_FIELD, parentArrayType)
+            .getfield(requireDeclaredField(ANCESTORS_FIELD))
             .aload(0)
             .dup()
-            .getfield(generatedClass, INDEX_FIELD, CtClass.intType)
+            .getfield(requireDeclaredField(INDEX_FIELD))
             .dup_x1()
             .iconst(1)
             .iadd()
-            .putfield(generatedClass, INDEX_FIELD, CtClass.intType)
+            .putfield(requireDeclaredField(INDEX_FIELD))
             .aload(1)
-            .ext_arraystore(ObjectType())
+            .arraystore(ObjectDecl())
             .vreturn();
 
-        pushParentMethod.getMethodInfo().setCodeAttribute(code.toCodeAttribute());
-        pushParentMethod.getMethodInfo().rebuildStackMap(pushParentMethod.getDeclaringClass().getClassPool());
+        pushParentMethod.setCode(code);
     }
 
-    private void emitPopParentMethod(BytecodeEmitContext parentContext) throws Exception {
-        BytecodeEmitContext context = new BytecodeEmitContext(parentContext, generatedClass, 1, -1);
-        Bytecode code = context.getOutput();
+    private void emitPopParentMethod() {
+        Bytecode code = new Bytecode(popParentMethod);
 
         code.aload(0)
-            .getfield(generatedClass, ANCESTORS_FIELD, parentArrayType)
+            .getfield(requireDeclaredField(ANCESTORS_FIELD))
             .aload(0)
             .dup()
-            .getfield(generatedClass, INDEX_FIELD, CtClass.intType)
+            .getfield(requireDeclaredField(INDEX_FIELD))
             .iconst(1)
             .isub()
             .dup_x1()
-            .putfield(generatedClass, INDEX_FIELD, CtClass.intType)
+            .putfield(requireDeclaredField(INDEX_FIELD))
             .aconst_null()
-            .ext_arraystore(ObjectType())
+            .arraystore(ObjectDecl())
             .vreturn();
 
-        popParentMethod.getMethodInfo().setCodeAttribute(code.toCodeAttribute());
-        popParentMethod.getMethodInfo().rebuildStackMap(popParentMethod.getDeclaringClass().getClassPool());
+        popParentMethod.setCode(code);
     }
 
-    private void emitGetParentMethod(BytecodeEmitContext parentContext) throws Exception {
-        BytecodeEmitContext context = new BytecodeEmitContext(parentContext, generatedClass, 2, -1);
-        Bytecode code = context.getOutput();
+    private void emitGetParentMethod() {
+        Bytecode code = new Bytecode(getAncestorMethod);
 
         code.aload(0)
-            .getfield(generatedClass, ANCESTORS_FIELD, parentArrayType)
+            .getfield(requireDeclaredField(ANCESTORS_FIELD))
             .aload(0)
-            .getfield(generatedClass, INDEX_FIELD, CtClass.intType)
+            .getfield(requireDeclaredField(INDEX_FIELD))
             .iload(1)
             .isub()
             .iconst(1)
             .isub()
-            .ext_arrayload(ObjectType())
+            .arrayload(ObjectDecl())
             .areturn();
 
-        getAncestorMethod.getMethodInfo().setCodeAttribute(code.toCodeAttribute());
-        getAncestorMethod.getMethodInfo().rebuildStackMap(getAncestorMethod.getDeclaringClass().getClassPool());
+        getAncestorMethod.setCode(code);
     }
 
-    private void emitGetParentCountMethod(BytecodeEmitContext parentContext) throws Exception {
-        BytecodeEmitContext context = new BytecodeEmitContext(parentContext, generatedClass, 1, -1);
-        Bytecode code = context.getOutput();
+    private void emitGetParentCountMethod() {
+        Bytecode code = new Bytecode(getAncestorCountMethod);
 
         code.aload(0)
-            .getfield(generatedClass, INDEX_FIELD, CtClass.intType)
+            .getfield(requireDeclaredField(INDEX_FIELD))
             .ireturn();
 
-        getAncestorCountMethod.getMethodInfo().setCodeAttribute(code.toCodeAttribute());
-        getAncestorCountMethod.getMethodInfo().rebuildStackMap(getAncestorCountMethod.getDeclaringClass().getClassPool());
+        getAncestorCountMethod.setCode(code);
     }
 
-    private void emitSetPropertyInfoMethod(BytecodeEmitContext parentContext) throws Exception {
-        BytecodeEmitContext context = new BytecodeEmitContext(parentContext, generatedClass, 4, -1);
-        Bytecode code = context.getOutput();
+    private void emitSetPropertyInfoMethod() {
+        Bytecode code = new Bytecode(setTargetInfoMethod);
 
         code.aload(0)
             .aload(1)
-            .putfield(generatedClass, TARGET_TYPE_FIELD, ClassType())
+            .putfield(requireDeclaredField(TARGET_TYPE_FIELD))
             .aload(0)
             .aload(2)
-            .putfield(generatedClass, TARGET_BEAN_FIELD, ObjectType())
+            .putfield(requireDeclaredField(TARGET_BEAN_FIELD))
             .aload(0)
             .aload(3)
-            .putfield(generatedClass, TARGET_NAME_FIELD, StringType())
+            .putfield(requireDeclaredField(TARGET_NAME_FIELD))
             .vreturn();
 
-        setTargetInfoMethod.getMethodInfo().setCodeAttribute(code.toCodeAttribute());
-        setTargetInfoMethod.getMethodInfo().rebuildStackMap(
-            setTargetInfoMethod.getDeclaringClass().getClassPool());
+        setTargetInfoMethod.setCode(code);
     }
 
-    private void emitGetTargetTypeMethod(BytecodeEmitContext parentContext) throws Exception {
-        BytecodeEmitContext context = new BytecodeEmitContext(parentContext, generatedClass, 1, -1);
-        Bytecode code = context.getOutput();
+    private void emitGetTargetTypeMethod() {
+        Bytecode code = new Bytecode(getTargetTypeMethod);
 
         code.aload(0)
-            .getfield(generatedClass, TARGET_TYPE_FIELD, ClassType())
-            .ext_return(ClassType());
+            .getfield(requireDeclaredField(TARGET_TYPE_FIELD))
+            .ret(ClassDecl());
 
-        getTargetTypeMethod.getMethodInfo().setCodeAttribute(code.toCodeAttribute());
-        getTargetTypeMethod.getMethodInfo().rebuildStackMap(
-        getTargetTypeMethod.getDeclaringClass().getClassPool());
+        getTargetTypeMethod.setCode(code);
     }
 
-    private void emitGetTargetBeanMethod(BytecodeEmitContext parentContext) throws Exception {
-        BytecodeEmitContext context = new BytecodeEmitContext(parentContext, generatedClass, 1, -1);
-        Bytecode code = context.getOutput();
+    private void emitGetTargetBeanMethod() {
+        Bytecode code = new Bytecode(getTargetBeanMethod);
 
         code.aload(0)
-            .getfield(generatedClass, TARGET_BEAN_FIELD, ObjectType())
+            .getfield(requireDeclaredField(TARGET_BEAN_FIELD))
             .areturn();
 
-        getTargetBeanMethod.getMethodInfo().setCodeAttribute(code.toCodeAttribute());
-        getTargetBeanMethod.getMethodInfo().rebuildStackMap(getTargetBeanMethod.getDeclaringClass().getClassPool());
+        getTargetBeanMethod.setCode(code);
     }
 
-    private void emitGetTargetNameMethod(BytecodeEmitContext parentContext) throws Exception {
-        BytecodeEmitContext context = new BytecodeEmitContext(parentContext, generatedClass, 1, -1);
-        Bytecode code = context.getOutput();
+    private void emitGetTargetNameMethod() {
+        Bytecode code = new Bytecode(getTargetNameMethod);
 
         code.aload(0)
-            .getfield(generatedClass, TARGET_NAME_FIELD, StringType())
+            .getfield(requireDeclaredField(TARGET_NAME_FIELD))
             .areturn();
 
-        getTargetNameMethod.getMethodInfo().setCodeAttribute(code.toCodeAttribute());
-        getTargetNameMethod.getMethodInfo().rebuildStackMap(
-            getTargetNameMethod.getDeclaringClass().getClassPool());
+        getTargetNameMethod.setCode(code);
     }
 
-    private void emitGetRootMethod(BytecodeEmitContext parentContext) throws Exception {
-        BytecodeEmitContext context = new BytecodeEmitContext(parentContext, generatedClass, 1, -1);
-        Bytecode code = context.getOutput();
+    private void emitGetRootMethod() {
+        Bytecode code = new Bytecode(getRootMethod);
 
         code.aload(0)
-            .getfield(generatedClass, ANCESTORS_FIELD, parentArrayType)
+            .getfield(requireDeclaredField(ANCESTORS_FIELD))
             .iconst(0)
-            .ext_arrayload(ObjectType())
+            .arrayload(ObjectDecl())
             .areturn();
 
-        getRootMethod.getMethodInfo().setCodeAttribute(code.toCodeAttribute());
-        getRootMethod.getMethodInfo().rebuildStackMap(getRootMethod.getDeclaringClass().getClassPool());
+        getRootMethod.setCode(code);
     }
 }

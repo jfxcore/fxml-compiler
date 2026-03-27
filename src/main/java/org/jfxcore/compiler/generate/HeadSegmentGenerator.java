@@ -1,70 +1,54 @@
-// Copyright (c) 2021, 2025, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.generate;
 
-import javassist.CtClass;
-import javassist.CtConstructor;
-import javassist.CtField;
-import javassist.CtMethod;
-import javassist.Modifier;
-import javassist.bytecode.MethodInfo;
-import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.ast.emit.BytecodeEmitContext;
 import org.jfxcore.compiler.ast.expression.path.FoldedGroup;
 import org.jfxcore.compiler.ast.expression.path.Segment;
+import org.jfxcore.compiler.diagnostic.SourceInfo;
+import org.jfxcore.compiler.type.ConstructorDeclaration;
+import org.jfxcore.compiler.type.MethodDeclaration;
+import org.jfxcore.compiler.type.TypeDeclaration;
 import org.jfxcore.compiler.util.Bytecode;
-import org.jfxcore.compiler.util.ExceptionHelper;
 import org.jfxcore.compiler.util.Label;
-import org.jfxcore.compiler.util.Resolver;
-import org.jfxcore.compiler.util.TypeHelper;
+import java.lang.reflect.Modifier;
 import java.util.function.Consumer;
 
-import static org.jfxcore.compiler.util.Classes.*;
-import static org.jfxcore.compiler.util.Descriptors.*;
+import static org.jfxcore.compiler.type.Types.*;
 
 public class HeadSegmentGenerator extends PropertySegmentGeneratorBase {
 
-    private final Resolver resolver;
-    private CtConstructor constructor;
-    private CtMethod changedMethod;
+    private ConstructorDeclaration constructor;
+    private MethodDeclaration changedMethod;
 
     public HeadSegmentGenerator(SourceInfo sourceInfo, FoldedGroup[] groups) {
         super(sourceInfo, groups, 0);
-        this.resolver = new Resolver(sourceInfo);
     }
 
     @Override
-    public void emitClass(BytecodeEmitContext context) throws Exception {
-        super.emitClass(context);
-        generatedClass.addInterface(ChangeListenerType());
+    public TypeDeclaration emitClass(BytecodeEmitContext context) {
+        return super.emitClass(context).addInterface(ChangeListenerDecl());
     }
 
     @Override
-    public void emitFields(BytecodeEmitContext context) throws Exception {
-        CtField field = new CtField(groups[segment + 1].getCompiledClass(), NEXT_FIELD, generatedClass);
-        field.setModifiers(Modifier.FINAL);
-        generatedClass.addField(field);
+    public void emitFields(BytecodeEmitContext context) {
+        createField(NEXT_FIELD, groups[segment + 1].getCompiledClass()).setModifiers(Modifier.FINAL);
     }
 
     @Override
-    public void emitMethods(BytecodeEmitContext context) throws Exception {
+    public void emitMethods(BytecodeEmitContext context) {
         super.emitMethods(context);
 
-        constructor = new CtConstructor(new CtClass[] {ObservableValueType()}, generatedClass);
-        generatedClass.addConstructor(constructor);
+        constructor = createConstructor(ObservableValueDecl());
 
-        changedMethod = new CtMethod(
-            CtClass.voidType,
-            "changed",
-            new CtClass[] {ObservableValueType(), ObjectType(), ObjectType()},
-                generatedClass);
-        changedMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
-        generatedClass.addMethod(changedMethod);
+        changedMethod = createMethod(
+            "changed", voidDecl(), ObservableValueDecl(), ObjectDecl(), ObjectDecl())
+            .setModifiers(Modifier.PUBLIC | Modifier.FINAL);
     }
 
     @Override
-    public void emitCode(BytecodeEmitContext context) throws Exception {
+    public void emitCode(BytecodeEmitContext context) {
         super.emitCode(context);
 
         emitConstructor(constructor);
@@ -91,150 +75,144 @@ public class HeadSegmentGenerator extends PropertySegmentGeneratorBase {
         }
     }
 
-    private void emitGetValueMethod(CtMethod method) throws Exception {
-        expandPath(method, 1, code -> code
-            .ext_invoke(nextClassMethod("getValue", function(ObjectType())))
+    private void emitGetValueMethod(MethodDeclaration method) {
+        expandPath(method, code -> code
+            .invoke(nextClassMethod("getValue"))
             .areturn());
     }
 
-    private void emitSetValueMethod(CtMethod method) throws Exception {
-        expandPath(method, 2, code -> code
+    private void emitSetValueMethod(MethodDeclaration method) {
+        expandPath(method, code -> code
             .aload(1)
-            .ext_invoke(nextClassMethod("setValue", function(CtClass.voidType, ObjectType())))
+            .invoke(nextClassMethod("setValue", ObjectDecl()))
             .vreturn());
     }
 
-    private void emitAddInvalidationListenerMethod(CtMethod method) throws Exception {
-        expandPath(method, 2, code -> code
+    private void emitAddInvalidationListenerMethod(MethodDeclaration method) {
+        expandPath(method, code -> code
             .aload(1)
-            .ext_invoke(nextClassMethod("addListener", function(CtClass.voidType, InvalidationListenerType())))
+            .invoke(nextClassMethod("addListener", InvalidationListenerDecl()))
             .vreturn());
     }
 
-    private void emitRemoveInvalidationListenerMethod(CtMethod method) throws Exception {
-        expandPath(method, 2, code -> code
+    private void emitRemoveInvalidationListenerMethod(MethodDeclaration method) {
+        expandPath(method, code -> code
             .aload(1)
-            .ext_invoke(nextClassMethod("removeListener", function(CtClass.voidType, InvalidationListenerType())))
+            .invoke(nextClassMethod("removeListener", InvalidationListenerDecl()))
             .vreturn());
     }
 
-    private void emitAddChangeListenerMethod(CtMethod method) throws Exception {
-        expandPath(method, 2, code -> code
+    private void emitAddChangeListenerMethod(MethodDeclaration method) {
+        expandPath(method, code -> code
             .aload(1)
-            .ext_invoke(nextClassMethod("addListener", function(CtClass.voidType, ChangeListenerType())))
+            .invoke(nextClassMethod("addListener", ChangeListenerDecl()))
             .vreturn());
     }
 
-    private void emitRemoveChangeListenerMethod(CtMethod method) throws Exception {
-        expandPath(method, 2, code -> code
+    private void emitRemoveChangeListenerMethod(MethodDeclaration method) {
+        expandPath(method, code -> code
             .aload(1)
-            .ext_invoke(nextClassMethod("removeListener", function(CtClass.voidType, ChangeListenerType())))
+            .invoke(nextClassMethod("removeListener", ChangeListenerDecl()))
             .vreturn());
     }
 
-    private void emitGetMethod(CtMethod method) throws Exception {
-        expandPath(method, 1, code ->
-            code.ext_invoke(nextClassMethod("get", function(valueClass)))
-                .ext_return(valueClass));
+    private void emitGetMethod(MethodDeclaration method) {
+        expandPath(method, code ->
+            code.invoke(nextClassMethod("get"))
+                .ret(valueClass));
     }
 
-    private void emitSetMethod(CtMethod method) throws Exception {
-        expandPath(method, 1 + TypeHelper.getSlots(valueClass), code ->
-            code.ext_load(valueClass, 1)
-                .ext_invoke(nextClassMethod("set", function(CtClass.voidType, valueClass)))
+    private void emitSetMethod(MethodDeclaration method) {
+        expandPath(method, code ->
+            code.load(valueClass, 1)
+                .invoke(nextClassMethod("set", valueClass))
                 .vreturn());
     }
 
-    private void emitIntValueMethod(CtMethod method) throws Exception {
-        expandPath(method, 1, code -> code
-            .ext_invoke(nextClassMethod("intValue", function(CtClass.intType)))
+    private void emitIntValueMethod(MethodDeclaration method) {
+        expandPath(method, code -> code
+            .invoke(nextClassMethod("intValue"))
             .ireturn());
     }
 
-    private void emitLongValueMethod(CtMethod method) throws Exception {
-        expandPath(method, 1, code -> code
-            .ext_invoke(nextClassMethod("longValue", function(CtClass.longType)))
+    private void emitLongValueMethod(MethodDeclaration method) {
+        expandPath(method, code -> code
+            .invoke(nextClassMethod("longValue"))
             .lreturn());
     }
 
-    private void emitFloatValueMethod(CtMethod method) throws Exception {
-        expandPath(method, 1, code -> code
-            .ext_invoke(nextClassMethod("floatValue", function(CtClass.floatType)))
+    private void emitFloatValueMethod(MethodDeclaration method) {
+        expandPath(method, code -> code
+            .invoke(nextClassMethod("floatValue"))
             .freturn());
     }
 
-    private void emitDoubleValueMethod(CtMethod method) throws Exception {
-        expandPath(method, 1, code -> code
-            .ext_invoke(nextClassMethod("doubleValue", function(CtClass.doubleType)))
+    private void emitDoubleValueMethod(MethodDeclaration method) {
+        expandPath(method, code -> code
+            .invoke(nextClassMethod("doubleValue"))
             .dreturn());
     }
 
-    private void emitGetBeanMethod(CtMethod method) throws Exception {
-        expandPath(method, 1, code -> code
-            .ext_invoke(nextClassMethod("getBean", function(ObjectType())))
+    private void emitGetBeanMethod(MethodDeclaration method) {
+        expandPath(method, code -> code
+            .invoke(nextClassMethod("getBean"))
             .areturn());
     }
 
-    private void emitGetNameMethod(CtMethod method) throws Exception {
-        expandPath(method, 1, code -> code
-            .ext_invoke(nextClassMethod("getName", function(StringType())))
+    private void emitGetNameMethod(MethodDeclaration method) {
+        expandPath(method, code -> code
+            .invoke(nextClassMethod("getName"))
             .areturn());
     }
 
-    private void expandPath(CtMethod method, int locals, Consumer<Bytecode> fixup) throws Exception {
-        Bytecode code = new Bytecode(method.getDeclaringClass(), locals);
+    private void expandPath(MethodDeclaration method, Consumer<Bytecode> fixup) {
+        Bytecode code = new Bytecode(method);
         code.aload(0);
 
         for (int i = 0; i < groups.length - 1; ++i) {
-            code.getfield(groups[i].getCompiledClass(), NEXT_FIELD, groups[i + 1].getCompiledClass());
+            code.getfield(groups[i].getCompiledClass().requireDeclaredField(NEXT_FIELD));
         }
 
         fixup.accept(code);
-        method.getMethodInfo().setCodeAttribute(code.toCodeAttribute());
-        method.getMethodInfo().rebuildStackMap(method.getDeclaringClass().getClassPool());
+        method.setCode(code);
     }
 
-    private void emitConstructor(CtConstructor constructor) throws Exception {
-        Bytecode code = new Bytecode(constructor.getDeclaringClass(), 2);
-        String className = constructor.getDeclaringClass().getName();
-        String nextClassName = groups[segment + 1].getCompiledClass().getName();
+    private void emitConstructor(ConstructorDeclaration constructor) {
+        Bytecode code = new Bytecode(constructor.declaringType(), 2);
+        TypeDeclaration nextClass = groups[segment + 1].getCompiledClass();
+        MethodDeclaration changedMethod = requireDeclaredMethod("changed", ObservableValueDecl(), ObjectDecl(), ObjectDecl());
 
         // this.next = new NextClassName();
         code.aload(0)
-            .invokespecial(generatedClass.getSuperclass(), MethodInfo.nameInit, constructor())
+            .invoke(requireSuperClass().requireDeclaredConstructor())
             .aload(0)
-            .anew(nextClassName)
+            .anew(nextClass)
             .dup()
-            .invokespecial(nextClassName, MethodInfo.nameInit, constructor())
-            .putfield(resolver.resolveClass(className), NEXT_FIELD, resolver.resolveClass(nextClassName));
+            .invoke(nextClass.requireDeclaredConstructor())
+            .putfield(requireDeclaredField(NEXT_FIELD));
 
         // $1.addListener(this);
         code.aload(1)
             .aload(0)
-            .invokeinterface(
-                ObservableValueType(),
-                "addListener",
-                function(CtClass.voidType, ChangeListenerType()));
+            .invoke(ObservableValueDecl().requireDeclaredMethod("addListener", ChangeListenerDecl()));
 
         // this.changed(null, null, $1.getValue());
         code.aload(0)
             .aconst_null()
             .aconst_null()
             .aload(1)
-            .invokeinterface(ObservableValueType(), "getValue", function(ObjectType()))
-            .invokevirtual(className, "changed",
-                           function(CtClass.voidType, ObservableValueType(), ObjectType(), ObjectType()))
+            .invoke(ObservableValueDecl().requireDeclaredMethod("getValue"))
+            .invoke(changedMethod)
             .vreturn();
 
-        constructor.getMethodInfo().setCodeAttribute(code.toCodeAttribute());
-        constructor.getMethodInfo().rebuildStackMap(constructor.getDeclaringClass().getClassPool());
+        constructor.setCode(code);
     }
 
-    private void emitChangedMethod(CtMethod method) throws Exception {
-        Bytecode code = new Bytecode(method.getDeclaringClass(), 4);
-        String nextClassName = groups[segment + 1].getCompiledClass().getName();
-        CtClass nextObservableType = groups[segment + 1].getFirstPathSegment().getTypeInstance().jvmType();
-        CtClass firstValueType = groups[segment].getFirstPathSegment().getValueTypeInstance().jvmType();
+    private void emitChangedMethod(MethodDeclaration method) {
+        Bytecode code = new Bytecode(method);
+        TypeDeclaration nextClass = groups[segment + 1].getCompiledClass();
+        TypeDeclaration nextObservableType = groups[segment + 1].getFirstPathSegment().getTypeInstance().declaration();
+        TypeDeclaration firstValueType = groups[segment].getFirstPathSegment().getValueTypeInstance().declaration();
         Segment[] path = this.groups[segment].getPath();
 
         if (path.length > 1) {
@@ -248,7 +226,7 @@ public class HeadSegmentGenerator extends PropertySegmentGeneratorBase {
 
             // (T)$3
             code.dup()
-                .checkcast(firstValueType.getName());
+                .checkcast(firstValueType);
 
             // .foo.bar().baz...
             emitInvariants(firstValueType, path, code);
@@ -260,17 +238,15 @@ public class HeadSegmentGenerator extends PropertySegmentGeneratorBase {
         }
 
         code.aload(0)
-            .getfield(generatedClass, NEXT_FIELD, resolver.resolveClass(nextClassName))
+            .getfield(requireDeclaredField(NEXT_FIELD))
             .aload(3)
-            .invokevirtual(nextClassName, UPDATE_METHOD, function(CtClass.voidType, nextObservableType))
+            .invoke(nextClass.requireDeclaredMethod(UPDATE_METHOD, nextObservableType))
             .vreturn();
 
-        method.getMethodInfo().setCodeAttribute(code.toCodeAttribute());
-        method.getMethodInfo().rebuildStackMap(method.getDeclaringClass().getClassPool());
+        method.setCode(code);
     }
 
-    private CtMethod nextClassMethod(String name, String desc) {
-        return ExceptionHelper.unchecked(
-            getSourceInfo(), () -> groups[segment + 1].getCompiledClass().getMethod(name, desc));
+    private MethodDeclaration nextClassMethod(String name, TypeDeclaration... params) {
+        return groups[segment + 1].getCompiledClass().requireDeclaredMethod(name, params);
     }
 }

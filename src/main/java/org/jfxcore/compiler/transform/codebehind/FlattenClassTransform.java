@@ -1,11 +1,8 @@
-// Copyright (c) 2022, 2025, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.transform.codebehind;
 
-import javassist.CtConstructor;
-import javassist.Modifier;
-import javassist.bytecode.annotation.AnnotationImpl;
 import org.jfxcore.compiler.ast.DocumentNode;
 import org.jfxcore.compiler.ast.Node;
 import org.jfxcore.compiler.ast.NodeDataKey;
@@ -20,18 +17,21 @@ import org.jfxcore.compiler.diagnostic.errors.SymbolResolutionErrors;
 import org.jfxcore.compiler.parse.TypeParser;
 import org.jfxcore.compiler.transform.Transform;
 import org.jfxcore.compiler.transform.TransformContext;
-import org.jfxcore.compiler.util.Classes;
+import org.jfxcore.compiler.type.AnnotationDeclaration;
+import org.jfxcore.compiler.type.ConstructorDeclaration;
+import org.jfxcore.compiler.type.TypeHelper;
+import org.jfxcore.compiler.type.TypeInstance;
 import org.jfxcore.compiler.util.FileUtil;
 import org.jfxcore.compiler.util.MethodFinder;
 import org.jfxcore.compiler.util.NameHelper;
-import org.jfxcore.compiler.util.TypeHelper;
-import org.jfxcore.compiler.util.TypeInstance;
-import java.lang.reflect.Proxy;
+import java.lang.reflect.Modifier;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
+
+import static org.jfxcore.compiler.type.Types.*;
 
 /**
  * Replaces the root element of the AST with a {@link ClassNode} and deletes all other
@@ -124,9 +124,9 @@ public class FlattenClassTransform implements Transform {
 
         if (paramsNode != null) {
             var rootType = TypeHelper.getTypeInstance(root);
-            var methodFinder = new MethodFinder(rootType, rootType.jvmType());
+            var methodFinder = new MethodFinder(rootType, rootType.declaration());
 
-            CtConstructor constructor = methodFinder.findConstructor(
+            ConstructorDeclaration constructor = methodFinder.findConstructor(
                 List.of(),
                 params,
                 params.stream().map(x -> paramsNode.getSourceInfo()).toList(),
@@ -135,20 +135,16 @@ public class FlattenClassTransform implements Transform {
 
             if (constructor == null) {
                 throw SymbolResolutionErrors.memberNotFound(
-                    paramsNode.getSourceInfo(), rootType.jvmType(), String.format("<ctor>(%s)",
-                        String.join(", ", params.stream().map(TypeInstance::getJavaName).toList())));
+                    paramsNode.getSourceInfo(), rootType.declaration(), String.format("<ctor>(%s)",
+                        String.join(", ", params.stream().map(TypeInstance::javaName).toList())));
             }
 
-            for (Object[] ctorParamAnnotations : constructor.getAvailableParameterAnnotations()) {
-                List<String> annotation = new ArrayList<>();
-                paramAnnotations.add(annotation);
-
-                for (Object ctorParamAnnotation : ctorParamAnnotations) {
-                    if (Proxy.getInvocationHandler(ctorParamAnnotation) instanceof AnnotationImpl annotationImpl
-                            && Classes.NamedArgAnnotationName.equals(annotationImpl.getTypeName())) {
-                        annotation.add(annotationImpl.getAnnotation().toString());
-                    }
-                }
+            for (var constructorParameter : constructor.parameters()) {
+                paramAnnotations.add(
+                    constructorParameter.annotations().stream()
+                        .filter(a -> a.typeName().equals(NamedArgAnnotationName))
+                        .map(AnnotationDeclaration::toString)
+                        .toList());
             }
         }
 
@@ -157,7 +153,7 @@ public class FlattenClassTransform implements Transform {
             className,
             markupClassName,
             classModifiers,
-            params.stream().map(TypeInstance::getJavaName).toArray(String[]::new),
+            params.stream().map(TypeInstance::javaName).toArray(String[]::new),
             paramAnnotations.stream().map(list -> list.toArray(String[]::new)).toArray(String[][]::new),
             (String)root.getNodeData(NodeDataKey.FORMATTED_TYPE_ARGUMENTS),
             codeBehindClass != null,
@@ -165,5 +161,4 @@ public class FlattenClassTransform implements Transform {
             root.getProperties().stream().filter(p -> p instanceof AddCodeFieldNode).collect(Collectors.toList()),
             root.getSourceInfo());
     }
-
 }

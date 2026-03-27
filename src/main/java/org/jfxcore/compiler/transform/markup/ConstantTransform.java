@@ -1,11 +1,8 @@
-// Copyright (c) 2023, 2025, JFXcore. All rights reserved.
+// Copyright (c) 2023, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.transform.markup;
 
-import javassist.CtClass;
-import javassist.CtField;
-import javassist.Modifier;
 import org.jfxcore.compiler.ast.Node;
 import org.jfxcore.compiler.ast.NodeDataKey;
 import org.jfxcore.compiler.ast.ObjectNode;
@@ -17,9 +14,11 @@ import org.jfxcore.compiler.diagnostic.errors.ObjectInitializationErrors;
 import org.jfxcore.compiler.diagnostic.errors.SymbolResolutionErrors;
 import org.jfxcore.compiler.transform.Transform;
 import org.jfxcore.compiler.transform.TransformContext;
+import org.jfxcore.compiler.type.FieldDeclaration;
+import org.jfxcore.compiler.type.Resolver;
+import org.jfxcore.compiler.type.TypeDeclaration;
+import org.jfxcore.compiler.type.TypeInvoker;
 import org.jfxcore.compiler.util.AccessVerifier;
-import org.jfxcore.compiler.util.Resolver;
-import org.jfxcore.compiler.util.TypeInvoker;
 import java.util.List;
 
 /**
@@ -49,15 +48,15 @@ public class ConstantTransform implements Transform {
         SourceInfo sourceInfo = constantProperty.getTrimmedTextSourceInfo(context);
         Resolver resolver = new Resolver(sourceInfo);
         TypeInvoker invoker = new TypeInvoker(sourceInfo);
-        CtClass declaringType = (CtClass)objectNode.getType().getNodeData(NodeDataKey.CONSTANT_DECLARING_TYPE);
-        CtField field = resolver.resolveField(declaringType, fieldName, false);
+        TypeDeclaration declaringType = (TypeDeclaration)objectNode.getType().getNodeData(NodeDataKey.CONSTANT_DECLARING_TYPE);
+        FieldDeclaration field = resolver.resolveField(declaringType, fieldName, false);
         AccessVerifier.verifyAccessible(field, context.getMarkupClass(), sourceInfo);
 
-        if (!Modifier.isStatic(field.getModifiers())) {
+        if (!field.isStatic()) {
             throw SymbolResolutionErrors.memberNotAccessible(sourceInfo, field);
         }
 
-        if (objectNode.getChildren().size() > 0) {
+        if (!objectNode.getChildren().isEmpty()) {
             throw ObjectInitializationErrors.objectCannotHaveContent(
                 objectNode.getSourceInfo(), declaringType, constantProperty.getMarkupName());
         }

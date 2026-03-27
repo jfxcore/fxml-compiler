@@ -1,28 +1,29 @@
-// Copyright (c) 2022, 2025, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.emit;
 
-import javassist.CtClass;
 import org.jetbrains.annotations.Nullable;
-import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.ast.ResolvedTypeNode;
+import org.jfxcore.compiler.diagnostic.SourceInfo;
+import org.jfxcore.compiler.type.TypeDeclaration;
+import org.jfxcore.compiler.type.TypeInstance;
+import org.jfxcore.compiler.type.TypeInvoker;
 import org.jfxcore.compiler.util.Bytecode;
-import org.jfxcore.compiler.util.TypeHelper;
-import org.jfxcore.compiler.util.TypeInstance;
-import org.jfxcore.compiler.util.TypeInvoker;
 import java.util.Objects;
-
-import static org.jfxcore.compiler.util.Descriptors.*;
 
 public class EmitClassConstantNode extends ReferenceableNode {
 
-    private final CtClass declaringType;
+    private final TypeDeclaration declaringType;
     private final String fieldName;
     private ResolvedTypeNode type;
 
     public EmitClassConstantNode(
-            @Nullable String id, TypeInstance type, CtClass declaringType, String fieldName, SourceInfo sourceInfo) {
+            @Nullable String id,
+            TypeInstance type,
+            TypeDeclaration declaringType,
+            String fieldName,
+            SourceInfo sourceInfo) {
         super(null, id, sourceInfo);
         this.type = new ResolvedTypeNode(checkNotNull(type), sourceInfo);
         this.declaringType = checkNotNull(declaringType);
@@ -42,9 +43,9 @@ public class EmitClassConstantNode extends ReferenceableNode {
 
         EmitObjectNode node = EmitObjectNode.loadLocal(type.getTypeInstance(), this, getSourceInfo());
 
-        if (type.getJvmType().isPrimitive()) {
+        if (type.getTypeDeclaration().isPrimitive()) {
             type = new ResolvedTypeNode(
-                new TypeInvoker(type.getSourceInfo()).invokeType(TypeHelper.getBoxedType(type.getJvmType())),
+                new TypeInvoker(type.getSourceInfo()).invokeType(type.getTypeDeclaration().boxed()),
                 type.getSourceInfo());
         }
 
@@ -56,13 +57,14 @@ public class EmitClassConstantNode extends ReferenceableNode {
         Bytecode code = context.getOutput();
 
         if (isEmitInPreamble()) {
-            code.aload(0);
-            code.getstatic(declaringType.getName(), fieldName, types(type.getJvmType()));
-            code.dup_x1()
-                .putfield(context.getLocalMarkupClass(), getId(), type.getJvmType());
-            storeLocal(code, type.getJvmType());
+            code.aload(0)
+                .getstatic(declaringType.requireField(fieldName))
+                .dup_x1()
+                .putfield(context.getLocalMarkupClass().requireField(getId()));
+
+            storeLocal(code, type.getTypeDeclaration());
         } else {
-            code.getstatic(declaringType.getName(), fieldName, types(type.getJvmType()));
+            code.getstatic(declaringType.requireField(fieldName));
         }
     }
 
@@ -76,7 +78,7 @@ public class EmitClassConstantNode extends ReferenceableNode {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         EmitClassConstantNode that = (EmitClassConstantNode)o;
-        return TypeHelper.equals(declaringType, that.declaringType) &&
+        return declaringType.equals(that.declaringType) &&
             Objects.equals(getId(), that.getId()) &&
             fieldName.equals(that.fieldName) &&
             type.equals(that.type);
@@ -84,7 +86,6 @@ public class EmitClassConstantNode extends ReferenceableNode {
 
     @Override
     public int hashCode() {
-        return Objects.hash(getId(), TypeHelper.hashCode(declaringType), fieldName, type);
+        return Objects.hash(getId(), declaringType, fieldName, type);
     }
-
 }

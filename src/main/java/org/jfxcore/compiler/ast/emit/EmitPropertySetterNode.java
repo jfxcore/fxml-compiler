@@ -1,24 +1,22 @@
-// Copyright (c) 2021, 2025, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.emit;
 
-import javassist.CtClass;
-import javassist.CtMethod;
 import org.jfxcore.compiler.ast.AbstractNode;
 import org.jfxcore.compiler.ast.ValueNode;
-import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.ast.Visitor;
+import org.jfxcore.compiler.diagnostic.SourceInfo;
+import org.jfxcore.compiler.type.MethodDeclaration;
+import org.jfxcore.compiler.type.Resolver;
+import org.jfxcore.compiler.type.TypeDeclaration;
+import org.jfxcore.compiler.type.TypeHelper;
 import org.jfxcore.compiler.util.Bytecode;
 import org.jfxcore.compiler.util.Local;
 import org.jfxcore.compiler.util.PropertyInfo;
-import org.jfxcore.compiler.util.Resolver;
-import org.jfxcore.compiler.util.TypeHelper;
 import java.util.Objects;
 
-import static javassist.CtClass.*;
-import static org.jfxcore.compiler.util.Classes.*;
-import static org.jfxcore.compiler.util.Descriptors.*;
+import static org.jfxcore.compiler.type.Types.*;
 
 /**
  * Emits opcodes to set a property value.
@@ -51,37 +49,37 @@ public class EmitPropertySetterNode extends AbstractNode implements EmitterNode 
 
     private void emitInvokeSetter(BytecodeEmitContext context) {
         Bytecode code = context.getOutput();
-        CtMethod method = Objects.requireNonNull(propertyInfo.getSetter());
-        CtClass valueType = TypeHelper.getJvmType(value);
-        CtClass targetType = unchecked(() -> method.getParameterTypes()[0]);
+        MethodDeclaration method = Objects.requireNonNull(propertyInfo.getSetter());
+        TypeDeclaration valueType = TypeHelper.getTypeDeclaration(value);
+        TypeDeclaration targetType = method.parameters().get(0).type();
 
         code.dup();
         context.emit(value);
-        code.ext_castconv(getSourceInfo(), valueType, targetType)
-            .ext_invoke(method);
+        code.castconv(valueType, targetType)
+            .invoke(method);
     }
 
     private void emitInvokePropertySetter(BytecodeEmitContext context) {
         Bytecode code = context.getOutput();
-        CtClass valueType = TypeHelper.getJvmType(value);
-        CtClass targetType = propertyInfo.getType().jvmType();
-        CtMethod method = propertyInfo.getSetterOrPropertyGetter();
-        CtClass declaringClass = new Resolver(getSourceInfo()).getWritableClass(unchecked(method::getReturnType), false);
+        TypeDeclaration valueType = TypeHelper.getTypeDeclaration(value);
+        TypeDeclaration targetType = propertyInfo.getType().declaration();
+        MethodDeclaration method = propertyInfo.getSetterOrPropertyGetter();
+        TypeDeclaration declaringClass = new Resolver(getSourceInfo()).getWritableClass(method.returnType(), false);
 
         context.emit(value);
 
         Local valueLocal = code.acquireLocal(valueType);
-        code.ext_store(valueType, valueLocal);
+        code.store(valueType, valueLocal);
 
         code.dup()
-            .ext_invoke(method)
-            .ext_load(valueType, valueLocal)
-            .ext_castconv(getSourceInfo(), valueType, targetType);
+            .invoke(method)
+            .load(valueType, valueLocal)
+            .castconv(valueType, targetType);
 
         if (targetType.isPrimitive()) {
-            code.invokeinterface(declaringClass, "set", function(voidType, targetType));
+            code.invoke(declaringClass.requireDeclaredMethod("set", targetType));
         } else {
-            code.invokeinterface(declaringClass, "setValue", function(voidType, ObjectType()));
+            code.invoke(declaringClass.requireDeclaredMethod("setValue", ObjectDecl()));
         }
 
         code.releaseLocal(valueLocal);
@@ -99,31 +97,31 @@ public class EmitPropertySetterNode extends AbstractNode implements EmitterNode 
             .ifnonnull(() -> {
                 if (propertyInfo.getGetter() != null) {
                     code.dup()
-                        .ext_invoke(propertyInfo.getGetter())
+                        .invoke(propertyInfo.getGetter())
                         .aload(local);
                 } else {
                     code.dup()
-                        .ext_invoke(propertyInfo.getPropertyGetter());
+                        .invoke(Objects.requireNonNull(propertyInfo.getPropertyGetter()));
 
-                    if (propertyInfo.getType().subtypeOf(CollectionType()) &&
-                            !propertyInfo.getObservableType().subtypeOf(CollectionType())) {
-                        code.invokeinterface(ObservableValueType(), "getValue", function(ObjectType()))
-                            .checkcast(CollectionType());
+                    if (propertyInfo.getType().subtypeOf(CollectionDecl()) &&
+                            !propertyInfo.getObservableType().subtypeOf(CollectionDecl())) {
+                        code.invoke(ObservableValueDecl().requireDeclaredMethod("getValue"))
+                            .checkcast(CollectionDecl());
                     }
-                    else if (propertyInfo.getType().subtypeOf(MapType()) &&
-                                !propertyInfo.getObservableType().subtypeOf(MapType())) {
-                        code.invokeinterface(ObservableValueType(), "getValue", function(ObjectType()))
-                            .checkcast(MapType());
+                    else if (propertyInfo.getType().subtypeOf(MapDecl()) &&
+                                !propertyInfo.getObservableType().subtypeOf(MapDecl())) {
+                        code.invoke(ObservableValueDecl().requireDeclaredMethod("getValue"))
+                            .checkcast(MapDecl());
                     }
 
                     code.aload(local);
                 }
 
-                if (propertyInfo.getType().subtypeOf(CollectionType())) {
-                    code.invokeinterface(CollectionType(), "addAll", function(booleanType, CollectionType()))
+                if (propertyInfo.getType().subtypeOf(CollectionDecl())) {
+                    code.invoke(CollectionDecl().requireDeclaredMethod("addAll", CollectionDecl()))
                         .pop();
-                } else if (propertyInfo.getType().subtypeOf(MapType())) {
-                    code.invokeinterface(MapType(), "putAll", function(voidType, MapType()));
+                } else if (propertyInfo.getType().subtypeOf(MapDecl())) {
+                    code.invoke(MapDecl().requireDeclaredMethod("putAll", MapDecl()));
                 } else {
                     throw new IllegalArgumentException(propertyInfo.getType().toString());
                 }

@@ -1,36 +1,29 @@
-// Copyright (c) 2023, 2025, JFXcore. All rights reserved.
+// Copyright (c) 2023, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.generate.collections;
 
-import javassist.CtClass;
-import javassist.CtConstructor;
-import javassist.CtField;
-import javassist.CtMethod;
-import javassist.Modifier;
-import javassist.bytecode.MethodInfo;
+import javafx.beans.value.ObservableMapValue;
+import javafx.beans.value.ObservableValue;
+import javafx.collections.ObservableMap;
 import org.jfxcore.compiler.ast.emit.BytecodeEmitContext;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.generate.ClassGenerator;
 import org.jfxcore.compiler.generate.Generator;
 import org.jfxcore.compiler.generate.ReferenceTrackerGenerator;
+import org.jfxcore.compiler.type.FieldDeclaration;
+import org.jfxcore.compiler.type.TypeDeclaration;
+import org.jfxcore.compiler.type.TypeInstance;
+import org.jfxcore.compiler.type.TypeInvoker;
 import org.jfxcore.compiler.util.Bytecode;
 import org.jfxcore.compiler.util.Local;
 import org.jfxcore.compiler.util.NameHelper;
-import org.jfxcore.compiler.util.TypeHelper;
-import org.jfxcore.compiler.util.TypeInstance;
-import org.jfxcore.compiler.util.TypeInvoker;
-import javafx.beans.value.ObservableMapValue;
-import javafx.beans.value.ObservableValue;
-import javafx.collections.ObservableMap;
-import java.util.Arrays;
+import java.lang.reflect.Modifier;
 import java.util.List;
 import java.util.Map;
 
-import static javassist.CtClass.*;
 import static org.jfxcore.compiler.generate.SharedMethodImpls.*;
-import static org.jfxcore.compiler.util.Classes.*;
-import static org.jfxcore.compiler.util.Descriptors.*;
+import static org.jfxcore.compiler.type.Types.*;
 
 /**
  * Implements an {@link ObservableMapValue} that wraps a {@link Map} contained in an {@link ObservableValue}.
@@ -61,7 +54,7 @@ public class MapObservableValueWrapperGenerator extends ClassGenerator {
     private final TypeInstance observableType;
 
     public MapObservableValueWrapperGenerator() {
-        observableType = new TypeInvoker(SourceInfo.none()).invokeType(ObservableMapValueType());
+        observableType = new TypeInvoker(SourceInfo.none()).invokeType(ObservableMapValueDecl());
     }
 
     @Override
@@ -82,187 +75,159 @@ public class MapObservableValueWrapperGenerator extends ClassGenerator {
     }
 
     @Override
-    public final void emitClass(BytecodeEmitContext context) throws Exception {
-        generatedClass = context.getNestedClasses().create(getClassName());
-        generatedClass.setModifiers(Modifier.PRIVATE | Modifier.FINAL);
-        generatedClass.addInterface(ObservableMapValueType());
-        generatedClass.addInterface(MapChangeListenerType());
-        generatedClass.addInterface(InvalidationListenerType());
+    public final TypeDeclaration emitClass(BytecodeEmitContext context) {
+        return super.emitClass(context)
+            .setModifiers(Modifier.PRIVATE | Modifier.FINAL)
+            .addInterface(ObservableMapValueDecl())
+            .addInterface(MapChangeListenerDecl())
+            .addInterface(InvalidationListenerDecl());
     }
 
     @Override
-    public void emitFields(BytecodeEmitContext context) throws Exception {
-        CtField field = new CtField(context.getMarkupClass(), ROOT_REF, generatedClass);
-        field.setModifiers(Modifier.PRIVATE | Modifier.FINAL);
-        generatedClass.addField(field);
-
-        field = new CtField(ObservableValueType(), OBSERVABLE_FIELD, generatedClass);
-        field.setModifiers(Modifier.PRIVATE | Modifier.FINAL);
-        generatedClass.addField(field);
-
-        field = new CtField(WeakMapChangeListenerType(), WEAK_MAP_CHANGE_LISTENER_FIELD, generatedClass);
-        field.setModifiers(Modifier.PRIVATE | Modifier.FINAL);
-        generatedClass.addField(field);
-
-        field = new CtField(context.getNestedClasses().find(MapSourceAdapterChangeGenerator.CLASS_NAME),
-                            ADAPTER_CHANGE_FIELD, generatedClass);
-        field.setModifiers(Modifier.PRIVATE | Modifier.FINAL);
-        generatedClass.addField(field);
-
-        field = new CtField(ObservableMapType(), VALUE_FIELD, generatedClass);
-        field.setModifiers(Modifier.PRIVATE);
-        generatedClass.addField(field);
-
-        field = new CtField(booleanType, VALID_FIELD, generatedClass);
-        field.setModifiers(Modifier.PRIVATE);
-        generatedClass.addField(field);
-
-        field = new CtField(InvalidationListenerType(), INVALIDATION_LISTENER_FIELD, generatedClass);
-        field.setModifiers(Modifier.PRIVATE);
-        generatedClass.addField(field);
-
-        field = new CtField(ChangeListenerType(), CHANGE_LISTENER_FIELD, generatedClass);
-        field.setModifiers(Modifier.PRIVATE);
-        generatedClass.addField(field);
-
-        field = new CtField(MapChangeListenerType(), MAP_CHANGE_LISTENER_FIELD, generatedClass);
-        field.setModifiers(Modifier.PRIVATE);
-        generatedClass.addField(field);
+    public void emitFields(BytecodeEmitContext context) {
+        TypeDeclaration adapterChangeType = context.getNestedClasses().find(MapSourceAdapterChangeGenerator.CLASS_NAME);
+        createField(ROOT_REF, context.getMarkupClass()).setModifiers(Modifier.PRIVATE | Modifier.FINAL);
+        createField(OBSERVABLE_FIELD, ObservableValueDecl()).setModifiers(Modifier.PRIVATE | Modifier.FINAL);
+        createField(WEAK_MAP_CHANGE_LISTENER_FIELD, WeakMapChangeListenerDecl()).setModifiers(Modifier.PRIVATE | Modifier.FINAL);
+        createField(ADAPTER_CHANGE_FIELD, adapterChangeType).setModifiers(Modifier.PRIVATE | Modifier.FINAL);
+        createField(VALUE_FIELD, ObservableMapDecl()).setModifiers(Modifier.PRIVATE);
+        createField(VALID_FIELD, booleanDecl()).setModifiers(Modifier.PRIVATE);
+        createField(INVALIDATION_LISTENER_FIELD, InvalidationListenerDecl()).setModifiers(Modifier.PRIVATE);
+        createField(CHANGE_LISTENER_FIELD, ChangeListenerDecl()).setModifiers(Modifier.PRIVATE);
+        createField(MAP_CHANGE_LISTENER_FIELD, MapChangeListenerDecl()).setModifiers(Modifier.PRIVATE);
     }
 
     @Override
-    public void emitCode(BytecodeEmitContext context) throws Exception {
-        super.emitCode(context);
-
+    public void emitCode(BytecodeEmitContext context) {
         createConstructor(context);
-        createMapMethods(context);
-        createGetValueMethod(context);
-        createGetMethod(context);
+        createMapMethods();
+        createGetValueMethod();
+        createGetMethod();
         createInvalidatedMethod(context);
         createOnChangedMethod(context);
-        createListenerMethods(context, generatedClass, INVALIDATION_LISTENER_FIELD, InvalidationListenerType());
-        createListenerMethods(context, generatedClass, CHANGE_LISTENER_FIELD, ChangeListenerType());
-        createListenerMethods(context, generatedClass, MAP_CHANGE_LISTENER_FIELD, MapChangeListenerType());
+
+        createListenerMethods(this, INVALIDATION_LISTENER_FIELD, InvalidationListenerDecl());
+        createListenerMethods(this, CHANGE_LISTENER_FIELD, ChangeListenerDecl());
+        createListenerMethods(this, MAP_CHANGE_LISTENER_FIELD, MapChangeListenerDecl());
     }
 
-    private void createMapMethods(BytecodeEmitContext context) throws Exception {
-        CtClass delegateType = MapType();
-        createDelegateMethod(context, intType, delegateType, "size");
-        createDelegateMethod(context, booleanType, delegateType, "isEmpty");
-        createDelegateMethod(context, booleanType, delegateType, "containsKey", ObjectType());
-        createDelegateMethod(context, booleanType, delegateType, "containsValue", ObjectType());
-        createDelegateMethod(context, ObjectType(), delegateType, "get", ObjectType());
-        createDelegateMethod(context, ObjectType(), delegateType, "put", ObjectType(), ObjectType());
-        createDelegateMethod(context, ObjectType(), delegateType, "remove", ObjectType());
-        createDelegateMethod(context, voidType, delegateType, "putAll", MapType());
-        createDelegateMethod(context, voidType, delegateType, "clear");
-        createDelegateMethod(context, SetType(), delegateType, "keySet");
-        createDelegateMethod(context, CollectionType(), delegateType, "values");
-        createDelegateMethod(context, SetType(), delegateType, "entrySet");
-        createDelegateMethod(context, intType, delegateType, "hashCode");
-        createDelegateMethod(context, booleanType, delegateType, "equals", ObjectType());
+    private void createMapMethods() {
+        TypeDeclaration delegateType = MapDecl();
+        createDelegateMethod(intDecl(), delegateType, "size");
+        createDelegateMethod(booleanDecl(), delegateType, "isEmpty");
+        createDelegateMethod(booleanDecl(), delegateType, "containsKey", ObjectDecl());
+        createDelegateMethod(booleanDecl(), delegateType, "containsValue", ObjectDecl());
+        createDelegateMethod(ObjectDecl(), delegateType, "get", ObjectDecl());
+        createDelegateMethod(ObjectDecl(), delegateType, "put", ObjectDecl(), ObjectDecl());
+        createDelegateMethod(ObjectDecl(), delegateType, "remove", ObjectDecl());
+        createDelegateMethod(voidDecl(), delegateType, "putAll", MapDecl());
+        createDelegateMethod(voidDecl(), delegateType, "clear");
+        createDelegateMethod(SetDecl(), delegateType, "keySet");
+        createDelegateMethod(CollectionDecl(), delegateType, "values");
+        createDelegateMethod(SetDecl(), delegateType, "entrySet");
+        createDelegateMethod(intDecl(), delegateType, "hashCode");
+        createDelegateMethod(booleanDecl(), delegateType, "equals", ObjectDecl());
     }
 
-    private void createGetValueMethod(BytecodeEmitContext context) throws Exception {
-        CtMethod method = new CtMethod(ObjectType(), "getValue", new CtClass[0], generatedClass);
-        method.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
-        generatedClass.addMethod(method);
-        var ctx = new BytecodeEmitContext(context, generatedClass, 1, -1);
-        ctx.getOutput()
+    private void createGetValueMethod() {
+        createBehavior(createMethod("getValue", ObjectDecl()), code -> code
             .aload(0)
-            .invokeinterface(ObservableObjectValueType(), "get", function(ObjectType()))
-            .areturn();
-        method.getMethodInfo().setCodeAttribute(ctx.getOutput().toCodeAttribute());
-        method.getMethodInfo().rebuildStackMap(generatedClass.getClassPool());
+            .invoke(ObservableObjectValueDecl().requireDeclaredMethod("get"))
+            .areturn());
     }
 
-    private void createGetMethod(BytecodeEmitContext context) throws Exception {
-        CtMethod method = new CtMethod(ObjectType(), "get", new CtClass[0], generatedClass);
-        method.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
-        generatedClass.addMethod(method);
-        var ctx = new BytecodeEmitContext(context, generatedClass, 1, -1);
-        Bytecode code = ctx.getOutput();
-        Local listLocal = code.acquireLocal(false);
+    private void createGetMethod() {
+        var method = createMethod("get", ObjectDecl());
+        var code = new Bytecode(method);
+
+        Local mapLocal = code.acquireLocal(false);
+        FieldDeclaration validField = requireDeclaredField(VALID_FIELD);
+        FieldDeclaration valueField = requireDeclaredField(VALUE_FIELD);
+        FieldDeclaration weakMapChangeListenerField = requireDeclaredField(WEAK_MAP_CHANGE_LISTENER_FIELD);
+        FieldDeclaration observableField = requireDeclaredField(OBSERVABLE_FIELD);
 
         code.aload(0)
-            .getfield(generatedClass, VALID_FIELD, booleanType)
+            .getfield(validField)
             .ifeq(() -> {
                 // if (this.map != null)
                 code.aload(0)
-                    .getfield(generatedClass, VALUE_FIELD, ObservableMapType())
-                    .ifnonnull(() -> {
+                    .getfield(valueField)
+                    .ifnonnull(() -> code
                         // this.map.removeListener(weakMapChangeListener);
-                        code.aload(0)
-                            .getfield(generatedClass, VALUE_FIELD, ObservableMapType())
-                            .aload(0)
-                            .getfield(generatedClass, WEAK_MAP_CHANGE_LISTENER_FIELD, WeakMapChangeListenerType())
-                            .invokeinterface(ObservableMapType(), "removeListener",
-                                             function(voidType, MapChangeListenerType()));
-                    });
+                        .aload(0)
+                        .getfield(valueField)
+                        .aload(0)
+                        .getfield(weakMapChangeListenerField)
+                        .invoke(ObservableMapDecl().requireDeclaredMethod("removeListener", MapChangeListenerDecl()))
+                    );
 
                 // valid = true;
                 // Map map = source.getValue();
                 code.aload(0)
                     .iconst(1)
-                    .putfield(generatedClass, VALID_FIELD, booleanType)
+                    .putfield(validField)
                     .aload(0)
-                    .getfield(generatedClass, OBSERVABLE_FIELD, ObservableValueType())
-                    .invokeinterface(ObservableValueType(), "getValue", function(ObjectType()))
-                    .astore(listLocal);
+                    .getfield(observableField)
+                    .invoke(ObservableValueDecl().requireDeclaredMethod("getValue"))
+                    .astore(mapLocal);
 
                 // if (map instanceof ObservableMap)
-                code.aload(listLocal)
-                    .isinstanceof(ObservableMapType())
+                code.aload(mapLocal)
+                    .isinstanceof(ObservableMapDecl())
                     .ifne(() -> code
                         // this.map = (ObservableMap)map;
                         // this.map.addListener(weakMapChangeListener);
                         .aload(0)
-                        .aload(listLocal)
-                        .checkcast(ObservableMapType())
-                        .putfield(generatedClass, VALUE_FIELD, ObservableMapType())
+                        .aload(mapLocal)
+                        .checkcast(ObservableMapDecl())
+                        .putfield(valueField)
                         .aload(0)
-                        .getfield(generatedClass, VALUE_FIELD, ObservableMapType())
+                        .getfield(valueField)
                         .aload(0)
-                        .getfield(generatedClass, WEAK_MAP_CHANGE_LISTENER_FIELD, WeakMapChangeListenerType())
-                        .invokeinterface(ObservableMapType(), "addListener",
-                                         function(voidType, MapChangeListenerType())),
+                        .getfield(weakMapChangeListenerField)
+                        .invoke(ObservableMapDecl().requireDeclaredMethod("addListener", MapChangeListenerDecl())),
                     /*else*/ () -> code
-                        // else if (set != null)
-                        .aload(listLocal)
+                        // else if (map != null)
+                        .aload(mapLocal)
                         .ifnonnull(() -> code
                             // this.map = FXCollections.observableMap(map);
                             .aload(0)
-                            .aload(listLocal)
-                            .invokestatic(FXCollectionsType(), "observableMap",
-                                          function(ObservableMapType(), MapType()))
-                            .putfield(generatedClass, VALUE_FIELD, ObservableMapType()),
+                            .aload(mapLocal)
+                            .invoke(FXCollectionsDecl().requireDeclaredMethod("observableMap", MapDecl()))
+                            .putfield(valueField),
                         /*else*/ () -> code
-                            // else this.set = null;
+                            // else this.map = null;
                             .aload(0)
                             .aconst_null()
-                            .putfield(generatedClass, VALUE_FIELD, ObservableMapType())
+                            .putfield(valueField)
                         )
                     );
             })
             .aload(0)
-            .getfield(generatedClass, VALUE_FIELD, ObservableMapType())
+            .getfield(valueField)
             .areturn()
-            .releaseLocal(listLocal);
+            .releaseLocal(mapLocal);
 
-        method.getMethodInfo().setCodeAttribute(code.toCodeAttribute());
-        method.getMethodInfo().rebuildStackMap(generatedClass.getClassPool());
+        method.setCode(code)
+              .setModifiers(Modifier.PUBLIC | Modifier.FINAL);
     }
 
     /**
      * The {@code invalidated} method is called when the value of the ObservableValue changes,
      * i.e. when the map wrapped by the ObservableValue is replaced entirely.
      */
-    private void createInvalidatedMethod(BytecodeEmitContext context) throws Exception {
-        CtMethod method = new CtMethod(voidType, "invalidated", new CtClass[] {ObservableType()}, generatedClass);
-        method.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
-        generatedClass.addMethod(method);
-        var ctx = new BytecodeEmitContext(context, generatedClass, 2, -1);
-        Bytecode code = ctx.getOutput();
+    private void createInvalidatedMethod(BytecodeEmitContext context) {
+        var method = createMethod("invalidated", voidDecl(), ObservableDecl());
+        var code = new Bytecode(method);
+
+        FieldDeclaration rootRefField = requireDeclaredField(ROOT_REF);
+        FieldDeclaration validField = requireDeclaredField(VALID_FIELD);
+        FieldDeclaration invalidationListenerField = requireDeclaredField(INVALIDATION_LISTENER_FIELD);
+        FieldDeclaration changeListenerField = requireDeclaredField(CHANGE_LISTENER_FIELD);
+        FieldDeclaration mapChangeListenerField = requireDeclaredField(MAP_CHANGE_LISTENER_FIELD);
+        FieldDeclaration valueField = requireDeclaredField(VALUE_FIELD);
+        TypeDeclaration addRemoveChangeType = context.getNestedClasses().find(MapAddRemoveChangeGenerator.CLASS_NAME);
+
         Local oldValueLocal = code.acquireLocal(false);
         Local currentValueLocal = code.acquireLocal(false);
         Local iteratorLocal = code.acquireLocal(false);
@@ -272,41 +237,39 @@ public class MapObservableValueWrapperGenerator extends ClassGenerator {
         Local oldEntryValueLocal = code.acquireLocal(false);
         Local newEntryKeyLocal = code.acquireLocal(false);
         Local newEntryValueLocal = code.acquireLocal(false);
-        CtClass addRemoveChangeType = context.getNestedClasses().find(MapAddRemoveChangeGenerator.CLASS_NAME);
 
         if (context.isGeneratorActive(ReferenceTrackerGenerator.class)) {
             // markupRef.clearStaleReferences();
             code.aload(0)
-                .getfield(generatedClass, ROOT_REF, context.getMarkupClass())
-                .invokevirtual(context.getMarkupClass(), ReferenceTrackerGenerator.CLEAR_STALE_REFERENCES_METHOD,
-                               function(voidType));
+                .getfield(rootRefField)
+                .invoke(context.getMarkupClass()
+                               .requireDeclaredMethod(ReferenceTrackerGenerator.CLEAR_STALE_REFERENCES_METHOD));
         }
 
         // this.valid = false;
         code.aload(0)
             .iconst(0)
-            .putfield(generatedClass, VALID_FIELD, booleanType);
+            .putfield(validField);
 
         // if (invalidationListener != null)
         code.aload(0)
-            .getfield(generatedClass, INVALIDATION_LISTENER_FIELD, InvalidationListenerType())
+            .getfield(invalidationListenerField)
             .ifnonnull(() -> code
                 // invalidationListener.invalidated(this);
                 .aload(0)
-                .getfield(generatedClass, INVALIDATION_LISTENER_FIELD, InvalidationListenerType())
+                .getfield(invalidationListenerField)
                 .aload(0)
-                .invokeinterface(InvalidationListenerType(), "invalidated",
-                                 function(voidType, ObservableType()))
+                .invoke(InvalidationListenerDecl().requireDeclaredMethod("invalidated", ObservableDecl()))
             );
 
         // if (changeListener != null || mapChangeListener != null)
         code.aload(0)
-            .getfield(generatedClass, CHANGE_LISTENER_FIELD, ChangeListenerType())
+            .getfield(changeListenerField)
             .ifnonnull(
                 () -> code.iconst(1),
                 () -> code
                     .aload(0)
-                    .getfield(generatedClass, MAP_CHANGE_LISTENER_FIELD, MapChangeListenerType())
+                    .getfield(mapChangeListenerField)
                     .ifnonnull(
                         () -> code.iconst(1),
                         () -> code.iconst(0)))
@@ -314,11 +277,11 @@ public class MapObservableValueWrapperGenerator extends ClassGenerator {
                 // ObservableMap oldValue = this.value;
                 // ObservableMap currentValue = this.get();
                 .aload(0)
-                .getfield(generatedClass, VALUE_FIELD, ObservableMapType())
+                .getfield(valueField)
                 .astore(oldValueLocal)
                 .aload(0)
-                .invokeinterface(ObservableObjectValueType(), "get", function(ObjectType()))
-                .checkcast(ObservableMapType())
+                .invoke(ObservableObjectValueDecl().requireDeclaredMethod("get"))
+                .checkcast(ObservableMapDecl())
                 .astore(currentValueLocal)
                 // if (oldValue != currentValue) {
                 .aload(oldValueLocal)
@@ -326,26 +289,24 @@ public class MapObservableValueWrapperGenerator extends ClassGenerator {
                 .if_acmpne(() -> code
                     // if (changeListener != null)
                     .aload(0)
-                    .getfield(generatedClass, CHANGE_LISTENER_FIELD, ChangeListenerType())
+                    .getfield(changeListenerField)
                     .ifnonnull(() -> code
                         // changeListener.changed(this, oldValue, currentValue);
                         .aload(0)
-                        .getfield(generatedClass, CHANGE_LISTENER_FIELD, ChangeListenerType())
+                        .getfield(changeListenerField)
                         .aload(0)
                         .aload(oldValueLocal)
                         .aload(currentValueLocal)
-                        .invokeinterface(ChangeListenerType(), "changed",
-                                         function(voidType, ObservableValueType(), ObjectType(), ObjectType())))
+                        .invoke(ChangeListenerDecl().requireDeclaredMethod("changed", ObservableValueDecl(), ObjectDecl(), ObjectDecl())))
                     // if (mapChangeListener != null)
                     .aload(0)
-                    .getfield(generatedClass, MAP_CHANGE_LISTENER_FIELD, MapChangeListenerType())
+                    .getfield(mapChangeListenerField)
                     .ifnonnull(() -> code
                         // var change = new MapAddRemoveChange(this)
                         .anew(addRemoveChangeType)
                         .dup()
                         .aload(0)
-                        .invokespecial(addRemoveChangeType, MethodInfo.nameInit,
-                                       constructor(ObservableMapType()))
+                        .invoke(addRemoveChangeType.requireDeclaredConstructor(ObservableMapDecl()))
                         .astore(addRemoveChangeLocal)
                         // if (currentValue == null)
                         .aload(currentValueLocal)
@@ -355,31 +316,29 @@ public class MapObservableValueWrapperGenerator extends ClassGenerator {
                             //     mapChangeListener.onChanged(addRemoveChange);
                             // }
                             code.aload(oldValueLocal)
-                                .invokeinterface(MapType(), "entrySet", function(SetType()))
-                                .invokeinterface(SetType(), "iterator", function(IteratorType()))
+                                .invoke(MapDecl().requireDeclaredMethod("entrySet"))
+                                .invoke(SetDecl().requireDeclaredMethod("iterator"))
                                 .astore(iteratorLocal);
 
                             int position = code.position() + 1;
 
                             code.aload(iteratorLocal)
-                                .invokeinterface(IteratorType(), "hasNext", function(booleanType))
+                                .invoke(IteratorDecl().requireDeclaredMethod("hasNext"))
                                 .ifne(() -> code
                                     .aload(addRemoveChangeLocal)
                                     .aload(iteratorLocal)
-                                    .invokeinterface(IteratorType(), "next", function(ObjectType()))
-                                    .checkcast(MapEntryType())
+                                    .invoke(IteratorDecl().requireDeclaredMethod("next"))
+                                    .checkcast(MapEntryDecl())
                                     .astore(entryLocal)
                                     .aload(entryLocal)
-                                    .invokeinterface(MapEntryType(), "getKey", function(ObjectType()))
+                                    .invoke(MapEntryDecl().requireDeclaredMethod("getKey"))
                                     .aload(entryLocal)
-                                    .invokeinterface(MapEntryType(), "getValue", function(ObjectType()))
-                                    .invokevirtual(addRemoveChangeType, MapAddRemoveChangeGenerator.INIT_REMOVE_METHOD_NAME,
-                                                   function(voidType, ObjectType(), ObjectType()))
+                                    .invoke(MapEntryDecl().requireDeclaredMethod("getValue"))
+                                    .invoke(addRemoveChangeType.requireDeclaredMethod(MapAddRemoveChangeGenerator.INIT_REMOVE_METHOD_NAME, ObjectDecl(), ObjectDecl()))
                                     .aload(0)
-                                    .getfield(generatedClass, MAP_CHANGE_LISTENER_FIELD, MapChangeListenerType())
+                                    .getfield(mapChangeListenerField)
                                     .aload(addRemoveChangeLocal)
-                                    .invokeinterface(MapChangeListenerType(), "onChanged",
-                                                     function(voidType, MapChangeListenerChangeType()))
+                                    .invoke(MapChangeListenerDecl().requireDeclaredMethod("onChanged", MapChangeListenerChangeDecl()))
                                     .goto_position(position)
                                 );
                             },
@@ -392,31 +351,29 @@ public class MapObservableValueWrapperGenerator extends ClassGenerator {
                                 //     mapChangeListener.onChanged(addRemoveChange);
                                 // }
                                 code.aload(currentValueLocal)
-                                    .invokeinterface(MapType(), "entrySet", function(SetType()))
-                                    .invokeinterface(SetType(), "iterator", function(IteratorType()))
+                                    .invoke(MapDecl().requireDeclaredMethod("entrySet"))
+                                    .invoke(SetDecl().requireDeclaredMethod("iterator"))
                                     .astore(iteratorLocal);
 
                                 int position = code.position() + 1;
 
                                 code.aload(iteratorLocal)
-                                    .invokeinterface(IteratorType(), "hasNext", function(booleanType))
+                                    .invoke(IteratorDecl().requireDeclaredMethod("hasNext"))
                                     .ifne(() -> code
                                         .aload(addRemoveChangeLocal)
                                         .aload(iteratorLocal)
-                                        .invokeinterface(IteratorType(), "next", function(ObjectType()))
-                                        .checkcast(MapEntryType())
+                                        .invoke(IteratorDecl().requireDeclaredMethod("next"))
+                                        .checkcast(MapEntryDecl())
                                         .astore(entryLocal)
                                         .aload(entryLocal)
-                                        .invokeinterface(MapEntryType(), "getKey", function(ObjectType()))
+                                        .invoke(MapEntryDecl().requireDeclaredMethod("getKey"))
                                         .aload(entryLocal)
-                                        .invokeinterface(MapEntryType(), "getValue", function(ObjectType()))
-                                        .invokevirtual(addRemoveChangeType, MapAddRemoveChangeGenerator.INIT_ADD_METHOD_NAME,
-                                                       function(voidType, ObjectType(), ObjectType()))
+                                        .invoke(MapEntryDecl().requireDeclaredMethod("getValue"))
+                                        .invoke(addRemoveChangeType.requireDeclaredMethod(MapAddRemoveChangeGenerator.INIT_ADD_METHOD_NAME, ObjectDecl(), ObjectDecl()))
                                         .aload(0)
-                                        .getfield(generatedClass, MAP_CHANGE_LISTENER_FIELD, MapChangeListenerType())
+                                        .getfield(mapChangeListenerField)
                                         .aload(addRemoveChangeLocal)
-                                        .invokeinterface(MapChangeListenerType(), "onChanged",
-                                                         function(voidType, MapChangeListenerChangeType()))
+                                        .invoke(MapChangeListenerDecl().requireDeclaredMethod("onChanged", MapChangeListenerChangeDecl()))
                                         .goto_position(position)
                                     );
                                 },
@@ -436,60 +393,61 @@ public class MapObservableValueWrapperGenerator extends ClassGenerator {
                                 //     }
                                 // }
                                 code.aload(oldValueLocal)
-                                    .invokeinterface(MapType(), "entrySet", function(SetType()))
-                                    .invokeinterface(SetType(), "iterator", function(IteratorType()))
+                                    .invoke(MapDecl().requireDeclaredMethod("entrySet"))
+                                    .invoke(SetDecl().requireDeclaredMethod("iterator"))
                                     .astore(iteratorLocal);
 
                                 int position1 = code.position() + 1;
 
                                 code.aload(iteratorLocal)
-                                    .invokeinterface(IteratorType(), "hasNext", function(booleanType))
+                                    .invoke(IteratorDecl().requireDeclaredMethod("hasNext"))
                                     .ifne(() -> code
                                         .aload(iteratorLocal)
-                                        .invokeinterface(IteratorType(), "next", function(ObjectType()))
-                                        .checkcast(MapEntryType())
+                                        .invoke(IteratorDecl().requireDeclaredMethod("next"))
+                                        .checkcast(MapEntryDecl())
                                         .astore(entryLocal)
                                         .aload(entryLocal)
-                                        .invokeinterface(MapEntryType(), "getKey", function(ObjectType()))
+                                        .invoke(MapEntryDecl().requireDeclaredMethod("getKey"))
                                         .astore(oldEntryKeyLocal)
                                         .aload(entryLocal)
-                                        .invokeinterface(MapEntryType(), "getValue", function(ObjectType()))
+                                        .invoke(MapEntryDecl().requireDeclaredMethod("getValue"))
                                         .astore(oldEntryValueLocal)
                                         .aload(currentValueLocal)
                                         .aload(oldEntryKeyLocal)
-                                        .invokeinterface(MapType(), "containsKey", function(booleanType, ObjectType()))
+                                        .invoke(MapDecl().requireDeclaredMethod("containsKey", ObjectDecl()))
                                         .ifne(() -> code
                                             .aload(currentValueLocal)
                                             .aload(oldEntryKeyLocal)
-                                            .invokeinterface(MapType(), "get", function(ObjectType(), ObjectType()))
+                                            .invoke(MapDecl().requireDeclaredMethod("get", ObjectDecl()))
                                             .astore(newEntryValueLocal)
                                             .aload(oldEntryValueLocal)
                                             .aload(newEntryValueLocal)
-                                            .invokestatic(ObjectsType(), "equals", function(booleanType, ObjectType(), ObjectType()))
+                                            .invoke(ObjectsDecl().requireDeclaredMethod("equals", ObjectDecl(), ObjectDecl()))
                                             .ifeq(() -> code
                                                 .aload(addRemoveChangeLocal)
                                                 .aload(oldEntryKeyLocal)
                                                 .aload(oldEntryValueLocal)
                                                 .aload(newEntryValueLocal)
-                                                .invokevirtual(addRemoveChangeType, MapAddRemoveChangeGenerator.INIT_REPLACE_METHOD_NAME,
-                                                               function(voidType, ObjectType(), ObjectType(), ObjectType()))
+                                                .invoke(addRemoveChangeType.requireDeclaredMethod(
+                                                    MapAddRemoveChangeGenerator.INIT_REPLACE_METHOD_NAME,
+                                                    ObjectDecl(), ObjectDecl(), ObjectDecl()))
                                                 .aload(0)
-                                                .getfield(generatedClass, MAP_CHANGE_LISTENER_FIELD, MapChangeListenerType())
+                                                .getfield(mapChangeListenerField)
                                                 .aload(addRemoveChangeLocal)
-                                                .invokeinterface(MapChangeListenerType(), "onChanged",
-                                                                 function(voidType, MapChangeListenerChangeType()))
+                                                .invoke(MapChangeListenerDecl().requireDeclaredMethod(
+                                                    "onChanged", MapChangeListenerChangeDecl()))
                                             ),
                                         /*else*/ () -> code
                                            .aload(addRemoveChangeLocal)
                                            .aload(oldEntryKeyLocal)
                                            .aload(oldEntryValueLocal)
-                                           .invokevirtual(addRemoveChangeType, MapAddRemoveChangeGenerator.INIT_REMOVE_METHOD_NAME,
-                                                          function(voidType, ObjectType(), ObjectType()))
+                                           .invoke(addRemoveChangeType.requireDeclaredMethod(
+                                               MapAddRemoveChangeGenerator.INIT_REMOVE_METHOD_NAME, ObjectDecl(), ObjectDecl()))
                                            .aload(0)
-                                           .getfield(generatedClass, MAP_CHANGE_LISTENER_FIELD, MapChangeListenerType())
+                                           .getfield(mapChangeListenerField)
                                            .aload(addRemoveChangeLocal)
-                                           .invokeinterface(MapChangeListenerType(), "onChanged",
-                                                            function(voidType, MapChangeListenerChangeType()))
+                                           .invoke(MapChangeListenerDecl().requireDeclaredMethod(
+                                               "onChanged", MapChangeListenerChangeDecl()))
                                         )
                                         .goto_position(position1)
                                     );
@@ -502,38 +460,37 @@ public class MapObservableValueWrapperGenerator extends ClassGenerator {
                                 //     }
                                 // }
                                 code.aload(currentValueLocal)
-                                    .invokeinterface(MapType(), "entrySet", function(SetType()))
-                                    .invokeinterface(SetType(), "iterator", function(IteratorType()))
+                                    .invoke(MapDecl().requireDeclaredMethod("entrySet"))
+                                    .invoke(SetDecl().requireDeclaredMethod("iterator"))
                                     .astore(iteratorLocal);
 
                                 int position2 = code.position() + 1;
 
                                 code.aload(iteratorLocal)
-                                    .invokeinterface(IteratorType(), "hasNext", function(booleanType))
+                                    .invoke(IteratorDecl().requireDeclaredMethod("hasNext"))
                                     .ifne(() -> code
                                         .aload(iteratorLocal)
-                                        .invokeinterface(IteratorType(), "next", function(ObjectType()))
-                                        .checkcast(MapEntryType())
+                                        .invoke(IteratorDecl().requireDeclaredMethod("next"))
+                                        .checkcast(MapEntryDecl())
                                         .astore(entryLocal)
                                         .aload(entryLocal)
-                                        .invokeinterface(MapEntryType(), "getKey", function(ObjectType()))
+                                        .invoke(MapEntryDecl().requireDeclaredMethod("getKey"))
                                         .astore(newEntryKeyLocal)
                                         .aload(oldValueLocal)
                                         .aload(newEntryKeyLocal)
-                                        .invokeinterface(MapType(), "containsKey",
-                                                         function(booleanType, ObjectType()))
+                                        .invoke(MapDecl().requireDeclaredMethod("containsKey", ObjectDecl()))
                                         .ifeq(() -> code
                                             .aload(addRemoveChangeLocal)
                                             .aload(newEntryKeyLocal)
                                             .aload(entryLocal)
-                                            .invokeinterface(MapEntryType(), "getValue", function(ObjectType()))
-                                            .invokevirtual(addRemoveChangeType, MapAddRemoveChangeGenerator.INIT_ADD_METHOD_NAME,
-                                                           function(voidType, ObjectType(), ObjectType()))
+                                            .invoke(MapEntryDecl().requireDeclaredMethod("getValue"))
+                                            .invoke(addRemoveChangeType.requireDeclaredMethod(
+                                                MapAddRemoveChangeGenerator.INIT_ADD_METHOD_NAME, ObjectDecl(), ObjectDecl()))
                                             .aload(0)
-                                            .getfield(generatedClass, MAP_CHANGE_LISTENER_FIELD, MapChangeListenerType())
+                                            .getfield(mapChangeListenerField)
                                             .aload(addRemoveChangeLocal)
-                                            .invokeinterface(MapChangeListenerType(), "onChanged",
-                                                             function(voidType, MapChangeListenerChangeType()))
+                                            .invoke(MapChangeListenerDecl().requireDeclaredMethod(
+                                                "onChanged", MapChangeListenerChangeDecl()))
                                         )
                                         .goto_position(position2)
                                     );
@@ -551,129 +508,129 @@ public class MapObservableValueWrapperGenerator extends ClassGenerator {
         code.releaseLocal(currentValueLocal);
         code.vreturn();
 
-        method.getMethodInfo().setCodeAttribute(code.toCodeAttribute());
-        method.getMethodInfo().rebuildStackMap(generatedClass.getClassPool());
+        method.setCode(code)
+              .setModifiers(Modifier.PUBLIC | Modifier.FINAL);
     }
 
-    private void createOnChangedMethod(BytecodeEmitContext context) throws Exception {
-        CtMethod method = new CtMethod(
-            voidType, "onChanged", new CtClass[] {MapChangeListenerChangeType()}, generatedClass);
-        method.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
-        generatedClass.addMethod(method);
-        BytecodeEmitContext ctx = new BytecodeEmitContext(context, generatedClass, 2, -1);
-        Bytecode code = ctx.getOutput();
-        CtClass adapterChangeType = context.getNestedClasses().find(MapSourceAdapterChangeGenerator.CLASS_NAME);
+    private void createOnChangedMethod(BytecodeEmitContext context) {
+        var method = createMethod("onChanged", voidDecl(), MapChangeListenerChangeDecl());
+        var code = new Bytecode(method);
+
+        FieldDeclaration rootRefField = requireDeclaredField(ROOT_REF);
+        FieldDeclaration invalidationListenerField = requireDeclaredField(INVALIDATION_LISTENER_FIELD);
+        FieldDeclaration changeListenerField = requireDeclaredField(CHANGE_LISTENER_FIELD);
+        FieldDeclaration valueField = requireDeclaredField(VALUE_FIELD);
+        FieldDeclaration mapChangeListenerField = requireDeclaredField(MAP_CHANGE_LISTENER_FIELD);
+        FieldDeclaration adapterChangeField = requireDeclaredField(ADAPTER_CHANGE_FIELD);
+        TypeDeclaration adapterChangeType = context.getNestedClasses().find(MapSourceAdapterChangeGenerator.CLASS_NAME);
 
         if (context.isGeneratorActive(ReferenceTrackerGenerator.class)) {
             code.aload(0)
-                .getfield(generatedClass, ROOT_REF, context.getMarkupClass())
-                .invokevirtual(context.getMarkupClass(), ReferenceTrackerGenerator.CLEAR_STALE_REFERENCES_METHOD,
-                               function(voidType));
+                .getfield(rootRefField)
+                .invoke(context.getMarkupClass()
+                               .requireDeclaredMethod(ReferenceTrackerGenerator.CLEAR_STALE_REFERENCES_METHOD));
         }
 
         code.aload(0)
-            .getfield(generatedClass, INVALIDATION_LISTENER_FIELD, InvalidationListenerType())
+            .getfield(invalidationListenerField)
             .ifnonnull(() -> code
                 .aload(0)
-                .getfield(generatedClass, INVALIDATION_LISTENER_FIELD, InvalidationListenerType())
+                .getfield(invalidationListenerField)
                 .aload(0)
-                .invokeinterface(InvalidationListenerType(), "invalidated",
-                                 function(voidType, ObservableType()))
+                .invoke(InvalidationListenerDecl().requireDeclaredMethod("invalidated", ObservableDecl()))
             );
 
         code.aload(0)
-            .getfield(generatedClass, CHANGE_LISTENER_FIELD, ChangeListenerType())
+            .getfield(changeListenerField)
             .ifnonnull(() -> code
                 .aload(0)
-                .getfield(generatedClass, CHANGE_LISTENER_FIELD, ChangeListenerType())
+                .getfield(changeListenerField)
                 .aload(0)
                 .aload(0)
-                .getfield(generatedClass, VALUE_FIELD, ObservableMapType())
+                .getfield(valueField)
                 .aload(0)
-                .getfield(generatedClass, VALUE_FIELD, ObservableMapType())
-                .invokeinterface(ChangeListenerType(), "changed",
-                                 function(voidType, ObservableValueType(), ObjectType(), ObjectType()))
+                .getfield(valueField)
+                .invoke(ChangeListenerDecl().requireDeclaredMethod(
+                    "changed", ObservableValueDecl(), ObjectDecl(), ObjectDecl()))
             );
 
         code.aload(0)
-            .getfield(generatedClass, MAP_CHANGE_LISTENER_FIELD, MapChangeListenerType())
+            .getfield(mapChangeListenerField)
             .ifnonnull(() -> code
                 .aload(0)
-                .getfield(generatedClass, ADAPTER_CHANGE_FIELD, adapterChangeType)
+                .getfield(adapterChangeField)
                 .aload(1)
-                .invokevirtual(adapterChangeType, MapSourceAdapterChangeGenerator.INIT_CHANGE_METHOD_NAME,
-                               function(voidType, MapChangeListenerChangeType()))
+                .invoke(adapterChangeType.requireDeclaredMethod(
+                    MapSourceAdapterChangeGenerator.INIT_CHANGE_METHOD_NAME, MapChangeListenerChangeDecl()))
                 .aload(0)
-                .getfield(generatedClass, MAP_CHANGE_LISTENER_FIELD, MapChangeListenerType())
+                .getfield(mapChangeListenerField)
                 .aload(0)
-                .getfield(generatedClass, ADAPTER_CHANGE_FIELD, adapterChangeType)
-                .invokeinterface(MapChangeListenerType(), "onChanged",
-                                 function(voidType, MapChangeListenerChangeType()))
+                .getfield(adapterChangeField)
+                .invoke(MapChangeListenerDecl().requireDeclaredMethod(
+                    "onChanged", MapChangeListenerChangeDecl()))
             );
 
         code.vreturn();
 
-        method.getMethodInfo().setCodeAttribute(code.toCodeAttribute());
-        method.getMethodInfo().rebuildStackMap(generatedClass.getClassPool());
+        method.setCode(code)
+              .setModifiers(Modifier.PUBLIC | Modifier.FINAL);
     }
 
-    private void createConstructor(BytecodeEmitContext context) throws Exception {
-        CtConstructor constructor = new CtConstructor(
-                new CtClass[] {context.getMarkupClass(), ObservableValueType()}, generatedClass);
-        constructor.setModifiers(Modifier.PUBLIC);
-        generatedClass.addConstructor(constructor);
-        BytecodeEmitContext ctx = new BytecodeEmitContext(context, generatedClass, 3, -1);
-        CtClass adapterChangeType = context.getNestedClasses().find(MapSourceAdapterChangeGenerator.CLASS_NAME);
-        Bytecode code = ctx.getOutput();
+    private void createConstructor(BytecodeEmitContext context) {
+        var constructor = createConstructor(context.getMarkupClass(), ObservableValueDecl());
+        var code = new Bytecode(constructor);
+
+        FieldDeclaration rootRefField = requireDeclaredField(ROOT_REF);
+        FieldDeclaration observableField = requireDeclaredField(OBSERVABLE_FIELD);
+        FieldDeclaration weakMapChangeListenerField = requireDeclaredField(WEAK_MAP_CHANGE_LISTENER_FIELD);
+        FieldDeclaration adapterChangeField = requireDeclaredField(ADAPTER_CHANGE_FIELD);
+        TypeDeclaration adapterChangeType = context.getNestedClasses().find(MapSourceAdapterChangeGenerator.CLASS_NAME);
 
         // super()
         code.aload(0)
-            .invokespecial(generatedClass.getSuperclass(), MethodInfo.nameInit, constructor());
+            .invoke(requireSuperClass().requireDeclaredConstructor());
 
         // markupRef = $1
         code.aload(0)
             .aload(1)
-            .putfield(generatedClass, ROOT_REF, context.getMarkupClass());
+            .putfield(rootRefField);
 
         // observable = $2
         code.aload(0)
             .aload(2)
-            .putfield(generatedClass, OBSERVABLE_FIELD, ObservableValueType());
+            .putfield(observableField);
 
         // weakMapChangeListener = new WeakMapChangeListener(this);
         code.aload(0)
-            .anew(WeakMapChangeListenerType())
+            .anew(WeakMapChangeListenerDecl())
             .dup()
             .aload(0)
-            .invokespecial(WeakMapChangeListenerType(), MethodInfo.nameInit,
-                           constructor(MapChangeListenerType()))
-            .putfield(generatedClass, WEAK_MAP_CHANGE_LISTENER_FIELD, WeakMapChangeListenerType());
+            .invoke(WeakMapChangeListenerDecl().requireConstructor(MapChangeListenerDecl()))
+            .putfield(weakMapChangeListenerField);
 
         // mapAdapterChange = new MapAdapterChange(this);
         code.aload(0)
             .anew(adapterChangeType)
             .dup()
             .aload(0)
-            .invokespecial(adapterChangeType, MethodInfo.nameInit, constructor(ObservableMapType()))
-            .putfield(generatedClass, ADAPTER_CHANGE_FIELD, adapterChangeType);
+            .invoke(adapterChangeType.requireDeclaredConstructor(ObservableMapDecl()))
+            .putfield(adapterChangeField);
 
         // $1.addListener(new WeakInvalidationListener(this));
         code.aload(2)
-            .anew(WeakInvalidationListenerType())
+            .anew(WeakInvalidationListenerDecl())
             .dup()
             .aload(0)
-            .invokespecial(WeakInvalidationListenerType(), MethodInfo.nameInit,
-                           constructor(InvalidationListenerType()))
-            .invokeinterface(ObservableType(), "addListener",
-                             function(voidType, InvalidationListenerType()));
+            .invoke(WeakInvalidationListenerDecl().requireConstructor(InvalidationListenerDecl()))
+            .invoke(ObservableDecl().requireDeclaredMethod("addListener", InvalidationListenerDecl()));
 
         code.aload(0)
-            .invokeinterface(ObservableMapValueType(), "get", function(ObjectType()))
+            .invoke(ObservableObjectValueDecl().requireDeclaredMethod("get"))
             .pop()
             .vreturn();
 
-        constructor.getMethodInfo().setCodeAttribute(code.toCodeAttribute());
-        constructor.getMethodInfo().rebuildStackMap(generatedClass.getClassPool());
+        constructor.setCode(code)
+                   .setModifiers(Modifier.PUBLIC);
     }
 
     /**
@@ -686,69 +643,70 @@ public class MapObservableValueWrapperGenerator extends ClassGenerator {
      *     }
      * }</pre>
      */
-    private void createDelegateMethod(BytecodeEmitContext context, CtClass retType, CtClass delegateType,
-                                      String methodName, CtClass... params) throws Exception {
-        boolean delegatesToObservableMap = delegateType.subtypeOf(ObservableMapType());
+    private void createDelegateMethod(TypeDeclaration retType,
+                                      TypeDeclaration delegateType,
+                                      String methodName,
+                                      TypeDeclaration... params) {
+        boolean delegatesToObservableMap = delegateType.subtypeOf(ObservableMapDecl());
 
         createBehavior(
-            context, generatedClass, new CtMethod(retType, methodName, params, generatedClass),
-            Arrays.stream(params).mapToInt(TypeHelper::getSlots).sum() + 1,
+            createMethod(methodName, retType, params),
             code -> {
-                Local listLocal = code.acquireLocal(false);
+                Local mapLocal = code.acquireLocal(false);
                 Local retLocal = code.acquireLocal(retType);
 
                 Runnable branch = () -> {
                     int slot = 1;
-                    for (CtClass param : params) {
-                        code.ext_load(param, slot);
-                        slot += TypeHelper.getSlots(param);
+                    for (TypeDeclaration param : params) {
+                        code.load(param, slot);
+                        slot += param.slots();
                     }
 
-                    code.invokeinterface(delegateType, methodName, function(retType, params));
+                    code.invoke(delegateType.requireDeclaredMethod(methodName, params));
 
-                    if (retType != CtClass.voidType) {
-                        code.ext_store(retType, retLocal);
+                    if (!retType.equals(voidDecl())) {
+                        code.store(retType, retLocal);
                     }
                 };
 
                 code.aload(0)
-                    .invokeinterface(ObservableObjectValueType(), "get", function(ObjectType()))
-                    .checkcast(ObservableMapType())
-                    .astore(listLocal)
-                    .aload(listLocal)
+                    .invoke(ObservableObjectValueDecl().requireDeclaredMethod("get"))
+                    .checkcast(ObservableMapDecl())
+                    .astore(mapLocal)
+                    .aload(mapLocal)
                     .ifnull(
                         () -> {
                             if (delegatesToObservableMap) {
-                                code.invokestatic(FXCollectionsType(), "emptyObservableMap", function(MapType()));
+                                code.invoke(FXCollectionsDecl().requireDeclaredMethod("emptyObservableMap"));
                             } else {
-                                code.invokestatic(CollectionsType(), "emptyMap", function(MapType()));
+                                code.invoke(CollectionsDecl().requireDeclaredMethod("emptyMap"));
                             }
                             branch.run();
                         },
                         () -> {
-                            code.aload(listLocal);
+                            code.aload(mapLocal);
                             branch.run();
                         });
 
-                if (retType == CtClass.voidType) {
+                if (retType.equals(voidDecl())) {
                     code.vreturn();
                 } else {
-                    code.ext_load(retType, retLocal);
+                    code.load(retType, retLocal);
 
-                    if (retType == CtClass.longType) {
+                    if (retType.equals(longDecl())) {
                         code.lreturn();
-                    } else if (retType == CtClass.booleanType || TypeHelper.isIntegralPrimitive(retType)) {
+                    } else if (retType.equals(booleanDecl()) || retType.isIntegralPrimitive()) {
                         code.ireturn();
-                    } else if (retType == CtClass.doubleType) {
+                    } else if (retType.equals(doubleDecl())) {
                         code.dreturn();
-                    } else if (retType == CtClass.floatType) {
+                    } else if (retType.equals(floatDecl())) {
                         code.freturn();
                     } else {
                         code.areturn();
                     }
                 }
 
-                code.releaseLocal(listLocal);
+                code.releaseLocal(mapLocal);
                 code.releaseLocal(retLocal);
             }
         );

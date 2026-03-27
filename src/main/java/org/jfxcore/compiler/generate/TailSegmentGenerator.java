@@ -1,34 +1,27 @@
-// Copyright (c) 2021, 2025, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.generate;
 
-import javassist.CtClass;
-import javassist.CtConstructor;
-import javassist.CtField;
-import javassist.CtMethod;
-import javassist.CtNewConstructor;
-import javassist.Modifier;
-import javassist.bytecode.MethodInfo;
 import org.jfxcore.compiler.ast.emit.BytecodeEmitContext;
 import org.jfxcore.compiler.ast.expression.path.FoldedGroup;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
+import org.jfxcore.compiler.type.ConstructorDeclaration;
+import org.jfxcore.compiler.type.MethodDeclaration;
+import org.jfxcore.compiler.type.TypeDeclaration;
 import org.jfxcore.compiler.util.Bytecode;
 import org.jfxcore.compiler.util.Label;
 import org.jfxcore.compiler.util.Local;
 import org.jfxcore.compiler.util.ObservableKind;
-import org.jfxcore.compiler.util.TypeHelper;
-import java.util.Objects;
+import java.lang.reflect.Modifier;
 
-import static org.jfxcore.compiler.util.Classes.*;
-import static org.jfxcore.compiler.util.Descriptors.*;
-import static org.jfxcore.compiler.util.ExceptionHelper.*;
+import static org.jfxcore.compiler.type.Types.*;
 
 public class TailSegmentGenerator extends PropertySegmentGeneratorBase {
 
     private static final String CHANGE_LISTENERS_ERROR =
         "Cannot add multiple change listeners to a compiled binding.";
-    
+
     private static final String INVALIDATION_LISTENERS_ERROR =
         "Cannot add multiple invalidation listeners to a compiled binding.";
 
@@ -43,13 +36,13 @@ public class TailSegmentGenerator extends PropertySegmentGeneratorBase {
     private static final String FLAGS_FIELD = "flags";
     private static final String VALIDATE_METHOD = "validate";
 
-    private CtConstructor constructor;
-    private CtMethod updateMethod;
-    private CtMethod invalidatedMethod;
-    private CtMethod changedMethod;
-    private CtMethod validateMethod;
-    private CtClass observableClass;
-    private CtClass boxedValueClass;
+    private ConstructorDeclaration constructor;
+    private MethodDeclaration updateMethod;
+    private MethodDeclaration invalidatedMethod;
+    private MethodDeclaration changedMethod;
+    private MethodDeclaration validateMethod;
+    private TypeDeclaration observableClass;
+    private TypeDeclaration boxedValueClass;
     private boolean hasInvariants;
 
     public TailSegmentGenerator(SourceInfo sourceInfo, FoldedGroup[] groups) {
@@ -57,89 +50,61 @@ public class TailSegmentGenerator extends PropertySegmentGeneratorBase {
     }
 
     @Override
-    public void emitClass(BytecodeEmitContext context) throws Exception {
-        super.emitClass(context);
-        observableClass = Objects.requireNonNull(groups[segment].getFirstPathSegment().getTypeInstance().jvmType());
-        boxedValueClass = TypeHelper.getBoxedType(groups[segment].getLastPathSegment().getValueTypeInstance().jvmType());
-        generatedClass.addInterface(InvalidationListenerType());
-        generatedClass.addInterface(ChangeListenerType());
+    public TypeDeclaration emitClass(BytecodeEmitContext context) {
+        observableClass = groups[segment].getFirstPathSegment().getTypeInstance().declaration();
+        boxedValueClass = groups[segment].getLastPathSegment().getValueTypeInstance().declaration().boxed();
+
+        return super.emitClass(context)
+            .addInterface(InvalidationListenerDecl())
+            .addInterface(ChangeListenerDecl());
     }
 
     @Override
-    public void emitFields(BytecodeEmitContext context) throws Exception {
-        CtField invalidationLister = new CtField(InvalidationListenerType(), INVALIDATION_LISTENER_FIELD, generatedClass);
-        invalidationLister.setModifiers(Modifier.PRIVATE);
-
-        CtField changeListener = new CtField(ChangeListenerType(), CHANGE_LISTENER_FIELD, generatedClass);
-        changeListener.setModifiers(Modifier.PRIVATE);
-
-        CtField observable = new CtField(observableClass, OBSERVABLE_FIELD, generatedClass);
-        observable.setModifiers(Modifier.PRIVATE);
-
-        generatedClass.addField(invalidationLister);
-        generatedClass.addField(changeListener);
-        generatedClass.addField(observable);
+    public void emitFields(BytecodeEmitContext context) {
+        createField(INVALIDATION_LISTENER_FIELD, InvalidationListenerDecl()).setModifiers(Modifier.PRIVATE);
+        createField(CHANGE_LISTENER_FIELD, ChangeListenerDecl()).setModifiers(Modifier.PRIVATE);
+        createField(OBSERVABLE_FIELD, observableClass).setModifiers(Modifier.PRIVATE);
 
         hasInvariants = groups[segment].getPath().length > 1;
 
         if (hasInvariants) {
-            CtField field = new CtField(CtClass.intType, FLAGS_FIELD, generatedClass);
-            field.setModifiers(Modifier.PRIVATE);
-            generatedClass.addField(field);
-
-            field = new CtField(boxedValueClass, VALUE_FIELD, generatedClass);
-            field.setModifiers(Modifier.PRIVATE);
-            generatedClass.addField(field);
+            createField(FLAGS_FIELD, intDecl()).setModifiers(Modifier.PRIVATE);
+            createField(VALUE_FIELD, boxedValueClass).setModifiers(Modifier.PRIVATE);
 
             if (valueClass.isPrimitive()) {
-                field = new CtField(valueClass, PRIMITIVE_VALUE_FIELD, generatedClass);
-                field.setModifiers(Modifier.PRIVATE);
-                generatedClass.addField(field);
+                createField(PRIMITIVE_VALUE_FIELD, valueClass).setModifiers(Modifier.PRIVATE);
             }
         }
     }
 
     @Override
-    public void emitMethods(BytecodeEmitContext context) throws Exception {
+    public void emitMethods(BytecodeEmitContext context) {
         super.emitMethods(context);
 
         if (groups.length == 1) {
-            constructor = new CtConstructor(new CtClass[] {observableClass}, generatedClass);
-            generatedClass.addConstructor(constructor);
+            constructor = createConstructor(observableClass);
         } else {
-            constructor = CtNewConstructor.defaultConstructor(generatedClass);
-            updateMethod = new CtMethod(CtClass.voidType, UPDATE_METHOD, new CtClass[] {observableClass}, generatedClass);
+            constructor = createDefaultConstructor();
+            updateMethod = createMethod(UPDATE_METHOD, voidDecl(), observableClass);
             updateMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
-            generatedClass.addConstructor(constructor);
-            generatedClass.addMethod(updateMethod);
         }
 
-        invalidatedMethod = new CtMethod(
-            CtClass.voidType, "invalidated", new CtClass[] {ObservableType()}, generatedClass);
-        invalidatedMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
-        generatedClass.addMethod(invalidatedMethod);
+        invalidatedMethod = createMethod("invalidated", voidDecl(), ObservableDecl())
+            .setModifiers(Modifier.PUBLIC | Modifier.FINAL);
 
-        changedMethod = new CtMethod(
-            CtClass.voidType,
-            "changed",
-            new CtClass[] {ObservableValueType(), ObjectType(), ObjectType()},
-            generatedClass);
-        changedMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
-        generatedClass.addMethod(changedMethod);
+        changedMethod = createMethod("changed", voidDecl(), ObservableValueDecl(), ObjectDecl(), ObjectDecl())
+            .setModifiers(Modifier.PUBLIC | Modifier.FINAL);
 
         if (hasInvariants) {
-            validateMethod = new CtMethod(
-                CtClass.voidType,
-                VALIDATE_METHOD,
-                valueClass.isPrimitive() ? new CtClass[] {CtClass.booleanType} : new CtClass[0],
-                    generatedClass);
-            validateMethod.setModifiers(Modifier.PRIVATE | Modifier.FINAL);
-            generatedClass.addMethod(validateMethod);
+            validateMethod = createMethod(
+                    VALIDATE_METHOD, voidDecl(),
+                    valueClass.isPrimitive() ? new TypeDeclaration[] { booleanDecl() } : new TypeDeclaration[0])
+                .setModifiers(Modifier.PRIVATE | Modifier.FINAL);
         }
     }
 
     @Override
-    public void emitCode(BytecodeEmitContext context) throws Exception {
+    public void emitCode(BytecodeEmitContext context) {
         super.emitCode(context);
 
         if (groups.length == 1) {
@@ -169,53 +134,48 @@ public class TailSegmentGenerator extends PropertySegmentGeneratorBase {
         }
 
         if (isNumeric) {
-            emitNumberValueMethod(intValueMethod, CtClass.intType);
-            emitNumberValueMethod(longValueMethod, CtClass.longType);
-            emitNumberValueMethod(floatValueMethod, CtClass.floatType);
-            emitNumberValueMethod(doubleValueMethod, CtClass.doubleType);
+            emitNumberValueMethod(intValueMethod, intDecl());
+            emitNumberValueMethod(longValueMethod, longDecl());
+            emitNumberValueMethod(floatValueMethod, floatDecl());
+            emitNumberValueMethod(doubleValueMethod, doubleDecl());
         }
     }
 
-    private void emitConstructor(CtConstructor constructor) throws Exception {
-        Bytecode code = new Bytecode(constructor.getDeclaringClass(), 2);
+    private void emitConstructor(ConstructorDeclaration constructor) {
+        Bytecode code = new Bytecode(constructor);
 
         if (groups.length == 1) {
             code.aload(0)
-                .invokespecial(generatedClass.getSuperclass(), MethodInfo.nameInit, constructor())
+                .invoke(requireSuperClass().requireDeclaredConstructor())
                 .aload(0)
                 .aload(1)
-                .putfield(constructor.getDeclaringClass(), OBSERVABLE_FIELD, observableClass);
+                .putfield(requireDeclaredField(OBSERVABLE_FIELD));
         } else {
             // $1.addListener(this);
             code.aload(0)
-                .invokespecial(generatedClass.getSuperclass(), MethodInfo.nameInit, constructor())
+                .invoke(requireSuperClass().requireDeclaredConstructor())
                 .aload(1)
                 .aload(0)
-                .invokeinterface(
-                    ObservableValueType(),
-                    "addListener",
-                    function(CtClass.voidType, ChangeListenerType()));
+                .invoke(ObservableValueDecl().requireDeclaredMethod("addListener", ChangeListenerDecl()));
         }
 
         // this.value = getValue();
         code.aload(0)
             .aload(0)
-            .invokeinterface(ObservableValueType(), "getValue", function(ObjectType()))
-            .checkcast(boxedValueClass.getName())
-            .putfield(generatedClass, VALUE_FIELD, boxedValueClass)
+            .invoke(ObservableValueDecl().requireDeclaredMethod("getValue"))
+            .checkcast(boxedValueClass)
+            .putfield(requireDeclaredField(VALUE_FIELD))
             .vreturn();
 
-        constructor.getMethodInfo().setCodeAttribute(code.toCodeAttribute());
-        constructor.getMethodInfo().rebuildStackMap(constructor.getDeclaringClass().getClassPool());
+        constructor.setCode(code);
     }
 
-    private void emitGetValueMethod(CtMethod method) throws Exception {
-        Bytecode code = new Bytecode(method.getDeclaringClass(), 1);
-        CtClass declaringClass = method.getDeclaringClass();
+    private void emitGetValueMethod(MethodDeclaration method) {
+        Bytecode code = new Bytecode(method);
 
         if (hasInvariants) {
             code.aload(0)
-                .getfield(declaringClass, FLAGS_FIELD, CtClass.intType)
+                .getfield(requireDeclaredField(FLAGS_FIELD))
                 .ifeq(
                     // if (this.flags == 0)
                     () -> {
@@ -223,17 +183,11 @@ public class TailSegmentGenerator extends PropertySegmentGeneratorBase {
                             // validate(true)
                             code.aload(0)
                                 .iconst(1)
-                                .invokevirtual(
-                                    declaringClass,
-                                    VALIDATE_METHOD,
-                                    function(CtClass.voidType, CtClass.booleanType));
+                                .invoke(requireDeclaredMethod(VALIDATE_METHOD, booleanDecl()));
                         } else {
                             // validate()
                             code.aload(0)
-                                .invokevirtual(
-                                    declaringClass,
-                                    VALIDATE_METHOD,
-                                    function(CtClass.voidType));
+                                .invoke(requireDeclaredMethod(VALIDATE_METHOD));
                         }
                     },
 
@@ -241,342 +195,320 @@ public class TailSegmentGenerator extends PropertySegmentGeneratorBase {
                     () -> {
                         if (valueClass.isPrimitive()) {
                             code.aload(0)
-                                .getfield(declaringClass, FLAGS_FIELD, CtClass.intType)
+                                .getfield(requireDeclaredField(FLAGS_FIELD))
                                 .iconst(2)
                                 .if_icmpeq(() -> code
                                     .aload(0)
                                     .aload(0)
-                                    .getfield(declaringClass, PRIMITIVE_VALUE_FIELD, valueClass)
-                                    .ext_box(valueClass)
-                                    .putfield(declaringClass, VALUE_FIELD, boxedValueClass)
+                                    .getfield(requireDeclaredField(PRIMITIVE_VALUE_FIELD))
+                                    .box(valueClass)
+                                    .putfield(requireDeclaredField(VALUE_FIELD))
                                     .aload(0)
                                     .iconst(1)
-                                    .putfield(declaringClass, FLAGS_FIELD, CtClass.intType));
+                                    .putfield(requireDeclaredField(FLAGS_FIELD)));
                         }
                     });
 
             // return this.value
             code.aload(0)
-                .getfield(declaringClass, VALUE_FIELD, boxedValueClass)
+                .getfield(requireDeclaredField(VALUE_FIELD))
                 .areturn();
         } else {
             // return this.observable != null ? this.observable.getValue() : null
             code.aload(0)
-                .getfield(declaringClass, OBSERVABLE_FIELD, observableClass)
+                .getfield(requireDeclaredField(OBSERVABLE_FIELD))
                 .dup()
                 .ifnull(
                     () -> code.pop().aconst_null(),
-                    () -> code.ext_invoke(unchecked(getSourceInfo(), () -> observableClass.getMethod(
-                                          "getValue", function(ObjectType())))))
+                    () -> code.invoke(ObservableValueDecl().requireDeclaredMethod("getValue")))
                 .areturn();
         }
 
-        method.getMethodInfo().setCodeAttribute(code.toCodeAttribute());
-        method.getMethodInfo().rebuildStackMap(method.getDeclaringClass().getClassPool());
+        method.setCode(code);
     }
 
-    private void emitSetValueMethod(CtMethod method) throws Exception {
-        Bytecode code = new Bytecode(method.getDeclaringClass(), 2);
+    private void emitSetValueMethod(MethodDeclaration method) {
+        Bytecode code = new Bytecode(method);
 
         if (groups[segment].getLastPathSegment().getObservableKind() == ObservableKind.NONE
-                || !observableClass.subtypeOf(WritableValueType())) {
-            code.anew(RuntimeExceptionType())
+                || !observableClass.subtypeOf(WritableValueDecl())) {
+            code.anew(RuntimeExceptionDecl())
                 .dup()
                 .ldc(CANNOT_SET_READONLY_PROPERTY)
-                .invokespecial(RuntimeExceptionType(), MethodInfo.nameInit, constructor(StringType()))
+                .invoke(RuntimeExceptionDecl().requireDeclaredConstructor(StringDecl()))
                 .athrow();
         } else {
             // if (this.observable != null)
             Label L0 = code
                 .aload(0)
-                .getfield(method.getDeclaringClass(), OBSERVABLE_FIELD, observableClass)
+                .getfield(requireDeclaredField(OBSERVABLE_FIELD))
                 .ifnull();
 
             // observable.setValue($1)
             code.aload(0)
-                .getfield(method.getDeclaringClass(), OBSERVABLE_FIELD, observableClass)
+                .getfield(requireDeclaredField(OBSERVABLE_FIELD))
                 .aload(1)
-                .ext_invoke(observableClass.getMethod("setValue", function(CtClass.voidType, ObjectType())));
+                .invoke(WritableValueDecl().requireDeclaredMethod("setValue", ObjectDecl()));
 
             // end if
             L0.resume()
                 .vreturn();
         }
 
-        method.getMethodInfo().setCodeAttribute(code.toCodeAttribute());
-        method.getMethodInfo().rebuildStackMap(method.getDeclaringClass().getClassPool());
+        method.setCode(code);
     }
 
-    private void emitGetMethod(CtMethod method) throws Exception {
-        Bytecode code = new Bytecode(method.getDeclaringClass(), 1);
+    private void emitGetMethod(MethodDeclaration method) {
+        Bytecode code = new Bytecode(method);
 
         if (hasInvariants) {
             // if (this.valid == 0)
             code.aload(0)
-                .getfield(method.getDeclaringClass(), FLAGS_FIELD, CtClass.intType)
+                .getfield(requireDeclaredField(FLAGS_FIELD))
                 .ifeq(() -> code
                     // validate(false)
                     .aload(0)
                     .iconst(0)
-                    .invokevirtual(
-                        method.getDeclaringClass(),
-                        VALIDATE_METHOD,
-                        function(CtClass.voidType, CtClass.booleanType)))
+                    .invoke(requireDeclaredMethod(VALIDATE_METHOD, booleanDecl())))
                 .aload(0)
-                .getfield(method.getDeclaringClass(), PRIMITIVE_VALUE_FIELD, valueClass)
-                .ext_return(method.getReturnType());
+                .getfield(requireDeclaredField(PRIMITIVE_VALUE_FIELD))
+                .ret(method.returnType());
         } else {
             // return this.observable != null ? this.observable.getValue() : null
             code.aload(0)
-                .getfield(method.getDeclaringClass(), OBSERVABLE_FIELD, observableClass)
+                .getfield(requireDeclaredField(OBSERVABLE_FIELD))
                 .dup()
                 .ifnull(
-                    () -> code.pop().ext_defaultconst(valueClass),
+                    () -> code.pop().defaultconst(valueClass),
                     () -> {
                         if (valueClass.isPrimitive()) {
-                            code.ext_invoke(unchecked(getSourceInfo(), () -> observableClass.getMethod(
-                                            "get", function(TypeHelper.getWidenedNumericType(valueClass)))));
+                            code.invoke(observableClass.requireMethod("get"));
                         } else {
-                            code.ext_invoke(unchecked(getSourceInfo(), () -> observableClass.getMethod(
-                                            "getValue", function(ObjectType()))));
+                            code.invoke(observableClass.requireMethod("getValue"));
                         }
                     })
-                .ext_return(method.getReturnType());
+                .ret(method.returnType());
         }
 
-        method.getMethodInfo().setCodeAttribute(code.toCodeAttribute());
-        method.getMethodInfo().rebuildStackMap(method.getDeclaringClass().getClassPool());
+        method.setCode(code);
     }
 
-    private void emitSetMethod(CtMethod method) throws Exception {
-        Bytecode code = new Bytecode(method.getDeclaringClass(), 1 + TypeHelper.getSlots(valueClass));
+    private void emitSetMethod(MethodDeclaration method) {
+        Bytecode code = new Bytecode(method);
 
         if (groups[segment].getLastPathSegment().getObservableKind() == ObservableKind.NONE
-                || !observableClass.subtypeOf(WritableValueType())) {
-            code.anew(RuntimeExceptionType())
+                || !observableClass.subtypeOf(WritableValueDecl())) {
+            code.anew(RuntimeExceptionDecl())
                 .dup()
                 .ldc(CANNOT_SET_READONLY_PROPERTY)
-                .invokespecial(RuntimeExceptionType(), MethodInfo.nameInit, constructor(StringType()))
+                .invoke(RuntimeExceptionDecl().requireDeclaredConstructor(StringDecl()))
                 .athrow();
         } else {
             // if (this.observable != null)
             Label L0 = code
                 .aload(0)
-                .getfield(method.getDeclaringClass(), OBSERVABLE_FIELD, observableClass)
+                .getfield(requireDeclaredField(OBSERVABLE_FIELD))
                 .ifnull();
 
             // this.observable.set($1)
             code.aload(0)
-                .getfield(method.getDeclaringClass(), OBSERVABLE_FIELD, observableClass)
-                .ext_load(valueClass, 1)
-                .ext_invoke(observableClass.getMethod("set", function(CtClass.voidType, valueClass)));
+                .getfield(requireDeclaredField(OBSERVABLE_FIELD))
+                .load(valueClass, 1)
+                .invoke(observableClass.requireMethod("set", valueClass));
 
             // end if
             L0.resume()
                 .vreturn();
         }
 
-        method.getMethodInfo().setCodeAttribute(code.toCodeAttribute());
-        method.getMethodInfo().rebuildStackMap(method.getDeclaringClass().getClassPool());
+        method.setCode(code);
     }
 
-    private void emitNumberValueMethod(CtMethod method, CtClass primitiveType) throws Exception {
-        Bytecode code = new Bytecode(method.getDeclaringClass(), 1);
-        CtClass wideValueClass = TypeHelper.getWidenedNumericType(valueClass);
+    private void emitNumberValueMethod(MethodDeclaration method, TypeDeclaration primitiveType) {
+        Bytecode code = new Bytecode(method);
 
         code.aload(0)
-            .invokevirtual(method.getDeclaringClass(), "get", function(wideValueClass))
-            .ext_primitiveconv(wideValueClass, primitiveType)
-            .ext_return(primitiveType);
+            .invoke(requireDeclaredMethod("get"))
+            .primconv(widenShortInt(valueClass), primitiveType)
+            .ret(primitiveType);
 
-        method.getMethodInfo().setCodeAttribute(code.toCodeAttribute());
-        method.getMethodInfo().rebuildStackMap(method.getDeclaringClass().getClassPool());
+        method.setCode(code);
     }
 
-    private void emitInvalidatedMethod(CtMethod method) throws Exception {
-        Bytecode code = new Bytecode(method.getDeclaringClass(), 2);
+    private void emitInvalidatedMethod(MethodDeclaration method) {
+        Bytecode code = new Bytecode(method);
 
         if (hasInvariants) {
             code.aload(0)
                 .iconst(0)
-                .putfield(method.getDeclaringClass(), FLAGS_FIELD, CtClass.intType);
+                .putfield(requireDeclaredField(FLAGS_FIELD));
         }
 
         code.aload(0)
-            .getfield(method.getDeclaringClass(), INVALIDATION_LISTENER_FIELD, InvalidationListenerType())
+            .getfield(requireDeclaredField(INVALIDATION_LISTENER_FIELD))
             .aload(0)
-            .invokeinterface(InvalidationListenerType(), "invalidated", function(CtClass.voidType, ObservableType()))
+            .invoke(InvalidationListenerDecl().requireDeclaredMethod("invalidated", ObservableDecl()))
             .vreturn();
 
-        method.getMethodInfo().setCodeAttribute(code.toCodeAttribute());
-        method.getMethodInfo().rebuildStackMap(method.getDeclaringClass().getClassPool());
+        method.setCode(code);
     }
 
-    private void emitAddListenerMethod(CtMethod method, boolean changeListenerIsTrue) throws Exception {
-        Bytecode code = new Bytecode(method.getDeclaringClass(), 2);
-        CtClass declaringClass = method.getDeclaringClass();
+    private void emitAddListenerMethod(MethodDeclaration method, boolean changeListenerIsTrue) {
+        Bytecode code = new Bytecode(method);
         String fieldName = changeListenerIsTrue ? CHANGE_LISTENER_FIELD : INVALIDATION_LISTENER_FIELD;
-        CtClass listenerType = changeListenerIsTrue ? ChangeListenerType() : InvalidationListenerType();
+        MethodDeclaration listenerMethod = changeListenerIsTrue
+            ? ObservableValueDecl().requireDeclaredMethod("addListener", ChangeListenerDecl())
+            : ObservableDecl().requireDeclaredMethod("addListener", InvalidationListenerDecl());
 
         // if (this.listener != null)
         code.aload(0)
-            .getfield(declaringClass, fieldName, listenerType)
+            .getfield(requireDeclaredField(fieldName))
             .ifnonnull(
                 () ->
                     // throw new RuntimeException()
-                    code.anew(RuntimeExceptionType())
+                    code.anew(RuntimeExceptionDecl())
                         .dup()
                         .ldc(changeListenerIsTrue ? CHANGE_LISTENERS_ERROR : INVALIDATION_LISTENERS_ERROR)
-                        .invokespecial(RuntimeExceptionType(), MethodInfo.nameInit, constructor(StringType()))
+                        .invoke(RuntimeExceptionDecl().requireDeclaredConstructor(StringDecl()))
                         .athrow(),
                 () -> {
                     // if (this.observable != null)
                     code.aload(0)
-                        .getfield(declaringClass, OBSERVABLE_FIELD, observableClass)
+                        .getfield(requireDeclaredField(OBSERVABLE_FIELD))
                         .dup()
                         .ifnonnull(() -> code
                             // observable.addListener($1)
                             .dup()
                             .aload(0)
-                            .ext_invoke(unchecked(getSourceInfo(), () -> observableClass.getMethod(
-                                        "addListener", function(CtClass.voidType, listenerType)))))
+                            .invoke(listenerMethod))
 
                         // this.listener = $1
                         .pop()
                         .aload(0)
                         .aload(1)
-                        .putfield(declaringClass, fieldName, listenerType);
+                        .putfield(requireDeclaredField(fieldName));
 
                     if (hasInvariants && changeListenerIsTrue) {
                         if (valueClass.isPrimitive()) {
                             // this.validate(true)
                             code.aload(0)
                                 .iconst(1)
-                                .invokevirtual(declaringClass, VALIDATE_METHOD,
-                                               function(CtClass.voidType, CtClass.booleanType));
+                                .invoke(requireDeclaredMethod(VALIDATE_METHOD, booleanDecl()));
                         } else {
                             // this.validate()
                             code.aload(0)
-                                .invokevirtual(declaringClass, VALIDATE_METHOD, function(CtClass.voidType));
+                                .invoke(requireDeclaredMethod(VALIDATE_METHOD));
                         }
                     }
                 });
 
         code.vreturn();
 
-        method.getMethodInfo().setCodeAttribute(code.toCodeAttribute());
-        method.getMethodInfo().rebuildStackMap(method.getDeclaringClass().getClassPool());
+        method.setCode(code);
     }
 
-    private void emitRemoveListenerMethod(CtMethod method, boolean changeListenerIsTrue) throws Exception {
-        Bytecode code = new Bytecode(method.getDeclaringClass(), 2);
-        CtClass declaringClass = method.getDeclaringClass();
+    private void emitRemoveListenerMethod(MethodDeclaration method, boolean changeListenerIsTrue) {
+        Bytecode code = new Bytecode(method);
         String fieldName = changeListenerIsTrue ? CHANGE_LISTENER_FIELD : INVALIDATION_LISTENER_FIELD;
-        CtClass listenerType = changeListenerIsTrue ? ChangeListenerType() : InvalidationListenerType();
+        MethodDeclaration listenerMethod = changeListenerIsTrue
+            ? ObservableValueDecl().requireDeclaredMethod("removeListener", ChangeListenerDecl())
+            : ObservableDecl().requireDeclaredMethod("removeListener", InvalidationListenerDecl());
 
         // if (listener != null...
         code.aload(0)
-            .getfield(declaringClass, fieldName, listenerType)
+            .getfield(requireDeclaredField(fieldName))
             .ifnonnull(() -> code
                 // ... && listener.equals($1))
                 .aload(0)
-                .getfield(declaringClass, fieldName, listenerType)
+                .getfield(requireDeclaredField(fieldName))
                 .aload(1)
-                .invokevirtual(ObjectType(), "equals", function(CtClass.booleanType, ObjectType()))
+                .invoke(ObjectDecl().requireDeclaredMethod("equals", ObjectDecl()))
                 .ifne(() -> code
                     // if (observable != null)
                     .aload(0)
-                    .getfield(declaringClass, OBSERVABLE_FIELD, observableClass)
+                    .getfield(requireDeclaredField(OBSERVABLE_FIELD))
                     .ifnonnull(() -> code
                         // observable.removeListener(this)
                         .aload(0)
-                        .getfield(declaringClass, OBSERVABLE_FIELD, observableClass)
+                        .getfield(requireDeclaredField(OBSERVABLE_FIELD))
                         .aload(0)
-                        .ext_invoke(unchecked(getSourceInfo(), () -> observableClass.getMethod(
-                                    "removeListener", function(CtClass.voidType, listenerType)))))
+                        .invoke(listenerMethod))
 
                     // listener = $1
                     .aload(0)
                     .aconst_null()
-                    .putfield(declaringClass, fieldName, listenerType)));
+                    .putfield(requireDeclaredField(fieldName))));
 
         code.vreturn();
 
-        method.getMethodInfo().setCodeAttribute(code.toCodeAttribute());
-        method.getMethodInfo().rebuildStackMap(method.getDeclaringClass().getClassPool());
+        method.setCode(code);
     }
 
-    private void emitUpdateMethod(CtMethod method) throws Exception {
-        Bytecode code = new Bytecode(method.getDeclaringClass(), 2);
-        CtClass declaringClass = method.getDeclaringClass();
+    private void emitUpdateMethod(MethodDeclaration method) {
+        Bytecode code = new Bytecode(method);
 
         // if (this.observable != null)
         code.aload(0)
-            .getfield(declaringClass, OBSERVABLE_FIELD, observableClass)
+            .getfield(requireDeclaredField(OBSERVABLE_FIELD))
             .ifnonnull(() -> code
                 // if (this.invalidationListener != null)
                 .aload(0)
-                .getfield(declaringClass, INVALIDATION_LISTENER_FIELD, InvalidationListenerType())
+                .getfield(requireDeclaredField(INVALIDATION_LISTENER_FIELD))
                 .ifnonnull(() -> code
                     // this.observable.removeListener((InvalidationListener)this)
                     .aload(0)
-                    .getfield(declaringClass, OBSERVABLE_FIELD, observableClass)
+                    .getfield(requireDeclaredField(OBSERVABLE_FIELD))
                     .aload(0)
-                    .ext_invoke(unchecked(getSourceInfo(), () -> observableClass.getMethod(
-                                "removeListener", function(CtClass.voidType, InvalidationListenerType())))))
+                    .invoke(ObservableDecl().requireDeclaredMethod("removeListener", InvalidationListenerDecl())))
 
                 // if (this.changeListener != null)
                 .aload(0)
-                .getfield(declaringClass, CHANGE_LISTENER_FIELD, ChangeListenerType())
+                .getfield(requireDeclaredField(CHANGE_LISTENER_FIELD))
                 .ifnonnull(() -> code
                     // this.observable.removeListener((ChangeListener)this)
                     .aload(0)
-                    .getfield(declaringClass, OBSERVABLE_FIELD, observableClass)
+                    .getfield(requireDeclaredField(OBSERVABLE_FIELD))
                     .aload(0)
-                    .ext_invoke(unchecked(getSourceInfo(), () -> observableClass.getMethod(
-                                "removeListener", function(CtClass.voidType, ChangeListenerType()))))));
+                    .invoke(ObservableValueDecl().requireDeclaredMethod("removeListener", ChangeListenerDecl()))));
 
         // if ($1 != null)
         code.aload(1)
             .ifnonnull(() -> code
                 // if (this.invalidationListener != null)
                 .aload(0)
-                .getfield(declaringClass, INVALIDATION_LISTENER_FIELD, InvalidationListenerType())
+                .getfield(requireDeclaredField(INVALIDATION_LISTENER_FIELD))
                 .ifnonnull(() -> code
                     // this.observable.addListener((InvalidationListener)this)
                     .aload(1)
                     .aload(0)
-                    .invokeinterface(ObservableValueType(), "addListener",
-                                     function(CtClass.voidType, InvalidationListenerType())))
+                    .invoke(ObservableDecl().requireDeclaredMethod("addListener", InvalidationListenerDecl())))
 
                 // if (this.changeListener != null)
                 .aload(0)
-                .getfield(declaringClass, CHANGE_LISTENER_FIELD, ChangeListenerType())
+                .getfield(requireDeclaredField(CHANGE_LISTENER_FIELD))
                 .ifnonnull(() -> code
                     // this.observable.addListener((ChangeListener)this)
                     .aload(1)
                     .aload(0)
-                    .invokeinterface(ObservableValueType(), "addListener",
-                                     function(CtClass.voidType, ChangeListenerType()))));
+                    .invoke(ObservableValueDecl().requireDeclaredMethod("addListener", ChangeListenerDecl()))));
 
         // this.observable = $1
         code.aload(0)
             .aload(1)
-            .putfield(declaringClass, OBSERVABLE_FIELD, observableClass);
+            .putfield(requireDeclaredField(OBSERVABLE_FIELD));
 
         // if (this.invalidationListener != null)
         code.aload(0)
-            .getfield(declaringClass, INVALIDATION_LISTENER_FIELD, InvalidationListenerType())
+            .getfield(requireDeclaredField(INVALIDATION_LISTENER_FIELD))
             .ifnonnull(() -> code
                 // this.invalidated(null)
                 .aload(0)
                 .aconst_null()
-                .invokeinterface(InvalidationListenerType(), "invalidated",
-                                 function(CtClass.voidType, ObservableType())));
+                .invoke(InvalidationListenerDecl().requireDeclaredMethod("invalidated", ObservableDecl())));
 
         // if (this.changeListener != null)
         code.aload(0)
-            .getfield(declaringClass, CHANGE_LISTENER_FIELD, ChangeListenerType())
+            .getfield(requireDeclaredField(CHANGE_LISTENER_FIELD))
             .ifnonnull(() -> code
                 // this.changed(null, null, $1 != null ? $1.getValue() : null)
                 .aload(0)
@@ -587,18 +519,16 @@ public class TailSegmentGenerator extends PropertySegmentGeneratorBase {
                 .ifnonnull(() -> code
                     .pop()
                     .aload(1)
-                    .invokeinterface(ObservableValueType(), "getValue", function(ObjectType())))
-                .invokeinterface(ChangeListenerType(), "changed",
-                                 function(CtClass.voidType, ObservableValueType(), ObjectType(), ObjectType())));
+                    .invoke(ObservableValueDecl().requireDeclaredMethod("getValue")))
+                .invoke(ChangeListenerDecl().requireDeclaredMethod("changed", ObservableValueDecl(), ObjectDecl(), ObjectDecl())));
 
         code.vreturn();
 
-        method.getMethodInfo().setCodeAttribute(code.toCodeAttribute());
-        method.getMethodInfo().rebuildStackMap(method.getDeclaringClass().getClassPool());
+        method.setCode(code);
     }
 
-    private void emitChangedMethod(CtMethod method) throws Exception {
-        Bytecode code = new Bytecode(method.getDeclaringClass(), 4);
+    private void emitChangedMethod(MethodDeclaration method) {
+        Bytecode code = new Bytecode(method);
 
         if (hasInvariants) {
             Local oldValue = code.acquireLocal(false);
@@ -606,97 +536,92 @@ public class TailSegmentGenerator extends PropertySegmentGeneratorBase {
             if (valueClass.isPrimitive()) {
                 // if (flags == 2)
                 code.aload(0)
-                    .getfield(generatedClass, FLAGS_FIELD, CtClass.booleanType)
+                    .getfield(requireDeclaredField(FLAGS_FIELD))
                     .iconst(2)
                     .if_icmpeq(
                         () ->
                             // oldValue = this.pvalue
                             code.aload(0)
-                                .getfield(generatedClass, PRIMITIVE_VALUE_FIELD, valueClass)
-                                .ext_box(valueClass),
+                                .getfield(requireDeclaredField(PRIMITIVE_VALUE_FIELD))
+                                .box(valueClass),
                         () ->
                             // oldValue = this.value
                             code.aload(0)
-                                .getfield(generatedClass, VALUE_FIELD, boxedValueClass))
-                    .ext_store(boxedValueClass, oldValue);
+                                .getfield(requireDeclaredField(VALUE_FIELD)))
+                    .store(boxedValueClass, oldValue);
             } else {
                 code.aload(0)
-                    .getfield(generatedClass, VALUE_FIELD, valueClass)
-                    .ext_store(valueClass, oldValue);
+                    .getfield(requireDeclaredField(VALUE_FIELD))
+                    .store(valueClass, oldValue);
             }
 
             if (valueClass.isPrimitive()) {
                 // validate(true)
                 code.aload(0)
                     .iconst(1)
-                    .invokevirtual(generatedClass, VALIDATE_METHOD, function(CtClass.voidType, CtClass.booleanType));
+                    .invoke(requireDeclaredMethod(VALIDATE_METHOD, booleanDecl()));
             } else {
                 // validate()
                 code.aload(0)
-                    .invokevirtual(generatedClass, VALIDATE_METHOD, function(CtClass.voidType));
+                    .invoke(requireDeclaredMethod(VALIDATE_METHOD));
             }
 
             // this.changeListener.changed(this, oldValue, newValue)
             code.aload(0)
-                .getfield(generatedClass, CHANGE_LISTENER_FIELD, ChangeListenerType())
+                .getfield(requireDeclaredField(CHANGE_LISTENER_FIELD))
                 .aload(0)
                 .aload(oldValue)
                 .aload(0)
-                .getfield(generatedClass, VALUE_FIELD, boxedValueClass)
-                .invokeinterface(ChangeListenerType(), "changed",
-                                 function(CtClass.voidType, ObservableValueType(), ObjectType(), ObjectType()))
+                .getfield(requireDeclaredField(VALUE_FIELD))
+                .invoke(ChangeListenerDecl().requireDeclaredMethod("changed", ObservableValueDecl(), ObjectDecl(), ObjectDecl()))
                 .vreturn();
 
             code.releaseLocal(oldValue);
         } else {
             // this.changeListener.changed(this, $2, $3)
             code.aload(0)
-                .getfield(generatedClass, CHANGE_LISTENER_FIELD, ChangeListenerType())
+                .getfield(requireDeclaredField(CHANGE_LISTENER_FIELD))
                 .aload(0)
                 .aload(2)
                 .aload(3)
-                .invokeinterface(ChangeListenerType(), "changed",
-                                 function(CtClass.voidType, ObservableValueType(), ObjectType(), ObjectType()))
+                .invoke(ChangeListenerDecl().requireDeclaredMethod("changed", ObservableValueDecl(), ObjectDecl(), ObjectDecl()))
                 .vreturn();
         }
 
-        method.getMethodInfo().setCodeAttribute(code.toCodeAttribute());
-        method.getMethodInfo().rebuildStackMap(method.getDeclaringClass().getClassPool());
+        method.setCode(code);
     }
 
-    private void emitValidateMethod(CtMethod method) throws Exception {
-        int localIndex = valueClass.isPrimitive() ? 2 : 1;
-        Bytecode code = new Bytecode(method.getDeclaringClass(), TypeHelper.getSlots(valueClass) + localIndex);
-        CtClass declaringClass = method.getDeclaringClass();
+    private void emitValidateMethod(MethodDeclaration method) {
+        Bytecode code = new Bytecode(method);
+        Local valueLocal = code.acquireLocal(valueClass);
 
         // if (this.observable != null)
         code.aload(0)
-            .getfield(declaringClass, OBSERVABLE_FIELD, observableClass)
+            .getfield(requireDeclaredField(OBSERVABLE_FIELD))
             .dup()
             .ifnull(
                 () -> code
                     .pop()
-                    .ext_defaultconst(valueClass),
+                    .defaultconst(valueClass),
                 () -> code
                     // observable.getValue().foo().bar().baz()...
-                    .ext_invoke(unchecked(getSourceInfo(), () -> observableClass.getMethod(
-                                "getValue", function(ObjectType()))))
+                    .invoke(observableClass.requireMethod("getValue"))
                     .dup()
                     .ifnull(
                         () -> code
                             .pop()
-                            .ext_defaultconst(valueClass),
+                            .defaultconst(valueClass),
                         () -> {
-                            code.checkcast(groups[segment].getFirstPathSegment().getValueTypeInstance().jvmType());
+                            code.checkcast(groups[segment].getFirstPathSegment().getValueTypeInstance().declaration());
                             emitInvariants(valueClass, groups[segment].getPath(), code);
                         }))
-            .ext_store(valueClass, localIndex);
+            .store(valueClass, valueLocal);
 
         if (valueClass.isPrimitive()) {
-            // this.pvalue = $localIndex
+            // this.pvalue = valueLocal
             code.aload(0)
-                .ext_load(valueClass, localIndex)
-                .putfield(declaringClass, PRIMITIVE_VALUE_FIELD, valueClass);
+                .load(valueClass, valueLocal)
+                .putfield(requireDeclaredField(PRIMITIVE_VALUE_FIELD));
 
             // if (boxValue)
             code.iload(1)
@@ -704,91 +629,94 @@ public class TailSegmentGenerator extends PropertySegmentGeneratorBase {
                     () -> code
                         // this.value = $1
                         .aload(0)
-                        .ext_load(valueClass, localIndex)
-                        .ext_box(valueClass)
-                        .putfield(declaringClass, VALUE_FIELD, boxedValueClass)
+                        .load(valueClass, valueLocal)
+                        .box(valueClass)
+                        .putfield(requireDeclaredField(VALUE_FIELD))
                         .aload(0)
                         .iconst(1) // 1 = valid, boxed
-                        .putfield(declaringClass, FLAGS_FIELD, CtClass.intType),
+                        .putfield(requireDeclaredField(FLAGS_FIELD)),
                     () -> code
                         .aload(0)
                         .iconst(2) // 2 = valid, unboxed
-                        .putfield(declaringClass, FLAGS_FIELD, CtClass.intType));
+                        .putfield(requireDeclaredField(FLAGS_FIELD)));
         } else {
-            // this.value = $localIndex
+            // this.value = valueLocal
             code.aload(0)
-                .aload(localIndex)
-                .checkcast(boxedValueClass)
-                .putfield(declaringClass, VALUE_FIELD, boxedValueClass);
+                .aload(valueLocal)
+                .putfield(requireDeclaredField(VALUE_FIELD));
 
             code.aload(0)
                 .iconst(1) // 1 = valid, boxed
-                .putfield(declaringClass, FLAGS_FIELD, CtClass.intType);
+                .putfield(requireDeclaredField(FLAGS_FIELD));
         }
 
+        code.releaseLocal(valueLocal);
         code.vreturn();
 
-        method.getMethodInfo().setCodeAttribute(code.toCodeAttribute());
-        method.getMethodInfo().rebuildStackMap(method.getDeclaringClass().getClassPool());
+        method.setCode(code);
     }
 
-    private void emitGetBeanMethod(CtMethod method) throws Exception {
-        Bytecode code = new Bytecode(method.getDeclaringClass(), 1);
+    private void emitGetBeanMethod(MethodDeclaration method) {
+        Bytecode code = new Bytecode(method);
 
-        if (boxedValueClass.subtypeOf(ReadOnlyPropertyType())) {
+        if (!hasInvariants) {
+            code.aconst_null()
+                .areturn();
+        } else if (boxedValueClass.subtypeOf(ReadOnlyPropertyDecl())) {
             code.aload(0)
-                .getfield(method.getDeclaringClass(), VALUE_FIELD, boxedValueClass)
+                .getfield(requireDeclaredField(VALUE_FIELD))
                 .dup()
                 .ifnonnull(
-                    () -> code.invokevirtual(boxedValueClass, "getBean", function(ObjectType())),
+                    () -> code.invoke(ReadOnlyPropertyDecl().requireDeclaredMethod("getBean")),
                     () -> code.pop().aconst_null())
                 .areturn();
         } else {
             code.aload(0)
-                .getfield(method.getDeclaringClass(), VALUE_FIELD, boxedValueClass)
+                .getfield(requireDeclaredField(VALUE_FIELD))
                 .dup()
-                .isinstanceof(ReadOnlyPropertyType())
+                .isinstanceof(ReadOnlyPropertyDecl())
                 .ifne(
                     () -> code
-                        .checkcast(ReadOnlyPropertyType())
-                        .invokeinterface(ReadOnlyPropertyType(), "getBean", function(ObjectType())),
+                        .checkcast(ReadOnlyPropertyDecl())
+                        .invoke(ReadOnlyPropertyDecl().requireDeclaredMethod("getBean")),
                     () -> code
                         .pop()
                         .aconst_null())
                 .areturn();
         }
 
-        method.getMethodInfo().setCodeAttribute(code.toCodeAttribute());
-        method.getMethodInfo().rebuildStackMap(method.getDeclaringClass().getClassPool());
+        method.setCode(code);
     }
 
-    private void emitGetNameMethod(CtMethod method) throws Exception {
-        Bytecode code = new Bytecode(method.getDeclaringClass(), 1);
+    private void emitGetNameMethod(MethodDeclaration method) {
+        Bytecode code = new Bytecode(method);
 
-        if (boxedValueClass.subtypeOf(ReadOnlyPropertyType())) {
+        if (!hasInvariants) {
+            code.aconst_null()
+                .areturn();
+        } else if (boxedValueClass.subtypeOf(ReadOnlyPropertyDecl())) {
             code.aload(0)
-                .getfield(method.getDeclaringClass(), VALUE_FIELD, boxedValueClass)
+                .getfield(requireDeclaredField(VALUE_FIELD))
                 .dup()
                 .ifnonnull(
-                    () -> code.invokevirtual(boxedValueClass, "getName", function(StringType())),
+                    () -> code.invoke(ReadOnlyPropertyDecl().requireDeclaredMethod("getName")),
                     () -> code.pop().aconst_null())
                 .areturn();
         } else {
             code.aload(0)
-                .getfield(method.getDeclaringClass(), VALUE_FIELD, boxedValueClass)
+                .getfield(requireDeclaredField(VALUE_FIELD))
                 .dup()
-                .isinstanceof(ReadOnlyPropertyType())
+                .isinstanceof(ReadOnlyPropertyDecl())
                 .ifne(
                     () -> code
-                        .checkcast(ReadOnlyPropertyType())
-                        .invokeinterface(ReadOnlyPropertyType(), "getName", function(StringType())),
+                        .checkcast(ReadOnlyPropertyDecl())
+                        .invoke(ReadOnlyPropertyDecl().requireDeclaredMethod("getName")),
                     () -> code
                         .pop()
                         .aconst_null())
                 .areturn();
         }
 
-        method.getMethodInfo().setCodeAttribute(code.toCodeAttribute());
-        method.getMethodInfo().rebuildStackMap(method.getDeclaringClass().getClassPool());
+        method.setCode(code);
     }
 }

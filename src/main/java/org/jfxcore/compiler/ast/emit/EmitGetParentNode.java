@@ -1,19 +1,17 @@
-// Copyright (c) 2021, 2025, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.emit;
 
-import javassist.CtClass;
 import org.jfxcore.compiler.ast.AbstractNode;
 import org.jfxcore.compiler.ast.ResolvedTypeNode;
 import org.jfxcore.compiler.ast.Visitor;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.generate.RuntimeContextGenerator;
-import org.jfxcore.compiler.util.TypeInstance;
+import org.jfxcore.compiler.type.TypeInstance;
 import java.util.Objects;
 
-import static org.jfxcore.compiler.util.Classes.*;
-import static org.jfxcore.compiler.util.Descriptors.*;
+import static org.jfxcore.compiler.type.Types.*;
 
 public class EmitGetParentNode
         extends AbstractNode
@@ -34,11 +32,9 @@ public class EmitGetParentNode
         context.getOutput()
             .aload(context.getRuntimeContextLocal())
             .iconst(parentIndex - parentIndexAdjustment)
-            .invokevirtual(
-                context.getRuntimeContextClass(),
-                RuntimeContextGenerator.GET_ANCESTOR_METHOD,
-                function(ObjectType(), CtClass.intType))
-            .checkcast(type.getJvmType());
+            .invoke(context.getRuntimeContextClass()
+                           .requireDeclaredMethod(RuntimeContextGenerator.GET_ANCESTOR_METHOD, intDecl()))
+            .checkcast(type.getTypeDeclaration());
     }
 
     @Override

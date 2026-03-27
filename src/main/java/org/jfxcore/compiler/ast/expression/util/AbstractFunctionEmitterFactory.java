@@ -1,24 +1,14 @@
-// Copyright (c) 2022, 2025, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.expression.util;
 
-import javassist.CtBehavior;
-import javassist.CtClass;
-import javassist.CtConstructor;
-import javassist.CtMethod;
-import javassist.Modifier;
-import javassist.bytecode.annotation.Annotation;
 import org.jetbrains.annotations.Nullable;
 import org.jfxcore.compiler.ast.AbstractNode;
 import org.jfxcore.compiler.ast.Node;
 import org.jfxcore.compiler.ast.ResolvedTypeNode;
 import org.jfxcore.compiler.ast.emit.BytecodeEmitContext;
 import org.jfxcore.compiler.ast.emit.EmitApplyMarkupExtensionNode;
-import org.jfxcore.compiler.ast.text.PathNode;
-import org.jfxcore.compiler.diagnostic.errors.ObjectInitializationErrors;
-import org.jfxcore.compiler.transform.markup.util.MarkupExtensionInfo;
-import org.jfxcore.compiler.util.Callable;
 import org.jfxcore.compiler.ast.emit.EmitLiteralNode;
 import org.jfxcore.compiler.ast.emit.EmitMethodArgumentNode;
 import org.jfxcore.compiler.ast.emit.ValueEmitterNode;
@@ -32,6 +22,7 @@ import org.jfxcore.compiler.ast.expression.path.InconvertibleArgumentException;
 import org.jfxcore.compiler.ast.expression.path.ResolvedPath;
 import org.jfxcore.compiler.ast.text.BooleanNode;
 import org.jfxcore.compiler.ast.text.NumberNode;
+import org.jfxcore.compiler.ast.text.PathNode;
 import org.jfxcore.compiler.ast.text.TextNode;
 import org.jfxcore.compiler.diagnostic.Diagnostic;
 import org.jfxcore.compiler.diagnostic.DiagnosticInfo;
@@ -39,15 +30,21 @@ import org.jfxcore.compiler.diagnostic.MarkupException;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.diagnostic.errors.BindingSourceErrors;
 import org.jfxcore.compiler.diagnostic.errors.GeneralErrors;
+import org.jfxcore.compiler.diagnostic.errors.ObjectInitializationErrors;
 import org.jfxcore.compiler.diagnostic.errors.SymbolResolutionErrors;
-import org.jfxcore.compiler.util.Classes;
+import org.jfxcore.compiler.transform.markup.util.MarkupExtensionInfo;
+import org.jfxcore.compiler.type.AnnotationDeclaration;
+import org.jfxcore.compiler.type.BehaviorDeclaration;
+import org.jfxcore.compiler.type.ConstructorDeclaration;
+import org.jfxcore.compiler.type.MethodDeclaration;
+import org.jfxcore.compiler.type.Resolver;
+import org.jfxcore.compiler.type.TypeDeclaration;
+import org.jfxcore.compiler.type.TypeHelper;
+import org.jfxcore.compiler.type.TypeInstance;
+import org.jfxcore.compiler.type.TypeInvoker;
+import org.jfxcore.compiler.util.Callable;
 import org.jfxcore.compiler.util.MethodFinder;
-import org.jfxcore.compiler.util.NameHelper;
 import org.jfxcore.compiler.util.NumberUtil;
-import org.jfxcore.compiler.util.Resolver;
-import org.jfxcore.compiler.util.TypeHelper;
-import org.jfxcore.compiler.util.TypeInstance;
-import org.jfxcore.compiler.util.TypeInvoker;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -55,9 +52,10 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Queue;
 import java.util.stream.Collectors;
+
+import static org.jfxcore.compiler.type.Types.*;
 
 abstract class AbstractFunctionEmitterFactory {
 
@@ -90,8 +88,8 @@ abstract class AbstractFunctionEmitterFactory {
         Callable function = findFunction(methodPath, targetType, witnesses, methodArguments, preferObservable);
         Callable inverseFunction = null;
 
+        boolean isVarArgs = function.getBehavior().isVarArgs();
         TypeInvoker invoker = new TypeInvoker(functionExpression.getSourceInfo());
-        boolean isVarArgs = Modifier.isVarArgs(function.getBehavior().getModifiers());
         TypeInstance[] paramTypes = invoker.invokeParameterTypes(function.getBehavior(), List.of(invokingType), witnesses);
         TypeInstance returnType = invoker.invokeReturnType(function.getBehavior(), List.of(invokingType), witnesses);
         List<EmitMethodArgumentNode> argumentValues = new ArrayList<>();
@@ -101,7 +99,7 @@ abstract class AbstractFunctionEmitterFactory {
                 || isVarArgs && methodArguments.size() < paramTypes.length) {
             throw GeneralErrors.numFunctionArgumentsMismatch(
                 SourceInfo.span(methodArguments),
-                NameHelper.getLongMethodSignature(function.getBehavior()),
+                function.getBehavior().displaySignature(false, false),
                 paramTypes.length,
                 methodArguments.size());
         }
@@ -121,12 +119,13 @@ abstract class AbstractFunctionEmitterFactory {
                     }
 
                     throw GeneralErrors.cannotAssignFunctionArgument(
-                        argument.getSourceInfo(), NameHelper.getLongMethodSignature(function.getBehavior()),
+                        argument.getSourceInfo(), function.getBehavior().displaySignature(false, false),
                         i, ex.getTypeName());
                 }
             } else {
                 argumentValue = createVariadicFunctionArgumentValue(
-                    new ArrayList<>(methodArguments), function.getBehavior(), i, bidirectional, preferObservable);
+                    function.getBehavior(), new ArrayList<>(methodArguments), paramTypes[i],
+                    i, bidirectional, preferObservable);
             }
 
             argumentValues.add(argumentValue);
@@ -176,12 +175,13 @@ abstract class AbstractFunctionEmitterFactory {
     }
 
     private EmitMethodArgumentNode createVariadicFunctionArgumentValue(
-            List<Node> arguments, CtBehavior method, int paramIndex, boolean bidirectional, boolean preferObservable) {
+            BehaviorDeclaration method, List<Node> arguments, TypeInstance paramType,
+            int paramIndex, boolean bidirectional, boolean preferObservable) {
         SourceInfo sourceInfo = SourceInfo.span(
             arguments.get(0).getSourceInfo(), arguments.get(arguments.size() - 1).getSourceInfo());
 
         try {
-            TypeInstance componentType = Objects.requireNonNull(TypeHelper.tryGetArrayComponentType(method, paramIndex));
+            TypeInstance componentType = paramType.componentType();
             List<EmitMethodArgumentNode> values = new ArrayList<>();
 
             for (Node argument : arguments) {
@@ -195,7 +195,7 @@ abstract class AbstractFunctionEmitterFactory {
             }
 
             throw GeneralErrors.cannotAssignFunctionArgument(
-                sourceInfo, NameHelper.getLongMethodSignature(method), paramIndex, ex.getTypeName());
+                sourceInfo, method.displaySignature(false, false), paramIndex, ex.getTypeName());
         }
     }
 
@@ -205,7 +205,7 @@ abstract class AbstractFunctionEmitterFactory {
 
         if (argument instanceof BooleanNode booleanArg) {
             if (!paramType.isAssignableFrom(TypeInstance.BooleanType())) {
-                throw new InconvertibleArgumentException(Classes.BooleanName);
+                throw new InconvertibleArgumentException(BooleanName);
             }
 
             boolean value = Boolean.parseBoolean(booleanArg.getText());
@@ -222,11 +222,11 @@ abstract class AbstractFunctionEmitterFactory {
                 numberType = NumberUtil.parseType(numberArg.getText());
                 value = NumberUtil.parse(numberArg.getText());
             } catch (NumberFormatException ex) {
-                throw new InconvertibleArgumentException(Classes.NumberName);
+                throw new InconvertibleArgumentException(NumberName);
             }
 
             if (!paramType.isAssignableFrom(numberType)) {
-                throw new InconvertibleArgumentException(Classes.NumberName);
+                throw new InconvertibleArgumentException(NumberName);
             }
 
             return EmitMethodArgumentNode.newScalar(
@@ -235,7 +235,7 @@ abstract class AbstractFunctionEmitterFactory {
 
         if (argument instanceof TextNode textArg) {
             if (!paramType.isAssignableFrom(TypeInstance.StringType())) {
-                throw new InconvertibleArgumentException(Classes.StringName);
+                throw new InconvertibleArgumentException(StringName);
             }
 
             return EmitMethodArgumentNode.newScalar(
@@ -320,7 +320,7 @@ abstract class AbstractFunctionEmitterFactory {
             boolean preferObservable,
             boolean maybeInstanceMethod) {
         String methodName;
-        CtClass declaringClass;
+        TypeDeclaration declaringClass;
         ResolvedPath resolvedPath = null;
         boolean isConstructor = false;
 
@@ -334,7 +334,7 @@ abstract class AbstractFunctionEmitterFactory {
             try {
                 if (maybeInstanceMethod) {
                     resolvedPath = pathExpression.resolvePath(false, limit);
-                    className = resolvedPath.getValueTypeInstance().getJavaName();
+                    className = resolvedPath.getValueTypeInstance().javaName();
                 }
             } catch (MarkupException ignored) {
                 maybeInstanceMethod = false;
@@ -355,7 +355,7 @@ abstract class AbstractFunctionEmitterFactory {
             declaringClass = resolver.tryResolveClassAgainstImports(className);
             if (declaringClass == null) {
                 declaringClass = resolver.tryResolveNestedClass(
-                    pathExpression.getBindingContext().getType().getJvmType(), className);
+                    pathExpression.getBindingContext().getType().getTypeDeclaration(), className);
             }
 
             if (declaringClass == null) {
@@ -366,13 +366,13 @@ abstract class AbstractFunctionEmitterFactory {
                 if (declaringClass == null) {
                     throw SymbolResolutionErrors.memberNotFound(
                         pathExpression.getSourceInfo(),
-                        pathExpression.getBindingContext().getType().getJvmType(),
+                        pathExpression.getBindingContext().getType().getTypeDeclaration(),
                         className);
                 }
             }
         } else {
             methodName = pathExpression.getSimplePath();
-            declaringClass = pathExpression.getBindingContext().getType().getJvmType();
+            declaringClass = pathExpression.getBindingContext().getType().getTypeDeclaration();
         }
 
         List<TypeInstance> argumentTypes = arguments.stream()
@@ -388,7 +388,7 @@ abstract class AbstractFunctionEmitterFactory {
         // If applicable methods are found, we choose the most specific method.
         if (!isConstructor) {
             var methodFinder = new MethodFinder(invokingType, declaringClass);
-            CtMethod method = methodFinder.findMethod(
+            MethodDeclaration method = methodFinder.findMethod(
                 methodName, false, returnType, typeWitnesses, argumentTypes,
                 argumentsSourceInfo, diagnostics, pathExpression.getSourceInfo());
 
@@ -401,7 +401,7 @@ abstract class AbstractFunctionEmitterFactory {
             }
 
             if (method != null) {
-                if (!maybeInstanceMethod && !Modifier.isStatic(method.getModifiers())) {
+                if (!maybeInstanceMethod && !method.isStatic()) {
                     throw SymbolResolutionErrors.instanceMemberReferencedFromStaticContext(
                         pathExpression.getSourceInfo(), method);
                 }
@@ -415,13 +415,13 @@ abstract class AbstractFunctionEmitterFactory {
         // If no applicable methods were found, we treat the identifier as the name of a class and
         // see if there is a constructor that accepts our arguments.
         var resolver = new Resolver(pathExpression.getSourceInfo());
-        CtClass ctorClass = resolver.tryResolveClass(pathExpression.getSimplePath());
+        TypeDeclaration ctorClass = resolver.tryResolveClass(pathExpression.getSimplePath());
         if (ctorClass == null) {
             ctorClass = resolver.tryResolveClassAgainstImports(methodName);
         }
 
         if (ctorClass != null) {
-            CtConstructor constructor = new MethodFinder(invokingType, ctorClass).findConstructor(
+            ConstructorDeclaration constructor = new MethodFinder(invokingType, ctorClass).findConstructor(
                 typeWitnesses,
                 argumentTypes,
                 argumentsSourceInfo,
@@ -455,8 +455,7 @@ abstract class AbstractFunctionEmitterFactory {
                 diagnostics.stream().map(DiagnosticInfo::getDiagnostic).toArray(Diagnostic[]::new));
         }
 
-        throw SymbolResolutionErrors.memberNotFound(
-            pathExpression.getSourceInfo(), declaringClass, methodName);
+        throw SymbolResolutionErrors.memberNotFound(pathExpression.getSourceInfo(), declaringClass, methodName);
     }
 
     private TypeInstance getArgumentType(Node argument, boolean preferObservable) {
@@ -498,12 +497,12 @@ abstract class AbstractFunctionEmitterFactory {
     }
 
     private List<ValueEmitterNode> getMethodReceiverEmitters(
-            PathExpressionNode pathExpression, ResolvedPath resolvedPath, CtMethod method) {
+            PathExpressionNode pathExpression, ResolvedPath resolvedPath, MethodDeclaration method) {
         if (resolvedPath != null) {
             return resolvedPath.toValueEmitters(true, pathExpression.getSourceInfo());
         }
 
-        if (!Modifier.isStatic(method.getModifiers())) {
+        if (!method.isStatic()) {
             BindingContextNode bindingSource = pathExpression.getBindingContext();
             var result = new ArrayList<ValueEmitterNode>(1);
             result.add((bindingSource.toSegment().toValueEmitter(true, bindingSource.getSourceInfo())));
@@ -515,23 +514,24 @@ abstract class AbstractFunctionEmitterFactory {
 
     private Callable findInverseFunctionViaAnnotation(
             Callable method, TypeInstance argumentType, TypeInstance returnType, SourceInfo sourceInfo) {
-        Annotation annotation = new Resolver(sourceInfo).tryResolveMethodAnnotation(
-            method.getBehavior(), "InverseMethod", true);
+        AnnotationDeclaration annotation = method.getBehavior()
+            .annotation(Markup.InverseMethodAnnotationName)
+            .orElse(null);
 
         if (annotation == null) {
             throw BindingSourceErrors.methodNotInvertible(sourceInfo, method.getBehavior());
         }
 
-        String methodName = TypeHelper.getAnnotationString(annotation, "value");
+        String methodName = annotation.getString("value");
         if (methodName == null) {
             throw BindingSourceErrors.invalidInverseMethodAnnotationValue(sourceInfo, method.getBehavior());
         }
 
-        CtClass declaringClass = method.getBehavior().getDeclaringClass();
+        TypeDeclaration declaringClass = method.getBehavior().declaringType();
         List<DiagnosticInfo> diagnostics = new ArrayList<>();
 
         // TODO: Do we need a way to specify type witnesses for inverse methods?
-        CtMethod jvmMethod = new MethodFinder(invokingType, declaringClass).findMethod(
+        MethodDeclaration foundMethod = new MethodFinder(invokingType, declaringClass).findMethod(
             methodName, false, argumentType, List.of(), List.of(returnType), List.of(sourceInfo), diagnostics, sourceInfo);
 
         if (!diagnostics.isEmpty()) {
@@ -540,7 +540,7 @@ abstract class AbstractFunctionEmitterFactory {
                 diagnostics.stream().map(DiagnosticInfo::getDiagnostic).toArray(Diagnostic[]::new));
         }
 
-        return new Callable(method.getReceiver(), jvmMethod, sourceInfo);
+        return new Callable(method.getReceiver(), foundMethod, sourceInfo);
     }
 
     private record InvocationInfoKey(

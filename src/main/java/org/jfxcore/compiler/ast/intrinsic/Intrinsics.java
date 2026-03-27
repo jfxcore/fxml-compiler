@@ -1,10 +1,10 @@
-// Copyright (c) 2022, 2025, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.intrinsic;
 
 import org.jfxcore.compiler.ast.ObjectNode;
-import org.jfxcore.compiler.util.Classes;
+import org.jfxcore.compiler.type.Types;
 import java.util.List;
 
 import static org.jfxcore.compiler.ast.intrinsic.Intrinsic.*;
@@ -12,77 +12,77 @@ import static org.jfxcore.compiler.ast.intrinsic.Intrinsic.*;
 public class Intrinsics {
 
     public static final Intrinsic NULL = new Intrinsic(
-        "null", Kind.OBJECT, Placement.NOT_ROOT, Classes::NullType);
+        "null", Kind.OBJECT, Placement.NOT_ROOT, Types::NullTypeDecl);
 
     public static final Intrinsic CLASS = new Intrinsic(
-        "class", Kind.PROPERTY, Placement.ROOT, Classes::StringType);
+        "class", Kind.PROPERTY, Placement.ROOT, Types::StringDecl);
 
     public static final Intrinsic CLASS_MODIFIER = new Intrinsic(
-        "classModifier", Kind.PROPERTY, Placement.ROOT, Classes::StringType);
+        "classModifier", Kind.PROPERTY, Placement.ROOT, Types::StringDecl);
 
     public static final Intrinsic CLASS_PARAMETERS = new Intrinsic(
-        "classParameters", Kind.PROPERTY, Placement.ROOT, Classes::StringType);
+        "classParameters", Kind.PROPERTY, Placement.ROOT, Types::StringDecl);
 
     public static final Intrinsic MARKUP_CLASS_NAME = new Intrinsic(
-        "markupClassName", Kind.PROPERTY, Placement.ROOT, Classes::StringType);
+        "markupClassName", Kind.PROPERTY, Placement.ROOT, Types::StringDecl);
 
     public static final Intrinsic CONTEXT = new Intrinsic(
-        "context", Kind.PROPERTY, Placement.ROOT, Classes::ObjectType);
+        "context", Kind.PROPERTY, Placement.ROOT, Types::ObjectDecl);
 
     public static final Intrinsic ID = new Intrinsic(
-        "id", Kind.PROPERTY, Placement.ANY, Classes::StringType);
+        "id", Kind.PROPERTY, Placement.ANY, Types::StringDecl);
 
     public static final Intrinsic VALUE = new Intrinsic(
-        "value", Kind.PROPERTY, Placement.NOT_ROOT, Classes::BottomType);
+        "value", Kind.PROPERTY, Placement.NOT_ROOT, Types::BottomTypeDecl);
 
     public static final Intrinsic CONSTANT = new Intrinsic(
-        "constant", Kind.PROPERTY, Placement.NOT_ROOT, Classes::StringType);
+        "constant", Kind.PROPERTY, Placement.NOT_ROOT, Types::StringDecl);
 
     public static final Intrinsic FACTORY = new Intrinsic(
-        "factory", Kind.PROPERTY, Placement.NOT_ROOT, Classes::BottomType);
+        "factory", Kind.PROPERTY, Placement.NOT_ROOT, Types::BottomTypeDecl);
 
     public static final Intrinsic TYPE_ARGUMENTS = new Intrinsic(
-        "typeArguments", Kind.PROPERTY, Placement.ANY, Classes::StringType);
+        "typeArguments", Kind.PROPERTY, Placement.ANY, Types::StringDecl);
 
     public static final Intrinsic ITEM_TYPE = new Intrinsic(
-        "itemType", Kind.PROPERTY, Placement.ANY, Classes::StringType);
+        "itemType", Kind.PROPERTY, Placement.ANY, Types::StringDecl);
 
     public static final Intrinsic DEFINE = new Intrinsic(
-        "define", Kind.PROPERTY, Placement.ANY, Classes::BottomType);
+        "define", Kind.PROPERTY, Placement.ANY, Types::BottomTypeDecl);
 
     public static final Intrinsic STYLESHEET = new Intrinsic(
-        "stylesheet", Kind.OBJECT, Placement.ANY, Classes::StringType);
+        "stylesheet", Kind.OBJECT, Placement.ANY, Types::StringDecl);
 
     public static final Intrinsic TYPE = new Intrinsic(
-        "type", Kind.OBJECT, Placement.ANY, Classes::ClassType,
-        new IntrinsicProperty("name", Classes::StringType, true));
+        "type", Kind.OBJECT, Placement.ANY, Types::ClassDecl,
+        new IntrinsicProperty("name", Types::StringDecl, true));
 
     public static final Intrinsic ONCE = new Intrinsic(
-        "once", Kind.OBJECT, Placement.ANY, Classes::BottomType,
-        new IntrinsicProperty("path", Classes::StringType, true));
+        "once", Kind.OBJECT, Placement.ANY, Types::BottomTypeDecl,
+        new IntrinsicProperty("path", Types::StringDecl, true));
 
     public static final Intrinsic CONTENT = new Intrinsic(
-        "content", Kind.OBJECT, Placement.ANY, Classes::BottomType,
-        new IntrinsicProperty("path", Classes::StringType, true));
+        "content", Kind.OBJECT, Placement.ANY, Types::BottomTypeDecl,
+        new IntrinsicProperty("path", Types::StringDecl, true));
 
     public static final Intrinsic BIND = new Intrinsic(
-        "bind", Kind.OBJECT, Placement.ANY, Classes::BottomType,
-        new IntrinsicProperty("path", Classes::StringType, true));
+        "bind", Kind.OBJECT, Placement.ANY, Types::BottomTypeDecl,
+        new IntrinsicProperty("path", Types::StringDecl, true));
 
     public static final Intrinsic BIND_CONTENT = new Intrinsic(
-        "bindContent", Kind.OBJECT, Placement.ANY, Classes::BottomType,
-        new IntrinsicProperty("path", Classes::StringType, true));
+        "bindContent", Kind.OBJECT, Placement.ANY, Types::BottomTypeDecl,
+        new IntrinsicProperty("path", Types::StringDecl, true));
 
     public static final Intrinsic BIND_BIDIRECTIONAL = new Intrinsic(
-        "bindBidirectional", Kind.OBJECT, Placement.ANY, Classes::BottomType,
-        new IntrinsicProperty("path", Classes::StringType, true),
-        new IntrinsicProperty("format", Classes::FormatType),
-        new IntrinsicProperty("converter", Classes::StringConverterType),
-        new IntrinsicProperty("inverseMethod", Classes::StringType));
+        "bindBidirectional", Kind.OBJECT, Placement.ANY, Types::BottomTypeDecl,
+        new IntrinsicProperty("path", Types::StringDecl, true),
+        new IntrinsicProperty("format", Types::FormatDecl),
+        new IntrinsicProperty("converter", Types::StringConverterDecl),
+        new IntrinsicProperty("inverseMethod", Types::StringDecl));
 
     public static final Intrinsic BIND_CONTENT_BIDIRECTIONAL = new Intrinsic(
-        "bindContentBidirectional", Kind.OBJECT, Placement.ANY, Classes::BottomType,
-        new IntrinsicProperty("path", Classes::StringType, true));
+        "bindContentBidirectional", Kind.OBJECT, Placement.ANY, Types::BottomTypeDecl,
+        new IntrinsicProperty("path", Types::StringDecl, true));
 
     private static final List<Intrinsic> NODES = List.of(
         NULL, CLASS, CLASS_MODIFIER, CLASS_PARAMETERS, MARKUP_CLASS_NAME, CONTEXT, ID, VALUE, CONSTANT,

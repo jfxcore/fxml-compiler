@@ -1,12 +1,12 @@
-// Copyright (c) 2022, 2025, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.intrinsic;
 
-import javassist.CtClass;
 import org.jfxcore.compiler.ast.TypeNode;
-import org.jfxcore.compiler.util.TypeInstance;
-import org.jfxcore.compiler.util.TypeInvoker;
+import org.jfxcore.compiler.type.TypeDeclaration;
+import org.jfxcore.compiler.type.TypeInstance;
+import org.jfxcore.compiler.type.TypeInvoker;
 import java.util.Arrays;
 import java.util.List;
 import java.util.function.Supplier;
@@ -22,13 +22,13 @@ public class Intrinsic {
     }
 
     private final String name;
-    private final Supplier<CtClass> type;
+    private final Supplier<TypeDeclaration> type;
     private final Kind kind;
     private final Placement placement;
     private final List<IntrinsicProperty> properties;
     private TypeInstance cachedTypeInstance;
 
-    public Intrinsic(String name, Kind kind, Placement placement, Supplier<CtClass> type, IntrinsicProperty... properties) {
+    public Intrinsic(String name, Kind kind, Placement placement, Supplier<TypeDeclaration> type, IntrinsicProperty... properties) {
         this.name = name;
         this.type = type;
         this.kind = kind;

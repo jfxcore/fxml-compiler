@@ -1,25 +1,24 @@
-// Copyright (c) 2024, 2025, JFXcore. All rights reserved.
+// Copyright (c) 2024, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.transform.markup;
 
-import javassist.CtField;
 import org.jfxcore.compiler.ast.BindingMode;
 import org.jfxcore.compiler.ast.BindingNode;
+import org.jfxcore.compiler.ast.ContextNode;
 import org.jfxcore.compiler.ast.Node;
 import org.jfxcore.compiler.ast.PropertyNode;
 import org.jfxcore.compiler.ast.ValueNode;
-import org.jfxcore.compiler.ast.ContextNode;
 import org.jfxcore.compiler.ast.intrinsic.Intrinsics;
 import org.jfxcore.compiler.diagnostic.errors.GeneralErrors;
 import org.jfxcore.compiler.diagnostic.errors.ParserErrors;
 import org.jfxcore.compiler.transform.Transform;
 import org.jfxcore.compiler.transform.TransformContext;
-import org.jfxcore.compiler.util.ExceptionHelper;
+import org.jfxcore.compiler.type.FieldDeclaration;
+import org.jfxcore.compiler.type.TypeHelper;
+import org.jfxcore.compiler.type.TypeInstance;
+import org.jfxcore.compiler.type.TypeInvoker;
 import org.jfxcore.compiler.util.NameHelper;
-import org.jfxcore.compiler.util.TypeHelper;
-import org.jfxcore.compiler.util.TypeInstance;
-import org.jfxcore.compiler.util.TypeInvoker;
 import java.util.function.Function;
 
 public class BindingContextTransform implements Transform {
@@ -31,15 +30,9 @@ public class BindingContextTransform implements Transform {
         }
 
         Node value = propertyNode.getSingleValue(context);
-        Function<TypeInstance, CtField> createField = t -> ExceptionHelper.unchecked(value.getSourceInfo(), () -> {
-            var contextField = new CtField(
-                t.jvmType(),
-                NameHelper.getMangledFieldName("context"),
-                context.getMarkupClass());
 
-            context.getMarkupClass().addField(contextField);
-            return contextField;
-        });
+        Function<TypeInstance, FieldDeclaration> createField = t -> context.getMarkupClass()
+            .createField(NameHelper.getMangledFieldName("context"), t.declaration());
 
         BindingNode bindingNode = new BindingTransform(false).transform(context, value).as(BindingNode.class);
         if (bindingNode != null) {

@@ -1,9 +1,8 @@
-// Copyright (c) 2021, 2025, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.emit;
 
-import javassist.CtClass;
 import org.jfxcore.compiler.ast.EmitContext;
 import org.jfxcore.compiler.ast.GeneratorEmitterNode;
 import org.jfxcore.compiler.ast.Node;
@@ -11,6 +10,8 @@ import org.jfxcore.compiler.ast.Visitor;
 import org.jfxcore.compiler.generate.ClassGenerator;
 import org.jfxcore.compiler.generate.Generator;
 import org.jfxcore.compiler.generate.RuntimeContextGenerator;
+import org.jfxcore.compiler.type.BehaviorDeclaration;
+import org.jfxcore.compiler.type.TypeDeclaration;
 import org.jfxcore.compiler.util.Action;
 import org.jfxcore.compiler.util.ArrayStack;
 import org.jfxcore.compiler.util.Bytecode;
@@ -24,23 +25,23 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 public class BytecodeEmitContext extends EmitContext<Bytecode> {
 
     private final BytecodeEmitContext parentContext;
     private final EmitInitializeRootNode rootNode;
-    private final CtClass codeBehindClass;
-    private final CtClass markupClass;
+    private final TypeDeclaration codeBehindClass;
+    private final TypeDeclaration markupClass;
     private final ClassSetImpl nestedClasses;
-    private CtClass bindingContextClass;
-    private CtClass runtimeContextClass;
-    private int runtimeContextLocal;
+
     private List<GeneratorEntry> activeGenerators;
+    private TypeDeclaration bindingContextClass;
+    private TypeDeclaration runtimeContextClass;
+    private int runtimeContextLocal;
 
     public BytecodeEmitContext(
-            CtClass codeBehindClass,
-            CtClass markupClass,
+            TypeDeclaration codeBehindClass,
+            TypeDeclaration markupClass,
             EmitInitializeRootNode rootNode,
             List<String> imports,
             Bytecode code) {
@@ -53,13 +54,13 @@ public class BytecodeEmitContext extends EmitContext<Bytecode> {
         this.nestedClasses = new ClassSetImpl(markupClass);
 
         CompilationContext context = CompilationContext.getCurrent();
-        context.setClassPool(markupClass.getClassPool());
+        context.setClassPool(markupClass.jvmType().getClassPool());
         context.setImports(imports);
     }
 
     public BytecodeEmitContext(
             BytecodeEmitContext parentContext,
-            CtClass bindingContextClass,
+            TypeDeclaration bindingContextClass,
             EmitInitializeRootNode rootNode,
             int occupiedLocals,
             int runtimeContextLocal) {
@@ -75,7 +76,21 @@ public class BytecodeEmitContext extends EmitContext<Bytecode> {
 
     public BytecodeEmitContext(
             BytecodeEmitContext parentContext,
-            CtClass bindingContextClass,
+            BehaviorDeclaration behavior,
+            int runtimeContextLocal) {
+        super(new Bytecode(behavior), parentContext.getParents());
+        this.parentContext = parentContext;
+        this.rootNode = null;
+        this.bindingContextClass = behavior.declaringType();
+        this.codeBehindClass = parentContext.codeBehindClass;
+        this.markupClass = parentContext.markupClass;
+        this.nestedClasses = parentContext.nestedClasses;
+        this.runtimeContextLocal = runtimeContextLocal;
+    }
+
+    public BytecodeEmitContext(
+            BytecodeEmitContext parentContext,
+            TypeDeclaration bindingContextClass,
             int occupiedLocals,
             int runtimeContextLocal) {
         super(new Bytecode(bindingContextClass, occupiedLocals), parentContext.getParents());
@@ -96,7 +111,7 @@ public class BytecodeEmitContext extends EmitContext<Bytecode> {
         return runtimeContextLocal;
     }
 
-    public CtClass getRuntimeContextClass() {
+    public TypeDeclaration getRuntimeContextClass() {
         if (parentContext != null) {
             return parentContext.getRuntimeContextClass();
         }
@@ -116,8 +131,7 @@ public class BytecodeEmitContext extends EmitContext<Bytecode> {
                 }
             });
 
-            runtimeContextClass = ClassGenerator.emit(
-                this, new RuntimeContextGenerator(markupContextSupport[0]));
+            runtimeContextClass = ClassGenerator.emit(this, new RuntimeContextGenerator(markupContextSupport[0]));
         }
 
         return runtimeContextClass;
@@ -131,11 +145,11 @@ public class BytecodeEmitContext extends EmitContext<Bytecode> {
      *
      * In a template sub-document, this corresponds to the local markup class.
      */
-    public CtClass getBindingContextClass() {
+    public TypeDeclaration getBindingContextClass() {
         return bindingContextClass;
     }
 
-    public void setBindingContextClass(CtClass contextClass) {
+    public void setBindingContextClass(TypeDeclaration contextClass) {
         this.bindingContextClass = contextClass;
     }
 
@@ -143,7 +157,7 @@ public class BytecodeEmitContext extends EmitContext<Bytecode> {
      * A user-specified class that inherits the compiler-generated markup class.
      * If the FXML document doesn't have a code-behind class, this is equivalent to the markup class.
      */
-    public CtClass getCodeBehindClass() {
+    public TypeDeclaration getCodeBehindClass() {
         if (codeBehindClass == null) {
             throw new UnsupportedOperationException();
         }
@@ -155,7 +169,7 @@ public class BytecodeEmitContext extends EmitContext<Bytecode> {
      * The class that contains compiler-generated markup.
      * If the FXML document has a code-behind class, this is the class which is inherited by the code-behind class.
      */
-    public CtClass getMarkupClass() {
+    public TypeDeclaration getMarkupClass() {
         if (markupClass == null) {
             throw new UnsupportedOperationException();
         }
@@ -167,7 +181,7 @@ public class BytecodeEmitContext extends EmitContext<Bytecode> {
      * In the root document, this corresponds to the markup class.
      * In a template sub-document, this corresponds to the binding context class.
      */
-    public CtClass getLocalMarkupClass() {
+    public TypeDeclaration getLocalMarkupClass() {
         if (rootNode.isTemplateRoot()) {
             return bindingContextClass;
         }
@@ -276,7 +290,7 @@ public class BytecodeEmitContext extends EmitContext<Bytecode> {
                         generators.addAll(
                             list.stream()
                                 .map(g -> new GeneratorEntry(node, new ArrayList<>(parents), g))
-                                .collect(Collectors.toList()));
+                                .toList());
                     }
                 }
 
@@ -318,33 +332,33 @@ public class BytecodeEmitContext extends EmitContext<Bytecode> {
         return Collections.emptyList();
     }
 
-    public interface ClassSet extends Set<CtClass> {
-        CtClass create(String simpleName);
-        CtClass find(String simpleName);
+    public interface ClassSet extends Set<TypeDeclaration> {
+        TypeDeclaration create(String simpleName);
+        TypeDeclaration find(String simpleName);
     }
 
-    private static class ClassSetImpl extends AbstractSet<CtClass> implements ClassSet {
-        private final HashMap<CtClass, Object> map = new HashMap<>();
+    private static class ClassSetImpl extends AbstractSet<TypeDeclaration> implements ClassSet {
+        private final HashMap<TypeDeclaration, Object> map = new HashMap<>();
         private final Object present = new Object();
-        private final CtClass markupClass;
+        private final TypeDeclaration markupClass;
 
-        ClassSetImpl(CtClass markupClass) {
+        ClassSetImpl(TypeDeclaration markupClass) {
             this.markupClass = markupClass;
         }
 
         @Override
-        public CtClass create(String simpleName) {
-            CtClass newClass = markupClass.makeNestedClass(simpleName, true);
+        public TypeDeclaration create(String simpleName) {
+            var newClass = markupClass.createNestedClass(simpleName);
             map.put(newClass, present);
             return newClass;
         }
 
         @Override
-        public CtClass find(String simpleName) {
-            simpleName = markupClass.getSimpleName() + "$" + simpleName;
+        public TypeDeclaration find(String simpleName) {
+            simpleName = markupClass.simpleName() + "$" + simpleName;
 
-            for (CtClass ctclass : this) {
-                if (ctclass.getSimpleName().equals(simpleName)) {
+            for (TypeDeclaration ctclass : this) {
+                if (ctclass.simpleName().equals(simpleName)) {
                     return ctclass;
                 }
             }
@@ -353,7 +367,7 @@ public class BytecodeEmitContext extends EmitContext<Bytecode> {
         }
 
         @Override
-        public Iterator<CtClass> iterator() {
+        public Iterator<TypeDeclaration> iterator() {
             return map.keySet().iterator();
         }
 

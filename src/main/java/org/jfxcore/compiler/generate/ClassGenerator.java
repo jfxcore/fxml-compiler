@@ -1,31 +1,65 @@
-// Copyright (c) 2023, JFXcore. All rights reserved.
+// Copyright (c) 2023, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.generate;
 
-import javassist.CtClass;
-import javassist.CtMethod;
-import javassist.Modifier;
 import org.jfxcore.compiler.ast.emit.BytecodeEmitContext;
-import org.jfxcore.compiler.diagnostic.SourceInfo;
+import org.jfxcore.compiler.type.ConstructorDeclaration;
+import org.jfxcore.compiler.type.FieldDeclaration;
+import org.jfxcore.compiler.type.MethodDeclaration;
+import org.jfxcore.compiler.type.TypeDeclaration;
+import org.jfxcore.compiler.type.TypeInstance;
+import org.jfxcore.compiler.type.Types;
 import org.jfxcore.compiler.util.Bytecode;
 import org.jfxcore.compiler.util.CompilationContext;
-import org.jfxcore.compiler.util.ExceptionHelper;
-import org.jfxcore.compiler.util.TypeInstance;
+import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.List;
 
 public abstract class ClassGenerator implements Generator {
 
-    protected CtClass generatedClass;
+    protected TypeDeclaration generatedClass;
 
-    private CtMethod forceInitMethod;
+    protected final FieldDeclaration createField(String name, TypeDeclaration type) {
+        return generatedClass.createField(name, type);
+    }
+
+    protected final MethodDeclaration createMethod(String name, TypeDeclaration returnType,
+                                                          TypeDeclaration... parameterTypes) {
+        return generatedClass.createMethod(name, returnType, parameterTypes);
+    }
+
+    protected final ConstructorDeclaration createDefaultConstructor() {
+        return generatedClass.createDefaultConstructor();
+    }
+
+    protected final ConstructorDeclaration createConstructor(TypeDeclaration... parameterTypes) {
+        return generatedClass.createConstructor(parameterTypes);
+    }
+
+    protected final TypeDeclaration requireSuperClass() {
+        return generatedClass.requireSuperClass();
+    }
+
+    protected final FieldDeclaration requireDeclaredField(String name) {
+        return generatedClass.requireDeclaredField(name);
+    }
+
+    protected final MethodDeclaration requireDeclaredMethod(String name, TypeDeclaration... parameters) {
+        return generatedClass.requireDeclaredMethod(name, parameters);
+    }
 
     public abstract String getClassName();
 
     public abstract TypeInstance getTypeInstance();
 
-    public abstract void emitClass(BytecodeEmitContext context) throws Exception;
+    public final TypeDeclaration getGeneratedClass() {
+        return generatedClass;
+    }
+
+    public TypeDeclaration emitClass(BytecodeEmitContext context) {
+        return generatedClass = context.getNestedClasses().create(getClassName());
+    }
 
     @Override
     @SuppressWarnings("unchecked")
@@ -43,29 +77,18 @@ public abstract class ClassGenerator implements Generator {
     }
 
     @Override
-    public void emitMethods(BytecodeEmitContext context) throws Exception {
-        forceInitMethod = new CtMethod(CtClass.voidType, "forceInit", new CtClass[0], generatedClass);
-        forceInitMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL | Modifier.STATIC);
-        generatedClass.addMethod(forceInitMethod);
+    public void emitMethods(BytecodeEmitContext context) {
+        generatedClass
+            .createMethod("forceInit", Types.voidDecl())
+            .setModifiers(Modifier.PUBLIC | Modifier.FINAL | Modifier.STATIC)
+            .setCode(new Bytecode(generatedClass, 0).vreturn());
     }
 
-    @Override
-    public void emitCode(BytecodeEmitContext context) throws Exception {
-        Bytecode code = new Bytecode(generatedClass, 0);
-        code.vreturn();
-        forceInitMethod.getMethodInfo().setCodeAttribute(code.toCodeAttribute());
-        forceInitMethod.getMethodInfo().rebuildStackMap(generatedClass.getClassPool());
-    }
-
-    public static CtClass emit(BytecodeEmitContext context, ClassGenerator generator) {
-        ExceptionHelper.unchecked(SourceInfo.none(), () -> {
-            generator.emitClass(context);
-            generator.emitFields(context);
-            generator.emitMethods(context);
-            generator.emitCode(context);
-        });
-
+    public static TypeDeclaration emit(BytecodeEmitContext context, ClassGenerator generator) {
+        generator.emitClass(context);
+        generator.emitFields(context);
+        generator.emitMethods(context);
+        generator.emitCode(context);
         return context.getNestedClasses().find(generator.getClassName());
     }
-
 }

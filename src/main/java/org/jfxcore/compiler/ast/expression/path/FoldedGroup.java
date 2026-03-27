@@ -1,17 +1,17 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.expression.path;
 
-import javassist.CtClass;
 import org.jetbrains.annotations.Nullable;
+import org.jfxcore.compiler.type.TypeDeclaration;
 import org.jfxcore.compiler.util.ObservableKind;
 
 public class FoldedGroup {
 
     private final Segment[] path;
     private final String name;
-    private CtClass compiledClass;
+    private TypeDeclaration compiledClass;
 
     public FoldedGroup(Segment[] path, String name) {
         this.path = path;
@@ -34,28 +34,27 @@ public class FoldedGroup {
         return name;
     }
 
-    public CtClass getCompiledClass() {
+    public TypeDeclaration getCompiledClass() {
         return compiledClass;
     }
 
-    public void setCompiledClass(CtClass compiledClass) {
+    public void setCompiledClass(TypeDeclaration compiledClass) {
         this.compiledClass = compiledClass;
     }
 
-    public CtClass getType() {
-        return path[path.length - 1].getTypeInstance().jvmType();
+    public TypeDeclaration getType() {
+        return path[path.length - 1].getTypeInstance().declaration();
     }
 
-    public CtClass getValueType() {
-        return path[path.length - 1].getValueTypeInstance().jvmType();
+    public TypeDeclaration getValueType() {
+        return path[path.length - 1].getValueTypeInstance().declaration();
     }
 
-    public @Nullable CtClass getObservableType() {
+    public @Nullable TypeDeclaration getObservableType() {
         if (path[path.length - 1].getObservableKind() != ObservableKind.NONE) {
-            return path[path.length - 1].getTypeInstance().jvmType();
+            return path[path.length - 1].getTypeInstance().declaration();
         }
 
         return null;
     }
-
 }

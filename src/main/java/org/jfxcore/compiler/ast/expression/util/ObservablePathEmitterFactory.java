@@ -1,4 +1,4 @@
-// Copyright (c) 2021, 2025, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.expression.util;
@@ -14,8 +14,8 @@ import org.jfxcore.compiler.ast.expression.path.Segment;
 import org.jfxcore.compiler.diagnostic.MarkupException;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.diagnostic.errors.BindingSourceErrors;
+import org.jfxcore.compiler.type.TypeHelper;
 import org.jfxcore.compiler.util.ObservableKind;
-import org.jfxcore.compiler.util.TypeHelper;
 
 public class ObservablePathEmitterFactory implements ObservableEmitterFactory {
 
@@ -39,12 +39,12 @@ public class ObservablePathEmitterFactory implements ObservableEmitterFactory {
         if (bidirectional && path.getObservableKind() != ObservableKind.FX_PROPERTY) {
             MarkupException ex;
 
-            if (lastSegment.getDeclaringClass() == null) {
+            if (lastSegment.getDeclaringType() == null) {
                 ex = BindingSourceErrors.invalidBidirectionalBindingSource(
-                    sourceInfo, lastSegment.getValueTypeInstance().jvmType(), false);
+                    sourceInfo, lastSegment.getValueTypeInstance(), false);
             } else {
                 ex = BindingSourceErrors.invalidBidirectionalBindingSource(
-                    sourceInfo, lastSegment.getDeclaringClass(), lastSegment.getDisplayName());
+                    sourceInfo, lastSegment.getDeclaringType(), lastSegment.getDisplayName());
             }
 
             ex.getProperties().put("sourceType", path.getValueTypeInstance());
@@ -69,7 +69,7 @@ public class ObservablePathEmitterFactory implements ObservableEmitterFactory {
             value,
             operator.evaluateType(path.getValueTypeInstance()),
             TypeHelper.getTypeInstance(value),
-            lastSegment.getDeclaringClass(),
+            lastSegment.getDeclaringType(),
             lastSegment.getDisplayName(),
             false,
             emitPathNode.isCompiledPath(),

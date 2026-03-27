@@ -3,12 +3,11 @@
 
 package org.jfxcore.compiler.util;
 
-import javassist.CtBehavior;
-import javassist.CtClass;
-import javassist.CtConstructor;
-import javassist.CtMember;
-import javassist.CtMethod;
-import org.jfxcore.compiler.diagnostic.SourceInfo;
+import org.jfxcore.compiler.type.BehaviorDeclaration;
+import org.jfxcore.compiler.type.ConstructorDeclaration;
+import org.jfxcore.compiler.type.MethodDeclaration;
+import org.jfxcore.compiler.type.TypeDeclaration;
+import org.jfxcore.compiler.type.TypeInstance;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -82,32 +81,33 @@ public class NameHelper {
         return (isPrefix ? "is" : "get") + Character.toUpperCase(name.charAt(0)) + name.substring(1);
     }
 
-    public static String getLongMethodSignature(CtBehavior behavior) {
-        String behaviorName = getJavaClassName(SourceInfo.none(), behavior.getDeclaringClass());
-        if (behavior instanceof CtMethod) {
-            behaviorName += "." + behavior.getName();
+    public static String getLongMethodSignature(BehaviorDeclaration behavior) {
+        String behaviorName = behavior.declaringType().javaName();
+        if (behavior instanceof MethodDeclaration) {
+            behaviorName += "." + behavior.name();
         }
 
         return getMethodSignature(
             behaviorName,
-            Arrays.stream(ExceptionHelper.unchecked(SourceInfo.none(), behavior::getParameterTypes))
-                .map(CtClass::getName).toArray(String[]::new),
+            behavior.parameters().stream().map(BehaviorDeclaration.Parameter::name).toArray(String[]::new),
             new String[0]);
     }
 
-    public static String getShortMethodSignature(CtBehavior behavior) {
+    public static String getShortMethodSignature(BehaviorDeclaration behavior) {
         return getMethodSignature(
-            behavior instanceof CtConstructor ?
-                behavior.getDeclaringClass().getSimpleName() : behavior.getName(),
-            Arrays.stream(ExceptionHelper.unchecked(SourceInfo.none(), behavior::getParameterTypes))
-                .map(CtClass::getName).toArray(String[]::new),
+            behavior instanceof ConstructorDeclaration
+                ? behavior.declaringType().simpleName()
+                : behavior.name(),
+            behavior.parameters().stream().map(BehaviorDeclaration.Parameter::name).toArray(String[]::new),
             new String[0]);
     }
 
-    public static String getShortMethodSignature(CtBehavior behavior, TypeInstance[] paramTypes, String[] paramNames) {
+    public static String getShortMethodSignature(BehaviorDeclaration behavior,
+                                                 TypeInstance[] paramTypes,
+                                                 String[] paramNames) {
         return getMethodSignature(
-            behavior.getDeclaringClass().getSimpleName(),
-            Arrays.stream(paramTypes).map(TypeInstance::getJavaName).toArray(String[]::new),
+            behavior.declaringType().simpleName(),
+            Arrays.stream(paramTypes).map(TypeInstance::javaName).toArray(String[]::new),
             paramNames);
     }
 
@@ -130,39 +130,21 @@ public class NameHelper {
         return builder.append(')').toString();
     }
 
-    public static String getJavaMemberName(SourceInfo sourceInfo, CtMember member) {
-        return getJavaClassName(sourceInfo, member.getDeclaringClass()) + "." + member.getName();
-    }
-
-    public static String getJavaClassName(SourceInfo sourceInfo, CtClass cls) {
-        return ExceptionHelper.unchecked(sourceInfo, () -> {
-            char[] name = cls.getName().toCharArray();
-            CtClass declaringClass = cls.getDeclaringClass();
-
-            while (declaringClass != null) {
-                name[declaringClass.getName().length()] = '.';
-                declaringClass = declaringClass.getDeclaringClass();
-            }
-
-            return new String(name);
-        });
-    }
-
     public static String formatPropertyName(PropertyInfo propertyInfo) {
         String propertyName = propertyInfo.getName();
         if (propertyName.contains(".")) {
-            return propertyInfo.getDeclaringType().getSimpleName() + ".(" + propertyName + ")";
+            return propertyInfo.getDeclaringType().simpleName() + ".(" + propertyName + ")";
         }
 
-        return propertyInfo.getDeclaringType().getSimpleName() + "." + propertyName;
+        return propertyInfo.getDeclaringType().simpleName() + "." + propertyName;
     }
 
-    public static String formatPropertyName(CtClass declaringClass, String name) {
+    public static String formatPropertyName(TypeDeclaration declaringType, String name) {
         if (name.contains(".")) {
-            return declaringClass.getSimpleName() + ".(" + name + ")";
+            return declaringType.simpleName() + ".(" + name + ")";
         }
 
-        return declaringClass.getSimpleName() + "." + name;
+        return declaringType.simpleName() + "." + name;
     }
 
     public static String formatPropertyName(String declaring, String name) {

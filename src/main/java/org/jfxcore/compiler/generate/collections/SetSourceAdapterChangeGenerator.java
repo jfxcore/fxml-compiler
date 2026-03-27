@@ -1,25 +1,21 @@
-// Copyright (c) 2023, 2025, JFXcore. All rights reserved.
+// Copyright (c) 2023, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.generate.collections;
 
-import javassist.CtClass;
-import javassist.CtConstructor;
-import javassist.CtField;
-import javassist.CtMethod;
-import javassist.Modifier;
-import javassist.bytecode.MethodInfo;
 import org.jfxcore.compiler.ast.emit.BytecodeEmitContext;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.generate.ClassGenerator;
+import org.jfxcore.compiler.type.ConstructorDeclaration;
+import org.jfxcore.compiler.type.MethodDeclaration;
+import org.jfxcore.compiler.type.TypeDeclaration;
+import org.jfxcore.compiler.type.TypeInstance;
+import org.jfxcore.compiler.type.TypeInvoker;
 import org.jfxcore.compiler.util.NameHelper;
-import org.jfxcore.compiler.util.TypeInstance;
-import org.jfxcore.compiler.util.TypeInvoker;
+import java.lang.reflect.Modifier;
 
-import static javassist.CtClass.*;
 import static org.jfxcore.compiler.generate.SharedMethodImpls.*;
-import static org.jfxcore.compiler.util.Classes.*;
-import static org.jfxcore.compiler.util.Descriptors.*;
+import static org.jfxcore.compiler.type.Types.*;
 
 public class SetSourceAdapterChangeGenerator extends ClassGenerator {
 
@@ -28,8 +24,8 @@ public class SetSourceAdapterChangeGenerator extends ClassGenerator {
 
     private static final String SOURCE_FIELD = "source";
 
-    private CtConstructor constructor;
-    private CtMethod initChangeMethod;
+    private ConstructorDeclaration constructor;
+    private MethodDeclaration initChangeMethod;
 
     @Override
     public String getClassName() {
@@ -38,60 +34,55 @@ public class SetSourceAdapterChangeGenerator extends ClassGenerator {
 
     @Override
     public TypeInstance getTypeInstance() {
-        return new TypeInvoker(SourceInfo.none()).invokeType(SetChangeListenerChangeType());
+        return new TypeInvoker(SourceInfo.none()).invokeType(SetChangeListenerChangeDecl());
     }
 
     @Override
-    public void emitClass(BytecodeEmitContext context) throws Exception {
-        generatedClass = context.getNestedClasses().create(getClassName());
-        generatedClass.setModifiers(Modifier.PRIVATE | Modifier.FINAL);
-        generatedClass.setSuperclass(SetChangeListenerChangeType());
+    public TypeDeclaration emitClass(BytecodeEmitContext context) {
+        return super.emitClass(context)
+            .setModifiers(Modifier.PRIVATE | Modifier.FINAL)
+            .setSuperClass(SetChangeListenerChangeDecl());
     }
 
     @Override
-    public void emitFields(BytecodeEmitContext context) throws Exception {
-        CtField field = new CtField(SetChangeListenerChangeType(), SOURCE_FIELD, generatedClass);
-        field.setModifiers(Modifier.PRIVATE);
-        generatedClass.addField(field);
+    public void emitFields(BytecodeEmitContext context) {
+        createField(SOURCE_FIELD, SetChangeListenerChangeDecl()).setModifiers(Modifier.PRIVATE);
     }
 
     @Override
-    public void emitMethods(BytecodeEmitContext context) throws Exception {
+    public void emitMethods(BytecodeEmitContext context) {
         super.emitMethods(context);
 
-        constructor = new CtConstructor(new CtClass[] {ObservableSetType()}, generatedClass);
-        initChangeMethod = new CtMethod(
-            voidType, INIT_CHANGE_METHOD_NAME, new CtClass[] {SetChangeListenerChangeType()}, generatedClass);
+        constructor = createConstructor(ObservableSetDecl()).setModifiers(Modifier.PRIVATE);
+        initChangeMethod = createMethod(INIT_CHANGE_METHOD_NAME, voidDecl(), SetChangeListenerChangeDecl());
     }
 
     @Override
-    public void emitCode(BytecodeEmitContext context) throws Exception {
-        super.emitCode(context);
+    public void emitCode(BytecodeEmitContext context) {
+        emitConstructor(constructor);
+        emitInitChangeMethod(initChangeMethod);
 
-        emitConstructor(context, constructor);
-        emitInitChangeMethod(context, initChangeMethod);
-
-        CtClass type = SetChangeListenerChangeType();
-        createFieldDelegateMethod(context, generatedClass, StringType(), SOURCE_FIELD, type, "toString");
-        createFieldDelegateMethod(context, generatedClass, booleanType, SOURCE_FIELD, type, "wasAdded");
-        createFieldDelegateMethod(context, generatedClass, booleanType, SOURCE_FIELD, type, "wasRemoved");
-        createFieldDelegateMethod(context, generatedClass, ObjectType(), SOURCE_FIELD, type, "getElementAdded");
-        createFieldDelegateMethod(context, generatedClass, ObjectType(), SOURCE_FIELD, type, "getElementRemoved");
+        TypeDeclaration type = SetChangeListenerChangeDecl();
+        createFieldDelegateMethod(this, StringDecl(), SOURCE_FIELD, type, "toString");
+        createFieldDelegateMethod(this, booleanDecl(), SOURCE_FIELD, type, "wasAdded");
+        createFieldDelegateMethod(this, booleanDecl(), SOURCE_FIELD, type, "wasRemoved");
+        createFieldDelegateMethod(this, ObjectDecl(), SOURCE_FIELD, type, "getElementAdded");
+        createFieldDelegateMethod(this, ObjectDecl(), SOURCE_FIELD, type, "getElementRemoved");
     }
 
-    private void emitConstructor(BytecodeEmitContext parentContext, CtConstructor constructor) throws Exception {
-        createBehavior(parentContext, generatedClass, constructor, 2, code -> code
+    private void emitConstructor(ConstructorDeclaration constructor) {
+        createBehavior(constructor, code -> code
             .aload(0)
             .aload(1)
-            .invokespecial(generatedClass.getSuperclass(), MethodInfo.nameInit, constructor(ObservableSetType()))
+            .invoke(requireSuperClass().requireConstructor(ObservableSetDecl()))
             .vreturn());
     }
 
-    private void emitInitChangeMethod(BytecodeEmitContext parentContext, CtMethod method) throws Exception {
-        createBehavior(parentContext, generatedClass, method, 2, code -> code
+    private void emitInitChangeMethod(MethodDeclaration method) {
+        createBehavior(method, code -> code
             .aload(0)
             .aload(1)
-            .putfield(generatedClass, SOURCE_FIELD, SetChangeListenerChangeType())
+            .putfield(requireDeclaredField(SOURCE_FIELD))
             .vreturn());
     }
 }

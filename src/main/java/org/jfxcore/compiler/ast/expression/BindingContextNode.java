@@ -1,9 +1,8 @@
-// Copyright (c) 2021, 2025, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.expression;
 
-import javassist.CtField;
 import org.jetbrains.annotations.Nullable;
 import org.jfxcore.compiler.ast.AbstractNode;
 import org.jfxcore.compiler.ast.ResolvedTypeNode;
@@ -14,8 +13,8 @@ import org.jfxcore.compiler.ast.expression.path.ParentSegment;
 import org.jfxcore.compiler.ast.expression.path.RootSegment;
 import org.jfxcore.compiler.ast.expression.path.Segment;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
-import org.jfxcore.compiler.util.TypeHelper;
-import org.jfxcore.compiler.util.TypeInstance;
+import org.jfxcore.compiler.type.FieldDeclaration;
+import org.jfxcore.compiler.type.TypeInstance;
 import java.util.Objects;
 
 import static org.jfxcore.compiler.util.ObservableKind.*;
@@ -24,7 +23,7 @@ public class BindingContextNode extends AbstractNode {
 
     private final BindingContextSelector selector;
     private final int bindingDistance;
-    private final CtField contextField;
+    private final FieldDeclaration contextField;
     private final TypeInstance type;
     private final TypeInstance valueType;
     private final TypeInstance observableType;
@@ -43,7 +42,7 @@ public class BindingContextNode extends AbstractNode {
             TypeInstance type,
             TypeInstance valueType,
             @Nullable TypeInstance observableType,
-            CtField contextField,
+            @Nullable FieldDeclaration contextField,
             int bindingDistance,
             SourceInfo sourceInfo) {
         super(sourceInfo);
@@ -105,7 +104,7 @@ public class BindingContextNode extends AbstractNode {
         BindingContextNode that = (BindingContextNode)o;
         return selector == that.selector &&
             bindingDistance == that.bindingDistance &&
-            TypeHelper.equals(contextField, that.contextField) &&
+            Objects.equals(contextField, that.contextField) &&
             type.equals(that.type) &&
             valueType.equals(that.valueType) &&
             Objects.equals(observableType, that.observableType);
@@ -114,7 +113,7 @@ public class BindingContextNode extends AbstractNode {
     @Override
     public int hashCode() {
         return Objects.hash(
-            selector, bindingDistance, TypeHelper.hashCode(contextField), type, valueType, observableType);
+            selector, bindingDistance, contextField, type, valueType, observableType);
     }
 
 }

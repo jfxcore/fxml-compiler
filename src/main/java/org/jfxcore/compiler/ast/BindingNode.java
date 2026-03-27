@@ -1,4 +1,4 @@
-// Copyright (c) 2021, 2025, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast;
@@ -10,9 +10,10 @@ import org.jfxcore.compiler.ast.expression.FunctionExpressionNode;
 import org.jfxcore.compiler.ast.expression.PathExpressionNode;
 import org.jfxcore.compiler.ast.text.ListNode;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
-import org.jfxcore.compiler.util.Classes;
-import org.jfxcore.compiler.util.TypeInstance;
+import org.jfxcore.compiler.type.TypeInstance;
 import java.util.Objects;
+
+import static org.jfxcore.compiler.type.Types.*;
 
 public class BindingNode extends AbstractNode {
 
@@ -67,13 +68,13 @@ public class BindingNode extends AbstractNode {
 
     public @Nullable BindingEmitterInfo toConverterEmitter(TypeInstance invokingType) {
         return converter != null
-            ? converter.toEmitter(BindingMode.ONCE, invokingType, TypeInstance.of(Classes.StringConverterType()))
+            ? converter.toEmitter(BindingMode.ONCE, invokingType, TypeInstance.of(StringConverterDecl()))
             : null;
     }
 
     public @Nullable BindingEmitterInfo toFormatEmitter(TypeInstance invokingType) {
         return format != null
-            ? format.toEmitter(BindingMode.ONCE, invokingType, TypeInstance.of(Classes.FormatType()))
+            ? format.toEmitter(BindingMode.ONCE, invokingType, TypeInstance.of(FormatDecl()))
             : null;
     }
 
@@ -140,7 +141,7 @@ public class BindingNode extends AbstractNode {
         public ListValue(BindingMode mode, ExpressionNode path, @Nullable ExpressionNode converter,
                          @Nullable ExpressionNode format, SourceInfo sourceInfo) {
             super(mode, path, converter, format, sourceInfo);
-            type = new ResolvedTypeNode(TypeInstance.of(Classes.BottomType()), sourceInfo);
+            type = new ResolvedTypeNode(TypeInstance.of(BottomTypeDecl()), sourceInfo);
         }
 
         @Override

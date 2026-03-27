@@ -1,18 +1,17 @@
-// Copyright (c) 2021, 2025, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.transform.markup;
 
-import javassist.CtClass;
 import org.jetbrains.annotations.Nullable;
 import org.jfxcore.compiler.ast.BindingMode;
 import org.jfxcore.compiler.ast.BindingNode;
+import org.jfxcore.compiler.ast.ContextNode;
 import org.jfxcore.compiler.ast.Node;
 import org.jfxcore.compiler.ast.ObjectNode;
 import org.jfxcore.compiler.ast.PropertyNode;
 import org.jfxcore.compiler.ast.TemplateContentNode;
 import org.jfxcore.compiler.ast.ValueNode;
-import org.jfxcore.compiler.ast.ContextNode;
 import org.jfxcore.compiler.ast.expression.BindingContextNode;
 import org.jfxcore.compiler.ast.expression.BindingContextSelector;
 import org.jfxcore.compiler.ast.expression.ExpressionNode;
@@ -34,9 +33,10 @@ import org.jfxcore.compiler.diagnostic.errors.GeneralErrors;
 import org.jfxcore.compiler.diagnostic.errors.ParserErrors;
 import org.jfxcore.compiler.transform.Transform;
 import org.jfxcore.compiler.transform.TransformContext;
-import org.jfxcore.compiler.util.Resolver;
-import org.jfxcore.compiler.util.TypeHelper;
-import org.jfxcore.compiler.util.TypeInstance;
+import org.jfxcore.compiler.type.Resolver;
+import org.jfxcore.compiler.type.TypeDeclaration;
+import org.jfxcore.compiler.type.TypeHelper;
+import org.jfxcore.compiler.type.TypeInstance;
 import java.util.List;
 
 public class BindingTransform implements Transform {
@@ -268,7 +268,7 @@ public class BindingTransform implements Transform {
                     .toList();
 
                 Integer level = null;
-                CtClass searchType = null;
+                TypeDeclaration searchType = null;
 
                 if (contextSelectorNode.getLevel() != null) {
                     level = parseParentLevel(contextSelectorNode.getLevel());
@@ -323,7 +323,7 @@ public class BindingTransform implements Transform {
 
     private ParentInfo findParent(
             List<Node> parents,
-            @Nullable CtClass searchType,
+            @Nullable TypeDeclaration searchType,
             @Nullable Integer level,
             SourceInfo sourceInfo) {
         int parentIndex = -1;
@@ -354,7 +354,7 @@ public class BindingTransform implements Transform {
             }
 
             if (parentIndex == -1) {
-                throw BindingSourceErrors.parentTypeNotFound(sourceInfo, searchType.getName());
+                throw BindingSourceErrors.parentTypeNotFound(sourceInfo, searchType.name());
             }
         }
 

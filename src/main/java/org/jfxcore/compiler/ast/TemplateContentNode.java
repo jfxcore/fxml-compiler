@@ -1,10 +1,10 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast;
 
 import org.jfxcore.compiler.diagnostic.SourceInfo;
-import org.jfxcore.compiler.util.TypeInstance;
+import org.jfxcore.compiler.type.TypeInstance;
 
 public class TemplateContentNode extends AbstractNode implements ValueNode {
 
@@ -55,5 +55,4 @@ public class TemplateContentNode extends AbstractNode implements ValueNode {
         return new TemplateContentNode(
             type.deepClone(), content.deepClone(), itemType, bindingContextClass, getSourceInfo());
     }
-
 }

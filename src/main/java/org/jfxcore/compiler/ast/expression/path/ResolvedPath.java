@@ -1,14 +1,8 @@
-// Copyright (c) 2022, 2025, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.expression.path;
 
-import javassist.CtClass;
-import javassist.CtField;
-import javassist.CtMethod;
-import javassist.Modifier;
-import javassist.NotFoundException;
-import javassist.bytecode.annotation.Annotation;
 import kotlinx.metadata.Flag;
 import kotlinx.metadata.KmClass;
 import kotlinx.metadata.KmExtensionType;
@@ -30,12 +24,15 @@ import org.jfxcore.compiler.ast.text.TextSegmentNode;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.diagnostic.errors.ParserErrors;
 import org.jfxcore.compiler.diagnostic.errors.SymbolResolutionErrors;
-import org.jfxcore.compiler.util.Classes;
+import org.jfxcore.compiler.type.AccessModifier;
+import org.jfxcore.compiler.type.AnnotationDeclaration;
+import org.jfxcore.compiler.type.FieldDeclaration;
+import org.jfxcore.compiler.type.MethodDeclaration;
+import org.jfxcore.compiler.type.Resolver;
+import org.jfxcore.compiler.type.TypeDeclaration;
+import org.jfxcore.compiler.type.TypeInstance;
+import org.jfxcore.compiler.type.TypeInvoker;
 import org.jfxcore.compiler.util.ObservableKind;
-import org.jfxcore.compiler.util.Resolver;
-import org.jfxcore.compiler.util.TypeHelper;
-import org.jfxcore.compiler.util.TypeInstance;
-import org.jfxcore.compiler.util.TypeInvoker;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Iterator;
@@ -44,7 +41,7 @@ import java.util.Objects;
 import java.util.TreeMap;
 import java.util.stream.Collectors;
 
-import static org.jfxcore.compiler.util.ExceptionHelper.*;
+import static org.jfxcore.compiler.type.Types.*;
 
 /**
  * Represents a property path like 'foo.bar.baz', where each of the segments
@@ -84,7 +81,7 @@ public class ResolvedPath {
         this.segments = new ArrayList<>(path.size() + 1);
         this.segments.add(firstSegment);
 
-        if (path.size() > 0 && path.get(0).equals("this")) {
+        if (!path.isEmpty() && path.get(0).equals("this")) {
             if (path.size() == 1) {
                 return;
             }
@@ -98,13 +95,13 @@ public class ResolvedPath {
             }
         }
 
-        if (path.size() == 0) {
+        if (path.isEmpty()) {
             throw ParserErrors.invalidExpression(sourceInfo);
         }
 
         Resolver resolver = new Resolver(sourceInfo);
         TypeInvoker invoker = new TypeInvoker(sourceInfo);
-        CtClass currentHostType = segments.get(0).getValueTypeInstance().jvmType();
+        TypeDeclaration currentHostType = segments.get(0).getValueTypeInstance().declaration();
 
         for (PathSegmentNode segment : path) {
             Segment source = getValueSource(
@@ -140,7 +137,7 @@ public class ResolvedPath {
             }
 
             segments.add(source);
-            currentHostType = source.getValueTypeInstance().jvmType();
+            currentHostType = source.getValueTypeInstance().declaration();
             staticContext = false;
         }
 
@@ -263,11 +260,10 @@ public class ResolvedPath {
     private void optimizePath() {
         for (int i = segments.size() - 1; i >= 0; --i) {
             boolean isStatic =
-                segments.get(i) instanceof FieldSegment fieldSegment
-                    && Modifier.isStatic(fieldSegment.getField().getModifiers())
+                segments.get(i) instanceof FieldSegment fieldSegment && fieldSegment.getField().isStatic()
                 || segments.get(i) instanceof GetterSegment getterSegment
                     && !getterSegment.isStaticPropertyGetter()
-                    && Modifier.isStatic(getterSegment.getGetter().getModifiers());
+                    && getterSegment.getGetter().isStatic();
 
             if (isStatic) {
                 segments.subList(0, i).clear();
@@ -280,7 +276,7 @@ public class ResolvedPath {
             Resolver resolver,
             TypeInvoker invoker,
             PathSegmentNode segment,
-            CtClass declaringClass,
+            TypeDeclaration declaringClass,
             boolean staticContext,
             boolean preferObservable,
             boolean suppressObservableSelector) {
@@ -291,7 +287,7 @@ public class ResolvedPath {
         };
 
         boolean attachedProperty = false;
-        CtClass receiverClass = declaringClass;
+        TypeDeclaration receiverClass = declaringClass;
         String propertyName = segment.getText();
 
         if (segment instanceof SubPathSegmentNode subPath) {
@@ -390,8 +386,8 @@ public class ResolvedPath {
             Resolver resolver,
             TypeInvoker invoker,
             String propertyName,
-            CtClass declaringClass,
-            CtClass receiverClass,
+            TypeDeclaration declaringClass,
+            TypeDeclaration receiverClass,
             boolean staticContext,
             boolean attachedProperty,
             boolean selectObservable,
@@ -400,38 +396,37 @@ public class ResolvedPath {
             return null;
         }
 
-        CtField field = resolver.tryResolveField(declaringClass, propertyName);
-        if (field == null) {
+        FieldDeclaration fieldDeclaration = resolver.tryResolveField(declaringClass, propertyName);
+        if (fieldDeclaration == null) {
             return null;
         }
 
-        CtClass fieldType;
-        try {
-            fieldType = field.getType();
-        } catch (NotFoundException ex) {
-            throw SymbolResolutionErrors.classNotFound(sourceInfo, ex.getMessage());
-        }
-
+        TypeDeclaration fieldType = fieldDeclaration.type();
         ObservableKind observableKind = ObservableKind.get(fieldType);
+
         if (selectObservable && observableKind == ObservableKind.NONE) {
             return null;
         }
 
-        List<TypeInstance> invocationContext = segments.stream().map(Segment::getTypeInstance).collect(Collectors.toList());
-        TypeInstance type = invoker.invokeFieldType(field, invocationContext);
+        List<TypeInstance> invocationContext = segments.stream()
+            .map(Segment::getTypeInstance)
+            .collect(Collectors.toList());
+
+        TypeInstance type = invoker.invokeFieldType(fieldDeclaration, invocationContext);
 
         if (selectObservable) {
             return new SegmentInfo(
-                new FieldSegment(field.getName(), propertyName, type, type, field, ObservableKind.NONE),
+                new FieldSegment(fieldDeclaration.name(), propertyName, type, type, fieldDeclaration, ObservableKind.NONE),
                 true);
         }
 
         TypeInstance valueType = observableKind != ObservableKind.NONE ?
             resolver.findObservableArgument(type) : type;
 
-        return new SegmentInfo(
-            new FieldSegment(field.getName(), propertyName, type, valueType, field, observableKind),
-            observableKind.isReadOnly());
+        FieldSegment segment = new FieldSegment(
+            fieldDeclaration.name(), propertyName, type, valueType, fieldDeclaration, observableKind);
+
+        return new SegmentInfo(segment, observableKind.isReadOnly());
     }
 
     /**
@@ -441,22 +436,22 @@ public class ResolvedPath {
             Resolver resolver,
             TypeInvoker invoker,
             String propertyName,
-            CtClass declaringClass,
-            CtClass receiverClass,
+            TypeDeclaration declaringClass,
+            TypeDeclaration receiverClass,
             boolean staticContext,
             boolean attachedProperty,
             boolean selectObservable,
             List<TypeInstance> providedArguments) {
-        CtMethod getter = attachedProperty ?
+        MethodDeclaration getterDeclaration = attachedProperty ?
             resolver.tryResolveStaticGetter(declaringClass, receiverClass, propertyName, true) :
             resolver.tryResolveGetter(declaringClass, propertyName, true, null);
 
-        if (getter == null) {
+        if (getterDeclaration == null) {
             return null;
         }
 
-        if (!attachedProperty && staticContext && !Modifier.isStatic(getter.getModifiers())) {
-            throw SymbolResolutionErrors.instanceMemberReferencedFromStaticContext(sourceInfo, getter);
+        if (!attachedProperty && staticContext && !getterDeclaration.isStatic()) {
+            throw SymbolResolutionErrors.instanceMemberReferencedFromStaticContext(sourceInfo, getterDeclaration);
         }
 
         List<TypeInstance> invocationContext = segments.stream().map(segment -> {
@@ -467,23 +462,20 @@ public class ResolvedPath {
             return segment.getValueTypeInstance();
         }).collect(Collectors.toList());
 
-        CtClass returnType;
-        try {
-            returnType = getter.getReturnType();
-        } catch (NotFoundException ex) {
-            throw SymbolResolutionErrors.classNotFound(sourceInfo, ex.getMessage());
-        }
-
+        TypeDeclaration returnType = getterDeclaration.returnType();
         ObservableKind observableKind = ObservableKind.get(returnType);
+
         if (selectObservable && observableKind == ObservableKind.NONE) {
             return null;
         }
 
-        TypeInstance type = invoker.invokeReturnType(getter, invocationContext, providedArguments);
+        TypeInstance type = invoker.invokeReturnType(getterDeclaration, invocationContext, providedArguments);
 
         if (selectObservable) {
             return new SegmentInfo(
-                new GetterSegment(getter.getName(), propertyName, type, type, getter, attachedProperty, ObservableKind.NONE),
+                new GetterSegment(
+                    getterDeclaration.name(), propertyName, type, type,
+                    getterDeclaration, attachedProperty, ObservableKind.NONE),
                 true);
         }
 
@@ -491,7 +483,9 @@ public class ResolvedPath {
             resolver.findObservableArgument(type) : type;
 
         return new SegmentInfo(
-            new GetterSegment(getter.getName(), propertyName, type, valueType, getter, attachedProperty, observableKind),
+            new GetterSegment(
+                getterDeclaration.name(), propertyName, type, valueType,
+                getterDeclaration, attachedProperty, observableKind),
             observableKind.isReadOnly());
     }
 
@@ -499,8 +493,8 @@ public class ResolvedPath {
             Resolver resolver,
             TypeInvoker invoker,
             String propertyName,
-            CtClass declaringClass,
-            CtClass receiverClass,
+            TypeDeclaration declaringClass,
+            TypeDeclaration receiverClass,
             boolean staticContext,
             boolean attachedProperty,
             boolean selectObservable,
@@ -522,19 +516,13 @@ public class ResolvedPath {
             return segment.getValueTypeInstance();
         }).collect(Collectors.toList());
 
-        CtClass fieldType;
-        try {
-            fieldType = delegateInfo.delegateField.getType();
-        } catch (NotFoundException ex) {
-            throw SymbolResolutionErrors.classNotFound(sourceInfo, ex.getMessage());
-        }
-
+        TypeDeclaration fieldType = delegateInfo.delegateField.type();
         ObservableKind observableKind = ObservableKind.get(fieldType);
         if (selectObservable && observableKind == ObservableKind.NONE) {
             return null;
         }
 
-        if (staticContext && !Modifier.isStatic(delegateInfo.getter.getModifiers())) {
+        if (staticContext && !delegateInfo.getter.isStatic()) {
             throw SymbolResolutionErrors.instanceMemberReferencedFromStaticContext(sourceInfo, delegateInfo.getter);
         }
 
@@ -545,22 +533,16 @@ public class ResolvedPath {
         TypeInstance valueType = invoker.invokeReturnType(delegateInfo.getter, invocationContext, providedArguments);
         TypeInstance type = invoker.invokeType(fieldType);
         TypeInstance argument = resolver.tryFindObservableArgument(type);
+        TypeDeclaration returnType = delegateInfo.getter.returnType();
 
-        CtClass returnType;
-        try {
-            returnType = delegateInfo.getter.getReturnType();
-        } catch (NotFoundException ex) {
-            throw SymbolResolutionErrors.classNotFound(sourceInfo, ex.getMessage());
-        }
-
-        if (argument == null || !returnType.equals(argument.jvmType())) {
-            type = invoker.invokeType(type.jvmType(), List.of(valueType));
+        if (argument == null || !returnType.equals(argument.declaration())) {
+            type = invoker.invokeType(type.declaration(), List.of(valueType));
         }
 
         if (selectObservable) {
             return new SegmentInfo(
                 new KotlinDelegateSegment(
-                    delegateInfo.delegateField.getName(), propertyName, type, type,
+                    delegateInfo.delegateField.name(), propertyName, type, type,
                     delegateInfo.delegateField, ObservableKind.NONE),
                 observableKind.isReadOnly());
         }
@@ -569,25 +551,25 @@ public class ResolvedPath {
 
         return new SegmentInfo(
             new KotlinDelegateSegment(
-                delegateInfo.delegateField.getName(), propertyName, type, typeArg,
+                delegateInfo.delegateField.name(), propertyName, type, typeArg,
                 delegateInfo.delegateField, observableKind),
             observableKind.isReadOnly());
     }
 
     @Nullable
-    private KotlinDelegateInfo getKotlinDelegateInfo(Resolver resolver, CtClass declaringType, String name) {
-        Annotation kotlinMetadataAnnotation = resolver.tryResolveClassAnnotation(declaringType, "kotlin.Metadata");
+    private KotlinDelegateInfo getKotlinDelegateInfo(Resolver resolver, TypeDeclaration declaringType, String name) {
+        AnnotationDeclaration kotlinMetadataAnnotation = declaringType.annotation("kotlin.Metadata").orElse(null);
         if (kotlinMetadataAnnotation == null) {
             return null;
         }
 
         KotlinClassMetadata metadata = KotlinClassMetadata.read(new KotlinClassHeader(
-            TypeHelper.getAnnotationInt(kotlinMetadataAnnotation, "k"),
-            TypeHelper.getAnnotationIntArray(kotlinMetadataAnnotation, "mv"),
-            TypeHelper.getAnnotationStringArray(kotlinMetadataAnnotation, "d1"),
-            TypeHelper.getAnnotationStringArray(kotlinMetadataAnnotation, "d2"),
+            kotlinMetadataAnnotation.getInt("k"),
+            kotlinMetadataAnnotation.getIntArray("mv"),
+            kotlinMetadataAnnotation.getStringArray("d1"),
+            kotlinMetadataAnnotation.getStringArray("d2"),
             null,
-            declaringType.getPackageName(),
+            declaringType.packageName(),
             null));
 
         if (!(metadata instanceof KotlinClassMetadata.Class classMetadata)) {
@@ -631,16 +613,16 @@ public class ResolvedPath {
                             }
 
                             if (setterSignature != null) {
-                                CtMethod setter = resolver.tryResolveMethod(
-                                    declaringType, m -> m.getName().equals(setterSignature.getName()));
+                                MethodDeclaration setter = resolver.tryResolveMethod(
+                                    declaringType, m -> m.name().equals(setterSignature.getName()));
 
-                                publicSetter = setter != null && Modifier.isPublic(setter.getModifiers());
+                                publicSetter = setter != null && setter.accessModifier() == AccessModifier.PUBLIC;
                             }
 
-                            CtField field = resolver.resolveField(declaringType, fieldSignature.getName(), false);
-                            CtMethod getter = resolver.resolveGetter(declaringType, getterSignature.getName(), true, null);
+                            FieldDeclaration field = resolver.resolveField(declaringType, fieldSignature.getName(), false);
+                            MethodDeclaration getter = resolver.resolveGetter(declaringType, getterSignature.getName(), true, null);
 
-                            if (unchecked(sourceInfo, () -> field.getType().subtypeOf(Classes.ObservableValueType()))) {
+                            if (field.type().subtypeOf(ObservableValueDecl())) {
                                 result[0] = new KotlinDelegateInfo(field, getter, publicSetter);
                             } else {
                                 result[0] = null;
@@ -678,8 +660,8 @@ public class ResolvedPath {
             Resolver resolver,
             TypeInvoker invoker,
             String propertyName,
-            CtClass declaringClass,
-            CtClass receiverClass,
+            TypeDeclaration declaringClass,
+            TypeDeclaration receiverClass,
             boolean staticContext,
             boolean attachedProperty,
             boolean selectObservable,
@@ -698,7 +680,7 @@ public class ResolvedPath {
             }
 
             if (!acceptOnlyObservable ||
-                    segmentInfo.segment().getTypeInstance().subtypeOf(Classes.ObservableValueType())) {
+                    segmentInfo.segment().getTypeInstance().subtypeOf(ObservableValueDecl())) {
                 put(getSegmentScore(segmentInfo, nameOrder, preferObservable), segmentInfo);
             }
         }
@@ -719,5 +701,5 @@ public class ResolvedPath {
         }
     }
 
-    private record KotlinDelegateInfo(CtField delegateField, CtMethod getter, boolean publicSetter) {}
+    private record KotlinDelegateInfo(FieldDeclaration delegateField, MethodDeclaration getter, boolean publicSetter) {}
 }

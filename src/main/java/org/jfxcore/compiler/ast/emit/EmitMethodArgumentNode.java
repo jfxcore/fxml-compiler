@@ -1,16 +1,16 @@
-// Copyright (c) 2021, 2024, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.emit;
 
-import javassist.CtClass;
-import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.ast.AbstractNode;
 import org.jfxcore.compiler.ast.ResolvedTypeNode;
 import org.jfxcore.compiler.ast.Visitor;
+import org.jfxcore.compiler.diagnostic.SourceInfo;
+import org.jfxcore.compiler.type.TypeDeclaration;
+import org.jfxcore.compiler.type.TypeHelper;
+import org.jfxcore.compiler.type.TypeInstance;
 import org.jfxcore.compiler.util.Bytecode;
-import org.jfxcore.compiler.util.TypeHelper;
-import org.jfxcore.compiler.util.TypeInstance;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -42,7 +42,7 @@ public class EmitMethodArgumentNode extends AbstractNode implements ValueEmitter
             List<EmitMethodArgumentNode> children,
             SourceInfo sourceInfo) {
         return new EmitMethodArgumentNode(
-            new ResolvedTypeNode(componentType.withDimensions(componentType.getDimensions() + 1), sourceInfo),
+            new ResolvedTypeNode(componentType.withDimensions(componentType.dimensions() + 1), sourceInfo),
             children.stream()
                 .flatMap(n -> n.children.stream())
                 .collect(Collectors.toCollection(ArrayList::new)),
@@ -93,7 +93,7 @@ public class EmitMethodArgumentNode extends AbstractNode implements ValueEmitter
         boolean assignable = TypeHelper.getTypeInstance(children.get(0)).subtypeOf(type.getTypeInstance());
 
         if (varargs && !(children.size() == 1 && assignable)) {
-            CtClass componentType = type.getTypeInstance().getComponentType().jvmType();
+            TypeDeclaration componentType = type.getTypeInstance().componentType().declaration();
             code.newarray(componentType, children.size());
 
             for (int i = 0; i < children.size(); ++i) {
@@ -101,12 +101,12 @@ public class EmitMethodArgumentNode extends AbstractNode implements ValueEmitter
 
                 context.emit(children.get(i));
 
-                code.ext_autoconv(getSourceInfo(), TypeHelper.getJvmType(children.get(i)), componentType)
-                    .ext_arraystore(componentType);
+                code.autoconv(TypeHelper.getTypeDeclaration(children.get(i)), componentType)
+                    .arraystore(componentType);
             }
         } else {
             context.emit(children.get(0));
-            code.ext_autoconv(getSourceInfo(), TypeHelper.getJvmType(children.get(0)), type.getJvmType());
+            code.autoconv(TypeHelper.getTypeDeclaration(children.get(0)), type.getTypeDeclaration());
         }
     }
 
@@ -130,5 +130,4 @@ public class EmitMethodArgumentNode extends AbstractNode implements ValueEmitter
     public int hashCode() {
         return Objects.hash(type, children, varargs, observable);
     }
-
 }

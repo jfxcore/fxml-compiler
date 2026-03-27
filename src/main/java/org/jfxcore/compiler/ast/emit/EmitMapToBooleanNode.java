@@ -3,28 +3,26 @@
 
 package org.jfxcore.compiler.ast.emit;
 
-import javassist.CtClass;
-import javassist.bytecode.MethodInfo;
 import org.jfxcore.compiler.ast.AbstractNode;
 import org.jfxcore.compiler.ast.GeneratorEmitterNode;
-import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.ast.ResolvedTypeNode;
 import org.jfxcore.compiler.ast.Visitor;
 import org.jfxcore.compiler.ast.expression.Operator;
+import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.generate.BooleanMapperGenerator;
 import org.jfxcore.compiler.generate.ClassGenerator;
 import org.jfxcore.compiler.generate.Generator;
+import org.jfxcore.compiler.type.Resolver;
+import org.jfxcore.compiler.type.TypeDeclaration;
+import org.jfxcore.compiler.type.TypeInstance;
+import org.jfxcore.compiler.type.TypeInvoker;
 import org.jfxcore.compiler.util.Bytecode;
 import org.jfxcore.compiler.util.CompilationContext;
-import org.jfxcore.compiler.util.Resolver;
-import org.jfxcore.compiler.util.TypeHelper;
-import org.jfxcore.compiler.util.TypeInstance;
-import org.jfxcore.compiler.util.TypeInvoker;
 import java.util.List;
 import java.util.Objects;
 
-import static org.jfxcore.compiler.util.Classes.*;
-import static org.jfxcore.compiler.util.Descriptors.*;
+import static org.jfxcore.compiler.type.Types.*;
+import static org.jfxcore.compiler.type.Types.Markup.Runtime.*;
 
 /**
  * Emits its child node, which places an {@link javafx.beans.value.ObservableValue} on top of the operand stack.
@@ -46,14 +44,14 @@ public class EmitMapToBooleanNode extends AbstractNode
         } else {
             Resolver resolver = new Resolver(sourceInfo);
             TypeInstance typeInstance = child.getType().getTypeInstance();
-            CtClass valueType = TypeHelper.getBoxedType(resolver.findObservableArgument(typeInstance).jvmType());
+            TypeDeclaration valueType = resolver.findObservableArgument(typeInstance).boxed().declaration();
             this.generator = new BooleanMapperGenerator(valueType, invert);
         }
 
         this.child = checkNotNull(child);
         this.invert = invert;
         this.type = new ResolvedTypeNode(
-            new TypeInvoker(sourceInfo).invokeType(ObservableValueType(), List.of(TypeInstance.BooleanType())),
+            new TypeInvoker(sourceInfo).invokeType(ObservableValueDecl(), List.of(TypeInstance.BooleanType())),
             sourceInfo);
     }
 
@@ -82,7 +80,7 @@ public class EmitMapToBooleanNode extends AbstractNode
     }
 
     private void emitLocalImpl(BytecodeEmitContext context) {
-        CtClass generatedClass = context.getNestedClasses().find(generator.getClassName());
+        TypeDeclaration generatedClass = context.getNestedClasses().find(generator.getClassName());
         Bytecode code = context.getOutput();
 
         code.anew(generatedClass)
@@ -90,7 +88,7 @@ public class EmitMapToBooleanNode extends AbstractNode
 
         context.emit(child);
 
-        code.invokespecial(generatedClass, MethodInfo.nameInit, constructor(ObservableValueType()));
+        code.invoke(generatedClass.requireConstructor(ObservableValueDecl()));
     }
 
     private void emitSharedImpl(BytecodeEmitContext context) {
@@ -100,31 +98,25 @@ public class EmitMapToBooleanNode extends AbstractNode
 
         context.emit(child);
 
-        if (TypeInstance.of(ObservableDoubleValueType()).isAssignableFrom(childType)) {
-            code.invokestatic(Markup.Runtime.BooleanBindingsType(), name,
-                              function(BooleanBindingType(), ObservableDoubleValueType()));
-        } else if (TypeInstance.of(ObservableIntegerValueType()).isAssignableFrom(childType)) {
-            code.invokestatic(Markup.Runtime.BooleanBindingsType(), name,
-                              function(BooleanBindingType(), ObservableIntegerValueType()));
-        } else if (TypeInstance.of(ObservableFloatValueType()).isAssignableFrom(childType)) {
-            code.invokestatic(Markup.Runtime.BooleanBindingsType(), name,
-                              function(BooleanBindingType(), ObservableFloatValueType()));
-        } else if (TypeInstance.of(ObservableLongValueType()).isAssignableFrom(childType)) {
-            code.invokestatic(Markup.Runtime.BooleanBindingsType(), name,
-                              function(BooleanBindingType(), ObservableLongValueType()));
+        if (TypeInstance.of(ObservableDoubleValueDecl()).isAssignableFrom(childType)) {
+            code.invoke(BooleanBindingsDecl().requireDeclaredMethod(name, ObservableDoubleValueDecl()));
+        } else if (TypeInstance.of(ObservableIntegerValueDecl()).isAssignableFrom(childType)) {
+            code.invoke(BooleanBindingsDecl().requireDeclaredMethod(name, ObservableIntegerValueDecl()));
+        } else if (TypeInstance.of(ObservableFloatValueDecl()).isAssignableFrom(childType)) {
+            code.invoke(BooleanBindingsDecl().requireDeclaredMethod(name, ObservableFloatValueDecl()));
+        } else if (TypeInstance.of(ObservableLongValueDecl()).isAssignableFrom(childType)) {
+            code.invoke(BooleanBindingsDecl().requireDeclaredMethod(name, ObservableLongValueDecl()));
         } else {
             Resolver resolver = new Resolver(getSourceInfo());
             TypeInstance argType = resolver.findObservableArgument(childType).boxed();
 
-            if (argType.subtypeOf(NumberType())) {
-                code.invokestatic(Markup.Runtime.BooleanBindingsType(), name,
-                                  function(BooleanBindingType(), ObservableValueType()));
-            } else if (argType.subtypeOf(BooleanType())) {
-                code.invokestatic(Markup.Runtime.BooleanBindingsType(), "isNot",
-                                  function(BooleanBindingType(), ObservableValueType()));
+            if (argType.subtypeOf(NumberDecl())) {
+                code.invoke(BooleanBindingsDecl().requireDeclaredMethod(name, ObservableValueDecl()));
+            } else if (argType.subtypeOf(BooleanDecl())) {
+                code.invoke(BooleanBindingsDecl().requireDeclaredMethod("isNot", ObservableValueDecl()));
             } else {
-                code.invokestatic(Markup.Runtime.BooleanBindingsType(), invert ? "isNull" : "isNotNull",
-                                  function(BooleanBindingType(), ObservableValueType()));
+                code.invoke(BooleanBindingsDecl().requireDeclaredMethod(
+                    invert ? "isNull" : "isNotNull", ObservableValueDecl()));
             }
         }
     }

@@ -1,4 +1,4 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.emit;
@@ -8,9 +8,7 @@ import org.jfxcore.compiler.ast.ValueNode;
 import org.jfxcore.compiler.ast.Visitor;
 import java.util.Objects;
 
-import static javassist.CtClass.*;
-import static org.jfxcore.compiler.util.Classes.*;
-import static org.jfxcore.compiler.util.Descriptors.*;
+import static org.jfxcore.compiler.type.Types.*;
 
 public class EmitCollectionAdderNode extends AbstractNode implements EmitterNode {
 
@@ -28,7 +26,7 @@ public class EmitCollectionAdderNode extends AbstractNode implements EmitterNode
         context.emit(value);
 
         context.getOutput()
-            .invokeinterface(CollectionType(), "add", function(booleanType, ObjectType()))
+            .invoke(CollectionDecl().requireDeclaredMethod("add", ObjectDecl()))
             .pop();
     }
 
@@ -54,5 +52,4 @@ public class EmitCollectionAdderNode extends AbstractNode implements EmitterNode
     public int hashCode() {
         return Objects.hash(value);
     }
-
 }
