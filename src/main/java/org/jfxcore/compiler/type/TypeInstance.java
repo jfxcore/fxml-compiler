@@ -13,7 +13,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
-import static org.jfxcore.compiler.type.TypeSymbols.*;
+import static org.jfxcore.compiler.type.KnownSymbols.*;
 
 /**
  * Represents the instantiation tree of a type, in which all generic arguments are replaced with concrete types.

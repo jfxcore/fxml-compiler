@@ -11,7 +11,7 @@ import org.jfxcore.compiler.generate.RuntimeContextGenerator;
 import org.jfxcore.compiler.type.TypeInstance;
 import java.util.Objects;
 
-import static org.jfxcore.compiler.type.TypeSymbols.*;
+import static org.jfxcore.compiler.type.KnownSymbols.*;
 
 public class EmitGetParentNode
         extends AbstractNode

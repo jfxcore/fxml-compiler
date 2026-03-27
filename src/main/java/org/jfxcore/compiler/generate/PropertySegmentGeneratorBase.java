@@ -16,7 +16,7 @@ import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.jfxcore.compiler.type.TypeSymbols.*;
+import static org.jfxcore.compiler.type.KnownSymbols.*;
 
 abstract class PropertySegmentGeneratorBase extends SegmentGeneratorBase {
 

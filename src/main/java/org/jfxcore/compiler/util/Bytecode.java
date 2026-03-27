@@ -15,7 +15,7 @@ import org.jfxcore.compiler.type.MethodDeclaration;
 import org.jfxcore.compiler.type.TypeDeclaration;
 import java.util.BitSet;
 
-import static org.jfxcore.compiler.type.TypeSymbols.*;
+import static org.jfxcore.compiler.type.KnownSymbols.*;
 
 @SuppressWarnings({"UnusedReturnValue", "unused"})
 public final class Bytecode {

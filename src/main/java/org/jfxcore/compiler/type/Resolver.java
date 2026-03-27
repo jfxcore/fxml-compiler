@@ -20,7 +20,7 @@ import java.util.Objects;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
-import static org.jfxcore.compiler.type.TypeSymbols.*;
+import static org.jfxcore.compiler.type.KnownSymbols.*;
 
 public final class Resolver {
 

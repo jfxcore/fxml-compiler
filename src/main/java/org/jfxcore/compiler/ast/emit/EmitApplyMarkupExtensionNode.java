@@ -16,8 +16,8 @@ import org.jfxcore.compiler.util.PropertyInfo;
 import java.util.Objects;
 
 import static org.jfxcore.compiler.generate.RuntimeContextGenerator.*;
-import static org.jfxcore.compiler.type.TypeSymbols.*;
-import static org.jfxcore.compiler.type.TypeSymbols.Markup.*;
+import static org.jfxcore.compiler.type.KnownSymbols.*;
+import static org.jfxcore.compiler.type.KnownSymbols.Markup.*;
 
 public class EmitApplyMarkupExtensionNode extends AbstractNode implements ValueNode, EmitterNode, ParentStackInfo {
 

@@ -55,7 +55,7 @@ import java.util.Map;
 import java.util.Queue;
 import java.util.stream.Collectors;
 
-import static org.jfxcore.compiler.type.TypeSymbols.*;
+import static org.jfxcore.compiler.type.KnownSymbols.*;
 
 abstract class AbstractFunctionEmitterFactory {
 

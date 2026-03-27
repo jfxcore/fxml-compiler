@@ -22,7 +22,7 @@ import java.util.Map;
 
 import static org.jfxcore.compiler.type.TypeInstance.*;
 import static org.jfxcore.compiler.type.TypeInstance.AssignmentContext.*;
-import static org.jfxcore.compiler.type.TypeSymbols.*;
+import static org.jfxcore.compiler.type.KnownSymbols.*;
 
 public class MethodFinder {
 

@@ -56,7 +56,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
-import static org.jfxcore.compiler.type.TypeSymbols.*;
+import static org.jfxcore.compiler.type.KnownSymbols.*;
 
 /**
  * Creates AST nodes that represent the creation of a new value.

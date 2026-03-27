@@ -12,7 +12,7 @@ import org.jfxcore.compiler.transform.TransformContext;
 import org.jfxcore.compiler.type.AnnotationDeclaration;
 import org.jfxcore.compiler.type.TypeHelper;
 
-import static org.jfxcore.compiler.type.TypeSymbols.*;
+import static org.jfxcore.compiler.type.KnownSymbols.*;
 
 /**
  * If a node specifies the fx:id intrinsic property, but not the 'id' property as indicated by the IDProperty

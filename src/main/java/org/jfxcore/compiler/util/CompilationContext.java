@@ -5,7 +5,7 @@ package org.jfxcore.compiler.util;
 
 import javassist.ClassPool;
 import org.jfxcore.compiler.type.TypeDeclaration;
-import org.jfxcore.compiler.type.TypeSymbols;
+import org.jfxcore.compiler.type.KnownSymbols;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.List;
@@ -54,7 +54,7 @@ public class CompilationContext extends HashMap<Object, Object> {
     public boolean useSharedImplementation() {
         return get(CompilationContext.USE_SHARED_IMPLEMENTATION) instanceof Boolean value
             ? value
-            : TypeSymbols.Markup.isAvailable();
+            : KnownSymbols.Markup.isAvailable();
     }
 
     public CompilationSource getCompilationSource() {

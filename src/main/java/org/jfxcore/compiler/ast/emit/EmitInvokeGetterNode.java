@@ -13,7 +13,7 @@ import org.jfxcore.compiler.util.Bytecode;
 import org.jfxcore.compiler.util.ObservableKind;
 import java.util.Objects;
 
-import static org.jfxcore.compiler.type.TypeSymbols.*;
+import static org.jfxcore.compiler.type.KnownSymbols.*;
 
 /**
  * Calls a getter and places the value on top of the operand stack, applying boxing and/or numeric conversions

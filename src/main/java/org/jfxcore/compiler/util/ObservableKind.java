@@ -5,7 +5,7 @@ package org.jfxcore.compiler.util;
 
 import org.jfxcore.compiler.type.TypeDeclaration;
 
-import static org.jfxcore.compiler.type.TypeSymbols.*;
+import static org.jfxcore.compiler.type.KnownSymbols.*;
 
 public enum ObservableKind {
 

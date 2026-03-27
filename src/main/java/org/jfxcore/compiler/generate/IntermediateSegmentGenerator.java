@@ -19,7 +19,7 @@ import org.jfxcore.compiler.util.Local;
 import org.jfxcore.compiler.util.NameHelper;
 import java.lang.reflect.Modifier;
 
-import static org.jfxcore.compiler.type.TypeSymbols.*;
+import static org.jfxcore.compiler.type.KnownSymbols.*;
 
 public class IntermediateSegmentGenerator extends SegmentGeneratorBase {
 

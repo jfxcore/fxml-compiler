@@ -28,7 +28,7 @@ import org.jfxcore.compiler.type.TypeInvoker;
 import org.jfxcore.compiler.util.PropertyInfo;
 import java.util.List;
 
-import static org.jfxcore.compiler.type.TypeSymbols.*;
+import static org.jfxcore.compiler.type.KnownSymbols.*;
 
 public class BindingEmitterFactory {
 

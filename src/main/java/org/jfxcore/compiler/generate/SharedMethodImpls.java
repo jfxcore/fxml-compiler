@@ -10,7 +10,7 @@ import org.jfxcore.compiler.type.TypeDeclaration;
 import org.jfxcore.compiler.util.Bytecode;
 import java.lang.reflect.Modifier;
 
-import static org.jfxcore.compiler.type.TypeSymbols.*;
+import static org.jfxcore.compiler.type.KnownSymbols.*;
 
 public final class SharedMethodImpls {
 

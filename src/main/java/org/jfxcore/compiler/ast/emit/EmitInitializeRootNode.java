@@ -8,12 +8,13 @@ import org.jfxcore.compiler.ast.Node;
 import org.jfxcore.compiler.ast.RootNode;
 import org.jfxcore.compiler.ast.Visitor;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
-import org.jfxcore.compiler.type.TypeSymbols;
 import org.jfxcore.compiler.util.Bytecode;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
+
+import static org.jfxcore.compiler.type.KnownSymbols.*;
 
 /**
  * Emits the bytecodes that load and initialize all scene graph nodes of a root node.
@@ -69,7 +70,7 @@ public class EmitInitializeRootNode extends AbstractNode implements RootNode, Em
             code.anew(context.getRuntimeContextClass())
                 .dup()
                 .iconst(maxDepth)
-                .invoke(context.getRuntimeContextClass().requireConstructor(TypeSymbols.intDecl()))
+                .invoke(context.getRuntimeContextClass().requireConstructor(intDecl()))
                 .astore(context.getRuntimeContextLocal());
         }
 

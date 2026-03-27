@@ -14,7 +14,7 @@ import org.jfxcore.compiler.util.Bytecode;
 import org.jfxcore.compiler.util.NameHelper;
 import java.lang.reflect.Modifier;
 
-import static org.jfxcore.compiler.type.TypeSymbols.*;
+import static org.jfxcore.compiler.type.KnownSymbols.*;
 
 public class RuntimeContextGenerator extends ClassGenerator {
 

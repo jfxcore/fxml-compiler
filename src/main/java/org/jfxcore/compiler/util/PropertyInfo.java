@@ -12,7 +12,7 @@ import org.jfxcore.compiler.type.MethodDeclaration;
 import org.jfxcore.compiler.type.TypeInstance;
 import java.util.Objects;
 
-import static org.jfxcore.compiler.type.TypeSymbols.*;
+import static org.jfxcore.compiler.type.KnownSymbols.*;
 
 /**
  * The compiler will recognize a JavaFX property if it is implemented by a well-defined set of methods.

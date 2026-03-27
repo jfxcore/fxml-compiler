@@ -15,7 +15,7 @@ import org.jfxcore.compiler.util.Bytecode;
 import java.util.List;
 import java.util.Objects;
 
-import static org.jfxcore.compiler.type.TypeSymbols.*;
+import static org.jfxcore.compiler.type.KnownSymbols.*;
 
 public class EmitEventHandlerNode extends AbstractNode implements ValueEmitterNode {
 

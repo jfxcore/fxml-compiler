@@ -13,7 +13,7 @@ import org.jfxcore.compiler.type.TypeInvoker;
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.jfxcore.compiler.type.TypeSymbols.*;
+import static org.jfxcore.compiler.type.KnownSymbols.*;
 
 public sealed interface MarkupExtensionInfo {
 

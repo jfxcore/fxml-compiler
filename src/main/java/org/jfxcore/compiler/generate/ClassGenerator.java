@@ -9,7 +9,7 @@ import org.jfxcore.compiler.type.FieldDeclaration;
 import org.jfxcore.compiler.type.MethodDeclaration;
 import org.jfxcore.compiler.type.TypeDeclaration;
 import org.jfxcore.compiler.type.TypeInstance;
-import org.jfxcore.compiler.type.TypeSymbols;
+import org.jfxcore.compiler.type.KnownSymbols;
 import org.jfxcore.compiler.util.Bytecode;
 import org.jfxcore.compiler.util.CompilationContext;
 import java.lang.reflect.Modifier;
@@ -79,7 +79,7 @@ public abstract class ClassGenerator implements Generator {
     @Override
     public void emitMethods(BytecodeEmitContext context) {
         generatedClass
-            .createMethod("forceInit", TypeSymbols.voidDecl())
+            .createMethod("forceInit", KnownSymbols.voidDecl())
             .setModifiers(Modifier.PUBLIC | Modifier.FINAL | Modifier.STATIC)
             .setCode(new Bytecode(generatedClass, 0).vreturn());
     }

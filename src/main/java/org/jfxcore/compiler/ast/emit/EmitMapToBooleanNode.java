@@ -21,8 +21,8 @@ import org.jfxcore.compiler.util.CompilationContext;
 import java.util.List;
 import java.util.Objects;
 
-import static org.jfxcore.compiler.type.TypeSymbols.*;
-import static org.jfxcore.compiler.type.TypeSymbols.Markup.Runtime.*;
+import static org.jfxcore.compiler.type.KnownSymbols.*;
+import static org.jfxcore.compiler.type.KnownSymbols.Markup.Runtime.*;
 
 /**
  * Emits its child node, which places an {@link javafx.beans.value.ObservableValue} on top of the operand stack.

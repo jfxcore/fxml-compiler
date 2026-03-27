@@ -9,9 +9,9 @@ import org.jfxcore.compiler.util.CompilationContext;
 import java.util.HashMap;
 import java.util.Map;
 
-public final class TypeSymbols {
+public final class KnownSymbols {
 
-    private TypeSymbols() {}
+    private KnownSymbols() {}
 
     public static final String ClassName = "java.lang.Class";
     public static final String ObjectName = "java.lang.Object";
@@ -244,6 +244,6 @@ public final class TypeSymbols {
     @SuppressWarnings("unchecked")
     private static Map<String, TypeDeclaration> getClassCache() {
         return (Map<String, TypeDeclaration>) CompilationContext.getCurrent()
-            .computeIfAbsent(TypeSymbols.class, key -> new HashMap<String, TypeDeclaration>());
+            .computeIfAbsent(KnownSymbols.class, key -> new HashMap<String, TypeDeclaration>());
     }
 }
