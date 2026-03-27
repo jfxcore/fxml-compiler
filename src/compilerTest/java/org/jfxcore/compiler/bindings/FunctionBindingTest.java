@@ -26,6 +26,7 @@ import org.jfxcore.markup.InverseMethod;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import java.text.DecimalFormat;
+import java.util.Locale;
 
 import static org.jfxcore.compiler.util.MoreAssertions.*;
 import static org.junit.jupiter.api.Assertions.*;
@@ -1455,6 +1456,16 @@ public class FunctionBindingTest extends CompilerTestBase {
         public T m4(double v) {
             return (T)Double.toString(v);
         }
+
+        public double invariantDoubleVal = 1;
+
+        public final String genericFormat(T value, Object... args) {
+            return String.format(value.toString(), args);
+        }
+
+        public final String genericFormat(Locale locale, T value, Object... args) {
+            return String.format(locale, value.toString(), args);
+        }
     }
 
     @Test
@@ -1508,6 +1519,8 @@ public class FunctionBindingTest extends CompilerTestBase {
 
         assertEquals(ErrorCode.NUM_TYPE_ARGUMENTS_MISMATCH, ex.getDiagnostic().getCode());
         assertCodeHighlight("m2", ex);
+        assertTrue(ex.getDiagnostic().getMessage().endsWith(
+            "GenericTestPane.m2: required 1 type argument(s), but 0 were provided"));
     }
 
     @Test
@@ -1518,8 +1531,9 @@ public class FunctionBindingTest extends CompilerTestBase {
             """));
 
         assertEquals(ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT, ex.getDiagnostic().getCode());
-        assertTrue(ex.getDiagnostic().getMessage().contains("double"));
         assertCodeHighlight("prefWidth", ex);
+        assertTrue(ex.getDiagnostic().getMessage().endsWith(
+            "GenericTestPane.m2(java.lang.String): argument #1 cannot be assigned from double, expected java.lang.String"));
     }
 
     @Test
@@ -1531,6 +1545,8 @@ public class FunctionBindingTest extends CompilerTestBase {
 
         assertEquals(ErrorCode.INCOMPATIBLE_RETURN_VALUE, ex.getDiagnostic().getCode());
         assertCodeHighlight("m2<Double>", ex);
+        assertTrue(ex.getDiagnostic().getMessage().endsWith(
+            "GenericTestPane.m2(java.lang.Double): return value cannot be converted to java.lang.String"));
     }
 
     @Test
@@ -1542,6 +1558,8 @@ public class FunctionBindingTest extends CompilerTestBase {
 
         assertEquals(ErrorCode.NUM_TYPE_ARGUMENTS_MISMATCH, ex.getDiagnostic().getCode());
         assertCodeHighlight("m2<Object, String>", ex);
+        assertTrue(ex.getDiagnostic().getMessage().endsWith(
+            "GenericTestPane.m2: required 1 type argument(s), but 2 were provided"));
     }
 
     @Test
@@ -1587,5 +1605,24 @@ public class FunctionBindingTest extends CompilerTestBase {
             """);
 
         assertEquals("123.0", root.getId());
+    }
+
+    @Test
+    public void Bind_Once_To_Generic_Method_With_Incompatible_ReturnType_Fails() {
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <GenericTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                             fx:typeArguments="String"
+                             prefWidth="$genericFormat('foo-%s', invariantDoubleVal)"/>
+        """));
+
+        assertEquals(ErrorCode.CANNOT_BIND_FUNCTION, ex.getDiagnostic().getCode());
+        assertEquals(2, ex.getDiagnostic().getCauses().length);
+        assertEquals(ErrorCode.INCOMPATIBLE_RETURN_VALUE, ex.getDiagnostic().getCauses()[0].getCode());
+        assertEquals(ErrorCode.NUM_FUNCTION_ARGUMENTS_MISMATCH, ex.getDiagnostic().getCauses()[1].getCode());
+        assertCodeHighlight("genericFormat", ex);
+        assertTrue(ex.getDiagnostic().getCauses()[0].getMessage().endsWith(
+            "genericFormat(java.lang.String, java.lang.Object[]): return value cannot be converted to double"));
+        assertTrue(ex.getDiagnostic().getCauses()[1].getMessage().endsWith(
+            "genericFormat(java.util.Locale, java.lang.String, java.lang.Object[]): required 3 argument(s), but 2 were provided"));
     }
 }

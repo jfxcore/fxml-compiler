@@ -357,7 +357,7 @@ public class ValueEmitterFactory {
                         var namedArgs = namedArgsConstructor.namedArgs();
                         var argTypes = Arrays.stream(namedArgs).map(NamedArgParam::type).toArray(TypeInstance[]::new);
                         var argNames = Arrays.stream(namedArgs).map(NamedArgParam::name).toArray(String[]::new);
-                        var methodSignature = NameHelper.getShortMethodSignature(
+                        var methodSignature = NameHelper.getDisplaySignature(
                             namedArgsConstructor.constructor(), argTypes, argNames);
 
                         switch (result.errorCode()) {
@@ -771,7 +771,7 @@ public class ValueEmitterFactory {
                 diagnostics.add(new DiagnosticInfo(
                     Diagnostic.newDiagnosticVariant(
                         ErrorCode.NUM_FUNCTION_ARGUMENTS_MISMATCH, "named",
-                        NameHelper.getShortMethodSignature(constructor.constructor(), argTypes, argNames),
+                        NameHelper.getDisplaySignature(constructor.constructor(), argTypes, argNames),
                         namedArgs.length,
                         matches),
                     objectNode.getSourceInfo()));

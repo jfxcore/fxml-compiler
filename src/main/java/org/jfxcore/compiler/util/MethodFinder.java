@@ -117,20 +117,22 @@ public class MethodFinder {
             @Nullable List<DiagnosticInfo> diagnostics,
             SourceInfo sourceInfo) {
         try {
+            TypeInvoker invoker = new TypeInvoker(sourceInfo);
+            TypeInstance[] paramTypes = invoker.invokeParameterTypes(
+                method, List.of(invokingType), context.typeWitnesses());
+
             if (!method.isStatic() && context.staticInvocation()) {
                 if (diagnostics != null) {
                     diagnostics.add(new DiagnosticInfo(
                         Diagnostic.newDiagnostic(
                             ErrorCode.METHOD_NOT_STATIC,
-                            method.displaySignature(false, false)),
+                            NameHelper.getDisplaySignature(method, paramTypes)),
                         sourceInfo));
                 }
 
                 return false;
             }
 
-            TypeInvoker invoker = new TypeInvoker(sourceInfo);
-            TypeInstance[] paramTypes = invoker.invokeParameterTypes(method, List.of(invokingType), context.typeWitnesses());
             int numParams = paramTypes.length;
             int numArgs = context.arguments().size();
             boolean isVarArgs = context.allowVarargInvocation() && method.isVarArgs();
@@ -140,7 +142,8 @@ public class MethodFinder {
                     diagnostics.add(new DiagnosticInfo(
                         Diagnostic.newDiagnostic(
                             ErrorCode.NUM_FUNCTION_ARGUMENTS_MISMATCH,
-                            method.displaySignature(false, false), numParams, numArgs),
+                            NameHelper.getDisplaySignature(method, paramTypes),
+                            numParams, numArgs),
                         sourceInfo));
                 }
 
@@ -185,11 +188,13 @@ public class MethodFinder {
                             if (parameterType.equals(paramType)) {
                                 diagnostics.add(new DiagnosticInfo(Diagnostic.newDiagnostic(
                                     ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT,
-                                    method.displaySignature(false, false), i + 1, argName), argSourceInfo));
+                                    NameHelper.getDisplaySignature(method, paramTypes),
+                                    i + 1, argName), argSourceInfo));
                             } else {
                                 diagnostics.add(new DiagnosticInfo(Diagnostic.newDiagnosticVariant(
                                     ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT, "expected",
-                                    method.displaySignature(false, false), i + 1, argName,
+                                    NameHelper.getDisplaySignature(method, paramTypes),
+                                    i + 1, argName,
                                     parameterType.javaName()), argSourceInfo));
                             }
                         }
@@ -206,7 +211,7 @@ public class MethodFinder {
                         diagnostics.add(new DiagnosticInfo(
                             Diagnostic.newDiagnostic(
                                 ErrorCode.INCOMPATIBLE_RETURN_VALUE,
-                                method.displaySignature(false, false),
+                                NameHelper.getDisplaySignature(method, paramTypes),
                                 context.returnType().javaName()),
                             sourceInfo));
                     }

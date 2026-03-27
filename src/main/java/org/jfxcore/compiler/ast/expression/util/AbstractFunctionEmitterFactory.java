@@ -44,6 +44,7 @@ import org.jfxcore.compiler.type.TypeInstance;
 import org.jfxcore.compiler.type.TypeInvoker;
 import org.jfxcore.compiler.util.Callable;
 import org.jfxcore.compiler.util.MethodFinder;
+import org.jfxcore.compiler.util.NameHelper;
 import org.jfxcore.compiler.util.NumberUtil;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -99,7 +100,7 @@ abstract class AbstractFunctionEmitterFactory {
                 || isVarArgs && methodArguments.size() < paramTypes.length) {
             throw GeneralErrors.numFunctionArgumentsMismatch(
                 SourceInfo.span(methodArguments),
-                function.getBehavior().displaySignature(false, false),
+                NameHelper.getDisplaySignature(function.getBehavior(), paramTypes),
                 paramTypes.length,
                 methodArguments.size());
         }

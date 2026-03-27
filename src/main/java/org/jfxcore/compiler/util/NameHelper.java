@@ -4,8 +4,6 @@
 package org.jfxcore.compiler.util;
 
 import org.jfxcore.compiler.type.BehaviorDeclaration;
-import org.jfxcore.compiler.type.ConstructorDeclaration;
-import org.jfxcore.compiler.type.MethodDeclaration;
 import org.jfxcore.compiler.type.TypeDeclaration;
 import org.jfxcore.compiler.type.TypeInstance;
 import java.util.ArrayList;
@@ -81,37 +79,21 @@ public class NameHelper {
         return (isPrefix ? "is" : "get") + Character.toUpperCase(name.charAt(0)) + name.substring(1);
     }
 
-    public static String getLongMethodSignature(BehaviorDeclaration behavior) {
-        String behaviorName = behavior.declaringType().javaName();
-        if (behavior instanceof MethodDeclaration) {
-            behaviorName += "." + behavior.name();
-        }
-
-        return getMethodSignature(
-            behaviorName,
-            behavior.parameters().stream().map(BehaviorDeclaration.Parameter::name).toArray(String[]::new),
+    public static String getDisplaySignature(BehaviorDeclaration behavior, TypeInstance[] paramTypes) {
+        return getDisplaySignature(
+            behavior.declaringType().name() + "." + behavior.name(),
+            Arrays.stream(paramTypes).map(TypeInstance::javaName).toArray(String[]::new),
             new String[0]);
     }
 
-    public static String getShortMethodSignature(BehaviorDeclaration behavior) {
-        return getMethodSignature(
-            behavior instanceof ConstructorDeclaration
-                ? behavior.declaringType().simpleName()
-                : behavior.name(),
-            behavior.parameters().stream().map(BehaviorDeclaration.Parameter::name).toArray(String[]::new),
-            new String[0]);
-    }
-
-    public static String getShortMethodSignature(BehaviorDeclaration behavior,
-                                                 TypeInstance[] paramTypes,
-                                                 String[] paramNames) {
-        return getMethodSignature(
-            behavior.declaringType().simpleName(),
+    public static String getDisplaySignature(BehaviorDeclaration behavior, TypeInstance[] paramTypes, String[] paramNames) {
+        return getDisplaySignature(
+            behavior.declaringType().name() + "." + behavior.name(),
             Arrays.stream(paramTypes).map(TypeInstance::javaName).toArray(String[]::new),
             paramNames);
     }
 
-    private static String getMethodSignature(String behaviorName, String[] paramTypes, String[] paramNames) {
+    private static String getDisplaySignature(String behaviorName, String[] paramTypes, String[] paramNames) {
         var builder = new StringBuilder(behaviorName).append('(');
 
         for (int i = 0; i < paramTypes.length; i++) {
