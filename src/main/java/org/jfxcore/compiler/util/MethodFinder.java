@@ -194,8 +194,7 @@ public class MethodFinder {
                                 diagnostics.add(new DiagnosticInfo(Diagnostic.newDiagnosticVariant(
                                     ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT, "expected",
                                     NameHelper.getDisplaySignature(method, paramTypes),
-                                    i + 1, argName,
-                                    parameterType.javaName()), argSourceInfo));
+                                    i + 1, argName, parameterType.javaName()), argSourceInfo));
                             }
                         }
 
