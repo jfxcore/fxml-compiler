@@ -14,7 +14,7 @@ import org.jfxcore.compiler.type.TypeDeclaration;
 import org.jfxcore.compiler.util.Bytecode;
 import java.lang.reflect.Modifier;
 
-import static org.jfxcore.compiler.type.Types.*;
+import static org.jfxcore.compiler.type.TypeSymbols.*;
 
 public class DocumentTransform implements Transform {
 

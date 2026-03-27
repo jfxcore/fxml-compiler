@@ -11,7 +11,7 @@ import org.jfxcore.compiler.ast.Visitor;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.type.TypeDeclaration;
 import org.jfxcore.compiler.type.TypeInstance;
-import org.jfxcore.compiler.type.Types;
+import org.jfxcore.compiler.type.TypeSymbols;
 import org.jfxcore.compiler.util.Bytecode;
 import org.jfxcore.compiler.util.NameHelper;
 import java.lang.reflect.Modifier;
@@ -19,7 +19,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-import static org.jfxcore.compiler.type.Types.*;
+import static org.jfxcore.compiler.type.TypeSymbols.*;
 
 public class EmitTemplateContentNode extends AbstractNode implements ValueEmitterNode, RootNode {
 
@@ -109,7 +109,7 @@ public class EmitTemplateContentNode extends AbstractNode implements ValueEmitte
             NameHelper.getUniqueName("TemplateContentFactory", this));
 
         type.setModifiers(Modifier.PRIVATE | Modifier.STATIC | Modifier.FINAL)
-            .addInterface(Types.Core.TemplateContentDecl())
+            .addInterface(TypeSymbols.Core.TemplateContentDecl())
             .createDefaultConstructor();
 
         context.getNestedClasses().add(type);

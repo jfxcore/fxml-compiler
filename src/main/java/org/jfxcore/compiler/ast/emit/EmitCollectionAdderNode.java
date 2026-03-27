@@ -8,7 +8,7 @@ import org.jfxcore.compiler.ast.ValueNode;
 import org.jfxcore.compiler.ast.Visitor;
 import java.util.Objects;
 
-import static org.jfxcore.compiler.type.Types.*;
+import static org.jfxcore.compiler.type.TypeSymbols.*;
 
 public class EmitCollectionAdderNode extends AbstractNode implements EmitterNode {
 

@@ -51,7 +51,7 @@ import java.util.ListIterator;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static org.jfxcore.compiler.type.Types.*;
+import static org.jfxcore.compiler.type.TypeSymbols.*;
 
 /**
  * Replaces all instances of {@link ObjectNode} in the AST with a node that represents one of the following:

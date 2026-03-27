@@ -13,8 +13,9 @@ import org.jfxcore.compiler.type.ConstructorDeclaration;
 import org.jfxcore.compiler.type.FieldDeclaration;
 import org.jfxcore.compiler.type.MethodDeclaration;
 import org.jfxcore.compiler.type.TypeDeclaration;
-import org.jfxcore.compiler.type.Types;
 import java.util.BitSet;
+
+import static org.jfxcore.compiler.type.TypeSymbols.*;
 
 @SuppressWarnings({"UnusedReturnValue", "unused"})
 public final class Bytecode {
@@ -729,21 +730,21 @@ public final class Bytecode {
         CtClass jvmType = primitiveType.jvmType();
 
         if (jvmType == CtClass.booleanType) {
-            bytecode.addInvokestatic(Types.BooleanDecl().jvmType(), "valueOf", "(Z)Ljava/lang/Boolean;");
+            bytecode.addInvokestatic(BooleanDecl().jvmType(), "valueOf", "(Z)Ljava/lang/Boolean;");
         } else if (jvmType == CtClass.charType) {
-            bytecode.addInvokestatic(Types.CharacterDecl().jvmType(), "valueOf", "(C)Ljava/lang/Character;");
+            bytecode.addInvokestatic(CharacterDecl().jvmType(), "valueOf", "(C)Ljava/lang/Character;");
         } else if (jvmType == CtClass.byteType) {
-            bytecode.addInvokestatic(Types.ByteDecl().jvmType(), "valueOf", "(B)Ljava/lang/Byte;");
+            bytecode.addInvokestatic(ByteDecl().jvmType(), "valueOf", "(B)Ljava/lang/Byte;");
         } else if (jvmType == CtClass.shortType) {
-            bytecode.addInvokestatic(Types.ShortDecl().jvmType(), "valueOf", "(S)Ljava/lang/Short;");
+            bytecode.addInvokestatic(ShortDecl().jvmType(), "valueOf", "(S)Ljava/lang/Short;");
         } else if (jvmType == CtClass.intType) {
-            bytecode.addInvokestatic(Types.IntegerDecl().jvmType(), "valueOf", "(I)Ljava/lang/Integer;");
+            bytecode.addInvokestatic(IntegerDecl().jvmType(), "valueOf", "(I)Ljava/lang/Integer;");
         } else if (jvmType == CtClass.longType) {
-            bytecode.addInvokestatic(Types.LongDecl().jvmType(), "valueOf", "(J)Ljava/lang/Long;");
+            bytecode.addInvokestatic(LongDecl().jvmType(), "valueOf", "(J)Ljava/lang/Long;");
         } else if (jvmType == CtClass.floatType) {
-            bytecode.addInvokestatic(Types.FloatDecl().jvmType(), "valueOf", "(F)Ljava/lang/Float;");
+            bytecode.addInvokestatic(FloatDecl().jvmType(), "valueOf", "(F)Ljava/lang/Float;");
         } else if (jvmType == CtClass.doubleType) {
-            bytecode.addInvokestatic(Types.DoubleDecl().jvmType(), "valueOf", "(D)Ljava/lang/Double;");
+            bytecode.addInvokestatic(DoubleDecl().jvmType(), "valueOf", "(D)Ljava/lang/Double;");
         } else {
             throw new IllegalArgumentException("Not a primitive type.");
         }
@@ -763,36 +764,36 @@ public final class Bytecode {
             throw new IllegalArgumentException("Not a primitive type: target=" + targetPrimitive.name());
         }
 
-        if (sourceBox.equals(Types.BooleanDecl()) && targetPrimitive.equals(Types.booleanDecl())) {
-            bytecode.addInvokevirtual(Types.BooleanDecl().jvmType(), "booleanValue", "()Z");
+        if (sourceBox.equals(BooleanDecl()) && targetPrimitive.equals(booleanDecl())) {
+            bytecode.addInvokevirtual(BooleanDecl().jvmType(), "booleanValue", "()Z");
             return this;
         }
 
-        if (sourceBox.equals(Types.CharacterDecl())
-                && (targetPrimitive.equals(Types.charDecl()) || targetPrimitive.equals(Types.intDecl()))) {
-            bytecode.addInvokevirtual(Types.CharacterDecl().jvmType(), "charValue", "()C");
+        if (sourceBox.equals(CharacterDecl())
+                && (targetPrimitive.equals(charDecl()) || targetPrimitive.equals(intDecl()))) {
+            bytecode.addInvokevirtual(CharacterDecl().jvmType(), "charValue", "()C");
             return this;
         }
 
-        if (sourceBox.subtypeOf(Types.NumberDecl())) {
+        if (sourceBox.subtypeOf(NumberDecl())) {
             switch (targetPrimitive.name()) {
                 case "byte":
-                    bytecode.addInvokevirtual(Types.NumberDecl().jvmType(), "byteValue", "()B");
+                    bytecode.addInvokevirtual(NumberDecl().jvmType(), "byteValue", "()B");
                     return this;
                 case "short":
-                    bytecode.addInvokevirtual(Types.NumberDecl().jvmType(), "shortValue", "()S");
+                    bytecode.addInvokevirtual(NumberDecl().jvmType(), "shortValue", "()S");
                     return this;
                 case "int":
-                    bytecode.addInvokevirtual(Types.NumberDecl().jvmType(), "intValue", "()I");
+                    bytecode.addInvokevirtual(NumberDecl().jvmType(), "intValue", "()I");
                     return this;
                 case "long":
-                    bytecode.addInvokevirtual(Types.NumberDecl().jvmType(), "longValue", "()J");
+                    bytecode.addInvokevirtual(NumberDecl().jvmType(), "longValue", "()J");
                     return this;
                 case "float":
-                    bytecode.addInvokevirtual(Types.NumberDecl().jvmType(), "floatValue", "()F");
+                    bytecode.addInvokevirtual(NumberDecl().jvmType(), "floatValue", "()F");
                     return this;
                 case "double":
-                    bytecode.addInvokevirtual(Types.NumberDecl().jvmType(), "doubleValue", "()D");
+                    bytecode.addInvokevirtual(NumberDecl().jvmType(), "doubleValue", "()D");
                     return this;
             }
         }
@@ -966,18 +967,18 @@ public final class Bytecode {
     }
 
     public Bytecode unboxObservable(TypeDeclaration source, TypeDeclaration target) {
-        if (target.jvmType() == CtClass.booleanType && source.subtypeOf(Types.ObservableBooleanValueDecl())) {
-            bytecode.addInvokeinterface(Types.ObservableBooleanValueDecl().jvmType(), "get", "()Z", 1);
+        if (target.jvmType() == CtClass.booleanType && source.subtypeOf(ObservableBooleanValueDecl())) {
+            bytecode.addInvokeinterface(ObservableBooleanValueDecl().jvmType(), "get", "()Z", 1);
             return this;
         }
 
-        if (source.subtypeOf(Types.ObservableNumberValueDecl())) {
+        if (source.subtypeOf(ObservableNumberValueDecl())) {
             switch (target.name()) {
                 case "byte":
                 case "char":
                 case "short":
                 case "int":
-                    bytecode.addInvokeinterface(Types.ObservableNumberValueDecl().jvmType(), "intValue", "()I", 1);
+                    bytecode.addInvokeinterface(ObservableNumberValueDecl().jvmType(), "intValue", "()I", 1);
                     switch (target.name()) {
                         case "byte": opcode(Opcode.I2B); break;
                         case "char": opcode(Opcode.I2C); break;
@@ -985,34 +986,34 @@ public final class Bytecode {
                     }
                     return this;
                 case "long":
-                    bytecode.addInvokeinterface(Types.ObservableNumberValueDecl().jvmType(), "longValue", "()J", 1);
+                    bytecode.addInvokeinterface(ObservableNumberValueDecl().jvmType(), "longValue", "()J", 1);
                     return this;
                 case "float":
-                    bytecode.addInvokeinterface(Types.ObservableNumberValueDecl().jvmType(), "floatValue", "()F", 1);
+                    bytecode.addInvokeinterface(ObservableNumberValueDecl().jvmType(), "floatValue", "()F", 1);
                     return this;
                 case "double":
-                    bytecode.addInvokeinterface(Types.ObservableNumberValueDecl().jvmType(), "doubleValue", "()D", 1);
+                    bytecode.addInvokeinterface(ObservableNumberValueDecl().jvmType(), "doubleValue", "()D", 1);
                     return this;
             }
         }
 
-        if (source.subtypeOf(Types.ObservableBooleanValueDecl())) {
-            bytecode.addInvokeinterface(Types.ObservableValueDecl().jvmType(), "getValue", "()Ljava/lang/Object;", 1);
-            checkcast(Types.BooleanDecl());
-            autoconv(Types.BooleanDecl(), target);
-        } else if (source.subtypeOf(Types.ObservableNumberValueDecl())) {
-            bytecode.addInvokeinterface(Types.ObservableValueDecl().jvmType(), "getValue", "()Ljava/lang/Object;", 1);
-            checkcast(Types.NumberDecl());
-            autoconv(Types.NumberDecl(), target);
-        } else if (!target.equals(Types.ObjectDecl())) {
+        if (source.subtypeOf(ObservableBooleanValueDecl())) {
+            bytecode.addInvokeinterface(ObservableValueDecl().jvmType(), "getValue", "()Ljava/lang/Object;", 1);
+            checkcast(BooleanDecl());
+            autoconv(BooleanDecl(), target);
+        } else if (source.subtypeOf(ObservableNumberValueDecl())) {
+            bytecode.addInvokeinterface(ObservableValueDecl().jvmType(), "getValue", "()Ljava/lang/Object;", 1);
+            checkcast(NumberDecl());
+            autoconv(NumberDecl(), target);
+        } else if (!target.equals(ObjectDecl())) {
             if (target.isPrimitive()) {
                 throw new IllegalArgumentException("source=" + source.name() + ", target=" + target.name());
             }
 
-            bytecode.addInvokeinterface(Types.ObservableValueDecl().jvmType(), "getValue", "()Ljava/lang/Object;", 1);
+            bytecode.addInvokeinterface(ObservableValueDecl().jvmType(), "getValue", "()Ljava/lang/Object;", 1);
             checkcast(target);
         } else {
-            bytecode.addInvokeinterface(Types.ObservableValueDecl().jvmType(), "getValue", "()Ljava/lang/Object;", 1);
+            bytecode.addInvokeinterface(ObservableValueDecl().jvmType(), "getValue", "()Ljava/lang/Object;", 1);
         }
 
         return this;
@@ -1188,7 +1189,7 @@ public final class Bytecode {
     }
 
     public Local acquireLocal(TypeDeclaration type) {
-        return acquireLocal(type.equals(Types.doubleDecl()) || type.equals(Types.longDecl()));
+        return acquireLocal(type.equals(doubleDecl()) || type.equals(longDecl()));
     }
 
     public Local acquireLocal(boolean wide) {

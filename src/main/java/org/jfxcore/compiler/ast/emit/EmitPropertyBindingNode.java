@@ -22,7 +22,7 @@ import org.jfxcore.compiler.util.PropertyInfo;
 import java.util.List;
 import java.util.Objects;
 
-import static org.jfxcore.compiler.type.Types.*;
+import static org.jfxcore.compiler.type.TypeSymbols.*;
 
 /**
  * Emits code to establish a binding between the value that is currently on top of the

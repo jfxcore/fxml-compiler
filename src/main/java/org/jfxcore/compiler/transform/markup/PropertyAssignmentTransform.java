@@ -44,7 +44,7 @@ import org.jfxcore.compiler.type.TypeDeclaration;
 import org.jfxcore.compiler.type.TypeHelper;
 import org.jfxcore.compiler.type.TypeInstance;
 import org.jfxcore.compiler.type.TypeInvoker;
-import org.jfxcore.compiler.type.Types;
+import org.jfxcore.compiler.type.TypeSymbols;
 import org.jfxcore.compiler.util.NameHelper;
 import org.jfxcore.compiler.util.ObservableKind;
 import org.jfxcore.compiler.util.PropertyInfo;
@@ -54,7 +54,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
-import static org.jfxcore.compiler.type.Types.*;
+import static org.jfxcore.compiler.type.TypeSymbols.*;
 
 /**
  * Replaces all instances of {@link PropertyNode} in the AST with nodes that represent property assignments
@@ -413,7 +413,7 @@ public class PropertyAssignmentTransform implements Transform {
         return EmitObjectNode
             .constructor(
                 TypeInstance.ObjectType(),
-                Types.ObjectDecl().requireDeclaredConstructor(),
+                TypeSymbols.ObjectDecl().requireDeclaredConstructor(),
                 Collections.emptyList(),
                 node.getSourceInfo())
             .create();

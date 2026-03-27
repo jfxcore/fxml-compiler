@@ -23,7 +23,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.jfxcore.compiler.generate.SharedMethodImpls.*;
-import static org.jfxcore.compiler.type.Types.*;
+import static org.jfxcore.compiler.type.TypeSymbols.*;
 
 /**
  * Implements an {@link ObservableMapValue} that wraps a {@link Map} contained in an {@link ObservableValue}.

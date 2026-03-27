@@ -14,7 +14,7 @@ import org.jfxcore.compiler.util.NameHelper;
 import java.lang.reflect.Modifier;
 
 import static org.jfxcore.compiler.generate.SharedMethodImpls.*;
-import static org.jfxcore.compiler.type.Types.*;
+import static org.jfxcore.compiler.type.TypeSymbols.*;
 
 public class MapAddRemoveChangeGenerator extends ClassGenerator {
 

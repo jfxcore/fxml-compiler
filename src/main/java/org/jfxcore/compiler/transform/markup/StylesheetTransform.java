@@ -32,7 +32,7 @@ import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
 
-import static org.jfxcore.compiler.type.Types.*;
+import static org.jfxcore.compiler.type.TypeSymbols.*;
 
 /**
  * Compiles stylesheets defined in markup using the fx:stylesheet intrinsic and stores the binary stylesheets

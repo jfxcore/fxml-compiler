@@ -10,14 +10,13 @@ import org.jfxcore.compiler.type.MethodDeclaration;
 import org.jfxcore.compiler.type.TypeDeclaration;
 import org.jfxcore.compiler.type.TypeInstance;
 import org.jfxcore.compiler.type.TypeInvoker;
-import org.jfxcore.compiler.type.Types;
 import org.jfxcore.compiler.util.Bytecode;
 import org.jfxcore.compiler.util.NameHelper;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.jfxcore.compiler.type.Types.*;
+import static org.jfxcore.compiler.type.TypeSymbols.*;
 
 abstract class PropertySegmentGeneratorBase extends SegmentGeneratorBase {
 
@@ -220,8 +219,8 @@ abstract class PropertySegmentGeneratorBase extends SegmentGeneratorBase {
 
     static TypeDeclaration widenShortInt(TypeDeclaration type) {
         return switch (type.name()) {
-            case "short", "byte", "char" -> Types.intDecl();
-            case ShortName, ByteName, CharacterName -> Types.IntegerDecl();
+            case "short", "byte", "char" -> intDecl();
+            case ShortName, ByteName, CharacterName -> IntegerDecl();
             default -> type;
         };
     }

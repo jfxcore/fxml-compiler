@@ -13,7 +13,7 @@ import org.junit.jupiter.api.Test;
 import java.util.Collections;
 import java.util.List;
 
-import static org.jfxcore.compiler.type.Types.*;
+import static org.jfxcore.compiler.type.TypeSymbols.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 @SuppressWarnings("unused")
@@ -869,7 +869,7 @@ public class TypeInstanceTest extends TestBase {
     @Test
     public void IsAssignableFrom_Subtype_ArgUpperBound() {
         MethodDeclaration method = resolver.tryResolveMethod(
-            Types.ParentDecl(), m -> m.name().equals("getChildrenUnmodifiable"));
+            TypeSymbols.ParentDecl(), m -> m.name().equals("getChildrenUnmodifiable"));
         TypeInstance t0 = invoker.invokeReturnType(method, Collections.emptyList()).arguments().get(0);
         TypeInstance t1 = new TypeParser("javafx.scene.Parent").parse().get(0);
         assertTrue(t0.isAssignableFrom(t1));

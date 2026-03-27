@@ -15,7 +15,7 @@ import org.jfxcore.compiler.util.Label;
 import java.lang.reflect.Modifier;
 import java.util.function.Consumer;
 
-import static org.jfxcore.compiler.type.Types.*;
+import static org.jfxcore.compiler.type.TypeSymbols.*;
 
 public class HeadSegmentGenerator extends PropertySegmentGeneratorBase {
 

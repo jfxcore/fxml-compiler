@@ -14,7 +14,7 @@ import org.jfxcore.compiler.type.TypeInvoker;
 import org.jfxcore.compiler.util.Bytecode;
 import java.util.Objects;
 
-import static org.jfxcore.compiler.type.Types.*;
+import static org.jfxcore.compiler.type.TypeSymbols.*;
 
 /**
  * Loads a string, primitive constant, null, or class literal, and places it on top of the operand stack.

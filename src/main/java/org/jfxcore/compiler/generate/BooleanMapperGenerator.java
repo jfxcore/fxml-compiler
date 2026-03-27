@@ -12,7 +12,7 @@ import org.jfxcore.compiler.util.NameHelper;
 import java.lang.reflect.Modifier;
 import java.util.function.BiConsumer;
 
-import static org.jfxcore.compiler.type.Types.*;
+import static org.jfxcore.compiler.type.TypeSymbols.*;
 
 public class BooleanMapperGenerator extends ClassGenerator {
 

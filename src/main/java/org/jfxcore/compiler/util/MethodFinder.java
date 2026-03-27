@@ -15,7 +15,6 @@ import org.jfxcore.compiler.type.MethodDeclaration;
 import org.jfxcore.compiler.type.TypeDeclaration;
 import org.jfxcore.compiler.type.TypeInstance;
 import org.jfxcore.compiler.type.TypeInvoker;
-import org.jfxcore.compiler.type.Types;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -23,6 +22,7 @@ import java.util.Map;
 
 import static org.jfxcore.compiler.type.TypeInstance.*;
 import static org.jfxcore.compiler.type.TypeInstance.AssignmentContext.*;
+import static org.jfxcore.compiler.type.TypeSymbols.*;
 
 public class MethodFinder {
 
@@ -352,7 +352,7 @@ public class MethodFinder {
                 }
 
                 return maxWideningConversions(e, t1) < maxWideningConversions(e, t2);
-            } else if (t1.equals(Types.floatDecl()) && t2.equals(Types.doubleDecl())) {
+            } else if (t1.equals(floatDecl()) && t2.equals(doubleDecl())) {
                 return true;
             }
         }
@@ -372,21 +372,21 @@ public class MethodFinder {
         TypeDeclaration fromType = from.declaration();
         TypeDeclaration toType = to.declaration();
 
-        if (toType.equals(Types.longDecl())) {
-            if (fromType.equals(Types.intDecl())) return 1;
-            if (fromType.equals(Types.shortDecl())) return 2;
-            if (fromType.equals(Types.charDecl())) return 3;
-            if (fromType.equals(Types.byteDecl())) return 3;
-        } else if (toType.equals(Types.intDecl())) {
-            if (fromType.equals(Types.shortDecl())) return 1;
-            if (fromType.equals(Types.charDecl())) return 2;
-            if (fromType.equals(Types.byteDecl())) return 2;
+        if (toType.equals(longDecl())) {
+            if (fromType.equals(intDecl())) return 1;
+            if (fromType.equals(shortDecl())) return 2;
+            if (fromType.equals(charDecl())) return 3;
+            if (fromType.equals(byteDecl())) return 3;
+        } else if (toType.equals(intDecl())) {
+            if (fromType.equals(shortDecl())) return 1;
+            if (fromType.equals(charDecl())) return 2;
+            if (fromType.equals(byteDecl())) return 2;
             return 0;
-        } else if (toType.equals(Types.shortDecl())) {
-            if (fromType.equals(Types.charDecl())) return 1;
-            if (fromType.equals(Types.byteDecl())) return 1;
-        } else if (toType.equals(Types.doubleDecl())) {
-            if (fromType.equals(Types.floatDecl())) return 1;
+        } else if (toType.equals(shortDecl())) {
+            if (fromType.equals(charDecl())) return 1;
+            if (fromType.equals(byteDecl())) return 1;
+        } else if (toType.equals(doubleDecl())) {
+            if (fromType.equals(floatDecl())) return 1;
         }
 
         return 0;

@@ -15,7 +15,7 @@ import org.jfxcore.compiler.util.Local;
 import org.jfxcore.compiler.util.ObservableKind;
 import java.lang.reflect.Modifier;
 
-import static org.jfxcore.compiler.type.Types.*;
+import static org.jfxcore.compiler.type.TypeSymbols.*;
 
 public class TailSegmentGenerator extends PropertySegmentGeneratorBase {
 

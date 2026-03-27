@@ -4,7 +4,8 @@
 package org.jfxcore.compiler.util;
 
 import org.jfxcore.compiler.type.TypeDeclaration;
-import org.jfxcore.compiler.type.Types;
+
+import static org.jfxcore.compiler.type.TypeSymbols.*;
 
 public enum ObservableKind {
 
@@ -13,11 +14,11 @@ public enum ObservableKind {
     FX_PROPERTY;
 
     public static ObservableKind get(TypeDeclaration type) {
-        if (type.subtypeOf(Types.PropertyDecl())) {
+        if (type.subtypeOf(PropertyDecl())) {
             return FX_PROPERTY;
         }
 
-        if (type.subtypeOf(Types.ObservableValueDecl())) {
+        if (type.subtypeOf(ObservableValueDecl())) {
             return FX_OBSERVABLE;
         }
 

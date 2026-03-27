@@ -16,7 +16,7 @@ import org.jfxcore.compiler.util.Local;
 import org.jfxcore.compiler.util.PropertyInfo;
 import java.util.Objects;
 
-import static org.jfxcore.compiler.type.Types.*;
+import static org.jfxcore.compiler.type.TypeSymbols.*;
 
 /**
  * Emits opcodes to set a property value.

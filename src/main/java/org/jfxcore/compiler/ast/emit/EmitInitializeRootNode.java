@@ -8,7 +8,7 @@ import org.jfxcore.compiler.ast.Node;
 import org.jfxcore.compiler.ast.RootNode;
 import org.jfxcore.compiler.ast.Visitor;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
-import org.jfxcore.compiler.type.Types;
+import org.jfxcore.compiler.type.TypeSymbols;
 import org.jfxcore.compiler.util.Bytecode;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -69,7 +69,7 @@ public class EmitInitializeRootNode extends AbstractNode implements RootNode, Em
             code.anew(context.getRuntimeContextClass())
                 .dup()
                 .iconst(maxDepth)
-                .invoke(context.getRuntimeContextClass().requireConstructor(Types.intDecl()))
+                .invoke(context.getRuntimeContextClass().requireConstructor(TypeSymbols.intDecl()))
                 .astore(context.getRuntimeContextLocal());
         }
 

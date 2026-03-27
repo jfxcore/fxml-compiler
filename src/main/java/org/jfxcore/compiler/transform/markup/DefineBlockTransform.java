@@ -12,7 +12,7 @@ import org.jfxcore.compiler.transform.TransformContext;
 import org.jfxcore.compiler.type.TypeDeclaration;
 import org.jfxcore.compiler.type.TypeHelper;
 
-import static org.jfxcore.compiler.type.Types.*;
+import static org.jfxcore.compiler.type.TypeSymbols.*;
 
 /**
  * Replaces a {@code <fx:define>} property with {@code <properties>}.

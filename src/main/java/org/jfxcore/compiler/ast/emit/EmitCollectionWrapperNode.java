@@ -22,7 +22,7 @@ import org.jfxcore.compiler.util.Local;
 import java.util.List;
 import java.util.Objects;
 
-import static org.jfxcore.compiler.type.Types.*;
+import static org.jfxcore.compiler.type.TypeSymbols.*;
 
 /**
  * {@link EmitCollectionWrapperNode} wraps an {@code ObservableValue<ObservableList<T>>} into an

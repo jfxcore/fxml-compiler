@@ -16,14 +16,13 @@ import org.jfxcore.compiler.ast.text.TextNode;
 import org.jfxcore.compiler.diagnostic.errors.GeneralErrors;
 import org.jfxcore.compiler.type.TypeHelper;
 import org.jfxcore.compiler.type.TypeInstance;
-import org.jfxcore.compiler.type.Types;
 import org.jfxcore.compiler.util.NameHelper;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
-import static org.jfxcore.compiler.type.Types.*;
+import static org.jfxcore.compiler.type.TypeSymbols.*;
 
 public class AdderFactory {
 
@@ -143,7 +142,7 @@ public class AdderFactory {
         return EmitObjectNode
             .constructor(
                 TypeInstance.ObjectType(),
-                Types.ObjectDecl().requireConstructor(),
+                ObjectDecl().requireConstructor(),
                 Collections.emptyList(),
                 node.getSourceInfo())
             .create();

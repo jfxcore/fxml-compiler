@@ -10,15 +10,14 @@ import org.jfxcore.compiler.ast.ValueNode;
 import org.jfxcore.compiler.ast.Visitor;
 import org.jfxcore.compiler.type.TypeDeclaration;
 import org.jfxcore.compiler.type.TypeInstance;
-import org.jfxcore.compiler.type.Types;
 import org.jfxcore.compiler.util.Bytecode;
 import org.jfxcore.compiler.util.Local;
 import org.jfxcore.compiler.util.PropertyInfo;
 import java.util.Objects;
 
 import static org.jfxcore.compiler.generate.RuntimeContextGenerator.*;
-import static org.jfxcore.compiler.type.Types.*;
-import static org.jfxcore.compiler.type.Types.Markup.*;
+import static org.jfxcore.compiler.type.TypeSymbols.*;
+import static org.jfxcore.compiler.type.TypeSymbols.Markup.*;
 
 public class EmitApplyMarkupExtensionNode extends AbstractNode implements ValueNode, EmitterNode, ParentStackInfo {
 
@@ -78,8 +77,8 @@ public class EmitApplyMarkupExtensionNode extends AbstractNode implements ValueN
         } else {
             TypeDeclaration acceptParamType =
                 markupExtensionInterface.subtypeOf(MarkupExtension.PropertyConsumerDecl())
-                    ? Types.PropertyDecl()
-                    : Types.ReadOnlyPropertyDecl();
+                    ? PropertyDecl()
+                    : ReadOnlyPropertyDecl();
 
             Local propertyLocal = code.acquireLocal(false);
 

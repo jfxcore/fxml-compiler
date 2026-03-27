@@ -17,7 +17,7 @@ import org.jfxcore.compiler.util.Bytecode;
 import org.jfxcore.compiler.util.Local;
 import java.util.List;
 
-import static org.jfxcore.compiler.type.Types.*;
+import static org.jfxcore.compiler.type.TypeSymbols.*;
 
 /**
  * Wraps a non-observable value into an instance of {@link javafx.beans.value.ObservableValue}.

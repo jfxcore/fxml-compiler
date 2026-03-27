@@ -14,7 +14,7 @@ import org.jfxcore.compiler.type.TypeInstance;
 import org.jfxcore.compiler.util.Bytecode;
 import java.util.Objects;
 
-import static org.jfxcore.compiler.type.Types.*;
+import static org.jfxcore.compiler.type.TypeSymbols.*;
 
 /**
  * Emits the child value, then replaces it with {@code true} or {@code false} as specified by {@link Operator}.

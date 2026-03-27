@@ -24,7 +24,7 @@ import java.util.List;
 import java.util.Set;
 
 import static org.jfxcore.compiler.generate.SharedMethodImpls.*;
-import static org.jfxcore.compiler.type.Types.*;
+import static org.jfxcore.compiler.type.TypeSymbols.*;
 
 /**
  * Implements an {@link ObservableSetValue} that wraps a {@link Set} contained in an {@link ObservableValue}.

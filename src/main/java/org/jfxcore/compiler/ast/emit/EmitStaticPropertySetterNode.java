@@ -13,7 +13,7 @@ import org.jfxcore.compiler.util.Bytecode;
 import org.jfxcore.compiler.util.PropertyInfo;
 import java.util.Objects;
 
-import static org.jfxcore.compiler.type.Types.*;
+import static org.jfxcore.compiler.type.TypeSymbols.*;
 
 public class EmitStaticPropertySetterNode extends AbstractNode implements EmitterNode {
 

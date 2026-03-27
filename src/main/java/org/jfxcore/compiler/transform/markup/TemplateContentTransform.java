@@ -23,7 +23,7 @@ import org.jfxcore.compiler.util.NameHelper;
 import java.lang.reflect.Modifier;
 import java.util.List;
 
-import static org.jfxcore.compiler.type.Types.*;
+import static org.jfxcore.compiler.type.TypeSymbols.*;
 
 public class TemplateContentTransform implements Transform {
 
