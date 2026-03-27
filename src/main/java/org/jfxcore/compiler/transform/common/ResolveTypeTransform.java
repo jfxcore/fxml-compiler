@@ -1,11 +1,8 @@
-// Copyright (c) 2022, 2025, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.transform.common;
 
-import javassist.CtClass;
-import javassist.CtField;
-import javassist.CtMethod;
 import org.jfxcore.compiler.ast.DocumentNode;
 import org.jfxcore.compiler.ast.Node;
 import org.jfxcore.compiler.ast.NodeDataKey;
@@ -25,10 +22,13 @@ import org.jfxcore.compiler.parse.TypeFormatter;
 import org.jfxcore.compiler.parse.TypeParser;
 import org.jfxcore.compiler.transform.Transform;
 import org.jfxcore.compiler.transform.TransformContext;
+import org.jfxcore.compiler.type.FieldDeclaration;
+import org.jfxcore.compiler.type.MethodDeclaration;
+import org.jfxcore.compiler.type.Resolver;
+import org.jfxcore.compiler.type.TypeDeclaration;
+import org.jfxcore.compiler.type.TypeInstance;
+import org.jfxcore.compiler.type.TypeInvoker;
 import org.jfxcore.compiler.util.AccessVerifier;
-import org.jfxcore.compiler.util.Resolver;
-import org.jfxcore.compiler.util.TypeInstance;
-import org.jfxcore.compiler.util.TypeInvoker;
 import java.util.List;
 
 /**
@@ -68,7 +68,7 @@ public class ResolveTypeTransform implements Transform {
                 typeNode.getSourceInfo());
         }
 
-        CtClass objectTypeClass = resolver.tryResolveClassAgainstImports(typeNode.getName());
+        TypeDeclaration objectTypeClass = resolver.tryResolveClassAgainstImports(typeNode.getName());
         if (objectTypeClass == null) {
             return typeNode;
         }
@@ -85,7 +85,7 @@ public class ResolveTypeTransform implements Transform {
             }
         }
 
-        CtClass markupClass = context.getMarkupClass();
+        TypeDeclaration markupClass = context.getMarkupClass();
         if (markupClass != null) {
             AccessVerifier.verifyAccessible(objectTypeClass, markupClass, typeNode.getSourceInfo());
         }
@@ -103,7 +103,7 @@ public class ResolveTypeTransform implements Transform {
         PropertyNode typeArgsNode = objectNode.findIntrinsicProperty(Intrinsics.TYPE_ARGUMENTS);
 
         if (typeArgsNode != null) {
-            if (objectTypeClass.getGenericSignature() == null) {
+            if (objectTypeClass.genericSignature() == null) {
                 throw ObjectInitializationErrors.cannotParameterizeType(node.getSourceInfo(), objectTypeClass);
             }
 
@@ -172,7 +172,7 @@ public class ResolveTypeTransform implements Transform {
             }
         }
 
-        CtClass classType = context.getCodeBehindOrMarkupClass();
+        TypeDeclaration classType = context.getCodeBehindOrMarkupClass();
         if (classType != null && parentIsDocument) {
             type = TypeInstance.of(classType);
         }
@@ -186,7 +186,7 @@ public class ResolveTypeTransform implements Transform {
     }
 
     private ResolvedTypeNode resolveConstantType(
-            TransformContext context, PropertyNode constantProperty, CtClass objectTypeClass) {
+            TransformContext context, PropertyNode constantProperty, TypeDeclaration objectTypeClass) {
         Node fieldNameNode = constantProperty.getSingleValue(context);
         SourceInfo sourceInfo = fieldNameNode.getSourceInfo();
 
@@ -196,16 +196,16 @@ public class ResolveTypeTransform implements Transform {
         }
 
         var resolver = new Resolver(sourceInfo);
-        CtField field = resolver.resolveField(objectTypeClass, fieldNameTextNode.getText().trim(), false);
+        FieldDeclaration field = resolver.resolveField(objectTypeClass, fieldNameTextNode.getText().trim(), false);
         TypeInstance fieldType = new TypeInvoker(sourceInfo).invokeFieldType(field, List.of());
         var resolvedType = new ResolvedTypeNode(
-            fieldType, fieldType.getName(), fieldType.getName(), false, sourceInfo);
+            fieldType, fieldType.name(), fieldType.name(), false, sourceInfo);
         resolvedType.setNodeData(NodeDataKey.CONSTANT_DECLARING_TYPE, objectTypeClass);
         return resolvedType;
     }
 
     private ResolvedTypeNode resolveFactoryType(
-            TransformContext context, PropertyNode factoryProperty, CtClass objectTypeClass) {
+            TransformContext context, PropertyNode factoryProperty, TypeDeclaration objectTypeClass) {
         Node methodNameNode = factoryProperty.getSingleValue(context);
         SourceInfo sourceInfo = methodNameNode.getSourceInfo();
 
@@ -219,10 +219,10 @@ public class ResolveTypeTransform implements Transform {
 
         var resolver = new Resolver(methodInfo.sourceInfo());
         var invoker = new TypeInvoker(methodInfo.sourceInfo());
-        CtMethod method = resolver.resolveGetter(objectTypeClass, methodInfo.methodName(), true, null);
+        MethodDeclaration method = resolver.resolveGetter(objectTypeClass, methodInfo.methodName(), true, null);
         TypeInstance returnType = invoker.invokeReturnType(method, List.of(), methodInfo.typeWitnesses());
         var resolvedType = new ResolvedTypeNode(
-            returnType, returnType.getName(), returnType.getName(), false, sourceInfo);
+            returnType, returnType.name(), returnType.name(), false, sourceInfo);
         resolvedType.setNodeData(NodeDataKey.FACTORY_DECLARING_TYPE, objectTypeClass);
         return resolvedType;
     }

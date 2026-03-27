@@ -1,18 +1,20 @@
-// Copyright (c) 2021, 2023, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.emit;
 
-import javassist.CtClass;
-import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.ast.AbstractNode;
 import org.jfxcore.compiler.ast.ResolvedTypeNode;
 import org.jfxcore.compiler.ast.Visitor;
 import org.jfxcore.compiler.ast.expression.Operator;
+import org.jfxcore.compiler.diagnostic.SourceInfo;
+import org.jfxcore.compiler.type.TypeDeclaration;
+import org.jfxcore.compiler.type.TypeHelper;
+import org.jfxcore.compiler.type.TypeInstance;
 import org.jfxcore.compiler.util.Bytecode;
-import org.jfxcore.compiler.util.TypeHelper;
-import org.jfxcore.compiler.util.TypeInstance;
 import java.util.Objects;
+
+import static org.jfxcore.compiler.type.KnownSymbols.*;
 
 /**
  * Emits the child value, then replaces it with {@code true} or {@code false} as specified by {@link Operator}.
@@ -40,14 +42,14 @@ public class EmitConvertToBooleanNode extends AbstractNode implements ValueEmitt
         context.emit(child);
 
         Bytecode code = context.getOutput();
-        CtClass type = TypeHelper.getJvmType(child);
+        TypeDeclaration type = TypeHelper.getTypeDeclaration(child);
 
         if (operator == Operator.NOT) {
             if (type.isPrimitive()) {
-                if (type == CtClass.doubleType) {
+                if (type.equals(doubleDecl())) {
                     code.dconst(0)
                         .dcmpl();
-                } else if (type == CtClass.longType) {
+                } else if (type.equals(longDecl())) {
                     code.lconst(0)
                         .lcmp();
                 }
@@ -58,10 +60,10 @@ public class EmitConvertToBooleanNode extends AbstractNode implements ValueEmitt
             }
         } else if (operator == Operator.BOOLIFY) {
             if (type.isPrimitive()) {
-                if (type == CtClass.doubleType) {
+                if (type.equals(doubleDecl())) {
                     code.dconst(0)
                         .dcmpl();
-                } else if (type == CtClass.longType) {
+                } else if (type.equals(longDecl())) {
                     code.lconst(0)
                         .lcmp();
                 }
@@ -100,5 +102,4 @@ public class EmitConvertToBooleanNode extends AbstractNode implements ValueEmitt
     public int hashCode() {
         return Objects.hash(operator, type, child);
     }
-
 }

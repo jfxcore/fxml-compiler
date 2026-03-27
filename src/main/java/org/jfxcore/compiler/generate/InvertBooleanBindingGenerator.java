@@ -1,24 +1,21 @@
-// Copyright (c) 2025, JFXcore. All rights reserved.
+// Copyright (c) 2025, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.generate;
 
-import javassist.CtClass;
-import javassist.CtConstructor;
-import javassist.CtField;
-import javassist.CtMethod;
-import javassist.Modifier;
-import javassist.bytecode.MethodInfo;
 import org.jfxcore.compiler.ast.emit.BytecodeEmitContext;
-import org.jfxcore.compiler.diagnostic.SourceInfo;
+import org.jfxcore.compiler.type.ConstructorDeclaration;
+import org.jfxcore.compiler.type.FieldDeclaration;
+import org.jfxcore.compiler.type.MethodDeclaration;
+import org.jfxcore.compiler.type.TypeDeclaration;
+import org.jfxcore.compiler.type.TypeInstance;
 import org.jfxcore.compiler.util.Bytecode;
 import org.jfxcore.compiler.util.Label;
 import org.jfxcore.compiler.util.Local;
 import org.jfxcore.compiler.util.NameHelper;
-import org.jfxcore.compiler.util.TypeInstance;
+import java.lang.reflect.Modifier;
 
-import static org.jfxcore.compiler.util.Classes.*;
-import static org.jfxcore.compiler.util.Descriptors.*;
+import static org.jfxcore.compiler.type.KnownSymbols.*;
 
 public class InvertBooleanBindingGenerator extends ClassGenerator {
 
@@ -32,15 +29,15 @@ public class InvertBooleanBindingGenerator extends ClassGenerator {
             + " to restore the source property to the previous value."
             + " Removing the bidirectional binding from both properties.";
 
-    private CtConstructor constructor;
-    private CtMethod getProperty1Method;
-    private CtMethod getProperty2Method;
-    private CtMethod wasGarbageCollectedMethod;
-    private CtMethod changedMethod;
-    private CtMethod bindMethod;
-    private CtField property1Field;
-    private CtField property2Field;
-    private CtField updatingField;
+    private ConstructorDeclaration constructor;
+    private MethodDeclaration getProperty1Method;
+    private MethodDeclaration getProperty2Method;
+    private MethodDeclaration wasGarbageCollectedMethod;
+    private MethodDeclaration changedMethod;
+    private MethodDeclaration bindMethod;
+    private FieldDeclaration property1Field;
+    private FieldDeclaration property2Field;
+    private FieldDeclaration updatingField;
 
     @Override
     public String getClassName() {
@@ -53,175 +50,139 @@ public class InvertBooleanBindingGenerator extends ClassGenerator {
     }
 
     @Override
-    public void emitClass(BytecodeEmitContext context) throws Exception {
-        generatedClass = context.getNestedClasses().create(getClassName());
-        generatedClass.addInterface(ChangeListenerType());
-        generatedClass.addInterface(WeakListenerType());
-        generatedClass.setModifiers(Modifier.PRIVATE | Modifier.FINAL);
+    public TypeDeclaration emitClass(BytecodeEmitContext context) {
+        return super.emitClass(context)
+            .addInterface(ChangeListenerDecl())
+            .addInterface(WeakListenerDecl())
+            .setModifiers(Modifier.PRIVATE | Modifier.FINAL);
     }
 
     @Override
-    public void emitFields(BytecodeEmitContext context) throws Exception {
-        updatingField = new CtField(CtClass.booleanType, "updating", generatedClass);
-        updatingField.setModifiers(Modifier.PRIVATE);
-        generatedClass.addField(updatingField);
-
-        property1Field = new CtField(WeakReferenceType(), "property1", generatedClass);
-        property1Field.setModifiers(Modifier.PRIVATE);
-        generatedClass.addField(property1Field);
-
-        property2Field = new CtField(WeakReferenceType(), "property2", generatedClass);
-        property2Field.setModifiers(Modifier.PRIVATE);
-        generatedClass.addField(property2Field);
+    public void emitFields(BytecodeEmitContext context) {
+        updatingField = createField("updating", booleanDecl()).setModifiers(Modifier.PRIVATE);
+        property1Field = createField("property1", WeakReferenceDecl()).setModifiers(Modifier.PRIVATE);
+        property2Field = createField("property2", WeakReferenceDecl()).setModifiers(Modifier.PRIVATE);
     }
 
     @Override
-    public void emitMethods(BytecodeEmitContext context) throws Exception {
+    public void emitMethods(BytecodeEmitContext context) {
         super.emitMethods(context);
 
-        constructor = new CtConstructor(new CtClass[] {PropertyType(), PropertyType()}, generatedClass);
-        constructor.setModifiers(Modifier.PUBLIC);
-        generatedClass.addConstructor(constructor);
+        constructor = createConstructor(PropertyDecl(), PropertyDecl()).setModifiers(Modifier.PUBLIC);
+        getProperty1Method = createMethod("getProperty1", PropertyDecl()).setModifiers(Modifier.PRIVATE);
+        getProperty2Method = createMethod("getProperty2", PropertyDecl()).setModifiers(Modifier.PRIVATE);
 
-        getProperty1Method = new CtMethod(PropertyType(), "getProperty1", new CtClass[0], generatedClass);
-        getProperty1Method.setModifiers(Modifier.PRIVATE);
-        generatedClass.addMethod(getProperty1Method);
+        wasGarbageCollectedMethod = createMethod("wasGarbageCollected", booleanDecl())
+            .setModifiers(Modifier.PUBLIC | Modifier.FINAL);
 
-        getProperty2Method = new CtMethod(PropertyType(), "getProperty2", new CtClass[0], generatedClass);
-        getProperty2Method.setModifiers(Modifier.PRIVATE);
-        generatedClass.addMethod(getProperty2Method);
+        changedMethod = createMethod("changed", voidDecl(), ObservableValueDecl(), ObjectDecl(), ObjectDecl())
+            .setModifiers(Modifier.PUBLIC | Modifier.FINAL);
 
-        wasGarbageCollectedMethod = new CtMethod(
-            CtClass.booleanType, "wasGarbageCollected", new CtClass[0], generatedClass);
-        wasGarbageCollectedMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
-        generatedClass.addMethod(wasGarbageCollectedMethod);
-
-        changedMethod = new CtMethod(
-            CtClass.voidType, "changed",
-            new CtClass[] {ObservableValueType(), ObjectType(), ObjectType()}, generatedClass);
-        changedMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
-        generatedClass.addMethod(changedMethod);
-
-        bindMethod = new CtMethod(
-            CtClass.voidType, "bindBidirectional",
-            new CtClass[] {PropertyType(), PropertyType()}, generatedClass);
-        bindMethod.setModifiers(Modifier.PUBLIC | Modifier.STATIC);
-        generatedClass.addMethod(bindMethod);
+        bindMethod = createMethod("bindBidirectional", voidDecl(), PropertyDecl(), PropertyDecl())
+            .setModifiers(Modifier.PUBLIC | Modifier.STATIC);
     }
 
     @Override
-    public void emitCode(BytecodeEmitContext context) throws Exception {
-        super.emitCode(context);
-
-        emitConstructor(context, constructor);
-        emitBindMethod(context, bindMethod);
-        emitChangedMethod(context, changedMethod);
-        emitWasGarbageCollectedMethod(context, wasGarbageCollectedMethod);
-        emitGetPropertyMethod(context, getProperty1Method, property1Field);
-        emitGetPropertyMethod(context, getProperty2Method, property2Field);
+    public void emitCode(BytecodeEmitContext context) {
+        emitConstructor(constructor);
+        emitBindMethod(bindMethod);
+        emitChangedMethod(changedMethod);
+        emitWasGarbageCollectedMethod(wasGarbageCollectedMethod);
+        emitGetPropertyMethod(getProperty1Method, property1Field);
+        emitGetPropertyMethod(getProperty2Method, property2Field);
     }
 
-    private void emitConstructor(BytecodeEmitContext parentContext, CtConstructor constructor) throws Exception {
-        var context = new BytecodeEmitContext(parentContext, generatedClass, 3, -1);
-        Bytecode code = context.getOutput();
+    private void emitConstructor(ConstructorDeclaration constructor) {
+        Bytecode code = new Bytecode(constructor);
 
         code.aload(0)
-            .invokespecial(generatedClass.getSuperclass(), MethodInfo.nameInit, constructor());
+            .invoke(requireSuperClass().requireDeclaredConstructor());
 
         // this.property1 = new WeakReference($1)
         code.aload(0)
-            .anew(WeakReferenceType())
+            .anew(WeakReferenceDecl())
             .dup()
             .aload(1)
-            .invokespecial(WeakReferenceType(), MethodInfo.nameInit, constructor(ObjectType()))
-            .putfield(generatedClass, property1Field.getName(), WeakReferenceType());
+            .invoke(WeakReferenceDecl().requireDeclaredConstructor(ObjectDecl()))
+            .putfield(property1Field);
 
         // this.property2 = new WeakReference($2)
         code.aload(0)
-            .anew(WeakReferenceType())
+            .anew(WeakReferenceDecl())
             .dup()
             .aload(2)
-            .invokespecial(WeakReferenceType(), MethodInfo.nameInit, constructor(ObjectType()))
-            .putfield(generatedClass, property2Field.getName(), WeakReferenceType())
+            .invoke(WeakReferenceDecl().requireDeclaredConstructor(ObjectDecl()))
+            .putfield(property2Field)
             .vreturn();
 
-        constructor.getMethodInfo().setCodeAttribute(code.toCodeAttribute());
-        constructor.getMethodInfo().rebuildStackMap(generatedClass.getClassPool());
+        constructor.setCode(code);
     }
 
-    private void emitBindMethod(BytecodeEmitContext parentContext, CtMethod method) throws Exception {
-        var context = new BytecodeEmitContext(parentContext, generatedClass, 3, -1);
-        Bytecode code = context.getOutput();
+    private void emitBindMethod(MethodDeclaration method) {
+        Bytecode code = new Bytecode(method);
         Local bindingLocal = code.acquireLocal(false);
 
         // var binding = new InvertedBooleanBinding($0, $1)
-        code.anew(generatedClass)
+        code.anew(getGeneratedClass())
             .dup()
             .aload(0)
             .aload(1)
-            .invokespecial(generatedClass, MethodInfo.nameInit, constructor(PropertyType(), PropertyType()))
+            .invoke(getGeneratedClass().requireDeclaredConstructor(PropertyDecl(), PropertyDecl()))
             .astore(bindingLocal);
 
         // $0.setValue(!$1.getValue())
         code.aload(0)
             .aload(1)
-            .invokeinterface(ObservableValueType(), "getValue", function(ObjectType()))
-            .checkcast(BooleanType())
-            .ext_unbox(SourceInfo.none(), BooleanType(), CtClass.booleanType)
+            .invoke(ObservableValueDecl().requireDeclaredMethod("getValue"))
+            .checkcast(BooleanDecl())
+            .unbox(BooleanDecl(), booleanDecl())
             .ifne(() -> code.iconst(0), () -> code.iconst(1))
-            .ext_box(CtClass.booleanType)
-            .invokeinterface(WritableValueType(), "setValue", function(CtClass.voidType, ObjectType()));
+            .box(booleanDecl())
+            .invoke(WritableValueDecl().requireDeclaredMethod("setValue", ObjectDecl()));
 
         // $0.addListener(binding)
         code.aload(0)
             .aload(bindingLocal)
-            .invokeinterface(ObservableValueType(), "addListener", function(CtClass.voidType, ChangeListenerType()));
+            .invoke(ObservableValueDecl().requireDeclaredMethod("addListener", ChangeListenerDecl()));
 
         // $1.addListener(binding)
         code.aload(1)
             .aload(bindingLocal)
-            .invokeinterface(ObservableValueType(), "addListener", function(CtClass.voidType, ChangeListenerType()))
+            .invoke(ObservableValueDecl().requireDeclaredMethod("addListener", ChangeListenerDecl()))
             .vreturn();
 
-        method.getMethodInfo().setCodeAttribute(code.toCodeAttribute());
-        method.getMethodInfo().rebuildStackMap(generatedClass.getClassPool());
+        method.setCode(code);
     }
 
-    private void emitWasGarbageCollectedMethod(BytecodeEmitContext parentContext, CtMethod method) throws Exception {
-        var context = new BytecodeEmitContext(parentContext, generatedClass, 1, -1);
-        Bytecode code = context.getOutput();
+    private void emitWasGarbageCollectedMethod(MethodDeclaration method) {
+        Bytecode code = new Bytecode(method);
 
         code.aload(0)
-            .invokespecial(generatedClass, "getProperty1", function(PropertyType()))
+            .invoke(requireDeclaredMethod("getProperty1"))
             .ifnull(() -> code.iconst(1).ireturn())
             .aload(0)
-            .invokespecial(generatedClass, "getProperty2", function(PropertyType()))
+            .invoke(requireDeclaredMethod("getProperty2"))
             .ifnull(() -> code.iconst(1).ireturn())
             .iconst(0)
             .ireturn();
 
-        method.getMethodInfo().setCodeAttribute(code.toCodeAttribute());
-        method.getMethodInfo().rebuildStackMap(generatedClass.getClassPool());
+        method.setCode(code);
     }
 
-    private void emitGetPropertyMethod(BytecodeEmitContext parentContext,
-                                       CtMethod method,
-                                       CtField propertyField) throws Exception {
-        var context = new BytecodeEmitContext(parentContext, generatedClass, 1, -1);
-        Bytecode code = context.getOutput();
+    private void emitGetPropertyMethod(MethodDeclaration method, FieldDeclaration propertyField) {
+        Bytecode code = new Bytecode(method);
 
         code.aload(0)
-            .getfield(generatedClass, propertyField.getName(), WeakReferenceType())
-            .invokevirtual(WeakReferenceType(), "get", function(ObjectType()))
+            .getfield(propertyField)
+            .invoke(ReferenceDecl().requireDeclaredMethod("get"))
+            .checkcast(PropertyDecl())
             .areturn();
 
-        method.getMethodInfo().setCodeAttribute(code.toCodeAttribute());
-        method.getMethodInfo().rebuildStackMap(generatedClass.getClassPool());
+        method.setCode(code);
     }
 
-    private void emitChangedMethod(BytecodeEmitContext parentContext, CtMethod method) throws Exception {
-        var context = new BytecodeEmitContext(parentContext, generatedClass, 4, -1);
-        Bytecode code = context.getOutput();
+    private void emitChangedMethod(MethodDeclaration method) {
+        Bytecode code = new Bytecode(method);
         Local property1Local = code.acquireLocal(false);
         Local property2Local = code.acquireLocal(false);
         Local anyNullLocal = code.acquireLocal(false);
@@ -229,17 +190,17 @@ public class InvertBooleanBindingGenerator extends ClassGenerator {
 
         // if (updating) return
         code.aload(0)
-            .getfield(generatedClass, updatingField.getName(), CtClass.booleanType)
+            .getfield(updatingField)
             .ifne(code::vreturn);
 
         // Property property1 = getProperty1()
         code.aload(0)
-            .invokespecial(generatedClass, "getProperty1", function(PropertyType()))
+            .invoke(requireDeclaredMethod("getProperty1"))
             .astore(property1Local);
 
         // Property property2 = getProperty2()
         code.aload(0)
-            .invokespecial(generatedClass, "getProperty2", function(PropertyType()))
+            .invoke(requireDeclaredMethod("getProperty2"))
             .astore(property2Local);
 
         // boolean anyNull = property1 == null || property2 == null
@@ -258,34 +219,32 @@ public class InvertBooleanBindingGenerator extends ClassGenerator {
             .ifnonnull(() -> code
                 .aload(property1Local)
                 .aload(0)
-                .invokeinterface(ObservableValueType(), "removeListener",
-                                 function(CtClass.voidType, ChangeListenerType())))
+                .invoke(ObservableValueDecl().requireDeclaredMethod("removeListener", ChangeListenerDecl())))
 
             // if (property2 == null) property2.removeListener(this)
             .aload(property2Local)
             .ifnonnull(() -> code
                 .aload(property2Local)
                 .aload(0)
-                .invokeinterface(ObservableValueType(), "removeListener",
-                                 function(CtClass.voidType, ChangeListenerType())));
+                .invoke(ObservableValueDecl().requireDeclaredMethod("removeListener", ChangeListenerDecl())));
 
         Runnable emitUpdateValue = () -> {
             // this.updating = true
             code.aload(0)
                 .iconst(1)
-                .putfield(generatedClass, updatingField.getName(), CtClass.booleanType)
+                .putfield(updatingField)
 
                 // boolean flippedValue = !newValue
                 .aload(3)
-                .checkcast(BooleanType())
+                .checkcast(BooleanDecl())
                 .dup()
                 .ifnull(
                     () -> code.pop().iconst(0),
-                    () -> code.ext_unbox(SourceInfo.none(), BooleanType(), CtClass.booleanType))
+                    () -> code.unbox(BooleanDecl(), booleanDecl()))
                 .ifne(
                     () -> code.iconst(0),
                     () -> code.iconst(1))
-                .ext_box(CtClass.booleanType)
+                .box(booleanDecl())
                 .astore(flippedNewValueLocal);
 
             int start = code.position();
@@ -298,29 +257,27 @@ public class InvertBooleanBindingGenerator extends ClassGenerator {
                     () -> code
                         .aload(property2Local)
                         .aload(flippedNewValueLocal)
-                        .invokeinterface(WritableValueType(), "setValue", function(CtClass.voidType, ObjectType())),
+                        .invoke(WritableValueDecl().requireDeclaredMethod("setValue", ObjectDecl())),
 
                     // property1.setValue(flippedValue)
                     () -> code
                         .aload(property1Local)
                         .aload(flippedNewValueLocal)
-                        .invokeinterface(WritableValueType(), "setValue", function(CtClass.voidType, ObjectType())))
+                        .invoke(WritableValueDecl().requireDeclaredMethod("setValue", ObjectDecl())))
 
                 // this.updating = false
                 .aload(0)
                 .iconst(0)
-                .putfield(generatedClass, updatingField.getName(), CtClass.booleanType);
+                .putfield(updatingField);
 
             int end = code.position();
             Label label = code.goto_label();
             int handler = code.position();
             CatchBlock innerBlock = emitOuterCatchBlock(code, property1Local, property2Local);
             code.addExtraStackSize(2);
-            label.resume();
-
-            int throwableInfo = code.getConstPool().addClassInfo(ThrowableType());
-            code.getExceptionTable().add(start, end, handler, throwableInfo);
-            code.getExceptionTable().add(innerBlock.start, innerBlock.end, innerBlock.handler, throwableInfo);
+            label.resume()
+                .handleException(ThrowableDecl(), start, end, handler)
+                .handleException(ThrowableDecl(), innerBlock.start, innerBlock.end, innerBlock.handler);
         };
 
         // if (anyNull)
@@ -328,8 +285,7 @@ public class InvertBooleanBindingGenerator extends ClassGenerator {
             .ifeq(emitUpdateValue, emitRemoveListeners)
             .vreturn();
 
-        method.getMethodInfo().setCodeAttribute(code.toCodeAttribute());
-        method.getMethodInfo().rebuildStackMap(generatedClass.getClassPool());
+        method.setCode(code);
     }
 
     private CatchBlock emitOuterCatchBlock(Bytecode code, Local property1Local, Local property2Local) {
@@ -339,15 +295,15 @@ public class InvertBooleanBindingGenerator extends ClassGenerator {
         // boolean flippedValue = !oldValue
         code.astore(outerExceptionLocal)
             .aload(2)
-            .checkcast(BooleanType())
+            .checkcast(BooleanDecl())
             .dup()
             .ifnull(
                 () -> code.pop().iconst(0),
-                () -> code.ext_unbox(SourceInfo.none(), BooleanType(), CtClass.booleanType))
+                () -> code.unbox(BooleanDecl(), booleanDecl()))
             .ifne(
                 () -> code.iconst(0),
                 () -> code.iconst(1))
-            .ext_box(CtClass.booleanType)
+            .box(booleanDecl())
             .astore(flippedOldValueLocal);
 
         int start = code.position();
@@ -360,18 +316,18 @@ public class InvertBooleanBindingGenerator extends ClassGenerator {
                 () -> code
                     .aload(property1Local)
                     .aload(flippedOldValueLocal)
-                    .invokeinterface(WritableValueType(), "setValue", function(CtClass.voidType, ObjectType())),
+                    .invoke(WritableValueDecl().requireDeclaredMethod("setValue", ObjectDecl())),
 
                 // property2.setValue(flippedValue)
                 () -> code
                     .aload(property2Local)
                     .aload(flippedOldValueLocal)
-                    .invokeinterface(WritableValueType(), "setValue", function(CtClass.voidType, ObjectType())));
+                    .invoke(WritableValueDecl().requireDeclaredMethod("setValue", ObjectDecl())));
 
         // this.updating = false
         code.aload(0)
             .iconst(0)
-            .putfield(generatedClass, updatingField.getName(), CtClass.booleanType);
+            .putfield(updatingField);
 
         int end = code.position();
         Label label = code.goto_label();
@@ -380,11 +336,11 @@ public class InvertBooleanBindingGenerator extends ClassGenerator {
         label.resume();
 
         // throw new RuntimeException(EXCEPTION_MESSAGE_OUTER, e1)
-        code.anew(RuntimeExceptionType())
+        code.anew(RuntimeExceptionDecl())
             .dup()
             .ldc(EXCEPTION_MESSAGE_OUTER)
             .aload(outerExceptionLocal)
-            .invokespecial(RuntimeExceptionType(), MethodInfo.nameInit, constructor(StringType(), ThrowableType()))
+            .invoke(RuntimeExceptionDecl().requireDeclaredConstructor(StringDecl(), ThrowableDecl()))
             .athrow();
 
         return new CatchBlock(start, end, handler);
@@ -398,29 +354,29 @@ public class InvertBooleanBindingGenerator extends ClassGenerator {
         code.astore(exceptionLocal)
             .aload(exceptionLocal)
             .aload(outerExceptionLocal)
-            .invokevirtual(ThrowableType(), "addSuppressed", function(CtClass.voidType, ThrowableType()));
+            .invoke(ThrowableDecl().requireDeclaredMethod("addSuppressed", ThrowableDecl()));
 
         // property1.removeListener(this)
         code.aload(property1Local)
             .aload(0)
-            .invokeinterface(ObservableValueType(), "removeListener", function(CtClass.voidType, ChangeListenerType()));
+            .invoke(ObservableValueDecl().requireDeclaredMethod("removeListener", ChangeListenerDecl()));
 
         // property2.removeListener(this)
         code.aload(property2Local)
             .aload(0)
-            .invokeinterface(ObservableValueType(), "removeListener", function(CtClass.voidType, ChangeListenerType()));
+            .invoke(ObservableValueDecl().requireDeclaredMethod("removeListener", ChangeListenerDecl()));
 
         // this.updating = false
         code.aload(0)
             .iconst(0)
-            .putfield(generatedClass, updatingField.getName(), CtClass.booleanType);
+            .putfield(updatingField);
 
         // throw new RuntimeException(EXCEPTION_MESSAGE_INNER, e1)
-        code.anew(RuntimeExceptionType())
+        code.anew(RuntimeExceptionDecl())
             .dup()
             .ldc(EXCEPTION_MESSAGE_INNER)
             .aload(exceptionLocal)
-            .invokespecial(RuntimeExceptionType(), MethodInfo.nameInit, constructor(StringType(), ThrowableType()))
+            .invoke(RuntimeExceptionDecl().requireDeclaredConstructor(StringDecl(), ThrowableDecl()))
             .athrow();
 
         code.releaseLocal(exceptionLocal);

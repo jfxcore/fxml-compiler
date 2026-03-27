@@ -1,10 +1,9 @@
-// Copyright (c) 2022, 2025, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.transform;
 
 import javassist.ClassPool;
-import javassist.CtClass;
 import org.jetbrains.annotations.Nullable;
 import org.jfxcore.compiler.ast.DocumentNode;
 import org.jfxcore.compiler.ast.Node;
@@ -35,6 +34,7 @@ import org.jfxcore.compiler.transform.markup.TemplateContentTransform;
 import org.jfxcore.compiler.transform.markup.TopologyTransform;
 import org.jfxcore.compiler.transform.markup.TypeIntrinsicTransform;
 import org.jfxcore.compiler.transform.markup.ValidateTypeTransform;
+import org.jfxcore.compiler.type.TypeDeclaration;
 import java.util.Arrays;
 import java.util.List;
 
@@ -102,7 +102,9 @@ public class Transformer {
         return classPool;
     }
 
-    public Node transform(Node node, @Nullable CtClass codeBehindClass, @Nullable CtClass markupClass) {
+    public Node transform(Node node,
+                          @Nullable TypeDeclaration codeBehindClass,
+                          @Nullable TypeDeclaration markupClass) {
         TransformContext context = new TransformContext(
             ((DocumentNode)node).getImports(), classPool, codeBehindClass, markupClass);
 

@@ -1,4 +1,4 @@
-// Copyright (c) 2022, 2025, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.expression.util;
@@ -11,9 +11,9 @@ import org.jfxcore.compiler.ast.expression.BindingEmitterInfo;
 import org.jfxcore.compiler.ast.expression.FunctionExpressionNode;
 import org.jfxcore.compiler.ast.expression.Operator;
 import org.jfxcore.compiler.diagnostic.errors.BindingSourceErrors;
-import org.jfxcore.compiler.util.Resolver;
-import org.jfxcore.compiler.util.TypeHelper;
-import org.jfxcore.compiler.util.TypeInstance;
+import org.jfxcore.compiler.type.Resolver;
+import org.jfxcore.compiler.type.TypeHelper;
+import org.jfxcore.compiler.type.TypeInstance;
 
 public class ObservableFunctionEmitterFactory
         extends AbstractFunctionEmitterFactory implements ObservableEmitterFactory {
@@ -63,8 +63,8 @@ public class ObservableFunctionEmitterFactory
             value,
             valueType,
             TypeHelper.getTypeInstance(value),
-            invocationInfo.function().getBehavior().getDeclaringClass(),
-            invocationInfo.function().getBehavior().getName(),
+            invocationInfo.function().getBehavior().declaringType(),
+            invocationInfo.function().getBehavior().name(),
             true,
             false,
             functionExpression.getSourceInfo());

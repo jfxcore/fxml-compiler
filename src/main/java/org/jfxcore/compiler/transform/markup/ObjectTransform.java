@@ -1,24 +1,19 @@
-// Copyright (c) 2022, 2025, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.transform.markup;
 
-import javassist.CtClass;
-import javassist.CtField;
-import javassist.CtMethod;
-import javassist.Modifier;
-import javassist.NotFoundException;
 import org.jfxcore.compiler.ast.BindingMode;
 import org.jfxcore.compiler.ast.BindingNode;
-import org.jfxcore.compiler.ast.NodeDataKey;
-import org.jfxcore.compiler.ast.TemplateContentNode;
-import org.jfxcore.compiler.ast.emit.EmitApplyMarkupExtensionNode;
-import org.jfxcore.compiler.ast.emit.EmitInitializeRootNode;
 import org.jfxcore.compiler.ast.Node;
+import org.jfxcore.compiler.ast.NodeDataKey;
 import org.jfxcore.compiler.ast.ObjectNode;
 import org.jfxcore.compiler.ast.PropertyNode;
+import org.jfxcore.compiler.ast.TemplateContentNode;
 import org.jfxcore.compiler.ast.ValueNode;
+import org.jfxcore.compiler.ast.emit.EmitApplyMarkupExtensionNode;
 import org.jfxcore.compiler.ast.emit.EmitClassConstantNode;
+import org.jfxcore.compiler.ast.emit.EmitInitializeRootNode;
 import org.jfxcore.compiler.ast.emit.EmitLiteralNode;
 import org.jfxcore.compiler.ast.emit.EmitObjectNode;
 import org.jfxcore.compiler.ast.emit.EmitUnwrapObservableNode;
@@ -27,6 +22,7 @@ import org.jfxcore.compiler.ast.expression.BindingEmitterInfo;
 import org.jfxcore.compiler.ast.intrinsic.Intrinsics;
 import org.jfxcore.compiler.ast.text.TextNode;
 import org.jfxcore.compiler.diagnostic.Diagnostic;
+import org.jfxcore.compiler.diagnostic.DiagnosticInfo;
 import org.jfxcore.compiler.diagnostic.ErrorCode;
 import org.jfxcore.compiler.diagnostic.MarkupException;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
@@ -40,22 +36,22 @@ import org.jfxcore.compiler.transform.TransformContext;
 import org.jfxcore.compiler.transform.markup.util.AdderFactory;
 import org.jfxcore.compiler.transform.markup.util.MarkupExtensionInfo;
 import org.jfxcore.compiler.transform.markup.util.ValueEmitterFactory;
-import org.jfxcore.compiler.diagnostic.DiagnosticInfo;
+import org.jfxcore.compiler.type.MethodDeclaration;
+import org.jfxcore.compiler.type.Resolver;
+import org.jfxcore.compiler.type.TypeDeclaration;
+import org.jfxcore.compiler.type.TypeHelper;
+import org.jfxcore.compiler.type.TypeInstance;
+import org.jfxcore.compiler.type.TypeInvoker;
 import org.jfxcore.compiler.util.AccessVerifier;
-import org.jfxcore.compiler.util.Classes;
 import org.jfxcore.compiler.util.MethodFinder;
 import org.jfxcore.compiler.util.PropertyHelper;
-import org.jfxcore.compiler.util.Resolver;
-import org.jfxcore.compiler.util.TypeHelper;
-import org.jfxcore.compiler.util.TypeInstance;
-import org.jfxcore.compiler.util.TypeInvoker;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static org.jfxcore.compiler.util.ExceptionHelper.*;
+import static org.jfxcore.compiler.type.KnownSymbols.*;
 
 /**
  * Replaces all instances of {@link ObjectNode} in the AST with a node that represents one of the following:
@@ -75,17 +71,17 @@ public class ObjectTransform implements Transform {
         }
 
         if (objectNode.isMarkupExtension()
-                && (!Classes.Markup.isAvailable()
-                    || !TypeHelper.getTypeInstance(objectNode).subtypeOf(Classes.Markup.MarkupExtensionType()))) {
+                && (!Markup.isAvailable()
+                    || !TypeHelper.getTypeInstance(objectNode).subtypeOf(Markup.MarkupExtensionDecl()))) {
             throw ParserErrors.unexpectedMarkupExtension(node.getSourceInfo(), objectNode.getType().getName());
         }
 
         Node parentNode = context.getParent(0);
 
         if (parentNode instanceof EmitInitializeRootNode || parentNode instanceof TemplateContentNode) {
-            if (objectNode.getChildren().size() > 0) {
+            if (!objectNode.getChildren().isEmpty()) {
                 throw ObjectInitializationErrors.objectCannotHaveContent(
-                    node.getSourceInfo(), TypeHelper.getJvmType(node));
+                    node.getSourceInfo(), TypeHelper.getTypeDeclaration(node));
             }
 
             return EmitObjectNode
@@ -96,8 +92,8 @@ public class ObjectTransform implements Transform {
 
         // Check that we don't have wildcard type arguments, since the JLS doesn't allow
         // direct instantiation of wildcard types.
-        for (TypeInstance typeArg : TypeHelper.getTypeInstance(objectNode).getArguments()) {
-            if (typeArg.getWildcardType() != TypeInstance.WildcardType.NONE) {
+        for (TypeInstance typeArg : TypeHelper.getTypeInstance(objectNode).arguments()) {
+            if (typeArg.wildcardType() != TypeInstance.WildcardType.NONE) {
                 throw ObjectInitializationErrors.wildcardCannotBeInstantiated(
                     (SourceInfo)objectNode.getNodeData(NodeDataKey.TYPE_ARGUMENTS_SOURCE_INFO));
             }
@@ -109,7 +105,7 @@ public class ObjectTransform implements Transform {
         if (result instanceof EmitObjectNode emitObjectNode) {
             List<Node> adders = new ArrayList<>();
 
-            if (TypeHelper.getTypeInstance(result).subtypeOf(Classes.CollectionType())) {
+            if (TypeHelper.getTypeInstance(result).subtypeOf(CollectionDecl())) {
                 ListIterator<Node> it = objectNode.getChildren().listIterator();
                 while (it.hasNext()) {
                     if (it.next() instanceof ValueNode child) {
@@ -117,7 +113,7 @@ public class ObjectTransform implements Transform {
                         it.remove();
                     }
                 }
-            } else if (TypeHelper.getTypeInstance(result).subtypeOf(Classes.MapType())) {
+            } else if (TypeHelper.getTypeInstance(result).subtypeOf(MapDecl())) {
                 ListIterator<Node> it = objectNode.getChildren().listIterator();
                 while (it.hasNext()) {
                     if (it.next() instanceof ValueNode child) {
@@ -134,9 +130,9 @@ public class ObjectTransform implements Transform {
             }
         }
 
-        if (objectNode.getChildren().size() > 0) {
+        if (!objectNode.getChildren().isEmpty()) {
             throw ObjectInitializationErrors.objectCannotHaveContent(
-                node.getSourceInfo(), TypeHelper.getJvmType(node));
+                node.getSourceInfo(), TypeHelper.getTypeDeclaration(node));
         }
 
         return result;
@@ -217,11 +213,12 @@ public class ObjectTransform implements Transform {
         if (!diagnostics.isEmpty()) {
             throw ObjectInitializationErrors.constructorNotFound(
                 node.getSourceInfo(),
-                TypeHelper.getJvmType(node),
+                TypeHelper.getTypeDeclaration(node),
                 diagnostics.stream().map(DiagnosticInfo::getDiagnostic).toArray(Diagnostic[]::new));
         }
 
-        throw ObjectInitializationErrors.constructorNotFound(node.getSourceInfo(), TypeHelper.getJvmType(node));
+        throw ObjectInitializationErrors.constructorNotFound(
+            node.getSourceInfo(), TypeHelper.getTypeDeclaration(node));
     }
 
     private ValueNode createValueOfNode(
@@ -230,7 +227,7 @@ public class ObjectTransform implements Transform {
 
         if (!objectNode.getChildren().isEmpty()) {
             throw ObjectInitializationErrors.objectCannotHaveContent(
-                propertyNode.getSourceInfo(), nodeType.jvmType(), propertyNode.getMarkupName());
+                propertyNode.getSourceInfo(), nodeType.declaration(), propertyNode.getMarkupName());
         }
 
         Node propertyValue = propertyNode.getSingleValue(context);
@@ -262,13 +259,13 @@ public class ObjectTransform implements Transform {
             : TypeHelper.getTypeInstance(argumentValue);
 
         List<DiagnosticInfo> diagnostics = new ArrayList<>();
-        CtMethod valueOfMethod = new MethodFinder(nodeType, nodeType.jvmType())
+        MethodDeclaration valueOfMethod = new MethodFinder(nodeType, nodeType.declaration())
             .findMethod("valueOf", true, nodeType, List.of(), List.of(argumentType),
                         List.of(propertyNode.getSourceInfo()), diagnostics, propertyNode.getSourceInfo());
 
         if (valueOfMethod == null) {
             throw ObjectInitializationErrors.valueOfMethodNotFound(
-                propertyNode.getSourceInfo(), nodeType.jvmType(),
+                propertyNode.getSourceInfo(), nodeType.declaration(),
                 diagnostics.stream().map(DiagnosticInfo::getDiagnostic).toArray(Diagnostic[]::new));
         } else {
             AccessVerifier.verifyAccessible(valueOfMethod, context.getMarkupClass(), propertyNode.getSourceInfo());
@@ -299,14 +296,11 @@ public class ObjectTransform implements Transform {
             TransformContext context, ObjectNode objectNode, PropertyNode constantProperty) {
         String fieldName = constantProperty.getTrimmedTextNotEmpty(context);
         SourceInfo valueSourceInfo = constantProperty.getTrimmedTextSourceInfo(context);
-        CtClass declaringType = (CtClass)objectNode.getNodeData(NodeDataKey.CONSTANT_DECLARING_TYPE);
+        TypeDeclaration declaringType = (TypeDeclaration)objectNode.getNodeData(NodeDataKey.CONSTANT_DECLARING_TYPE);
 
-        try {
-            CtField field = declaringType.getField(fieldName);
-            AccessVerifier.verifyAccessible(field, context.getMarkupClass(), valueSourceInfo);
-        } catch (NotFoundException ex) {
-            throw SymbolResolutionErrors.memberNotFound(valueSourceInfo, declaringType, fieldName);
-        }
+        declaringType.field(fieldName).ifPresentOrElse(
+            f -> AccessVerifier.verifyAccessible(f, context.getMarkupClass(), valueSourceInfo),
+            () -> { throw SymbolResolutionErrors.memberNotFound(valueSourceInfo, declaringType, fieldName); });
 
         return new EmitClassConstantNode(
             findAndRemoveId(context, objectNode),
@@ -321,17 +315,16 @@ public class ObjectTransform implements Transform {
         String factoryMethodName = factoryProperty.getTrimmedTextNotEmpty(context);
         TypeParser typeParser = new TypeParser(factoryMethodName, factoryProperty.getTrimmedTextSourceInfo(context).getStart());
         TypeParser.MethodInfo methodInfo = typeParser.parseMethod();
-        CtClass declaringClass = (CtClass)objectNode.getType().getNodeData(NodeDataKey.FACTORY_DECLARING_TYPE);
-        CtMethod factoryMethod = new Resolver(methodInfo.sourceInfo()).tryResolveMethod(declaringClass, m ->
-            m.getName().equals(methodInfo.methodName())
-            && unchecked(methodInfo.sourceInfo(), m::getParameterTypes).length == 0);
+        TypeDeclaration declaringClass = (TypeDeclaration)objectNode.getType().getNodeData(NodeDataKey.FACTORY_DECLARING_TYPE);
+        MethodDeclaration factoryMethod = new Resolver(methodInfo.sourceInfo()).tryResolveMethod(declaringClass, m ->
+            m.name().equals(methodInfo.methodName()) && m.parameters().isEmpty());
 
         if (factoryMethod == null) {
             throw SymbolResolutionErrors.memberNotFound(
                 factoryProperty.getSourceInfo(), declaringClass, methodInfo.methodName());
         }
 
-        if (!Modifier.isStatic(factoryMethod.getModifiers())) {
+        if (!factoryMethod.isStatic()) {
             throw SymbolResolutionErrors.instanceMemberReferencedFromStaticContext(
                 methodInfo.sourceInfo(), factoryMethod);
         }

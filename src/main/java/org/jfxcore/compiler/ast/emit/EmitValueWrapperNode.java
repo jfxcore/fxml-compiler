@@ -1,25 +1,23 @@
-// Copyright (c) 2021, 2023, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.emit;
 
-import javassist.CtClass;
-import javassist.bytecode.MethodInfo;
 import org.jfxcore.compiler.ast.AbstractNode;
 import org.jfxcore.compiler.ast.GeneratorEmitterNode;
 import org.jfxcore.compiler.ast.ResolvedTypeNode;
 import org.jfxcore.compiler.ast.Visitor;
 import org.jfxcore.compiler.generate.ClassGenerator;
 import org.jfxcore.compiler.generate.ValueWrapperGenerator;
+import org.jfxcore.compiler.type.Resolver;
+import org.jfxcore.compiler.type.TypeDeclaration;
+import org.jfxcore.compiler.type.TypeHelper;
+import org.jfxcore.compiler.type.TypeInstance;
 import org.jfxcore.compiler.util.Bytecode;
 import org.jfxcore.compiler.util.Local;
-import org.jfxcore.compiler.util.Resolver;
-import org.jfxcore.compiler.util.TypeHelper;
-import org.jfxcore.compiler.util.TypeInstance;
 import java.util.List;
 
-import static org.jfxcore.compiler.util.Classes.ObjectType;
-import static org.jfxcore.compiler.util.Descriptors.constructor;
+import static org.jfxcore.compiler.type.KnownSymbols.*;
 
 /**
  * Wraps a non-observable value into an instance of {@link javafx.beans.value.ObservableValue}.
@@ -27,7 +25,7 @@ import static org.jfxcore.compiler.util.Descriptors.constructor;
 public class EmitValueWrapperNode extends AbstractNode implements ValueEmitterNode, GeneratorEmitterNode, NullableInfo {
 
     private final ClassGenerator generator;
-    private final CtClass valueType;
+    private final TypeInstance valueType;
     private EmitterNode child;
     private ResolvedTypeNode type;
 
@@ -36,12 +34,12 @@ public class EmitValueWrapperNode extends AbstractNode implements ValueEmitterNo
 
         Resolver resolver = new Resolver(child.getSourceInfo());
         TypeInstance observableType = resolver.getObservableClass(TypeHelper.getTypeInstance(child));
-        CtClass valueType = TypeHelper.getWidenedNumericType(TypeHelper.getJvmType(child));
+        TypeInstance valueType = widenShortInt(TypeHelper.getTypeInstance(child));
 
         this.child = child;
         this.type = new ResolvedTypeNode(observableType, child.getSourceInfo());
         this.valueType = valueType;
-        this.generator = ValueWrapperGenerator.newInstance(valueType);
+        this.generator = ValueWrapperGenerator.newInstance(valueType.declaration());
     }
 
     @Override
@@ -49,7 +47,7 @@ public class EmitValueWrapperNode extends AbstractNode implements ValueEmitterNo
         return type;
     }
 
-    public CtClass getValueType() {
+    public TypeInstance getValueType() {
         return valueType;
     }
 
@@ -61,20 +59,20 @@ public class EmitValueWrapperNode extends AbstractNode implements ValueEmitterNo
     @Override
     public void emit(BytecodeEmitContext context) {
         Bytecode code = context.getOutput();
-        CtClass generatedClass = context.getNestedClasses().find(generator.getClassName());
-        CtClass childType = TypeHelper.getJvmType(child);
-        boolean generic = !valueType.isPrimitive() && !TypeHelper.isPrimitiveBox(valueType);
+        TypeDeclaration generatedClass = context.getNestedClasses().find(generator.getClassName());
+        TypeDeclaration childType = TypeHelper.getTypeDeclaration(child);
+        boolean generic = !valueType.isPrimitive() && !valueType.declaration().isPrimitiveBox();
 
         context.emit(child);
 
         Local local = code.acquireLocal(childType);
 
-        code.ext_store(childType, local)
+        code.store(childType, local)
             .anew(generatedClass)
             .dup()
-            .ext_load(childType, local)
-            .ext_autoconv(getSourceInfo(), childType, valueType)
-            .invokespecial(generatedClass, MethodInfo.nameInit, constructor(generic ? ObjectType() : valueType))
+            .load(childType, local)
+            .autoconv(childType, valueType.declaration())
+            .invoke(generatedClass.requireConstructor(generic ? ObjectDecl() : valueType.declaration()))
             .releaseLocal(local);
     }
 
@@ -95,4 +93,11 @@ public class EmitValueWrapperNode extends AbstractNode implements ValueEmitterNo
         return false;
     }
 
+    private static TypeInstance widenShortInt(TypeInstance type) {
+        return switch (type.name()) {
+            case "short", "byte", "char" -> TypeInstance.intType();
+            case ShortName, ByteName, CharacterName -> TypeInstance.IntegerType();
+            default -> type;
+        };
+    }
 }

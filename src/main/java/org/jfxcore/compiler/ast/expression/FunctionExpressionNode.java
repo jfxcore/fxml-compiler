@@ -1,9 +1,8 @@
-// Copyright (c) 2022, 2025, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.expression;
 
-import javassist.CtClass;
 import org.jetbrains.annotations.Nullable;
 import org.jfxcore.compiler.ast.AbstractNode;
 import org.jfxcore.compiler.ast.BindingMode;
@@ -12,8 +11,8 @@ import org.jfxcore.compiler.ast.Visitor;
 import org.jfxcore.compiler.ast.expression.util.ObservableFunctionEmitterFactory;
 import org.jfxcore.compiler.ast.expression.util.SimpleFunctionEmitterFactory;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
-import org.jfxcore.compiler.util.TypeHelper;
-import org.jfxcore.compiler.util.TypeInstance;
+import org.jfxcore.compiler.type.TypeDeclaration;
+import org.jfxcore.compiler.type.TypeInstance;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -21,13 +20,13 @@ import java.util.Objects;
 
 public class FunctionExpressionNode extends AbstractNode implements ExpressionNode {
 
-    private final CtClass invocationContext;
+    private final TypeDeclaration invocationContext;
     private final List<Node> arguments;
     private PathExpressionNode path;
     private PathExpressionNode inversePath;
 
     public FunctionExpressionNode(
-            CtClass invocationContext,
+            TypeDeclaration invocationContext,
             PathExpressionNode path,
             Collection<? extends Node> arguments,
             @Nullable PathExpressionNode inversePath,
@@ -39,7 +38,7 @@ public class FunctionExpressionNode extends AbstractNode implements ExpressionNo
         this.inversePath = inversePath;
     }
 
-    public CtClass getInvocationContext() {
+    public TypeDeclaration getInvocationContext() {
         return invocationContext;
     }
 
@@ -99,7 +98,7 @@ public class FunctionExpressionNode extends AbstractNode implements ExpressionNo
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         FunctionExpressionNode that = (FunctionExpressionNode)o;
-        return TypeHelper.equals(invocationContext, that.invocationContext) &&
+        return invocationContext.equals(that.invocationContext) &&
             path.equals(that.path) &&
             arguments.equals(that.arguments) &&
             Objects.equals(inversePath, that.inversePath);
@@ -107,6 +106,6 @@ public class FunctionExpressionNode extends AbstractNode implements ExpressionNo
 
     @Override
     public int hashCode() {
-        return Objects.hash(TypeHelper.hashCode(invocationContext), path, arguments, inversePath);
+        return Objects.hash(invocationContext, path, arguments, inversePath);
     }
 }

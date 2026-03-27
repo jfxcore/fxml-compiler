@@ -1,25 +1,21 @@
-// Copyright (c) 2023, 2024, JFXcore. All rights reserved.
+// Copyright (c) 2023, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.generate;
 
-import javassist.CtClass;
-import javassist.CtConstructor;
-import javassist.CtField;
-import javassist.CtMethod;
-import javassist.Modifier;
-import javassist.bytecode.MethodInfo;
 import org.jfxcore.compiler.ast.emit.BytecodeEmitContext;
+import org.jfxcore.compiler.type.MethodDeclaration;
+import org.jfxcore.compiler.type.TypeDeclaration;
+import org.jfxcore.compiler.type.TypeInstance;
 import org.jfxcore.compiler.util.Bytecode;
 import org.jfxcore.compiler.util.CompilationContext;
 import org.jfxcore.compiler.util.Local;
 import org.jfxcore.compiler.util.NameHelper;
-import org.jfxcore.compiler.util.TypeInstance;
+import java.lang.reflect.Modifier;
 import java.util.List;
 
 import static org.jfxcore.compiler.generate.SharedMethodImpls.*;
-import static org.jfxcore.compiler.util.Classes.*;
-import static org.jfxcore.compiler.util.Descriptors.*;
+import static org.jfxcore.compiler.type.KnownSymbols.*;
 
 public class ReferenceTrackerGenerator implements Generator {
 
@@ -29,8 +25,8 @@ public class ReferenceTrackerGenerator implements Generator {
     private static final String REFERENCES_FIELD = NameHelper.getMangledFieldName("references");
     private static final String REFERENCE_QUEUE_FIELD = NameHelper.getMangledFieldName("referenceQueue");
 
-    private CtMethod addReferenceMethod;
-    private CtMethod clearWeaklyReachableMethod;
+    private MethodDeclaration addReferenceMethod;
+    private MethodDeclaration clearWeaklyReachableMethod;
 
     @Override
     public List<Generator> getSubGenerators() {
@@ -50,91 +46,86 @@ public class ReferenceTrackerGenerator implements Generator {
     }
 
     @Override
-    public void emitFields(BytecodeEmitContext context) throws Exception {
-        CtField field = new CtField(SetType(), REFERENCES_FIELD, context.getMarkupClass());
-        field.setModifiers(Modifier.PRIVATE);
-        context.getMarkupClass().addField(field);
+    public void emitFields(BytecodeEmitContext context) {
+        context.getMarkupClass()
+            .createField(REFERENCES_FIELD, SetDecl())
+            .setModifiers(Modifier.PRIVATE);
 
-        field = new CtField(ReferenceQueueType(), REFERENCE_QUEUE_FIELD, context.getMarkupClass());
-        field.setModifiers(Modifier.PRIVATE);
-        context.getMarkupClass().addField(field);
+        context.getMarkupClass()
+            .createField(REFERENCE_QUEUE_FIELD, ReferenceQueueDecl())
+            .setModifiers(Modifier.PRIVATE);
     }
 
     @Override
-    public void emitMethods(BytecodeEmitContext context) throws Exception {
-        addReferenceMethod = new CtMethod(
-            CtClass.voidType, ADD_REFERENCE_METHOD, new CtClass[] {ObjectType(), ObjectType()}, context.getMarkupClass());
-        addReferenceMethod.setModifiers(Modifier.FINAL);
-        context.getMarkupClass().addMethod(addReferenceMethod);
+    public void emitMethods(BytecodeEmitContext context) {
+        addReferenceMethod = context.getMarkupClass()
+            .createMethod(ADD_REFERENCE_METHOD, voidDecl(), ObjectDecl(), ObjectDecl())
+            .setModifiers(Modifier.FINAL);
 
-        clearWeaklyReachableMethod = new CtMethod(
-            CtClass.voidType, CLEAR_STALE_REFERENCES_METHOD, new CtClass[0], context.getMarkupClass());
-        clearWeaklyReachableMethod.setModifiers(Modifier.FINAL);
-        context.getMarkupClass().addMethod(clearWeaklyReachableMethod);
+        clearWeaklyReachableMethod = context.getMarkupClass()
+            .createMethod(CLEAR_STALE_REFERENCES_METHOD, voidDecl())
+            .setModifiers(Modifier.FINAL);
     }
 
     @Override
-    public void emitCode(BytecodeEmitContext context) throws Exception {
+    public void emitCode(BytecodeEmitContext context) {
         emitAddReferenceMethod(context, addReferenceMethod);
         emitClearWeaklyReachableMethod(context, clearWeaklyReachableMethod);
     }
 
-    private void emitAddReferenceMethod(BytecodeEmitContext parentContext, CtMethod method) throws Exception {
-        CtClass weakEntryClass = parentContext.getNestedClasses().find(WeakEntryGenerator.CLASS_NAME);
-        var context = new BytecodeEmitContext(parentContext, parentContext.getMarkupClass(), 3, -1);
-        Bytecode code = context.getOutput();
+    private void emitAddReferenceMethod(BytecodeEmitContext context, MethodDeclaration method) {
+        TypeDeclaration weakEntryClass = context.getNestedClasses().find(WeakEntryGenerator.CLASS_NAME);
+        Bytecode code = new Bytecode(method);
 
         code.aload(0)
-            .getfield(context.getMarkupClass(), REFERENCES_FIELD, SetType())
+            .getfield(context.getMarkupClass().requireDeclaredField(REFERENCES_FIELD))
             .ifnull(() -> code
                 .aload(0)
-                .anew(HashSetType())
+                .anew(HashSetDecl())
                 .dup()
-                .invokespecial(HashSetType(), MethodInfo.nameInit, constructor())
-                .putfield(context.getMarkupClass(), REFERENCES_FIELD, SetType())
+                .invoke(HashSetDecl().requireConstructor())
+                .putfield(context.getMarkupClass().requireDeclaredField(REFERENCES_FIELD))
                 .aload(0)
-                .anew(ReferenceQueueType())
+                .anew(ReferenceQueueDecl())
                 .dup()
-                .invokespecial(ReferenceQueueType(), MethodInfo.nameInit, constructor())
-                .putfield(context.getMarkupClass(), REFERENCE_QUEUE_FIELD, ReferenceQueueType())
+                .invoke(ReferenceQueueDecl().requireConstructor())
+                .putfield(context.getMarkupClass().requireDeclaredField(REFERENCE_QUEUE_FIELD))
             )
             .aload(0)
-            .getfield(context.getMarkupClass(), REFERENCES_FIELD, SetType())
+            .getfield(context.getMarkupClass().requireDeclaredField(REFERENCES_FIELD))
             .anew(weakEntryClass)
             .dup()
             .aload(2)
             .aload(1)
             .aload(0)
-            .getfield(context.getMarkupClass(), REFERENCE_QUEUE_FIELD, ReferenceQueueType())
-            .invokespecial(weakEntryClass, MethodInfo.nameInit,
-                           constructor(ObjectType(), ObjectType(), ReferenceQueueType()))
-            .invokeinterface(SetType(), "add", function(CtClass.booleanType, ObjectType()))
+            .getfield(context.getMarkupClass().requireDeclaredField(REFERENCE_QUEUE_FIELD))
+            .invoke(weakEntryClass.requireConstructor(ObjectDecl(), ObjectDecl(), ReferenceQueueDecl()))
+            .invoke(SetDecl().requireDeclaredMethod("add", ObjectDecl()))
+            .pop()
             .vreturn();
 
-        method.getMethodInfo().setCodeAttribute(code.toCodeAttribute());
-        method.getMethodInfo().rebuildStackMap(method.getDeclaringClass().getClassPool());
+        method.setCode(code);
     }
 
-    private void emitClearWeaklyReachableMethod(BytecodeEmitContext parentContext, CtMethod method) throws Exception {
-        var context = new BytecodeEmitContext(parentContext, parentContext.getMarkupClass(), 1, -1);
-        Bytecode code = context.getOutput();
+    private void emitClearWeaklyReachableMethod(BytecodeEmitContext context, MethodDeclaration method) {
+        Bytecode code = new Bytecode(method);
 
         code.aload(0)
-            .getfield(context.getMarkupClass(), REFERENCE_QUEUE_FIELD, ReferenceQueueType())
+            .getfield(context.getMarkupClass().requireDeclaredField(REFERENCE_QUEUE_FIELD))
             .ifnonnull(() -> {
                 Local refLocal = code.acquireLocal(false);
                 int position = code.position() + 1;
 
                 code.aload(0)
-                    .getfield(context.getMarkupClass(), REFERENCE_QUEUE_FIELD, ReferenceQueueType())
-                    .invokevirtual(ReferenceQueueType(), "poll", function(ReferenceType()))
+                    .getfield(context.getMarkupClass().requireDeclaredField(REFERENCE_QUEUE_FIELD))
+                    .invoke(ReferenceQueueDecl().requireDeclaredMethod("poll"))
                     .astore(refLocal)
                     .aload(refLocal)
                     .ifnonnull(() -> code
                         .aload(0)
-                        .getfield(context.getMarkupClass(), REFERENCES_FIELD, SetType())
+                        .getfield(context.getMarkupClass().requireDeclaredField(REFERENCES_FIELD))
                         .aload(refLocal)
-                        .invokevirtual(SetType(), "remove", function(CtClass.booleanType, ObjectType()))
+                        .invoke(SetDecl().requireDeclaredMethod("remove", ObjectDecl()))
                         .pop()
                         .goto_position(position)
                     );
@@ -143,8 +134,7 @@ public class ReferenceTrackerGenerator implements Generator {
             })
             .vreturn();
 
-        method.getMethodInfo().setCodeAttribute(code.toCodeAttribute());
-        method.getMethodInfo().rebuildStackMap(method.getDeclaringClass().getClassPool());
+        method.setCode(code);
     }
 
     private static class WeakEntryGenerator extends ClassGenerator {
@@ -161,75 +151,62 @@ public class ReferenceTrackerGenerator implements Generator {
         }
 
         @Override
-        public void emitClass(BytecodeEmitContext context) throws Exception {
-            generatedClass = context.getNestedClasses().create(getClassName());
-            generatedClass.setModifiers(Modifier.PRIVATE | Modifier.FINAL | Modifier.STATIC);
-            generatedClass.setSuperclass(WeakReferenceType());
+        public TypeDeclaration emitClass(BytecodeEmitContext context) {
+            return super.emitClass(context)
+                .setModifiers(Modifier.PRIVATE | Modifier.FINAL | Modifier.STATIC)
+                .setSuperClass(WeakReferenceDecl());
         }
 
         @Override
-        public void emitFields(BytecodeEmitContext context) throws Exception {
-            CtField field = new CtField(ObjectType(), "$0", generatedClass);
-            field.setModifiers(Modifier.PRIVATE | Modifier.FINAL);
-            generatedClass.addField(field);
-
-            field = new CtField(CtClass.intType, "$1", generatedClass);
-            field.setModifiers(Modifier.PRIVATE | Modifier.FINAL);
-            generatedClass.addField(field);
+        public void emitFields(BytecodeEmitContext context) {
+            createField("$0", ObjectDecl()).setModifiers(Modifier.PRIVATE | Modifier.FINAL);
+            createField("$1", intDecl()).setModifiers(Modifier.PRIVATE | Modifier.FINAL);
         }
 
         @Override
-        public void emitCode(BytecodeEmitContext context) throws Exception {
-            super.emitCode(context);
-
-            var constructor = new CtConstructor(new CtClass[] {ObjectType(), ObjectType(), ReferenceQueueType()}, generatedClass);
-            createBehavior(context, generatedClass, constructor, 4, code -> code
+        public void emitCode(BytecodeEmitContext context) {
+            createBehavior(createConstructor(ObjectDecl(), ObjectDecl(), ReferenceQueueDecl()), code -> code
                 .aload(0)
                 .aload(2)
                 .aload(3)
-                .invokespecial(generatedClass.getSuperclass(), MethodInfo.nameInit,
-                               constructor(ObjectType(), ReferenceQueueType()))
+                .invoke(requireSuperClass().requireDeclaredConstructor(ObjectDecl(), ReferenceQueueDecl()))
                 .aload(0)
                 .aload(1)
-                .putfield(generatedClass, "$0", ObjectType())
+                .putfield(requireDeclaredField("$0"))
                 .aload(0)
                 .aload(2)
-                .invokestatic("java.lang.System", "identityHashCode",
-                              function(CtClass.intType, ObjectType()))
-                .putfield(generatedClass, "$1", CtClass.intType)
+                .invoke(SystemDecl().requireDeclaredMethod("identityHashCode", ObjectDecl()))
+                .putfield(requireDeclaredField("$1"))
                 .vreturn()
             );
 
-            var method = new CtMethod(CtClass.intType, "hashCode", new CtClass[0], generatedClass);
-            createBehavior(context, generatedClass, method, 1, code -> {
+            createBehavior(createMethod("hashCode", intDecl()), code -> {
                 code.aload(0)
-                    .getfield(generatedClass, "$1", CtClass.intType)
+                    .getfield(requireDeclaredField("$1"))
                     .ireturn();
             });
 
-            method = new CtMethod(CtClass.booleanType, "equals", new CtClass[] {ObjectType()}, generatedClass);
-            createBehavior(context, generatedClass, method, 2, code -> code
+            createBehavior(createMethod("equals", booleanDecl(), ObjectDecl()), code -> code
                 .aload(0)
                 .aload(1)
                 .if_acmpeq(() -> code
                     .iconst(1),
                 /*else*/ () -> code
                     .aload(1)
-                    .isinstanceof(generatedClass)
+                    .isinstanceof(getGeneratedClass())
                     .ifeq(() -> {
                         code.iconst(0);
                     }, () -> {
                         Local referentLocal = code.acquireLocal(false);
                         code.aload(0)
-                            .invokevirtual(ReferenceType(), "get", function(ObjectType()))
+                            .invoke(ReferenceDecl().requireDeclaredMethod("get"))
                             .astore(referentLocal)
                             .aload(referentLocal)
                             .ifnonnull(() -> {
                                 code.aload(1)
-                                    .checkcast(WeakReferenceType())
+                                    .checkcast(WeakReferenceDecl())
                                     .aload(referentLocal)
-                                    .invokevirtual(ReferenceType(), "refersTo",
-                                                   function(CtClass.booleanType, ObjectType()));
+                                    .invoke(ReferenceDecl().requireDeclaredMethod("refersTo", ObjectDecl()));
                             }, () -> {
                                 code.iconst(0);
                             })
@@ -240,5 +217,4 @@ public class ReferenceTrackerGenerator implements Generator {
             );
         }
     }
-
 }

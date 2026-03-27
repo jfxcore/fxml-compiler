@@ -1,14 +1,15 @@
-// Copyright (c) 2021, 2023, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.expression.path;
 
-import javassist.CtClass;
+import org.jetbrains.annotations.Nullable;
 import org.jfxcore.compiler.ast.emit.EmitUnwrapObservableNode;
 import org.jfxcore.compiler.ast.emit.ValueEmitterNode;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
+import org.jfxcore.compiler.type.TypeDeclaration;
+import org.jfxcore.compiler.type.TypeInstance;
 import org.jfxcore.compiler.util.ObservableKind;
-import org.jfxcore.compiler.util.TypeInstance;
 
 public abstract class Segment {
 
@@ -51,7 +52,9 @@ public abstract class Segment {
         return observableKind;
     }
 
-    public abstract CtClass getDeclaringClass();
+    public @Nullable TypeDeclaration getDeclaringType() {
+        return null;
+    }
 
     public boolean isNullable() {
         return true;
@@ -88,5 +91,4 @@ public abstract class Segment {
     public int hashCode() {
         return name.hashCode();
     }
-
 }

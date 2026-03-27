@@ -14,26 +14,25 @@ import org.jfxcore.compiler.ast.intrinsic.Intrinsics;
 import org.jfxcore.compiler.ast.text.ListNode;
 import org.jfxcore.compiler.ast.text.TextNode;
 import org.jfxcore.compiler.diagnostic.errors.GeneralErrors;
-import org.jfxcore.compiler.util.Classes;
+import org.jfxcore.compiler.type.TypeHelper;
+import org.jfxcore.compiler.type.TypeInstance;
 import org.jfxcore.compiler.util.NameHelper;
-import org.jfxcore.compiler.util.TypeHelper;
-import org.jfxcore.compiler.util.TypeInstance;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
-import static org.jfxcore.compiler.util.ExceptionHelper.unchecked;
+import static org.jfxcore.compiler.type.KnownSymbols.*;
 
 public class AdderFactory {
 
     public static List<EmitCollectionAdderNode> newCollectionAdders(ValueNode collection, ValueNode child) {
-        if (!TypeHelper.getTypeInstance(collection).subtypeOf(Classes.CollectionType())) {
+        if (!TypeHelper.getTypeInstance(collection).subtypeOf(CollectionDecl())) {
             throw new IllegalArgumentException();
         }
 
-        List<TypeInstance> typeArgs = TypeHelper.getTypeInstance(collection).getArguments();
-        TypeInstance itemType = typeArgs.size() > 0 ? typeArgs.get(0) : TypeInstance.ObjectType();
+        List<TypeInstance> typeArgs = TypeHelper.getTypeInstance(collection).arguments();
+        TypeInstance itemType = !typeArgs.isEmpty() ? typeArgs.get(0) : TypeInstance.ObjectType();
 
         if (child instanceof ListNode listNode) {
             List<EmitCollectionAdderNode> adders = new ArrayList<>();
@@ -83,7 +82,7 @@ public class AdderFactory {
 
         if (!(child instanceof ObjectNode)) {
             throw GeneralErrors.cannotAddItemIncompatibleValue(
-                child.getSourceInfo(), TypeHelper.getJvmType(collection), child.getSourceInfo().getText());
+                child.getSourceInfo(), TypeHelper.getTypeInstance(collection), child.getSourceInfo().getText());
         }
 
         if (!TypeHelper.getTypeInstance(child).subtypeOf(itemType)) {
@@ -98,17 +97,17 @@ public class AdderFactory {
     }
 
     public static EmitMapAdderNode newMapAdder(ValueNode map, ValueNode child) {
-        if (!TypeHelper.getTypeInstance(map).subtypeOf(Classes.MapType())) {
+        if (!TypeHelper.getTypeInstance(map).subtypeOf(MapDecl())) {
             throw new IllegalArgumentException();
         }
 
-        List<TypeInstance> typeArgs = TypeHelper.getTypeInstance(map).getArguments();
-        TypeInstance keyType = typeArgs.size() > 0 ? typeArgs.get(0) : TypeInstance.ObjectType();
-        TypeInstance itemType = typeArgs.size() > 0 ? typeArgs.get(1) : TypeInstance.ObjectType();
+        List<TypeInstance> typeArgs = TypeHelper.getTypeInstance(map).arguments();
+        TypeInstance keyType = !typeArgs.isEmpty() ? typeArgs.get(0) : TypeInstance.ObjectType();
+        TypeInstance itemType = !typeArgs.isEmpty() ? typeArgs.get(1) : TypeInstance.ObjectType();
 
         if (!(child instanceof ObjectNode)) {
             throw GeneralErrors.cannotAddItemIncompatibleValue(
-                child.getSourceInfo(), TypeHelper.getJvmType(map), child.getSourceInfo().getText());
+                child.getSourceInfo(), TypeHelper.getTypeInstance(map), child.getSourceInfo().getText());
         }
 
         if (!TypeHelper.getTypeInstance(child).subtypeOf(itemType)) {
@@ -116,8 +115,8 @@ public class AdderFactory {
                 child.getSourceInfo(), TypeHelper.getTypeInstance(map), TypeHelper.getTypeInstance(child), itemType);
         }
 
-        if (!keyType.equals(Classes.StringType()) && !keyType.equals(Classes.ObjectType())) {
-            throw GeneralErrors.unsupportedMapKeyType(map.getSourceInfo(), TypeHelper.getJvmType(map));
+        if (!keyType.equals(StringDecl()) && !keyType.equals(ObjectDecl())) {
+            throw GeneralErrors.unsupportedMapKeyType(map.getSourceInfo(), TypeHelper.getTypeInstance(map));
         }
 
         return new EmitMapAdderNode(createKey((ObjectNode)child, keyType), child);
@@ -132,10 +131,10 @@ public class AdderFactory {
                 node.getSourceInfo());
         }
 
-        if (keyType.equals(Classes.StringType())) {
+        if (keyType.equals(StringDecl())) {
             return ValueEmitterFactory.newLiteralValue(
                 NameHelper.getUniqueName(
-                    UUID.nameUUIDFromBytes(TypeHelper.getJvmType(node).getName().getBytes()).toString(), node),
+                    UUID.nameUUIDFromBytes(TypeHelper.getTypeDeclaration(node).name().getBytes()).toString(), node),
                 TypeInstance.StringType(),
                 node.getSourceInfo());
         }
@@ -143,7 +142,7 @@ public class AdderFactory {
         return EmitObjectNode
             .constructor(
                 TypeInstance.ObjectType(),
-                unchecked(node.getSourceInfo(), () -> Classes.ObjectType().getConstructor("()V")),
+                ObjectDecl().requireConstructor(),
                 Collections.emptyList(),
                 node.getSourceInfo())
             .create();

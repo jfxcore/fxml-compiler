@@ -1,21 +1,20 @@
-// Copyright (c) 2021, 2024, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.expression.path;
 
-import javassist.CtClass;
-import javassist.CtField;
+import org.jfxcore.compiler.ast.emit.EmitGetFieldNode;
 import org.jfxcore.compiler.ast.emit.ValueEmitterNode;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
-import org.jfxcore.compiler.ast.emit.EmitGetFieldNode;
+import org.jfxcore.compiler.type.FieldDeclaration;
+import org.jfxcore.compiler.type.TypeDeclaration;
+import org.jfxcore.compiler.type.TypeInstance;
 import org.jfxcore.compiler.util.ObservableKind;
-import org.jfxcore.compiler.util.TypeHelper;
-import org.jfxcore.compiler.util.TypeInstance;
 import java.util.Objects;
 
 public class FieldSegment extends Segment {
 
-    private final CtField field;
+    private final FieldDeclaration field;
     private final ObservableKind observableKind;
 
     public FieldSegment(
@@ -23,25 +22,25 @@ public class FieldSegment extends Segment {
             String displayName,
             TypeInstance type,
             TypeInstance valueType,
-            CtField field,
+            FieldDeclaration field,
             ObservableKind observableKind) {
         super(name, displayName, type, valueType, observableKind);
         this.field = Objects.requireNonNull(field);
         this.observableKind = observableKind;
     }
 
-    public CtField getField() {
+    public FieldDeclaration getField() {
         return field;
+    }
+
+    @Override
+    public TypeDeclaration getDeclaringType() {
+        return field.declaringType();
     }
 
     @Override
     public boolean isNullable() {
         return !observableKind.isNonNull();
-    }
-
-    @Override
-    public CtClass getDeclaringClass() {
-        return field.getDeclaringClass();
     }
 
     @Override
@@ -56,12 +55,11 @@ public class FieldSegment extends Segment {
         if (o == null || getClass() != o.getClass()) return false;
         if (!super.equals(o)) return false;
         FieldSegment that = (FieldSegment)o;
-        return TypeHelper.equals(field, that.field) && observableKind == that.observableKind;
+        return field.equals(that.field) && observableKind == that.observableKind;
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(super.hashCode(), TypeHelper.hashCode(field), observableKind);
+        return Objects.hash(super.hashCode(), field, observableKind);
     }
-
 }

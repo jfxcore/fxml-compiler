@@ -1,10 +1,8 @@
-// Copyright (c) 2021, 2025, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.emit;
 
-import javassist.CtClass;
-import javassist.bytecode.MethodInfo;
 import org.jfxcore.compiler.ast.AbstractNode;
 import org.jfxcore.compiler.ast.Node;
 import org.jfxcore.compiler.ast.RootNode;
@@ -16,7 +14,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
 
-import static org.jfxcore.compiler.util.Descriptors.constructor;
+import static org.jfxcore.compiler.type.KnownSymbols.*;
 
 /**
  * Emits the bytecodes that load and initialize all scene graph nodes of a root node.
@@ -72,10 +70,7 @@ public class EmitInitializeRootNode extends AbstractNode implements RootNode, Em
             code.anew(context.getRuntimeContextClass())
                 .dup()
                 .iconst(maxDepth)
-                .invokespecial(
-                    context.getRuntimeContextClass(),
-                    MethodInfo.nameInit,
-                    constructor(CtClass.intType))
+                .invoke(context.getRuntimeContextClass().requireConstructor(intDecl()))
                 .astore(context.getRuntimeContextLocal());
         }
 

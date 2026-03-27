@@ -1,9 +1,8 @@
-// Copyright (c) 2022, 2025, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.diagnostic.errors;
 
-import javassist.CtClass;
 import org.jfxcore.compiler.ast.BindingMode;
 import org.jfxcore.compiler.ast.Node;
 import org.jfxcore.compiler.ast.emit.EmitObjectNode;
@@ -12,16 +11,16 @@ import org.jfxcore.compiler.diagnostic.ErrorCode;
 import org.jfxcore.compiler.diagnostic.MarkupException;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.transform.TransformContext;
-import org.jfxcore.compiler.util.NameHelper;
+import org.jfxcore.compiler.type.TypeDeclaration;
+import org.jfxcore.compiler.type.TypeHelper;
+import org.jfxcore.compiler.type.TypeInstance;
 import org.jfxcore.compiler.util.PropertyInfo;
-import org.jfxcore.compiler.util.TypeHelper;
-import org.jfxcore.compiler.util.TypeInstance;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import static org.jfxcore.compiler.util.NameHelper.formatPropertyName;
+import static org.jfxcore.compiler.util.NameHelper.*;
 
 public class PropertyAssignmentErrors {
 
@@ -29,27 +28,28 @@ public class PropertyAssignmentErrors {
             SourceInfo sourceInfo, PropertyInfo propertyInfo, TypeInstance assignType) {
         return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
             ErrorCode.INCOMPATIBLE_PROPERTY_TYPE, formatPropertyName(propertyInfo),
-            propertyInfo.getType().getJavaName(), assignType != null ? assignType.getJavaName() : "'null'"));
+            propertyInfo.getType().javaName(), assignType != null ? assignType.javaName() : "'null'"));
     }
 
     public static MarkupException incompatiblePropertyType(
-            SourceInfo sourceInfo, CtClass declaringClass, String propertyName, CtClass requiredType, TypeInstance assignType) {
+            SourceInfo sourceInfo, TypeDeclaration declaringClass, String propertyName,
+            TypeDeclaration requiredType, TypeInstance assignType) {
         return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
             ErrorCode.INCOMPATIBLE_PROPERTY_TYPE, formatPropertyName(declaringClass, propertyName),
-            requiredType.getName(), assignType != null ? assignType.getJavaName() : "'null'"));
+            requiredType.name(), assignType != null ? assignType.javaName() : "'null'"));
     }
 
     public static MarkupException incompatiblePropertyItems(SourceInfo sourceInfo, PropertyInfo propertyInfo) {
         return new MarkupException(sourceInfo, Diagnostic.newDiagnosticVariant(
             ErrorCode.INCOMPATIBLE_PROPERTY_TYPE, "items",
-            formatPropertyName(propertyInfo), propertyInfo.getType().getJavaName()));
+            formatPropertyName(propertyInfo), propertyInfo.getType().javaName()));
     }
 
     public static MarkupException cannotCoercePropertyValue(
             SourceInfo sourceInfo, PropertyInfo propertyInfo, String value, boolean raw) {
         return new MarkupException(sourceInfo, raw ?
             Diagnostic.newDiagnosticVariant(
-                ErrorCode.CANNOT_COERCE_PROPERTY_VALUE, "raw", propertyInfo.getType().getJavaName()) :
+                ErrorCode.CANNOT_COERCE_PROPERTY_VALUE, "raw", propertyInfo.getType().javaName()) :
             Diagnostic.newDiagnostic(
                 ErrorCode.CANNOT_COERCE_PROPERTY_VALUE, formatPropertyName(propertyInfo), value));
     }
@@ -65,7 +65,8 @@ public class PropertyAssignmentErrors {
             ErrorCode.PROPERTY_CANNOT_BE_EMPTY, propertyName));
     }
 
-    public static MarkupException propertyCannotBeEmpty(SourceInfo sourceInfo, CtClass declaringType, String propertyName) {
+    public static MarkupException propertyCannotBeEmpty(
+            SourceInfo sourceInfo, TypeDeclaration declaringType, String propertyName) {
         return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
             ErrorCode.PROPERTY_CANNOT_BE_EMPTY, formatPropertyName(declaringType, propertyName)));
     }
@@ -80,7 +81,8 @@ public class PropertyAssignmentErrors {
             ErrorCode.PROPERTY_MUST_CONTAIN_TEXT, propertyName));
     }
 
-    public static MarkupException propertyMustContainText(SourceInfo sourceInfo, CtClass declaringType, String propertyName) {
+    public static MarkupException propertyMustContainText(
+            SourceInfo sourceInfo, TypeDeclaration declaringType, String propertyName) {
         return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
             ErrorCode.PROPERTY_MUST_CONTAIN_TEXT, formatPropertyName(declaringType, propertyName)));
     }
@@ -95,7 +97,8 @@ public class PropertyAssignmentErrors {
             ErrorCode.PROPERTY_CANNOT_HAVE_MULTIPLE_VALUES, propertyName));
     }
 
-    public static MarkupException propertyCannotHaveMultipleValues(SourceInfo sourceInfo, CtClass declaringType, String propertyName) {
+    public static MarkupException propertyCannotHaveMultipleValues(
+            SourceInfo sourceInfo, TypeDeclaration declaringType, String propertyName) {
         return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
             ErrorCode.PROPERTY_CANNOT_HAVE_MULTIPLE_VALUES, formatPropertyName(declaringType, propertyName)));
     }
@@ -112,7 +115,7 @@ public class PropertyAssignmentErrors {
 
         return new MarkupException(sourceInfo, Diagnostic.newDiagnosticVariant(
             ErrorCode.CANNOT_REFERENCE_NODE_UNDER_INITIALIZATION, "property",
-            formatPropertyName(propertyInfo), TypeHelper.getTypeInstance(referencedParent).getJavaName()));
+            formatPropertyName(propertyInfo), TypeHelper.getTypeInstance(referencedParent).javaName()));
     }
 
     public static MarkupException duplicateProperty(SourceInfo sourceInfo, String declaringType, String propertyName) {
@@ -120,9 +123,10 @@ public class PropertyAssignmentErrors {
             ErrorCode.DUPLICATE_PROPERTY, formatPropertyName(declaringType, propertyName)));
     }
 
-    public static MarkupException unsuitableEventHandler(SourceInfo sourceInfo, CtClass eventType, String methodName) {
+    public static MarkupException unsuitableEventHandler(
+            SourceInfo sourceInfo, TypeDeclaration eventType, String methodName) {
         return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
-            ErrorCode.UNSUITABLE_EVENT_HANDLER, NameHelper.getJavaClassName(sourceInfo, eventType), methodName));
+            ErrorCode.UNSUITABLE_EVENT_HANDLER, eventType.javaName(), methodName));
     }
 
     public static MarkupException cannotModifyReadOnlyProperty(SourceInfo sourceInfo, PropertyInfo propertyInfo) {
@@ -168,9 +172,10 @@ public class PropertyAssignmentErrors {
     }
 
     public static MarkupException markupExtensionNotApplicable(
-            SourceInfo sourceInfo, PropertyInfo propertyInfo, CtClass markupExtensionType, TypeInstance[] supportedTargetTypes) {
+            SourceInfo sourceInfo, PropertyInfo propertyInfo, TypeDeclaration markupExtensionType,
+            TypeInstance[] supportedTargetTypes) {
         String supportedTargets = Arrays.stream(supportedTargetTypes)
-            .map(TypeInstance::getJavaName)
+            .map(TypeInstance::javaName)
             .collect(Collectors.joining(", "));
 
         if (supportedTargets.isEmpty()) {
@@ -178,7 +183,6 @@ public class PropertyAssignmentErrors {
         }
 
         return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(ErrorCode.MARKUP_EXTENSION_NOT_APPLICABLE,
-            NameHelper.getJavaClassName(sourceInfo, markupExtensionType),
-            formatPropertyName(propertyInfo), supportedTargets));
+            markupExtensionType.javaName(), formatPropertyName(propertyInfo), supportedTargets));
     }
 }

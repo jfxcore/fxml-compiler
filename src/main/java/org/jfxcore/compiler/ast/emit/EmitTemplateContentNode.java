@@ -1,31 +1,25 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.emit;
 
-import javassist.CtClass;
-import javassist.CtConstructor;
-import javassist.CtMethod;
-import javassist.CtNewConstructor;
-import javassist.Modifier;
-import javassist.bytecode.MethodInfo;
 import org.jfxcore.compiler.ast.AbstractNode;
 import org.jfxcore.compiler.ast.Node;
 import org.jfxcore.compiler.ast.ResolvedTypeNode;
 import org.jfxcore.compiler.ast.RootNode;
-import org.jfxcore.compiler.ast.TypeNode;
 import org.jfxcore.compiler.ast.Visitor;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
+import org.jfxcore.compiler.type.TypeDeclaration;
+import org.jfxcore.compiler.type.TypeInstance;
+import org.jfxcore.compiler.type.KnownSymbols;
 import org.jfxcore.compiler.util.Bytecode;
-import org.jfxcore.compiler.util.Classes;
-import org.jfxcore.compiler.util.Descriptors;
 import org.jfxcore.compiler.util.NameHelper;
-import org.jfxcore.compiler.util.TypeHelper;
-import org.jfxcore.compiler.util.TypeInstance;
-
+import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+
+import static org.jfxcore.compiler.type.KnownSymbols.*;
 
 public class EmitTemplateContentNode extends AbstractNode implements ValueEmitterNode, RootNode {
 
@@ -89,14 +83,14 @@ public class EmitTemplateContentNode extends AbstractNode implements ValueEmitte
 
     @Override
     public void emit(BytecodeEmitContext context) {
-        CtClass oldContextClass = context.getBindingContextClass();
-        CtClass newContextClass = bindingContextClass.jvmType();
+        TypeDeclaration oldContextClass = context.getBindingContextClass();
+        TypeDeclaration newContextClass = bindingContextClass.declaration();
 
         try {
             context.getNestedClasses().add(newContextClass);
             context.setBindingContextClass(newContextClass);
 
-            CtClass factoryClass = unchecked(() -> {
+            TypeDeclaration factoryClass = unchecked(() -> {
                 emitTemplateContentClass(context, newContextClass);
                 return emitFactoryClass(context, newContextClass);
             });
@@ -104,63 +98,60 @@ public class EmitTemplateContentNode extends AbstractNode implements ValueEmitte
             context.getOutput()
                 .anew(factoryClass)
                 .dup()
-                .invokespecial(factoryClass, MethodInfo.nameInit, "()V");
+                .invoke(factoryClass.requireConstructor());
         } finally {
             context.setBindingContextClass(oldContextClass);
         }
     }
 
-    private CtClass emitFactoryClass(BytecodeEmitContext context, CtClass contentClass) throws Exception {
-        String className = NameHelper.getUniqueName("TemplateContentFactory", this);
-        CtClass clazz = context.getMarkupClass().makeNestedClass(className, true);
-        clazz.setModifiers(Modifier.PRIVATE | Modifier.STATIC | Modifier.FINAL);
-        clazz.addInterface(Classes.Core.TemplateContentType());
-        context.getNestedClasses().add(clazz);
+    private TypeDeclaration emitFactoryClass(BytecodeEmitContext context, TypeDeclaration contentClass) throws Exception {
+        TypeDeclaration type = context.getMarkupClass().createNestedClass(
+            NameHelper.getUniqueName("TemplateContentFactory", this));
 
-        emitForceInitMethod(context, clazz);
-        emitNewInstanceMethod(context, contentClass, clazz);
-        clazz.addConstructor(CtNewConstructor.defaultConstructor(clazz));
-        return clazz;
+        type.setModifiers(Modifier.PRIVATE | Modifier.STATIC | Modifier.FINAL)
+            .addInterface(KnownSymbols.Core.TemplateContentDecl())
+            .createDefaultConstructor();
+
+        context.getNestedClasses().add(type);
+
+        emitForceInitMethod(context, type);
+        emitNewInstanceMethod(context, contentClass, type);
+        return type;
     }
 
     private void emitNewInstanceMethod(
-            BytecodeEmitContext parentContext, CtClass contentClass, CtClass declaringClass) throws Exception {
+            BytecodeEmitContext parentContext, TypeDeclaration contentClass, TypeDeclaration declaringClass) throws Exception {
         var localContext = new BytecodeEmitContext(parentContext, declaringClass, 2, -1);
         localContext.getOutput()
             .anew(contentClass)
             .dup()
             .aload(1)
-            .checkcast(itemType.jvmType())
-            .invokespecial(contentClass, MethodInfo.nameInit, Descriptors.constructor(itemType.jvmType()))
+            .checkcast(itemType.declaration())
+            .invoke(contentClass.requireConstructor(itemType.declaration()))
             .areturn();
 
-        CtMethod newInstanceMethod = new CtMethod(
-            Classes.NodeType(), "newInstance", new CtClass[] {Classes.ObjectType()}, declaringClass);
-        newInstanceMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
-        newInstanceMethod.getMethodInfo().setCodeAttribute(localContext.getOutput().toCodeAttribute());
-        newInstanceMethod.getMethodInfo().rebuildStackMap(declaringClass.getClassPool());
-        declaringClass.addMethod(newInstanceMethod);
+        declaringClass.createMethod("newInstance", NodeDecl(), ObjectDecl())
+                      .setModifiers(Modifier.PUBLIC | Modifier.FINAL)
+                      .setCode(localContext.getOutput());
     }
 
-    private void emitTemplateContentClass(BytecodeEmitContext context, CtClass contentClass) throws Exception {
+    private void emitTemplateContentClass(BytecodeEmitContext context, TypeDeclaration contentClass) throws Exception {
         emitForceInitMethod(context, contentClass);
         emitConstructor(context, contentClass);
     }
 
-    private void emitForceInitMethod(BytecodeEmitContext parentContext, CtClass declaringClass) throws Exception {
+    private void emitForceInitMethod(BytecodeEmitContext parentContext, TypeDeclaration declaringClass) throws Exception {
         var context = new BytecodeEmitContext(parentContext, declaringClass, 1, -1);
         Bytecode code = context.getOutput().vreturn();
 
-        CtMethod forceInitMethod = new CtMethod(CtClass.voidType, "forceInit", new CtClass[0], declaringClass);
-        forceInitMethod.setModifiers(Modifier.STATIC | Modifier.FINAL);
-        forceInitMethod.getMethodInfo().setCodeAttribute(code.toCodeAttribute());
-        forceInitMethod.getMethodInfo().rebuildStackMap(declaringClass.getClassPool());
-        declaringClass.addMethod(forceInitMethod);
+        declaringClass.createMethod("forceInit", voidDecl())
+                      .setModifiers(Modifier.STATIC | Modifier.FINAL)
+                      .setCode(code);
     }
 
-    private void emitConstructor(BytecodeEmitContext parentContext, CtClass declaringClass) throws Exception {
+    private void emitConstructor(BytecodeEmitContext parentContext, TypeDeclaration declaringClass) throws Exception {
         boolean needsContext = RuntimeContextHelper.needsRuntimeContext(content);
-        int occupiedLocals = TypeHelper.getSlots(itemType.jvmType()) + (needsContext ? 2 : 1);
+        int occupiedLocals = itemType.declaration().slots() + (needsContext ? 2 : 1);
 
         var context = new BytecodeEmitContext(
             parentContext, declaringClass, content, occupiedLocals, needsContext ? occupiedLocals - 1 : -1);
@@ -168,16 +159,13 @@ public class EmitTemplateContentNode extends AbstractNode implements ValueEmitte
         Bytecode code = context.getOutput();
 
         code.aload(0)
-            .invokespecial(declaringClass.getSuperclass(), MethodInfo.nameInit, "()V");
+            .invoke(declaringClass.requireSuperClass().requireConstructor());
 
         context.emitRootNode();
 
         code.vreturn();
 
-        CtConstructor constructor = new CtConstructor(new CtClass[] {itemType.jvmType()}, declaringClass);
-        constructor.getMethodInfo().setCodeAttribute(code.toCodeAttribute());
-        constructor.getMethodInfo().rebuildStackMap(declaringClass.getClassPool());
-        declaringClass.addConstructor(constructor);
+        declaringClass.createConstructor(itemType.declaration())
+                      .setCode(code);
     }
-
 }

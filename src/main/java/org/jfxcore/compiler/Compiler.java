@@ -1,11 +1,10 @@
-// Copyright (c) 2022, 2025, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler;
 
 import javassist.CannotCompileException;
 import javassist.ClassPool;
-import javassist.CtClass;
 import javassist.NotFoundException;
 import javassist.bytecode.AttributeInfo;
 import javassist.bytecode.BadBytecode;
@@ -22,6 +21,7 @@ import org.jfxcore.compiler.diagnostic.errors.SymbolResolutionErrors;
 import org.jfxcore.compiler.parse.FxmlParseAbortException;
 import org.jfxcore.compiler.parse.FxmlParser;
 import org.jfxcore.compiler.transform.Transformer;
+import org.jfxcore.compiler.type.TypeDeclaration;
 import org.jfxcore.compiler.util.AbstractCompiler;
 import org.jfxcore.compiler.util.Bytecode;
 import org.jfxcore.compiler.util.CompilationContext;
@@ -269,15 +269,15 @@ public class Compiler extends AbstractCompiler {
                 throw GeneralErrors.internalError(String.format("%s cannot be found", markupClassName));
             }
 
-            CtClass codeBehindClass = transformer.getClassPool().get(codeBehindClassName);
-            CtClass markupClass = transformer.getClassPool().get(markupClassName);
+            var codeBehindClass = TypeDeclaration.of(transformer.getClassPool().get(codeBehindClassName));
+            var markupClass = TypeDeclaration.of(transformer.getClassPool().get(markupClassName));
 
-            if (markupClass.getAttribute(FileUtil.GENERATOR_NAME) != null) {
+            if (markupClass.jvmType().getAttribute(FileUtil.GENERATOR_NAME) != null) {
                 throw GeneralErrors.internalError(String.format(
                     "FXML class '%s' has already been compiled, it cannot be compiled again", markupClassName));
             }
 
-            markupClass.defrost();
+            markupClass.jvmType().defrost();
 
             Bytecode bytecode = new Bytecode(markupClass, 1);
 
@@ -289,18 +289,18 @@ public class Compiler extends AbstractCompiler {
 
             emitContext.emitRootNode();
 
-            MethodInfo methodInfo = markupClass.getClassFile().getMethod("initializeComponent");
+            MethodInfo methodInfo = markupClass.jvmType().getClassFile().getMethod("initializeComponent");
             if (methodInfo == null) {
                 throw GeneralErrors.internalError("Invalid markup class file");
             }
 
             // Add the generator attribute, which is used to detect if a class file was
             // compiled by this compiler.
-            markupClass.getClassFile().addAttribute(new AttributeInfo(
-                markupClass.getClassFile().getConstPool(), FileUtil.GENERATOR_NAME, new byte[0]));
+            markupClass.jvmType().getClassFile().addAttribute(new AttributeInfo(
+                markupClass.jvmType().getClassFile().getConstPool(), FileUtil.GENERATOR_NAME, new byte[0]));
 
             methodInfo.setCodeAttribute(bytecode.toCodeAttribute());
-            methodInfo.rebuildStackMap(markupClass.getClassPool());
+            methodInfo.rebuildStackMap(markupClass.jvmType().getClassPool());
 
             Path outDir = Paths.get(classUrl.toURI());
             compilation.context().addModifiedClass(markupClass, outDir);

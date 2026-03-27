@@ -1,63 +1,59 @@
-// Copyright (c) 2023, 2025, JFXcore. All rights reserved.
+// Copyright (c) 2023, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.generate;
 
-import javassist.CtClass;
-import javassist.CtConstructor;
-import javassist.CtField;
-import javassist.CtMethod;
-import javassist.Modifier;
-import javassist.bytecode.MethodInfo;
 import org.jfxcore.compiler.ast.emit.BytecodeEmitContext;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
+import org.jfxcore.compiler.type.ConstructorDeclaration;
+import org.jfxcore.compiler.type.MethodDeclaration;
+import org.jfxcore.compiler.type.TypeDeclaration;
+import org.jfxcore.compiler.type.TypeInstance;
+import org.jfxcore.compiler.type.TypeInvoker;
 import org.jfxcore.compiler.util.Bytecode;
-import org.jfxcore.compiler.util.Descriptors;
 import org.jfxcore.compiler.util.NameHelper;
-import org.jfxcore.compiler.util.TypeHelper;
-import org.jfxcore.compiler.util.TypeInstance;
-import org.jfxcore.compiler.util.TypeInvoker;
+import java.lang.reflect.Modifier;
 
 import static org.jfxcore.compiler.generate.SharedMethodImpls.*;
-import static org.jfxcore.compiler.util.Classes.*;
+import static org.jfxcore.compiler.type.KnownSymbols.*;
 
 public abstract class ValueWrapperGenerator extends ClassGenerator {
 
-    public static ClassGenerator newInstance(CtClass valueType) {
+    public static ClassGenerator newInstance(TypeDeclaration valueType) {
         TypeInvoker invoker = new TypeInvoker(SourceInfo.none());
-        CtClass primitiveType = TypeHelper.getPrimitiveType(valueType);
+        TypeDeclaration primitiveType = valueType.primitive().orElse(null);
 
-        if (primitiveType == CtClass.booleanType) {
+        if (booleanDecl().equals(primitiveType)) {
             return new ValueWrapperGenerator(
-                    invoker.invokeType(ObservableBooleanValueType()), CtClass.booleanType, BooleanType()) {
+                    invoker.invokeType(ObservableBooleanValueDecl()), booleanDecl(), BooleanDecl()) {
                 @Override public String getClassName() {
                     return NameHelper.getMangledClassName("BooleanConstant");
                 }
             };
-        } else if (primitiveType == CtClass.intType) {
+        } else if (intDecl().equals(primitiveType)) {
             return new ValueWrapperGenerator(
-                    invoker.invokeType(ObservableIntegerValueType()), CtClass.intType, IntegerType()) {
+                    invoker.invokeType(ObservableIntegerValueDecl()), intDecl(), IntegerDecl()) {
                 @Override public String getClassName() {
                     return NameHelper.getMangledClassName("IntegerConstant");
                 }
             };
-        } else if (primitiveType == CtClass.longType) {
+        } else if (longDecl().equals(primitiveType)) {
             return new ValueWrapperGenerator(
-                    invoker.invokeType(ObservableLongValueType()), CtClass.longType, LongType()) {
+                    invoker.invokeType(ObservableLongValueDecl()), longDecl(), LongDecl()) {
                 @Override public String getClassName() {
                     return NameHelper.getMangledClassName("LongConstant");
                 }
             };
-        } else if (primitiveType == CtClass.floatType) {
+        } else if (floatDecl().equals(primitiveType)) {
             return new ValueWrapperGenerator(
-                    invoker.invokeType(ObservableFloatValueType()), CtClass.floatType, FloatType()) {
+                    invoker.invokeType(ObservableFloatValueDecl()), floatDecl(), FloatDecl()) {
                 @Override public String getClassName() {
                     return NameHelper.getMangledClassName("FloatConstant");
                 }
             };
-        } else if (primitiveType == CtClass.doubleType) {
+        } else if (doubleDecl().equals(primitiveType)) {
             return new ValueWrapperGenerator(
-                    invoker.invokeType(ObservableDoubleValueType()), CtClass.doubleType, DoubleType()) {
+                    invoker.invokeType(ObservableDoubleValueDecl()), doubleDecl(), DoubleDecl()) {
                 @Override public String getClassName() {
                     return NameHelper.getMangledClassName("DoubleConstant");
                 }
@@ -65,7 +61,7 @@ public abstract class ValueWrapperGenerator extends ClassGenerator {
         }
 
         return new ValueWrapperGenerator(
-                invoker.invokeType(ObservableObjectValueType()), null, ObjectType()) {
+                invoker.invokeType(ObservableObjectValueDecl()), null, ObjectDecl()) {
             @Override public String getClassName() {
                 return NameHelper.getMangledClassName("ObjectConstant");
             }
@@ -78,18 +74,19 @@ public abstract class ValueWrapperGenerator extends ClassGenerator {
     private static final String CHANGE_LISTENER_FIELD = "changeListener";
 
     private final TypeInstance observableType;
-    private final CtClass primitiveType;
-    private final CtClass boxedType;
-    private CtConstructor primitiveConstructor;
-    private CtConstructor boxedConstructor;
-    private CtMethod getMethod;
-    private CtMethod getValueMethod;
-    private CtMethod intValueMethod;
-    private CtMethod longValueMethod;
-    private CtMethod floatValueMethod;
-    private CtMethod doubleValueMethod;
+    private final TypeDeclaration primitiveType;
+    private final TypeDeclaration boxedType;
 
-    ValueWrapperGenerator(TypeInstance observableType, CtClass primitiveType, CtClass boxedType) {
+    private ConstructorDeclaration primitiveConstructor;
+    private ConstructorDeclaration boxedConstructor;
+    private MethodDeclaration getMethod;
+    private MethodDeclaration getValueMethod;
+    private MethodDeclaration intValueMethod;
+    private MethodDeclaration longValueMethod;
+    private MethodDeclaration floatValueMethod;
+    private MethodDeclaration doubleValueMethod;
+
+    ValueWrapperGenerator(TypeInstance observableType, TypeDeclaration primitiveType, TypeDeclaration boxedType) {
         this.observableType = observableType;
         this.primitiveType = primitiveType;
         this.boxedType = boxedType;
@@ -101,199 +98,160 @@ public abstract class ValueWrapperGenerator extends ClassGenerator {
     }
 
     @Override
-    public void emitClass(BytecodeEmitContext context) {
-        generatedClass = context.getNestedClasses().create(getClassName());
-        generatedClass.setModifiers(Modifier.PRIVATE | Modifier.FINAL);
-        generatedClass.addInterface(observableType.jvmType());
+    public TypeDeclaration emitClass(BytecodeEmitContext context) {
+        return super.emitClass(context)
+            .setModifiers(Modifier.PRIVATE | Modifier.FINAL)
+            .addInterface(observableType.declaration());
     }
 
     @Override
-    public void emitFields(BytecodeEmitContext context) throws Exception {
-        CtField field = new CtField(boxedType, BOXED_FIELD, generatedClass);
-        field.setModifiers(Modifier.PRIVATE | Modifier.FINAL);
-        generatedClass.addField(field);
+    public void emitFields(BytecodeEmitContext context) {
+        createField(BOXED_FIELD, boxedType).setModifiers(Modifier.PRIVATE | Modifier.FINAL);
 
         if (primitiveType != null) {
-            field = new CtField(primitiveType, PRIMITIVE_FIELD, generatedClass);
-            field.setModifiers(Modifier.PRIVATE | Modifier.FINAL);
-            generatedClass.addField(field);
+            createField(PRIMITIVE_FIELD, primitiveType).setModifiers(Modifier.PRIVATE | Modifier.FINAL);
         }
 
-        field = new CtField(InvalidationListenerType(), INVALIDATION_LISTENER_FIELD, generatedClass);
-        field.setModifiers(Modifier.PRIVATE);
-        generatedClass.addField(field);
-
-        field = new CtField(ChangeListenerType(), CHANGE_LISTENER_FIELD, generatedClass);
-        field.setModifiers(Modifier.PRIVATE);
-        generatedClass.addField(field);
+        createField(INVALIDATION_LISTENER_FIELD, InvalidationListenerDecl()).setModifiers(Modifier.PRIVATE);
+        createField(CHANGE_LISTENER_FIELD, ChangeListenerDecl()).setModifiers(Modifier.PRIVATE);
     }
 
     @Override
-    public void emitMethods(BytecodeEmitContext context) throws Exception {
+    public void emitMethods(BytecodeEmitContext context) {
         super.emitMethods(context);
 
         if (primitiveType != null) {
-            primitiveConstructor = new CtConstructor(new CtClass[]{primitiveType}, generatedClass);
-            generatedClass.addConstructor(primitiveConstructor);
+            primitiveConstructor = createConstructor(primitiveType);
         }
 
-        boxedConstructor = new CtConstructor(new CtClass[] {boxedType}, generatedClass);
-        generatedClass.addConstructor(boxedConstructor);
+        boxedConstructor = createConstructor(boxedType);
 
-        getMethod = new CtMethod(primitiveType != null ? primitiveType : boxedType, "get", new CtClass[0], generatedClass);
-        getMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
-        generatedClass.addMethod(getMethod);
+        getMethod = createMethod("get", primitiveType != null ? primitiveType : boxedType)
+            .setModifiers(Modifier.PUBLIC | Modifier.FINAL);
 
-        getValueMethod = new CtMethod(boxedType, "getValue", new CtClass[0], generatedClass);
-        getValueMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
-        generatedClass.addMethod(getValueMethod);
+        getValueMethod = createMethod("getValue", boxedType).setModifiers(Modifier.PUBLIC | Modifier.FINAL);
 
-        createListenerMethods(context, generatedClass, INVALIDATION_LISTENER_FIELD, InvalidationListenerType());
-        createListenerMethods(context, generatedClass, CHANGE_LISTENER_FIELD, ChangeListenerType());
+        TypeDeclaration invalidationListenerType = InvalidationListenerDecl();
+        TypeDeclaration changeListenerType = ChangeListenerDecl();
 
-        if (primitiveType != null && TypeHelper.isNumericPrimitive(primitiveType)) {
-            intValueMethod = new CtMethod(CtClass.intType, "intValue", new CtClass[0], generatedClass);
-            intValueMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
-            generatedClass.addMethod(intValueMethod);
+        createListenerMethods(this, INVALIDATION_LISTENER_FIELD, invalidationListenerType);
+        createListenerMethods(this, CHANGE_LISTENER_FIELD, changeListenerType);
 
-            longValueMethod = new CtMethod(CtClass.longType, "longValue", new CtClass[0], generatedClass);
-            longValueMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
-            generatedClass.addMethod(longValueMethod);
-
-            floatValueMethod = new CtMethod(CtClass.floatType, "floatValue", new CtClass[0], generatedClass);
-            floatValueMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
-            generatedClass.addMethod(floatValueMethod);
-
-            doubleValueMethod = new CtMethod(CtClass.doubleType, "doubleValue", new CtClass[0], generatedClass);
-            doubleValueMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
-            generatedClass.addMethod(doubleValueMethod);
+        if (primitiveType != null && primitiveType.isNumericPrimitive()) {
+            intValueMethod = createMethod("intValue", intDecl()).setModifiers(Modifier.PUBLIC | Modifier.FINAL);
+            longValueMethod = createMethod("longValue", longDecl()).setModifiers(Modifier.PUBLIC | Modifier.FINAL);
+            floatValueMethod = createMethod("floatValue", floatDecl()).setModifiers(Modifier.PUBLIC | Modifier.FINAL);
+            doubleValueMethod = createMethod("doubleValue", doubleDecl()).setModifiers(Modifier.PUBLIC | Modifier.FINAL);
         }
     }
 
     @Override
-    public void emitCode(BytecodeEmitContext context) throws Exception {
-        super.emitCode(context);
-
+    public void emitCode(BytecodeEmitContext context) {
         if (primitiveType != null) {
-            emitPrimitiveConstructor(context, primitiveConstructor);
+            emitPrimitiveConstructor(primitiveConstructor);
         }
 
-        emitBoxedConstructor(context, boxedConstructor);
-        emitGetValueMethod(context, getValueMethod);
-        emitGetMethod(context, getMethod);
+        emitBoxedConstructor(boxedConstructor);
+        emitGetValueMethod(getValueMethod);
+        emitGetMethod(getMethod);
 
-
-        if (primitiveType != null && TypeHelper.isNumericPrimitive(primitiveType)) {
-            emitConversionMethods(context);
+        if (primitiveType != null && primitiveType.isNumericPrimitive()) {
+            emitConversionMethods();
         }
     }
 
-    private void emitPrimitiveConstructor(BytecodeEmitContext parentContext, CtConstructor constructor) throws Exception {
-        var context = new BytecodeEmitContext(parentContext, generatedClass, TypeHelper.getSlots(primitiveType) + 1, -1);
-        Bytecode code = context.getOutput();
+    private void emitPrimitiveConstructor(ConstructorDeclaration constructor) {
+        Bytecode code = new Bytecode(constructor);
 
         code.aload(0)
-            .invokespecial(generatedClass.getSuperclass(), MethodInfo.nameInit, Descriptors.constructor())
+            .invoke(requireSuperClass().requireDeclaredConstructor())
             .aload(0)
-            .ext_load(primitiveType, 1)
-            .putfield(generatedClass, PRIMITIVE_FIELD, primitiveType)
+            .load(primitiveType, 1)
+            .putfield(requireDeclaredField(PRIMITIVE_FIELD))
             .aload(0)
-            .ext_load(primitiveType, 1)
-            .ext_autoconv(SourceInfo.none(), primitiveType, boxedType)
-            .putfield(generatedClass, BOXED_FIELD, boxedType)
+            .load(primitiveType, 1)
+            .autoconv(primitiveType, boxedType)
+            .putfield(requireDeclaredField(BOXED_FIELD))
             .vreturn();
 
-        constructor.getMethodInfo().setCodeAttribute(code.toCodeAttribute());
-        constructor.getMethodInfo().rebuildStackMap(generatedClass.getClassPool());
+        constructor.setCode(code);
     }
 
-    private void emitBoxedConstructor(BytecodeEmitContext parentContext, CtConstructor constructor) throws Exception {
-        var context = new BytecodeEmitContext(parentContext, generatedClass, 2, -1);
-        Bytecode code = context.getOutput();
+    private void emitBoxedConstructor(ConstructorDeclaration constructor) {
+        Bytecode code = new Bytecode(constructor);
 
         code.aload(0)
-            .invokespecial(generatedClass.getSuperclass(), MethodInfo.nameInit, Descriptors.constructor())
+            .invoke(requireSuperClass().requireDeclaredConstructor())
             .aload(0)
-            .ext_load(boxedType, 1)
-            .putfield(generatedClass, BOXED_FIELD, boxedType);
+            .load(boxedType, 1)
+            .putfield(requireDeclaredField(BOXED_FIELD));
 
         if (primitiveType != null) {
             code.aload(0)
                 .aload(1)
-                .ext_autoconv(SourceInfo.none(), boxedType, primitiveType)
-                .putfield(generatedClass, PRIMITIVE_FIELD, primitiveType);
+                .autoconv(boxedType, primitiveType)
+                .putfield(requireDeclaredField(PRIMITIVE_FIELD));
         }
 
         code.vreturn();
-
-        constructor.getMethodInfo().setCodeAttribute(code.toCodeAttribute());
-        constructor.getMethodInfo().rebuildStackMap(generatedClass.getClassPool());
+        constructor.setCode(code);
     }
 
-    private void emitGetMethod(BytecodeEmitContext parentContext, CtMethod method) throws Exception {
-        var context = new BytecodeEmitContext(parentContext, generatedClass, 1, -1);
-        CtClass type = primitiveType != null ? primitiveType : boxedType;
-        Bytecode code = context.getOutput();
+    private void emitGetMethod(MethodDeclaration method) {
+        Bytecode code = new Bytecode(method);
 
         code.aload(0)
-            .getfield(generatedClass, primitiveType != null ? PRIMITIVE_FIELD : BOXED_FIELD, type)
-            .ext_return(type);
+            .getfield(requireDeclaredField(primitiveType != null ? PRIMITIVE_FIELD : BOXED_FIELD))
+            .ret(primitiveType != null ? primitiveType : boxedType);
 
-        method.getMethodInfo().setCodeAttribute(code.toCodeAttribute());
-        method.getMethodInfo().rebuildStackMap(generatedClass.getClassPool());
+        method.setCode(code);
     }
 
-    private void emitGetValueMethod(BytecodeEmitContext parentContext, CtMethod method) throws Exception {
-        var context = new BytecodeEmitContext(parentContext, generatedClass, 1, -1);
-        Bytecode code = context.getOutput();
+    private void emitGetValueMethod(MethodDeclaration method) {
+        Bytecode code = new Bytecode(method);
 
         code.aload(0)
-            .getfield(generatedClass, BOXED_FIELD, boxedType)
-            .ext_return(boxedType);
+            .getfield(requireDeclaredField(BOXED_FIELD))
+            .ret(boxedType);
 
-        method.getMethodInfo().setCodeAttribute(code.toCodeAttribute());
-        method.getMethodInfo().rebuildStackMap(generatedClass.getClassPool());
+        method.setCode(code);
     }
 
-    private void emitConversionMethods(BytecodeEmitContext parentContext) throws Exception {
-        var context = new BytecodeEmitContext(parentContext, generatedClass, 2, -1);
-        context.getOutput()
+    private void emitConversionMethods() {
+        Bytecode code = new Bytecode(intValueMethod);
+        code
             .aload(0)
-            .getfield(generatedClass, PRIMITIVE_FIELD, primitiveType)
-            .ext_autoconv(SourceInfo.none(), primitiveType, CtClass.intType)
+            .getfield(requireDeclaredField(PRIMITIVE_FIELD))
+            .autoconv(primitiveType, intDecl())
             .ireturn();
 
-        intValueMethod.getMethodInfo().setCodeAttribute(context.getOutput().toCodeAttribute());
-        intValueMethod.getMethodInfo().rebuildStackMap(generatedClass.getClassPool());
+        intValueMethod.setCode(code);
 
-        context = new BytecodeEmitContext(parentContext, generatedClass, 2, -1);
-        context.getOutput()
+        code = new Bytecode(longValueMethod);
+        code
             .aload(0)
-            .getfield(generatedClass, PRIMITIVE_FIELD, primitiveType)
-            .ext_autoconv(SourceInfo.none(), primitiveType, CtClass.longType)
+            .getfield(requireDeclaredField(PRIMITIVE_FIELD))
+            .autoconv(primitiveType, longDecl())
             .lreturn();
 
-        longValueMethod.getMethodInfo().setCodeAttribute(context.getOutput().toCodeAttribute());
-        longValueMethod.getMethodInfo().rebuildStackMap(generatedClass.getClassPool());
+        longValueMethod.setCode(code);
 
-        context = new BytecodeEmitContext(parentContext, generatedClass, 2, -1);
-        context.getOutput()
+        code = new Bytecode(floatValueMethod);
+        code
             .aload(0)
-            .getfield(generatedClass, PRIMITIVE_FIELD, primitiveType)
-            .ext_autoconv(SourceInfo.none(), primitiveType, CtClass.floatType)
+            .getfield(requireDeclaredField(PRIMITIVE_FIELD))
+            .autoconv(primitiveType, floatDecl())
             .freturn();
 
-        floatValueMethod.getMethodInfo().setCodeAttribute(context.getOutput().toCodeAttribute());
-        floatValueMethod.getMethodInfo().rebuildStackMap(generatedClass.getClassPool());
+        floatValueMethod.setCode(code);
 
-        context = new BytecodeEmitContext(parentContext, generatedClass, 2, -1);
-        context.getOutput()
+        code = new Bytecode(doubleValueMethod);
+        code
             .aload(0)
-            .getfield(generatedClass, PRIMITIVE_FIELD, primitiveType)
-            .ext_autoconv(SourceInfo.none(), primitiveType, CtClass.doubleType)
+            .getfield(requireDeclaredField(PRIMITIVE_FIELD))
+            .autoconv(primitiveType, doubleDecl())
             .dreturn();
 
-        doubleValueMethod.getMethodInfo().setCodeAttribute(context.getOutput().toCodeAttribute());
-        doubleValueMethod.getMethodInfo().rebuildStackMap(generatedClass.getClassPool());
+        doubleValueMethod.setCode(code);
     }
 }

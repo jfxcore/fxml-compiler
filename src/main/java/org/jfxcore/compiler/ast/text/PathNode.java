@@ -1,4 +1,4 @@
-// Copyright (c) 2021, 2025, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.text;
@@ -6,10 +6,9 @@ package org.jfxcore.compiler.ast.text;
 import org.jetbrains.annotations.Nullable;
 import org.jfxcore.compiler.ast.Visitor;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
-import org.jfxcore.compiler.util.Resolver;
-import org.jfxcore.compiler.util.TypeInstance;
-import org.jfxcore.compiler.util.TypeInvoker;
-
+import org.jfxcore.compiler.type.Resolver;
+import org.jfxcore.compiler.type.TypeInstance;
+import org.jfxcore.compiler.type.TypeInvoker;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;

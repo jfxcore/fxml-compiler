@@ -1,11 +1,11 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.emit;
 
-import javassist.CtClass;
 import org.jfxcore.compiler.ast.AbstractNode;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
+import org.jfxcore.compiler.type.TypeDeclaration;
 import org.jfxcore.compiler.util.Bytecode;
 import org.jfxcore.compiler.util.Local;
 
@@ -42,7 +42,7 @@ public abstract class ReferenceableNode extends AbstractNode implements ValueEmi
         return referencedNode;
     }
 
-    protected void storeLocal(Bytecode code, CtClass type) {
+    protected void storeLocal(Bytecode code, TypeDeclaration type) {
         Local local = code.acquireLocal(false);
         code.astore(local);
         storedLocal = new StoredLocal(type, local);
@@ -53,17 +53,16 @@ public abstract class ReferenceableNode extends AbstractNode implements ValueEmi
     }
 
     private static class StoredLocal {
-        private final CtClass type;
+        private final TypeDeclaration type;
         private final Local local;
 
-        StoredLocal(CtClass type, Local local) {
+        StoredLocal(TypeDeclaration type, Local local) {
             this.type = type;
             this.local = local;
         }
 
         void load(Bytecode code) {
-            code.ext_load(type, local);
+            code.load(type, local);
         }
     }
-
 }

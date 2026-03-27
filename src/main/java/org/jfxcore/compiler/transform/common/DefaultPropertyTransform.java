@@ -1,10 +1,8 @@
-// Copyright (c) 2022, 2024, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.transform.common;
 
-import javassist.CtClass;
-import javassist.bytecode.annotation.Annotation;
 import org.jfxcore.compiler.ast.Node;
 import org.jfxcore.compiler.ast.ObjectNode;
 import org.jfxcore.compiler.ast.PropertyNode;
@@ -16,12 +14,12 @@ import org.jfxcore.compiler.ast.intrinsic.Intrinsics;
 import org.jfxcore.compiler.diagnostic.errors.PropertyAssignmentErrors;
 import org.jfxcore.compiler.transform.Transform;
 import org.jfxcore.compiler.transform.TransformContext;
-import org.jfxcore.compiler.util.Classes;
-import org.jfxcore.compiler.util.Resolver;
-import org.jfxcore.compiler.util.TypeHelper;
+import org.jfxcore.compiler.type.TypeDeclaration;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+
+import static org.jfxcore.compiler.type.KnownSymbols.*;
 
 /**
  * If an {@link ObjectNode} contains child nodes, this transform tries to look up the default
@@ -59,11 +57,10 @@ public class DefaultPropertyTransform implements Transform {
                 defaultProperty = null;
             }
         } else {
-            CtClass typeClass = ((ResolvedTypeNode)objectNode.getType()).getJvmType();
-            Annotation defaultPropertyAnnotation = new Resolver(
-                objectNode.getSourceInfo()).tryResolveClassAnnotation(typeClass, Classes.DefaultPropertyAnnotationName);
-            defaultProperty = defaultPropertyAnnotation != null ?
-                TypeHelper.getAnnotationString(defaultPropertyAnnotation, "value") : null;
+            TypeDeclaration typeClass = ((ResolvedTypeNode)objectNode.getType()).getTypeDeclaration();
+            defaultProperty = typeClass.annotation(DefaultPropertyAnnotationName)
+                .map(a -> a.getString("value"))
+                .orElse(null);
         }
 
         if (defaultProperty == null) {
@@ -94,5 +91,4 @@ public class DefaultPropertyTransform implements Transform {
 
         return objectNode;
     }
-
 }

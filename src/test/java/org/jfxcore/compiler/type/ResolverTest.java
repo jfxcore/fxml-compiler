@@ -1,23 +1,8 @@
-// Copyright (c) 2022, 2024, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
-package org.jfxcore.compiler.util;
+package org.jfxcore.compiler.type;
 
-import javassist.CtClass;
-import javassist.CtConstructor;
-import javassist.CtMethod;
-import org.jfxcore.compiler.TestBase;
-import org.jfxcore.compiler.diagnostic.ErrorCode;
-import org.jfxcore.compiler.diagnostic.MarkupException;
-import org.jfxcore.compiler.diagnostic.SourceInfo;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtensionContext;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.ArgumentsProvider;
-import org.junit.jupiter.params.provider.ArgumentsSource;
 import javafx.beans.property.ListProperty;
 import javafx.beans.property.ReadOnlyStringProperty;
 import javafx.beans.property.StringProperty;
@@ -28,6 +13,20 @@ import javafx.scene.control.Button;
 import javafx.scene.control.TableView;
 import javafx.scene.layout.Pane;
 import javafx.util.Pair;
+import org.jfxcore.compiler.TestBase;
+import org.jfxcore.compiler.diagnostic.ErrorCode;
+import org.jfxcore.compiler.diagnostic.MarkupException;
+import org.jfxcore.compiler.diagnostic.SourceInfo;
+import org.jfxcore.compiler.util.CompilationContext;
+import org.jfxcore.compiler.util.PropertyInfo;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtensionContext;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.ArgumentsProvider;
+import org.junit.jupiter.params.provider.ArgumentsSource;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -56,16 +55,16 @@ public class ResolverTest extends TestBase {
 
     @Test
     public void Resolve_Array_Types() {
-        assertEquals("java.lang.Double[]", resolver.resolveClassAgainstImports("Double[]").getName());
-        assertEquals("java.lang.Double[][]", resolver.resolveClassAgainstImports("Double[][]").getName());
-        assertEquals("java.lang.Double[][][]", resolver.resolveClassAgainstImports("Double[][][]").getName());
+        assertEquals("java.lang.Double[]", resolver.resolveClassAgainstImports("Double[]").name());
+        assertEquals("java.lang.Double[][]", resolver.resolveClassAgainstImports("Double[][]").name());
+        assertEquals("java.lang.Double[][][]", resolver.resolveClassAgainstImports("Double[][][]").name());
     }
 
     @Test
     public void Resolve_Generic_Array_Types() {
-        assertEquals("java.lang.Comparable[]", resolver.resolveClassAgainstImports("Comparable<Double>[]").getName());
-        assertEquals("java.lang.Comparable[][]", resolver.resolveClassAgainstImports("Comparable<Double>[][]").getName());
-        assertEquals("java.lang.Comparable[][][]", resolver.resolveClassAgainstImports("Comparable<Double>[][][]").getName());
+        assertEquals("java.lang.Comparable[]", resolver.resolveClassAgainstImports("Comparable<Double>[]").name());
+        assertEquals("java.lang.Comparable[][]", resolver.resolveClassAgainstImports("Comparable<Double>[][]").name());
+        assertEquals("java.lang.Comparable[][][]", resolver.resolveClassAgainstImports("Comparable<Double>[][][]").name());
     }
 
     public static class ArrayTest {
@@ -101,14 +100,14 @@ public class ResolverTest extends TestBase {
             List.of(ResolverTest.class.getName() + ".*", Foo.class.getName() + ".*", Foo.Bar.class.getName() + ".*"));
 
         assertEquals(
-            "org.jfxcore.compiler.util.ResolverTest$Foo",
-            resolver.resolveClassAgainstImports("Foo").getName());
+            "org.jfxcore.compiler.type.ResolverTest$Foo",
+            resolver.resolveClassAgainstImports("Foo").name());
         assertEquals(
-            "org.jfxcore.compiler.util.ResolverTest$Foo$Bar",
-            resolver.resolveClassAgainstImports("Bar").getName());
+            "org.jfxcore.compiler.type.ResolverTest$Foo$Bar",
+            resolver.resolveClassAgainstImports("Bar").name());
         assertEquals(
-            "org.jfxcore.compiler.util.ResolverTest$Foo$Bar$Baz",
-            resolver.resolveClassAgainstImports("Baz").getName());
+            "org.jfxcore.compiler.type.ResolverTest$Foo$Bar$Baz",
+            resolver.resolveClassAgainstImports("Baz").name());
     }
 
     @Test
@@ -117,21 +116,22 @@ public class ResolverTest extends TestBase {
             List.of(ResolverTest.class.getName() + ".*", Foo.class.getName() + ".*"));
 
         assertEquals(
-            "org.jfxcore.compiler.util.ResolverTest$Foo$Double",
-            resolver.resolveClassAgainstImports("Double").getName());
+            "org.jfxcore.compiler.type.ResolverTest$Foo$Double",
+            resolver.resolveClassAgainstImports("Double").name());
     }
 
     @Test
     public void Resolve_Class_With_JavaLang_SimpleName() {
-        assertEquals("java.lang.Double", resolver.resolveClassAgainstImports("Double").getName());
+        assertEquals("java.lang.Double", resolver.resolveClassAgainstImports("Double").name());
     }
 
     public static void nonGenericParamTypes(int a, String b, Comparable c) {}
     public static void genericParamTypes(int a, Comparable<String> b, ObservableValue<Comparable<String>> c, Comparable<?> d) {}
 
     @Test
-    public void GetParameterTypes_Of_NonGeneric_Method() throws Exception {
-        CtMethod method = resolver.resolveClass(ResolverTest.class.getName()).getDeclaredMethod("nonGenericParamTypes");
+    public void GetParameterTypes_Of_NonGeneric_Method() {
+        MethodDeclaration method = resolver.resolveClass(
+            ResolverTest.class.getName()).declaredMethods("nonGenericParamTypes").get(0);
         TypeInstance[] paramTypes = invoker.invokeParameterTypes(method, Collections.emptyList());
 
         assertEquals(3, paramTypes.length);
@@ -141,8 +141,9 @@ public class ResolverTest extends TestBase {
     }
 
     @Test
-    public void GetParameterTypes_Of_Generic_Method() throws Exception {
-        CtMethod method = resolver.resolveClass(ResolverTest.class.getName()).getDeclaredMethod("genericParamTypes");
+    public void GetParameterTypes_Of_Generic_Method() {
+        MethodDeclaration method = resolver.resolveClass(
+            ResolverTest.class.getName()).declaredMethods("genericParamTypes").get(0);
         TypeInstance[] paramTypes = invoker.invokeParameterTypes(method, Collections.emptyList());
 
         assertEquals(4, paramTypes.length);
@@ -162,7 +163,7 @@ public class ResolverTest extends TestBase {
 
     @Test
     public void GetParameterTypes_Of_NonGeneric_Constructor() {
-        CtConstructor ctor = resolver.resolveClass(ParamsTestClass.class.getName()).getDeclaredConstructors()[0];
+        ConstructorDeclaration ctor = resolver.resolveClass(ParamsTestClass.class.getName()).declaredConstructors().get(0);
         TypeInstance[] paramTypes = invoker.invokeParameterTypes(ctor, Collections.emptyList());
 
         assertEquals(3, paramTypes.length);
@@ -173,7 +174,7 @@ public class ResolverTest extends TestBase {
 
     @Test
     public void GetParameterTypes_Of_Generic_Constructor() {
-        CtConstructor ctor = resolver.resolveClass(GenericParamsTestClass.class.getName()).getDeclaredConstructors()[0];
+        ConstructorDeclaration ctor = resolver.resolveClass(GenericParamsTestClass.class.getName()).declaredConstructors().get(0);
         TypeInstance[] paramTypes = invoker.invokeParameterTypes(ctor, Collections.emptyList());
 
         assertEquals(4, paramTypes.length);
@@ -195,43 +196,43 @@ public class ResolverTest extends TestBase {
 
     @Test
     public void GetParameterTypes_Of_Generic_Constructor_With_RawUsage() {
-        CtClass clazz = resolver.resolveClass(GenericConstructorWithRawUsage.class.getName());
-        CtConstructor ctor = clazz.getDeclaredConstructors()[0];
+        TypeDeclaration clazz = resolver.resolveClass(GenericConstructorWithRawUsage.class.getName());
+        ConstructorDeclaration ctor = clazz.declaredConstructors().get(0);
         TypeInstance[] paramTypes = invoker.invokeParameterTypes(ctor, List.of(TypeInstance.of(clazz)));
 
         assertEquals(2, paramTypes.length);
         assertFalse(paramTypes[0].isRaw());
-        assertEquals("java.lang.String", paramTypes[0].getJavaName());
+        assertEquals("java.lang.String", paramTypes[0].javaName());
         assertTrue(paramTypes[1].isRaw());
-        assertEquals("java.lang.Comparable", paramTypes[1].getJavaName());
+        assertEquals("java.lang.Comparable", paramTypes[1].javaName());
     }
 
     @Test
     public void GetParameterTypes_Of_Generic_Varargs_Constructor_With_RawUsage() {
-        CtClass clazz = resolver.resolveClass(GenericConstructorWithRawUsage.class.getName());
-        CtConstructor ctor = clazz.getDeclaredConstructors()[1];
+        TypeDeclaration clazz = resolver.resolveClass(GenericConstructorWithRawUsage.class.getName());
+        ConstructorDeclaration ctor = clazz.declaredConstructors().get(1);
         TypeInstance[] paramTypes = invoker.invokeParameterTypes(ctor, List.of(TypeInstance.of(clazz)));
 
         assertEquals(2, paramTypes.length);
         assertFalse(paramTypes[0].isRaw());
-        assertEquals("java.lang.String", paramTypes[0].getJavaName());
+        assertEquals("java.lang.String", paramTypes[0].javaName());
         assertTrue(paramTypes[1].isRaw());
-        assertEquals("java.lang.Comparable[]", paramTypes[1].getJavaName());
+        assertEquals("java.lang.Comparable[]", paramTypes[1].javaName());
     }
 
     @Test
     public void GetParameterTypes_Of_LowerBound_Generic_Varargs_Constructor_With_RawUsage() {
-        CtClass clazz = resolver.resolveClass(GenericConstructorWithRawUsage.class.getName());
-        CtConstructor ctor = clazz.getDeclaredConstructors()[2];
+        TypeDeclaration clazz = resolver.resolveClass(GenericConstructorWithRawUsage.class.getName());
+        ConstructorDeclaration ctor = clazz.declaredConstructors().get(2);
         TypeInstance[] paramTypes = invoker.invokeParameterTypes(ctor, List.of(TypeInstance.of(clazz)));
 
         assertEquals(3, paramTypes.length);
         assertFalse(paramTypes[0].isRaw());
-        assertEquals("boolean", paramTypes[0].getJavaName());
+        assertEquals("boolean", paramTypes[0].javaName());
         assertFalse(paramTypes[1].isRaw());
-        assertEquals("java.lang.String", paramTypes[1].getJavaName());
+        assertEquals("java.lang.String", paramTypes[1].javaName());
         assertTrue(paramTypes[2].isRaw());
-        assertEquals("java.lang.Comparable[]", paramTypes[2].getJavaName());
+        assertEquals("java.lang.Comparable[]", paramTypes[2].javaName());
     }
 
     public static String nonGenericReturnType() { return null; }
@@ -240,34 +241,36 @@ public class ResolverTest extends TestBase {
     public static ObservableValue<Comparable<? extends String>> genericReturnTypeWithUpperBound() { return null; }
 
     @Test
-    public void GetReturnType_Of_NonGeneric_Method() throws Exception {
-        CtMethod method = resolver.resolveClass(ResolverTest.class.getName()).getDeclaredMethod("nonGenericReturnType");
+    public void GetReturnType_Of_NonGeneric_Method() {
+        MethodDeclaration method = resolver.resolveClass(
+            ResolverTest.class.getName()).requireDeclaredMethod("nonGenericReturnType");
         TypeInstance returnType = invoker.invokeReturnType(method, List.of());
 
         assertEquals("String", returnType.toString());
     }
 
     @Test
-    public void GetReturnType_Of_Generic_Method() throws Exception {
-        CtMethod method = resolver.resolveClass(ResolverTest.class.getName()).getDeclaredMethod("genericReturnType");
+    public void GetReturnType_Of_Generic_Method() {
+        MethodDeclaration method = resolver.resolveClass(
+            ResolverTest.class.getName()).requireDeclaredMethod("genericReturnType");
         TypeInstance returnType = invoker.invokeReturnType(method, List.of());
 
         assertEquals("ObservableValue<Comparable<String>>", returnType.toString());
     }
 
     @Test
-    public void GetReturnType_Of_Generic_Method_With_Lower_Bound() throws Exception {
-        CtMethod method = resolver.resolveClass(
-            ResolverTest.class.getName()).getDeclaredMethod("genericReturnTypeWithLowerBound");
+    public void GetReturnType_Of_Generic_Method_With_Lower_Bound() {
+        MethodDeclaration method = resolver.resolveClass(
+            ResolverTest.class.getName()).requireDeclaredMethod("genericReturnTypeWithLowerBound");
         TypeInstance returnType = invoker.invokeReturnType(method, List.of());
 
         assertEquals("ObservableValue<Comparable<? super String>>", returnType.toString());
     }
 
     @Test
-    public void GetReturnType_Of_Generic_Method_With_Upper_Bound() throws Exception {
-        CtMethod method = resolver.resolveClass(
-            ResolverTest.class.getName()).getDeclaredMethod("genericReturnTypeWithUpperBound");
+    public void GetReturnType_Of_Generic_Method_With_Upper_Bound() {
+        MethodDeclaration method = resolver.resolveClass(
+            ResolverTest.class.getName()).requireDeclaredMethod("genericReturnTypeWithUpperBound");
         TypeInstance returnType = invoker.invokeReturnType(method, List.of());
 
         assertEquals("ObservableValue<Comparable<? extends String>>", returnType.toString());
@@ -285,7 +288,8 @@ public class ResolverTest extends TestBase {
 
     @Test
     public void GetReturnType_Of_NonGeneric_Constructor() {
-        CtConstructor method = resolver.resolveClass(ReturnTypeTestClass.class.getName()).getDeclaredConstructors()[0];
+        ConstructorDeclaration method = resolver.resolveClass(
+            ReturnTypeTestClass.class.getName()).declaredConstructors().get(0);
         TypeInstance returnType = invoker.invokeReturnType(method, List.of());
 
         assertEquals("ResolverTest$ReturnTypeTestClass", returnType.toString());
@@ -293,16 +297,17 @@ public class ResolverTest extends TestBase {
 
     @Test
     public void GetReturnType_Of_Generic_Constructor() {
-        CtConstructor ctor = resolver.resolveClass(GenericReturnTypeTestClass.class.getName()).getConstructors()[0];
+        ConstructorDeclaration ctor = resolver.resolveClass(
+            GenericReturnTypeTestClass.class.getName()).constructors().get(0);
         TypeInstance returnType = invoker.invokeReturnType(ctor, List.of());
 
         assertEquals("ResolverTest$GenericReturnTypeTestClass", returnType.toString());
     }
 
     @Test
-    public void GetReturnType_Of_Generic_Method_With_Lower_Bound_Of_Type_Parameter() throws Exception {
-        CtClass clazz = resolver.resolveClass(GenericReturnTypeTestClass.class.getName());
-        CtMethod method = clazz.getDeclaredMethod("methodWithLowerBound");
+    public void GetReturnType_Of_Generic_Method_With_Lower_Bound_Of_Type_Parameter() {
+        TypeDeclaration clazz = resolver.resolveClass(GenericReturnTypeTestClass.class.getName());
+        MethodDeclaration method = clazz.requireDeclaredMethod("methodWithLowerBound");
         TypeInstance classTypeInst = invoker.invokeType(clazz, List.of(TypeInstance.StringType()));
         TypeInstance returnType = invoker.invokeReturnType(method, List.of(classTypeInst));
 
@@ -310,9 +315,9 @@ public class ResolverTest extends TestBase {
     }
 
     @Test
-    public void GetReturnType_Of_Generic_Method_With_Upper_Bound_Of_Type_Parameter() throws Exception {
-        CtClass clazz = resolver.resolveClass(GenericReturnTypeTestClass.class.getName());
-        CtMethod method = clazz.getDeclaredMethod("methodWithUpperBound");
+    public void GetReturnType_Of_Generic_Method_With_Upper_Bound_Of_Type_Parameter() {
+        TypeDeclaration clazz = resolver.resolveClass(GenericReturnTypeTestClass.class.getName());
+        MethodDeclaration method = clazz.requireDeclaredMethod("methodWithUpperBound");
         TypeInstance classTypeInst = invoker.invokeType(clazz, List.of(TypeInstance.StringType()));
         TypeInstance returnType = invoker.invokeReturnType(method, List.of(classTypeInst));
 
@@ -686,5 +691,4 @@ public class ResolverTest extends TestBase {
         assertNotNull(property.getGetter());
         assertNull(property.getSetter());
     }
-
 }

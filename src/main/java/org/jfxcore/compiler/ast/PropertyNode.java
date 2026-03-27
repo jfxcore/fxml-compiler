@@ -1,14 +1,14 @@
-// Copyright (c) 2022, 2025, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast;
 
-import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.ast.intrinsic.Intrinsic;
 import org.jfxcore.compiler.ast.text.TextNode;
+import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.diagnostic.errors.PropertyAssignmentErrors;
 import org.jfxcore.compiler.transform.TransformContext;
-import javassist.CtClass;
+import org.jfxcore.compiler.type.TypeDeclaration;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -80,8 +80,8 @@ public class PropertyNode extends AbstractNode {
     }
 
     public Node getSingleValue(TransformContext context) {
-        if (values.size() == 0) {
-            CtClass declaringType = tryGetJvmType(context.getParent(this));
+        if (values.isEmpty()) {
+            TypeDeclaration declaringType = tryGetTypeDeclaration(context.getParent(this));
             String propertyName = intrinsic ? markupName : name;
             throw declaringType != null
                 ? PropertyAssignmentErrors.propertyCannotBeEmpty(getSourceInfo(), declaringType, propertyName)
@@ -89,7 +89,7 @@ public class PropertyNode extends AbstractNode {
         }
 
         if (values.size() > 1) {
-            CtClass declaringType = tryGetJvmType(context.getParent(this));
+            TypeDeclaration declaringType = tryGetTypeDeclaration(context.getParent(this));
             String propertyName = intrinsic ? markupName : name;
             throw declaringType != null
                 ? PropertyAssignmentErrors.propertyCannotHaveMultipleValues(getSourceInfo(), declaringType, propertyName)
@@ -102,7 +102,7 @@ public class PropertyNode extends AbstractNode {
     public String getTrimmedTextNotEmpty(TransformContext context) {
         String text = getTextNode(context).getText();
         if (text.isBlank()) {
-            CtClass declaringType = tryGetJvmType(context.getParent(this));
+            TypeDeclaration declaringType = tryGetTypeDeclaration(context.getParent(this));
             String propertyName = intrinsic ? markupName : name;
             throw declaringType != null
                 ? PropertyAssignmentErrors.propertyCannotBeEmpty(getSourceInfo(), declaringType, propertyName)
@@ -124,7 +124,7 @@ public class PropertyNode extends AbstractNode {
             if (parent.getType().isIntrinsic()) {
                 parentName = parent.getType().getMarkupName();
             } else if (parent.getType() instanceof ResolvedTypeNode resolvedTypeNode) {
-                parentName = resolvedTypeNode.getJvmType().getSimpleName();
+                parentName = resolvedTypeNode.getTypeDeclaration().simpleName();
             } else {
                 parentName = null;
             }
@@ -141,10 +141,10 @@ public class PropertyNode extends AbstractNode {
         return (TextNode)values.get(0);
     }
 
-    private CtClass tryGetJvmType(Node node) {
+    private TypeDeclaration tryGetTypeDeclaration(Node node) {
         if (node instanceof ValueNode valueNode
                 && valueNode.getType() instanceof ResolvedTypeNode resolvedTypeNode) {
-            return resolvedTypeNode.getJvmType();
+            return resolvedTypeNode.getTypeDeclaration();
         }
 
         return null;
@@ -183,5 +183,4 @@ public class PropertyNode extends AbstractNode {
     public PropertyNode deepClone() {
         return new PropertyNode(names, markupName, deepClone(values), intrinsic, allowQualifiedName, getSourceInfo());
     }
-
 }

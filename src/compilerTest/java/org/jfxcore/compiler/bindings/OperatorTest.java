@@ -5,12 +5,11 @@ package org.jfxcore.compiler.bindings;
 
 import org.jfxcore.compiler.diagnostic.ErrorCode;
 import org.jfxcore.compiler.diagnostic.MarkupException;
-import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.util.CompilationContext;
 import org.jfxcore.compiler.util.CompilerTestBase;
-import org.jfxcore.compiler.util.InverseMethod;
 import org.jfxcore.compiler.util.NameHelper;
 import org.jfxcore.compiler.util.TestExtension;
+import org.jfxcore.markup.InverseMethod;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -29,7 +28,6 @@ import javafx.beans.value.ObservableLongValue;
 import javafx.beans.value.ObservableValue;
 import javafx.scene.layout.Pane;
 
-import static org.jfxcore.compiler.util.ExceptionHelper.*;
 import static org.jfxcore.compiler.util.MoreAssertions.*;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -80,7 +78,7 @@ public class OperatorTest extends CompilerTestBase {
     public enum ImplType {
         UNIDIRECTIONAL_LOCAL((testBase, root, type, invert) ->
             testBase.assertNewExpr(root, ctors -> ctors.stream().anyMatch(
-                ctor -> ctor.getName().endsWith(getMangledClassName(type, invert))))),
+                ctor -> ctor.name().endsWith(getMangledClassName(type, invert))))),
 
         UNIDIRECTIONAL_LIBRARY((testBase, root, type, invert) -> {
             Class<?> argType = getArgClass(type);
@@ -95,21 +93,21 @@ public class OperatorTest extends CompilerTestBase {
             }
 
             testBase.assertMethodCall(root, methods -> methods.stream().anyMatch(method ->
-                methodName.equals(method.getName())
-                && "BooleanBindings".equals(method.getDeclaringClass().getSimpleName())
-                && argType.getSimpleName().equals(unchecked(SourceInfo.none(), method::getParameterTypes)[0].getSimpleName())));
+                methodName.equals(method.name())
+                && "BooleanBindings".equals(method.declaringType().simpleName())
+                && argType.getSimpleName().equals(method.parameters().get(0).type().simpleName())));
         }),
 
         BIDIRECTIONAL_INVERSE_LOCAL((testBase, root, type, invert) ->
             testBase.assertMethodCall(root, methods -> methods.stream().anyMatch(method ->
-                "bindBidirectional".equals(method.getName())
-                && method.getDeclaringClass().getSimpleName().endsWith("InvertBooleanBinding")
+                "bindBidirectional".equals(method.name())
+                && method.declaringType().simpleName().endsWith("InvertBooleanBinding")
             ))),
 
         BIDIRECTIONAL_INVERSE_LIBRARY((testBase, root, type, invert) ->
             testBase.assertMethodCall(root, methods -> methods.stream().anyMatch(method ->
-                "bindBidirectionalComplement".equals(method.getName())
-                && "BooleanBindings".equals(method.getDeclaringClass().getSimpleName())
+                "bindBidirectionalComplement".equals(method.name())
+                && "BooleanBindings".equals(method.declaringType().simpleName())
             )));
 
         ImplType(ImplTest implTest) {
@@ -261,7 +259,7 @@ public class OperatorTest extends CompilerTestBase {
         root.booleanProp.set(true);
         assertTrue(root.isVisible());
 
-        assertNewExpr(root, ctors -> ctors.stream().noneMatch(ctor -> ctor.getName().endsWith("ToBoolean")));
+        assertNewExpr(root, ctors -> ctors.stream().noneMatch(ctor -> ctor.name().endsWith("ToBoolean")));
     }
 
     @ParameterizedTest

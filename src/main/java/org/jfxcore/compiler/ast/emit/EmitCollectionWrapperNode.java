@@ -1,30 +1,28 @@
-// Copyright (c) 2021, 2025, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.emit;
 
-import javassist.CtClass;
-import javassist.bytecode.MethodInfo;
 import org.jetbrains.annotations.Nullable;
 import org.jfxcore.compiler.ast.AbstractNode;
 import org.jfxcore.compiler.ast.GeneratorEmitterNode;
-import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.ast.ResolvedTypeNode;
 import org.jfxcore.compiler.ast.Visitor;
+import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.generate.ClassGenerator;
 import org.jfxcore.compiler.generate.Generator;
 import org.jfxcore.compiler.generate.collections.ListObservableValueWrapperGenerator;
 import org.jfxcore.compiler.generate.collections.MapObservableValueWrapperGenerator;
 import org.jfxcore.compiler.generate.collections.SetObservableValueWrapperGenerator;
+import org.jfxcore.compiler.type.TypeDeclaration;
+import org.jfxcore.compiler.type.TypeInstance;
+import org.jfxcore.compiler.type.TypeInvoker;
 import org.jfxcore.compiler.util.Bytecode;
 import org.jfxcore.compiler.util.Local;
-import org.jfxcore.compiler.util.TypeInstance;
-import org.jfxcore.compiler.util.TypeInvoker;
 import java.util.List;
 import java.util.Objects;
 
-import static org.jfxcore.compiler.util.Classes.*;
-import static org.jfxcore.compiler.util.Descriptors.*;
+import static org.jfxcore.compiler.type.KnownSymbols.*;
 
 /**
  * {@link EmitCollectionWrapperNode} wraps an {@code ObservableValue<ObservableList<T>>} into an
@@ -52,14 +50,14 @@ public class EmitCollectionWrapperNode extends AbstractNode
         TypeInstance type;
         TypeInvoker invoker = new TypeInvoker(SourceInfo.none());
 
-        if (sourceValueType.subtypeOf(ObservableListType())) {
-            type = invoker.invokeType(ObservableListType(), sourceValueType.getArguments());
+        if (sourceValueType.subtypeOf(ObservableListDecl())) {
+            type = invoker.invokeType(ObservableListDecl(), sourceValueType.arguments());
             wrapperGenerator = new ListObservableValueWrapperGenerator();
-        } else if (sourceValueType.subtypeOf(ObservableSetType())) {
-            type = invoker.invokeType(ObservableSetType(), sourceValueType.getArguments());
+        } else if (sourceValueType.subtypeOf(ObservableSetDecl())) {
+            type = invoker.invokeType(ObservableSetDecl(), sourceValueType.arguments());
             wrapperGenerator = new SetObservableValueWrapperGenerator();
-        } else if (sourceValueType.subtypeOf(ObservableMapType())) {
-            type = invoker.invokeType(ObservableMapType(), sourceValueType.getArguments());
+        } else if (sourceValueType.subtypeOf(ObservableMapDecl())) {
+            type = invoker.invokeType(ObservableMapDecl(), sourceValueType.arguments());
             wrapperGenerator = new MapObservableValueWrapperGenerator();
         } else {
             throw new IllegalArgumentException("valueType");
@@ -88,7 +86,7 @@ public class EmitCollectionWrapperNode extends AbstractNode
         Bytecode code = context.getOutput();
         context.emit(child);
 
-        CtClass generatedClass = context.getNestedClasses().find(wrapperGenerator.getClassName());
+        TypeDeclaration generatedClass = context.getNestedClasses().find(wrapperGenerator.getClassName());
         Local local = code.acquireLocal(false);
 
         code.astore(local)
@@ -96,8 +94,7 @@ public class EmitCollectionWrapperNode extends AbstractNode
             .dup()
             .aload(0)
             .aload(local)
-            .invokespecial(generatedClass, MethodInfo.nameInit,
-                           constructor(context.getMarkupClass(), ObservableValueType()))
+            .invoke(generatedClass.requireConstructor(context.getMarkupClass(), ObservableValueDecl()))
             .releaseLocal(local);
     }
 

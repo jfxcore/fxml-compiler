@@ -1,19 +1,20 @@
-// Copyright (c) 2021, 2025, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.expression;
 
-import javassist.CtClass;
+import org.jetbrains.annotations.Nullable;
 import org.jfxcore.compiler.ast.emit.ValueEmitterNode;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
-import org.jfxcore.compiler.util.TypeInstance;
+import org.jfxcore.compiler.type.TypeDeclaration;
+import org.jfxcore.compiler.type.TypeInstance;
 
 public class BindingEmitterInfo {
 
     private final ValueEmitterNode value;
     private final TypeInstance valueType;
     private final TypeInstance observableType;
-    private final CtClass sourceDeclaringType;
+    private final TypeDeclaration sourceDeclaringType;
     private final String sourceName;
     private final boolean function;
     private final boolean compiledPath;
@@ -23,7 +24,7 @@ public class BindingEmitterInfo {
             ValueEmitterNode value,
             TypeInstance valueType,
             TypeInstance observableType,
-            CtClass sourceDeclaringType,
+            @Nullable TypeDeclaration sourceDeclaringType,
             String sourceName,
             boolean function,
             boolean compiledPath,
@@ -54,7 +55,7 @@ public class BindingEmitterInfo {
         return observableType;
     }
 
-    public CtClass getSourceDeclaringType() {
+    public @Nullable TypeDeclaration getSourceDeclaringType() {
         return sourceDeclaringType;
     }
 

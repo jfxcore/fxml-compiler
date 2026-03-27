@@ -1,4 +1,4 @@
-// Copyright (c) 2022, 2025, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.transform.markup;
@@ -11,7 +11,7 @@ import org.jfxcore.compiler.ast.intrinsic.Intrinsics;
 import org.jfxcore.compiler.diagnostic.errors.GeneralErrors;
 import org.jfxcore.compiler.transform.Transform;
 import org.jfxcore.compiler.transform.TransformContext;
-import org.jfxcore.compiler.util.TypeInstance;
+import org.jfxcore.compiler.type.TypeInstance;
 
 /**
  * Transforms the fx:null intrinsic into a null literal.

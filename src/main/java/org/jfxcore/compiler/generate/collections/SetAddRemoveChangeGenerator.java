@@ -1,25 +1,20 @@
-// Copyright (c) 2023, 2025, JFXcore. All rights reserved.
+// Copyright (c) 2023, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.generate.collections;
 
-import javassist.CtClass;
-import javassist.CtConstructor;
-import javassist.CtField;
-import javassist.CtMethod;
-import javassist.Modifier;
-import javassist.bytecode.MethodInfo;
 import org.jfxcore.compiler.ast.emit.BytecodeEmitContext;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.generate.ClassGenerator;
+import org.jfxcore.compiler.type.ConstructorDeclaration;
+import org.jfxcore.compiler.type.TypeDeclaration;
+import org.jfxcore.compiler.type.TypeInstance;
+import org.jfxcore.compiler.type.TypeInvoker;
 import org.jfxcore.compiler.util.NameHelper;
-import org.jfxcore.compiler.util.TypeInstance;
-import org.jfxcore.compiler.util.TypeInvoker;
+import java.lang.reflect.Modifier;
 
-import static javassist.CtClass.*;
 import static org.jfxcore.compiler.generate.SharedMethodImpls.*;
-import static org.jfxcore.compiler.util.Classes.*;
-import static org.jfxcore.compiler.util.Descriptors.*;
+import static org.jfxcore.compiler.type.KnownSymbols.*;
 
 public class SetAddRemoveChangeGenerator extends ClassGenerator {
 
@@ -29,7 +24,7 @@ public class SetAddRemoveChangeGenerator extends ClassGenerator {
     private static final String VALUE_FIELD = "value";
     private static final String WAS_ADDED_FIELD = "added";
 
-    private CtConstructor constructor;
+    private ConstructorDeclaration constructor;
 
     @Override
     public String getClassName() {
@@ -38,99 +33,87 @@ public class SetAddRemoveChangeGenerator extends ClassGenerator {
 
     @Override
     public TypeInstance getTypeInstance() {
-        return new TypeInvoker(SourceInfo.none()).invokeType(SetChangeListenerChangeType());
+        return new TypeInvoker(SourceInfo.none()).invokeType(SetChangeListenerChangeDecl());
     }
 
     @Override
-    public void emitClass(BytecodeEmitContext context) throws Exception {
-        generatedClass = context.getNestedClasses().create(getClassName());
-        generatedClass.setModifiers(Modifier.PRIVATE | Modifier.FINAL);
-        generatedClass.setSuperclass(SetChangeListenerChangeType());
+    public TypeDeclaration emitClass(BytecodeEmitContext context) {
+        return super.emitClass(context)
+            .setModifiers(Modifier.PRIVATE | Modifier.FINAL)
+            .setSuperClass(SetChangeListenerChangeDecl());
     }
 
     @Override
-    public void emitFields(BytecodeEmitContext context) throws Exception {
-        CtField field = new CtField(ObjectType(), VALUE_FIELD, generatedClass);
-        field.setModifiers(Modifier.PRIVATE);
-        generatedClass.addField(field);
-
-        field = new CtField(booleanType, WAS_ADDED_FIELD, generatedClass);
-        field.setModifiers(Modifier.PRIVATE);
-        generatedClass.addField(field);
+    public void emitFields(BytecodeEmitContext context) {
+        generatedClass.createField(VALUE_FIELD, ObjectDecl()).setModifiers(Modifier.PRIVATE);
+        generatedClass.createField(WAS_ADDED_FIELD, booleanDecl()).setModifiers(Modifier.PRIVATE);
     }
 
     @Override
-    public void emitMethods(BytecodeEmitContext context) throws Exception {
+    public void emitMethods(BytecodeEmitContext context) {
         super.emitMethods(context);
 
-        constructor = new CtConstructor( new CtClass[] {ObservableSetType()}, generatedClass);
+        constructor = createConstructor(ObservableSetDecl());
     }
 
     @Override
-    public void emitCode(BytecodeEmitContext context) throws Exception {
-        super.emitCode(context);
-
-        emitConstructor(context, constructor);
+    public void emitCode(BytecodeEmitContext context) {
+        emitConstructor(constructor);
 
         createBehavior(
-            context, generatedClass,
-            new CtMethod(voidType, INIT_METHOD_NAME, new CtClass[] {ObjectType(), booleanType}, generatedClass), 3, code -> code
+            createMethod(INIT_METHOD_NAME, voidDecl(), ObjectDecl(), booleanDecl()), code -> code
                 .aload(0)
                 .aload(1)
-                .putfield(generatedClass, VALUE_FIELD, ObjectType())
+                .putfield(requireDeclaredField(VALUE_FIELD))
                 .aload(0)
                 .iload(2)
-                .putfield(generatedClass, WAS_ADDED_FIELD, booleanType)
+                .putfield(requireDeclaredField(WAS_ADDED_FIELD))
                 .vreturn());
 
         createBehavior(
-            context, generatedClass,
-            new CtMethod(booleanType, "wasAdded", new CtClass[0], generatedClass), 1, code -> code
+            createMethod("wasAdded", booleanDecl()), code -> code
                 .aload(0)
-                .getfield(generatedClass, WAS_ADDED_FIELD, booleanType)
+                .getfield(requireDeclaredField(WAS_ADDED_FIELD))
                 .ireturn());
 
         createBehavior(
-            context, generatedClass,
-            new CtMethod(booleanType, "wasRemoved", new CtClass[0], generatedClass), 1, code -> code
+            createMethod("wasRemoved", booleanDecl()), code -> code
                 .aload(0)
-                .getfield(generatedClass, WAS_ADDED_FIELD, booleanType)
+                .getfield(requireDeclaredField(WAS_ADDED_FIELD))
                 .iconst(1)
                 .ixor()
                 .ireturn());
 
         createBehavior(
-            context, generatedClass,
-            new CtMethod(ObjectType(), "getElementAdded", new CtClass[0], generatedClass), 1, code -> code
+            createMethod("getElementAdded", ObjectDecl()), code -> code
                 .aload(0)
-                .getfield(generatedClass, WAS_ADDED_FIELD, booleanType)
+                .getfield(requireDeclaredField(WAS_ADDED_FIELD))
                 .ifeq(
                     code::aconst_null,
                     () -> code
                         .aload(0)
-                        .getfield(generatedClass, VALUE_FIELD, ObjectType()))
+                        .getfield(requireDeclaredField(VALUE_FIELD)))
                 .areturn());
 
         createBehavior(
-            context, generatedClass,
-            new CtMethod(ObjectType(), "getElementRemoved", new CtClass[0], generatedClass), 1, code -> code
+            createMethod("getElementRemoved", ObjectDecl()), code -> code
                 .aload(0)
-                .getfield(generatedClass, WAS_ADDED_FIELD, booleanType)
+                .getfield(requireDeclaredField(WAS_ADDED_FIELD))
                 .iconst(1)
                 .ixor()
                 .ifeq(
                     code::aconst_null,
                     () -> code
                         .aload(0)
-                        .getfield(generatedClass, VALUE_FIELD, ObjectType()))
+                        .getfield(requireDeclaredField(VALUE_FIELD)))
                 .areturn());
     }
 
-    private void emitConstructor(BytecodeEmitContext parentContext, CtConstructor constructor) throws Exception {
-        createBehavior(parentContext, generatedClass, constructor, 2, code -> code
+    private void emitConstructor(ConstructorDeclaration constructor) {
+        createBehavior(constructor, code -> code
             .aload(0)
             .aload(1)
-            .invokespecial(generatedClass.getSuperclass(), MethodInfo.nameInit, constructor(ObservableSetType()))
+            .invoke(requireSuperClass().requireConstructor(ObservableSetDecl()))
             .vreturn());
     }
 }

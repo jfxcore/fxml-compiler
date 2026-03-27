@@ -1,55 +1,48 @@
-// Copyright (c) 2022, 2025, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.util;
 
-import javassist.CtBehavior;
-import javassist.CtClass;
-import javassist.CtConstructor;
-import javassist.CtMethod;
-import javassist.Modifier;
 import org.jetbrains.annotations.Nullable;
 import org.jfxcore.compiler.diagnostic.Diagnostic;
 import org.jfxcore.compiler.diagnostic.DiagnosticInfo;
 import org.jfxcore.compiler.diagnostic.ErrorCode;
 import org.jfxcore.compiler.diagnostic.MarkupException;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
+import org.jfxcore.compiler.type.BehaviorDeclaration;
+import org.jfxcore.compiler.type.ConstructorDeclaration;
+import org.jfxcore.compiler.type.MethodDeclaration;
+import org.jfxcore.compiler.type.TypeDeclaration;
+import org.jfxcore.compiler.type.TypeInstance;
+import org.jfxcore.compiler.type.TypeInvoker;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
-import static org.jfxcore.compiler.util.ExceptionHelper.unchecked;
-import static org.jfxcore.compiler.util.TypeInstance.*;
-import static org.jfxcore.compiler.util.TypeInstance.AssignmentContext.*;
+import static org.jfxcore.compiler.type.TypeInstance.*;
+import static org.jfxcore.compiler.type.TypeInstance.AssignmentContext.*;
+import static org.jfxcore.compiler.type.KnownSymbols.*;
 
 public class MethodFinder {
 
     private final TypeInstance invokingType;
-    private final CtClass declaringType;
-    private final Map<CtBehavior, TypeInstance[]> parameterCache = new HashMap<>();
+    private final TypeDeclaration declaringType;
+    private final Map<BehaviorDeclaration, TypeInstance[]> parameterCache = new HashMap<>();
 
-    public MethodFinder(TypeInstance invokingType, CtClass declaringType){
+    public MethodFinder(TypeInstance invokingType, TypeDeclaration declaringType) {
         this.invokingType = invokingType;
         this.declaringType = declaringType;
     }
 
-    public List<CtMethod> findOverloadedMethods(String methodName) {
-        return Arrays.stream(declaringType.getMethods())
-            .filter(method -> method.getName().equals(methodName))
-            .collect(Collectors.toList());
-    }
-
-    public @Nullable CtConstructor findConstructor(
+    public @Nullable ConstructorDeclaration findConstructor(
             List<TypeInstance> typeWitnesses,
             List<TypeInstance> argumentTypes,
             List<SourceInfo> argumentSourceInfo,
             @Nullable List<DiagnosticInfo> diagnostics,
             SourceInfo sourceInfo) {
         return resolveOverloadedMethod(
-            List.of(declaringType.getConstructors()),
+            declaringType.constructors(),
             false,
             null,
             typeWitnesses,
@@ -59,7 +52,7 @@ public class MethodFinder {
             sourceInfo);
     }
 
-    public @Nullable CtMethod findMethod(
+    public @Nullable MethodDeclaration findMethod(
             String methodName,
             boolean staticInvocation,
             @Nullable TypeInstance returnType,
@@ -69,7 +62,7 @@ public class MethodFinder {
             @Nullable List<DiagnosticInfo> diagnostics,
             SourceInfo sourceInfo) {
         return resolveOverloadedMethod(
-            findOverloadedMethods(methodName),
+            declaringType.methods(methodName),
             staticInvocation,
             returnType,
             typeWitnesses,
@@ -79,7 +72,7 @@ public class MethodFinder {
             sourceInfo);
     }
 
-    private <T extends CtBehavior> T resolveOverloadedMethod(
+    private <T extends BehaviorDeclaration> T resolveOverloadedMethod(
             List<T> methods,
             boolean staticInvocation,
             @Nullable TypeInstance returnType,
@@ -119,17 +112,17 @@ public class MethodFinder {
      * If a method matches by name but is not applicable, a diagnostic is generated.
      */
     private boolean evaluateApplicability(
-            CtBehavior method,
+            BehaviorDeclaration method,
             InvocationContext context,
             @Nullable List<DiagnosticInfo> diagnostics,
             SourceInfo sourceInfo) {
         try {
-            if (!Modifier.isStatic(method.getModifiers()) && context.staticInvocation()) {
+            if (!method.isStatic() && context.staticInvocation()) {
                 if (diagnostics != null) {
                     diagnostics.add(new DiagnosticInfo(
                         Diagnostic.newDiagnostic(
                             ErrorCode.METHOD_NOT_STATIC,
-                            NameHelper.getLongMethodSignature(method)),
+                            method.displaySignature(false, false)),
                         sourceInfo));
                 }
 
@@ -140,14 +133,14 @@ public class MethodFinder {
             TypeInstance[] paramTypes = invoker.invokeParameterTypes(method, List.of(invokingType), context.typeWitnesses());
             int numParams = paramTypes.length;
             int numArgs = context.arguments().size();
-            boolean isVarArgs = context.allowVarargInvocation() && Modifier.isVarArgs(method.getModifiers());
+            boolean isVarArgs = context.allowVarargInvocation() && method.isVarArgs();
 
-            if (numParams > numArgs || (numParams < numArgs && !isVarArgs)) {
+            if (((numParams > numArgs) && !(isVarArgs && numParams == 1)) || (numParams < numArgs && !isVarArgs)) {
                 if (diagnostics != null) {
                     diagnostics.add(new DiagnosticInfo(
                         Diagnostic.newDiagnostic(
                             ErrorCode.NUM_FUNCTION_ARGUMENTS_MISMATCH,
-                            NameHelper.getLongMethodSignature(method), numParams, numArgs),
+                            method.displaySignature(false, false), numParams, numArgs),
                         sourceInfo));
                 }
 
@@ -155,6 +148,10 @@ public class MethodFinder {
             }
 
             for (int i = 0; i < numParams; ++i) {
+                if (isVarArgs && numArgs == 0) {
+                    break;
+                }
+
                 SourceInfo argSourceInfo = context.argumentSourceInfo().get(i);
                 TypeInstance argumentType = context.arguments().get(i);
                 TypeInstance parameterType = paramTypes[i];
@@ -165,11 +162,11 @@ public class MethodFinder {
                     if (i < numParams - 1 || !isVarArgs) {
                         valid = false;
                     } else {
-                        TypeInstance componentType = TypeHelper.tryGetArrayComponentType(method, i);
-
-                        if (componentType == null) {
+                        if (!paramTypes[i].isArray()) {
                             valid = false;
                         } else {
+                            TypeInstance componentType = paramTypes[i].componentType();
+
                             for (int j = i; j < numArgs; ++j) {
                                 if (!componentType.isAssignableFrom(
                                         context.arguments().get(j), context.assignmentContext())) {
@@ -182,19 +179,18 @@ public class MethodFinder {
 
                     if (!valid) {
                         if (diagnostics != null) {
-                            int argIndex = i;
-                            String argName = argumentType.getJavaName();
-                            CtClass paramType = unchecked(argSourceInfo, () -> method.getParameterTypes()[argIndex]);
+                            String argName = argumentType.javaName();
+                            TypeDeclaration paramType = method.parameters().get(i).type();
 
                             if (parameterType.equals(paramType)) {
                                 diagnostics.add(new DiagnosticInfo(Diagnostic.newDiagnostic(
                                     ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT,
-                                    NameHelper.getLongMethodSignature(method), argIndex + 1, argName), argSourceInfo));
+                                    method.displaySignature(false, false), i + 1, argName), argSourceInfo));
                             } else {
                                 diagnostics.add(new DiagnosticInfo(Diagnostic.newDiagnosticVariant(
                                     ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT, "expected",
-                                    NameHelper.getLongMethodSignature(method), argIndex + 1, argName,
-                                    parameterType.getJavaName()), argSourceInfo));
+                                    method.displaySignature(false, false), i + 1, argName,
+                                    parameterType.javaName()), argSourceInfo));
                             }
                         }
 
@@ -210,7 +206,8 @@ public class MethodFinder {
                         diagnostics.add(new DiagnosticInfo(
                             Diagnostic.newDiagnostic(
                                 ErrorCode.INCOMPATIBLE_RETURN_VALUE,
-                                NameHelper.getLongMethodSignature(method), context.returnType().getJavaName()),
+                                method.displaySignature(false, false),
+                                context.returnType().javaName()),
                             sourceInfo));
                     }
 
@@ -236,7 +233,7 @@ public class MethodFinder {
      * It is possible that a set of applicable methods contains more than one maximally specific method; in this
      * case the method call is ambiguous.
      */
-    private <T extends CtBehavior> T findMostSpecificMethod(
+    private <T extends BehaviorDeclaration> T findMostSpecificMethod(
             List<T> methods, List<TypeInstance> argumentTypes, List<DiagnosticInfo> diagnostics, SourceInfo sourceInfo) {
         List<T> maximallySpecificMethods = new ArrayList<>();
 
@@ -268,8 +265,8 @@ public class MethodFinder {
             diagnostics.clear();
             diagnostics.add(new DiagnosticInfo(Diagnostic.newDiagnosticCauses(
                 ErrorCode.AMBIGUOUS_METHOD_CALL,
-                maximallySpecificMethods.stream().map(CtBehavior::getLongName).toArray(String[]::new),
-                methods.get(0).getName()), sourceInfo));
+                maximallySpecificMethods.stream().map(BehaviorDeclaration::longName).toArray(String[]::new),
+                methods.get(0).name()), sourceInfo));
         }
 
         return null;
@@ -280,7 +277,7 @@ public class MethodFinder {
      *   1. there is at least one pair (a1_i, a2_i) for which a1_i is more specific than a2_i, and
      *   2. there is no pair (a1_i, a2_i) for which a2_i is more specific than a1_i.
      */
-    private boolean isMethodMoreSpecific(CtBehavior m1, CtBehavior m2, List<TypeInstance> argumentTypes) {
+    private boolean isMethodMoreSpecific(BehaviorDeclaration m1, BehaviorDeclaration m2, List<TypeInstance> argumentTypes) {
         TypeInvoker invoker = new TypeInvoker(SourceInfo.none());
 
         TypeInstance[] params1 = parameterCache.get(m1);
@@ -305,10 +302,10 @@ public class MethodFinder {
             }
 
             TypeInstance m1Type = params1[i].isAssignableFrom(argumentTypes.get(i)) ?
-                params1[i] : TypeHelper.tryGetArrayComponentType(m1, i);
+                params1[i] : (params1[i].isArray() ? params1[i].componentType() : null);
 
             TypeInstance m2Type = params2[i].isAssignableFrom(argumentTypes.get(i)) ?
-                params2[i] : TypeHelper.tryGetArrayComponentType(m2, i);
+                params2[i] : (params2[i].isArray() ? params2[i].componentType() : null);
 
             if (m1Type == null || m2Type == null) {
                 return false;
@@ -348,45 +345,48 @@ public class MethodFinder {
             return false;
         }
 
-        if (TypeHelper.isIntegralPrimitive(e.jvmType())) {
-            if (TypeHelper.isIntegralPrimitive(t1.jvmType())) {
-                if (!TypeHelper.isIntegralPrimitive(t2.jvmType())) {
+        if (e.declaration().isIntegralPrimitive()) {
+            if (t1.declaration().isIntegralPrimitive()) {
+                if (!t2.declaration().isIntegralPrimitive()) {
                     return true;
                 }
 
-                return maxWideningConversions(e.jvmType(), t1.jvmType()) < maxWideningConversions(e.jvmType(), t2.jvmType());
-            } else if (t1.jvmType() == CtClass.floatType && t2.jvmType() == CtClass.doubleType) {
+                return maxWideningConversions(e, t1) < maxWideningConversions(e, t2);
+            } else if (t1.equals(floatDecl()) && t2.equals(doubleDecl())) {
                 return true;
             }
         }
 
-        if (TypeHelper.isFPPrimitive(e.jvmType()) && TypeHelper.isFPPrimitive(t1.jvmType())) {
-            if (!TypeHelper.isFPPrimitive(t2.jvmType())) {
+        if (e.declaration().isFloatingPointPrimitive() && t1.declaration().isFloatingPointPrimitive()) {
+            if (!t2.declaration().isFloatingPointPrimitive()) {
                 return true;
             }
 
-            return maxWideningConversions(e.jvmType(), t1.jvmType()) < maxWideningConversions(e.jvmType(), t2.jvmType());
+            return maxWideningConversions(e, t1) < maxWideningConversions(e, t2);
         }
 
         return false;
     }
 
-    private int maxWideningConversions(CtClass from, CtClass to) {
-        if (to == CtClass.longType) {
-            if (from == CtClass.intType) return 1;
-            if (from == CtClass.shortType) return 2;
-            if (from == CtClass.charType) return 3;
-            if (from == CtClass.byteType) return 3;
-        } else if (to == CtClass.intType) {
-            if (from == CtClass.shortType) return 1;
-            if (from == CtClass.charType) return 2;
-            if (from == CtClass.byteType) return 2;
+    private int maxWideningConversions(TypeInstance from, TypeInstance to) {
+        TypeDeclaration fromType = from.declaration();
+        TypeDeclaration toType = to.declaration();
+
+        if (toType.equals(longDecl())) {
+            if (fromType.equals(intDecl())) return 1;
+            if (fromType.equals(shortDecl())) return 2;
+            if (fromType.equals(charDecl())) return 3;
+            if (fromType.equals(byteDecl())) return 3;
+        } else if (toType.equals(intDecl())) {
+            if (fromType.equals(shortDecl())) return 1;
+            if (fromType.equals(charDecl())) return 2;
+            if (fromType.equals(byteDecl())) return 2;
             return 0;
-        } else if (to == CtClass.shortType) {
-            if (from == CtClass.charType) return 1;
-            if (from == CtClass.byteType) return 1;
-        } else if (to == CtClass.doubleType) {
-            if (from == CtClass.floatType) return 1;
+        } else if (toType.equals(shortDecl())) {
+            if (fromType.equals(charDecl())) return 1;
+            if (fromType.equals(byteDecl())) return 1;
+        } else if (toType.equals(doubleDecl())) {
+            if (fromType.equals(floatDecl())) return 1;
         }
 
         return 0;

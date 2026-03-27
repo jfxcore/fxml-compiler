@@ -1,4 +1,4 @@
-// Copyright (c) 2021, 2025, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.bindings;
@@ -216,7 +216,7 @@ public class ControlBindingTest extends CompilerTestBase {
             </Pane>
         """);
 
-        assertMethodCall(root, methods -> methods.stream().anyMatch(method -> method.getName().equals("bind")));
+        assertMethodCall(root, methods -> methods.stream().anyMatch(method -> method.name().equals("bind")));
         assertEquals(123.0, Reflection.<Pane>getFieldValue(root, "testNode").getPrefWidth(), 0.001);
     }
 
@@ -242,10 +242,10 @@ public class ControlBindingTest extends CompilerTestBase {
             </Pane>
         """);
 
-        assertMethodCall(root, methods -> methods.stream().anyMatch(m -> m.getName().equals("prefWidthProperty")));
-        assertMethodCall(root, methods -> methods.stream().anyMatch(m -> m.getName().equals("prefHeightProperty")));
+        assertMethodCall(root, methods -> methods.stream().anyMatch(m -> m.name().equals("prefWidthProperty")));
+        assertMethodCall(root, methods -> methods.stream().anyMatch(m -> m.name().equals("prefHeightProperty")));
         assertNewExpr(root, ctors -> ctors.stream()
-            .anyMatch(c -> c.getLongName().equals(NodeUnderInitializationWithAlternativeProperty.class.getName() + "()")));
+            .anyMatch(c -> c.longName().equals(NodeUnderInitializationWithAlternativeProperty.class.getName() + "()")));
     }
 
     @Test

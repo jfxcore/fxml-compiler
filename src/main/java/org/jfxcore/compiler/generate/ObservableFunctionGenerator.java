@@ -1,40 +1,36 @@
-// Copyright (c) 2022, 2025, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.generate;
 
-import javassist.CtBehavior;
-import javassist.CtClass;
-import javassist.CtConstructor;
-import javassist.CtField;
-import javassist.CtMethod;
-import javassist.Modifier;
-import javassist.bytecode.MethodInfo;
 import org.jetbrains.annotations.Nullable;
+import org.jfxcore.compiler.ast.ValueNode;
+import org.jfxcore.compiler.ast.emit.BytecodeEmitContext;
+import org.jfxcore.compiler.ast.emit.EmitLiteralNode;
+import org.jfxcore.compiler.ast.emit.EmitMethodArgumentNode;
 import org.jfxcore.compiler.ast.emit.EmitObservableFunctionNode;
+import org.jfxcore.compiler.ast.emit.EmitObservablePathNode;
 import org.jfxcore.compiler.ast.emit.ValueEmitterNode;
+import org.jfxcore.compiler.diagnostic.SourceInfo;
+import org.jfxcore.compiler.type.ConstructorDeclaration;
+import org.jfxcore.compiler.type.FieldDeclaration;
+import org.jfxcore.compiler.type.MethodDeclaration;
+import org.jfxcore.compiler.type.Resolver;
+import org.jfxcore.compiler.type.TypeDeclaration;
+import org.jfxcore.compiler.type.TypeHelper;
+import org.jfxcore.compiler.type.TypeInstance;
+import org.jfxcore.compiler.type.TypeInvoker;
+import org.jfxcore.compiler.util.Bytecode;
 import org.jfxcore.compiler.util.Callable;
 import org.jfxcore.compiler.util.Label;
-import org.jfxcore.compiler.diagnostic.SourceInfo;
-import org.jfxcore.compiler.ast.emit.BytecodeEmitContext;
-import org.jfxcore.compiler.ast.ValueNode;
-import org.jfxcore.compiler.ast.emit.EmitMethodArgumentNode;
-import org.jfxcore.compiler.ast.emit.EmitLiteralNode;
-import org.jfxcore.compiler.ast.emit.EmitObservablePathNode;
-import org.jfxcore.compiler.util.Bytecode;
 import org.jfxcore.compiler.util.Local;
 import org.jfxcore.compiler.util.NameHelper;
-import org.jfxcore.compiler.util.Resolver;
-import org.jfxcore.compiler.util.TypeHelper;
-import org.jfxcore.compiler.util.TypeInstance;
-import org.jfxcore.compiler.util.TypeInvoker;
+import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-import static org.jfxcore.compiler.util.Classes.*;
-import static org.jfxcore.compiler.util.Descriptors.*;
-import static org.jfxcore.compiler.util.ExceptionHelper.unchecked;
+import static org.jfxcore.compiler.type.KnownSymbols.*;
 
 public class ObservableFunctionGenerator extends ClassGenerator {
 
@@ -52,6 +48,8 @@ public class ObservableFunctionGenerator extends ClassGenerator {
     private static final String VALIDATE_METHOD = "validate";
     private static final String CONNECT_METHOD = "connect";
     private static final String DISCONNECT_METHOD = "disconnect";
+    private static final String RECEIVER_FIELD = "receiver";
+    private static final String INVERSE_RECEIVER_FIELD = "inverseReceiver";
 
     private final boolean bidirectional;
     private final Callable function;
@@ -59,39 +57,39 @@ public class ObservableFunctionGenerator extends ClassGenerator {
     private final boolean storeReceiver;
     private final boolean storeInverseReceiver;
     private final List<EmitMethodArgumentNode> arguments;
-    private final List<CtField> paramFields;
-    private final List<CtClass> paramTypes;
+    private final List<FieldDeclaration> paramFields;
+    private final List<TypeDeclaration> paramTypes;
 
     private final TypeInstance superType;
-    private final CtClass returnType;
+    private final TypeDeclaration returnType;
     private final boolean isNumeric;
     private int numObservables;
 
-    private CtConstructor constructor;
-    private CtMethod getValueMethod;
-    private CtMethod getMethod;
-    private CtMethod intValueMethod;
-    private CtMethod longValueMethod;
-    private CtMethod floatValueMethod;
-    private CtMethod doubleValueMethod;
-    private CtMethod addInvalidationListenerMethod;
-    private CtMethod removeInvalidationListenerMethod;
-    private CtMethod addChangeListenerMethod;
-    private CtMethod removeChangeListenerMethod;
-    private CtMethod invalidatedMethod;
-    private CtMethod validateMethod;
-    private CtMethod connectMethod;
-    private CtMethod disconnectMethod;
+    private ConstructorDeclaration constructor;
+    private MethodDeclaration getValueMethod;
+    private MethodDeclaration getMethod;
+    private MethodDeclaration intValueMethod;
+    private MethodDeclaration longValueMethod;
+    private MethodDeclaration floatValueMethod;
+    private MethodDeclaration doubleValueMethod;
+    private MethodDeclaration addInvalidationListenerMethod;
+    private MethodDeclaration removeInvalidationListenerMethod;
+    private MethodDeclaration addChangeListenerMethod;
+    private MethodDeclaration removeChangeListenerMethod;
+    private MethodDeclaration invalidatedMethod;
+    private MethodDeclaration validateMethod;
+    private MethodDeclaration connectMethod;
+    private MethodDeclaration disconnectMethod;
 
-    private CtMethod setMethod;
-    private CtMethod setValueMethod;
-    private CtMethod getBeanMethod;
-    private CtMethod getNameMethod;
-    private CtMethod bindMethod;
-    private CtMethod unbindMethod;
-    private CtMethod isBoundMethod;
-    private CtMethod bindBidirectionalMethod;
-    private CtMethod unbindBidirectionalMethod;
+    private MethodDeclaration setMethod;
+    private MethodDeclaration setValueMethod;
+    private MethodDeclaration getBeanMethod;
+    private MethodDeclaration getNameMethod;
+    private MethodDeclaration bindMethod;
+    private MethodDeclaration unbindMethod;
+    private MethodDeclaration isBoundMethod;
+    private MethodDeclaration bindBidirectionalMethod;
+    private MethodDeclaration unbindBidirectionalMethod;
 
     public ObservableFunctionGenerator(
             Callable function,
@@ -100,47 +98,39 @@ public class ObservableFunctionGenerator extends ClassGenerator {
         this.bidirectional = inverseFunction != null;
         this.function = function;
         this.inverseFunction = inverseFunction;
-        this.storeReceiver =
-            !Modifier.isStatic(function.getBehavior().getModifiers())
-            && function.getBehavior() instanceof CtMethod;
+        this.storeReceiver = !function.getBehavior().isStatic() && function.getBehavior() instanceof MethodDeclaration;
         this.storeInverseReceiver = inverseFunction != null &&
-            !Modifier.isStatic(inverseFunction.getBehavior().getModifiers())
-            && inverseFunction.getBehavior() instanceof CtMethod;
+            !inverseFunction.getBehavior().isStatic() && inverseFunction.getBehavior() instanceof MethodDeclaration;
         this.arguments = new ArrayList<>(arguments);
         this.paramFields = new ArrayList<>();
         this.paramTypes = new ArrayList<>();
 
         TypeInvoker invoker = new TypeInvoker(SourceInfo.none());
-        CtClass returnType = function.getBehavior() instanceof CtConstructor ?
-            function.getBehavior().getDeclaringClass() :
-            unchecked(SourceInfo.none(), ((CtMethod) function.getBehavior())::getReturnType);
+        TypeDeclaration returnType = function.getBehavior() instanceof ConstructorDeclaration
+            ? function.getBehavior().declaringType()
+            : ((MethodDeclaration)function.getBehavior()).returnType();
 
-        if (returnType == CtClass.booleanType || returnType == BooleanType()) {
-            this.superType = invoker.invokeType(
-                bidirectional ? BooleanPropertyType() : ObservableBooleanValueType());
-        } else if (returnType == CtClass.byteType || returnType == ByteType()
-            || returnType == CtClass.charType || returnType == CharacterType()
-            || returnType == CtClass.shortType || returnType == ShortType()
-            || returnType == CtClass.intType || returnType == IntegerType()) {
-            this.superType = invoker.invokeType(
-                bidirectional ? IntegerPropertyType() : ObservableIntegerValueType());
-        } else if (returnType == CtClass.longType || returnType == LongType()) {
-            this.superType = invoker.invokeType(
-                bidirectional ? LongPropertyType() : ObservableLongValueType());
-        } else if (returnType == CtClass.floatType || returnType == FloatType()) {
-            this.superType = invoker.invokeType(
-                bidirectional ? FloatPropertyType() : ObservableFloatValueType());
-        } else if (returnType == CtClass.doubleType || returnType == DoubleType()) {
-            this.superType = invoker.invokeType(
-                bidirectional ? DoublePropertyType() : ObservableDoubleValueType());
+        if (returnType.equals(booleanDecl()) || returnType.equals(BooleanDecl())) {
+            this.superType = invoker.invokeType(bidirectional ? BooleanPropertyDecl() : ObservableBooleanValueDecl());
+        } else if (returnType.equals(byteDecl()) || returnType.equals(ByteDecl())
+                || returnType.equals(charDecl()) || returnType.equals(CharacterDecl())
+                || returnType.equals(shortDecl()) || returnType.equals(ShortDecl())
+                || returnType.equals(intDecl()) || returnType.equals(IntegerDecl())) {
+            this.superType = invoker.invokeType(bidirectional ? IntegerPropertyDecl() : ObservableIntegerValueDecl());
+        } else if (returnType.equals(longDecl()) || returnType.equals(LongDecl())) {
+            this.superType = invoker.invokeType(bidirectional ? LongPropertyDecl() : ObservableLongValueDecl());
+        } else if (returnType.equals(floatDecl()) || returnType.equals(FloatDecl())) {
+            this.superType = invoker.invokeType(bidirectional ? FloatPropertyDecl() : ObservableFloatValueDecl());
+        } else if (returnType.equals(doubleDecl()) || returnType.equals(DoubleDecl())) {
+            this.superType = invoker.invokeType(bidirectional ? DoublePropertyDecl() : ObservableDoubleValueDecl());
         } else {
             this.superType = invoker.invokeType(
-                bidirectional ? PropertyType() : ObservableValueType(),
+                bidirectional ? PropertyDecl() : ObservableValueDecl(),
                 List.of(invoker.invokeType(returnType)));
         }
 
-        this.returnType = new Resolver(SourceInfo.none()).findObservableArgument(superType).jvmType();
-        this.isNumeric = TypeHelper.isNumeric(returnType);
+        this.returnType = new Resolver(SourceInfo.none()).findObservableArgument(superType).declaration();
+        this.isNumeric = returnType.isNumeric();
     }
 
     @Override
@@ -154,35 +144,34 @@ public class ObservableFunctionGenerator extends ClassGenerator {
     }
 
     @Override
-    public void emitClass(BytecodeEmitContext context) throws Exception {
-        generatedClass = context.getNestedClasses().create(getClassName());
+    public TypeDeclaration emitClass(BytecodeEmitContext context) {
+        TypeDeclaration generatedClass = super.emitClass(context);
 
-        if (superType.jvmType().isInterface()) {
-            generatedClass.addInterface(superType.jvmType());
+        if (superType.declaration().isInterface()) {
+            generatedClass.addInterface(superType.declaration());
         } else {
-            generatedClass.setSuperclass(superType.jvmType());
+            generatedClass.setSuperClass(superType.declaration());
         }
 
-        generatedClass.addInterface(InvalidationListenerType());
+        generatedClass.addInterface(InvalidationListenerDecl());
         generatedClass.setModifiers(Modifier.PRIVATE | Modifier.FINAL);
+
+        return generatedClass;
     }
 
     @Override
-    public void emitFields(BytecodeEmitContext context) throws Exception {
+    public void emitFields(BytecodeEmitContext context) {
         Resolver resolver = new Resolver(SourceInfo.none());
         int fieldNum = 1;
-        CtField field;
 
         if (storeReceiver) {
-            field = new CtField(function.getBehavior().getDeclaringClass(), "receiver", generatedClass);
-            field.setModifiers(Modifier.FINAL | Modifier.PRIVATE);
-            generatedClass.addField(field);
+            createField(RECEIVER_FIELD, function.getBehavior().declaringType())
+                .setModifiers(Modifier.FINAL | Modifier.PRIVATE);
         }
 
         if (storeInverseReceiver) {
-            field = new CtField(inverseFunction.getBehavior().getDeclaringClass(), "inverseReceiver", generatedClass);
-            field.setModifiers(Modifier.FINAL | Modifier.PRIVATE);
-            generatedClass.addField(field);
+            createField(INVERSE_RECEIVER_FIELD, inverseFunction.getBehavior().declaringType())
+                .setModifiers(Modifier.FINAL | Modifier.PRIVATE);
         }
 
         for (EmitMethodArgumentNode argument : arguments) {
@@ -191,21 +180,18 @@ public class ObservableFunctionGenerator extends ClassGenerator {
                     continue;
                 }
 
-                CtClass fieldType = isObservableArgument(child) && !bidirectional ?
-                    resolver.getObservableClass(TypeHelper.getJvmType(child), false) :
-                    TypeHelper.getJvmType(child);
+                TypeDeclaration fieldType = isObservableArgument(child) && !bidirectional ?
+                    resolver.getObservableClass(TypeHelper.getTypeDeclaration(child), false) :
+                    TypeHelper.getTypeDeclaration(child);
 
                 if (isObservableArgument(child)) {
-                    paramTypes.add(resolver.findObservableArgument(TypeHelper.getTypeInstance(child)).jvmType());
+                    paramTypes.add(resolver.findObservableArgument(TypeHelper.getTypeInstance(child)).declaration());
                 } else {
-                    paramTypes.add(TypeHelper.getJvmType(child));
+                    paramTypes.add(TypeHelper.getTypeDeclaration(child));
                 }
 
-                CtField paramField = new CtField(fieldType, "param" + fieldNum, generatedClass);
-
-                paramField.setModifiers(Modifier.PRIVATE);
+                FieldDeclaration paramField = createField("param" + fieldNum, fieldType).setModifiers(Modifier.PRIVATE);
                 paramFields.add(paramField);
-                generatedClass.addField(paramField);
 
                 if (isObservableArgument(child)) {
                     numObservables++;
@@ -216,156 +202,112 @@ public class ObservableFunctionGenerator extends ClassGenerator {
         }
 
         if (numObservables > 0) {
-            field = new CtField(InvalidationListenerType(), INVALIDATION_LISTENER_FIELD, generatedClass);
-            field.setModifiers(Modifier.PRIVATE);
-            generatedClass.addField(field);
-
-            field = new CtField(ChangeListenerType(), CHANGE_LISTENER_FIELD, generatedClass);
-            field.setModifiers(Modifier.PRIVATE);
-            generatedClass.addField(field);
+            createField(INVALIDATION_LISTENER_FIELD, InvalidationListenerDecl()).setModifiers(Modifier.PRIVATE);
+            createField(CHANGE_LISTENER_FIELD, ChangeListenerDecl()).setModifiers(Modifier.PRIVATE);
         }
 
-        field = new CtField(CtClass.intType, FLAGS_FIELD, generatedClass);
-        field.setModifiers(Modifier.PRIVATE);
-        generatedClass.addField(field);
-
-        field = new CtField(TypeHelper.getBoxedType(returnType), VALUE_FIELD, generatedClass);
-        field.setModifiers(Modifier.PRIVATE);
-        generatedClass.addField(field);
+        createField(FLAGS_FIELD, intDecl()).setModifiers(Modifier.PRIVATE);
+        createField(VALUE_FIELD, returnType.boxed()).setModifiers(Modifier.PRIVATE);
 
         if (returnType.isPrimitive()) {
-            field = new CtField(returnType, PRIMITIVE_VALUE_FIELD, generatedClass);
-            field.setModifiers(Modifier.PRIVATE);
-            generatedClass.addField(field);
+            createField(PRIMITIVE_VALUE_FIELD, returnType).setModifiers(Modifier.PRIVATE);
         }
     }
 
     @Override
-    public void emitMethods(BytecodeEmitContext context) throws Exception {
+    public void emitMethods(BytecodeEmitContext context) {
         super.emitMethods(context);
 
-        generatedClass.addConstructor(constructor = new CtConstructor(new CtClass[] {context.getRuntimeContextClass()}, generatedClass));
+        constructor = createConstructor(context.getRuntimeContextClass());
 
-        addInvalidationListenerMethod = new CtMethod(
-            CtClass.voidType, "addListener", new CtClass[] {InvalidationListenerType()}, generatedClass);
-        addInvalidationListenerMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
-        generatedClass.addMethod(addInvalidationListenerMethod);
+        addInvalidationListenerMethod = createMethod("addListener", voidDecl(), InvalidationListenerDecl())
+            .setModifiers(Modifier.PUBLIC | Modifier.FINAL);
 
-        removeInvalidationListenerMethod = new CtMethod(
-            CtClass.voidType, "removeListener", new CtClass[] {InvalidationListenerType()}, generatedClass);
-        removeInvalidationListenerMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
-        generatedClass.addMethod(removeInvalidationListenerMethod);
+        removeInvalidationListenerMethod = createMethod("removeListener", voidDecl(), InvalidationListenerDecl())
+            .setModifiers(Modifier.PUBLIC | Modifier.FINAL);
 
-        addChangeListenerMethod = new CtMethod(
-            CtClass.voidType, "addListener", new CtClass[] {ChangeListenerType()}, generatedClass);
-        addChangeListenerMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
-        generatedClass.addMethod(addChangeListenerMethod);
+        addChangeListenerMethod = createMethod("addListener", voidDecl(), ChangeListenerDecl())
+            .setModifiers(Modifier.PUBLIC | Modifier.FINAL);
 
-        removeChangeListenerMethod = new CtMethod(
-            CtClass.voidType, "removeListener", new CtClass[] {ChangeListenerType()}, generatedClass);
-        removeChangeListenerMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
-        generatedClass.addMethod(removeChangeListenerMethod);
+        removeChangeListenerMethod = createMethod("removeListener", voidDecl(), ChangeListenerDecl())
+            .setModifiers(Modifier.PUBLIC | Modifier.FINAL);
 
-        invalidatedMethod = new CtMethod(CtClass.voidType, "invalidated", new CtClass[] {ObservableType()}, generatedClass);
-        invalidatedMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
-        generatedClass.addMethod(invalidatedMethod);
+        invalidatedMethod = createMethod("invalidated", voidDecl(), ObservableDecl())
+            .setModifiers(Modifier.PUBLIC | Modifier.FINAL);
 
-        getValueMethod = new CtMethod(ObjectType(), "getValue", new CtClass[0], generatedClass);
-        getValueMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
-        generatedClass.addMethod(getValueMethod);
+        getValueMethod = createMethod("getValue", ObjectDecl())
+            .setModifiers(Modifier.PUBLIC | Modifier.FINAL);
 
         if (bidirectional) {
-            setValueMethod = new CtMethod(CtClass.voidType, "setValue", new CtClass[] {ObjectType()}, generatedClass);
-            setValueMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
-            generatedClass.addMethod(setValueMethod);
+            setValueMethod = createMethod("setValue", voidDecl(), ObjectDecl())
+                .setModifiers(Modifier.PUBLIC | Modifier.FINAL);
         }
 
         if (returnType.isPrimitive()) {
-            getMethod = new CtMethod(returnType, "get", new CtClass[0], generatedClass);
-            getMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
-            generatedClass.addMethod(getMethod);
+            getMethod = createMethod("get", returnType)
+                .setModifiers(Modifier.PUBLIC | Modifier.FINAL);
 
             if (bidirectional) {
-                setMethod = new CtMethod(CtClass.voidType, "set", new CtClass[]{returnType}, generatedClass);
-                setMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
-                generatedClass.addMethod(setMethod);
+                setMethod = createMethod("set", voidDecl(), returnType)
+                    .setModifiers(Modifier.PUBLIC | Modifier.FINAL);
             }
         }
 
         if (isNumeric) {
-            intValueMethod = new CtMethod(CtClass.intType, "intValue", new CtClass[0], generatedClass);
-            intValueMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
-            generatedClass.addMethod(intValueMethod);
+            intValueMethod = createMethod("intValue", intDecl())
+                .setModifiers(Modifier.PUBLIC | Modifier.FINAL);
 
-            longValueMethod = new CtMethod(CtClass.longType, "longValue", new CtClass[0], generatedClass);
-            longValueMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
-            generatedClass.addMethod(longValueMethod);
+            longValueMethod = createMethod("longValue", longDecl())
+                .setModifiers(Modifier.PUBLIC | Modifier.FINAL);
 
-            floatValueMethod = new CtMethod(CtClass.floatType, "floatValue", new CtClass[0], generatedClass);
-            floatValueMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
-            generatedClass.addMethod(floatValueMethod);
+            floatValueMethod = createMethod("floatValue", floatDecl())
+                .setModifiers(Modifier.PUBLIC | Modifier.FINAL);
 
-            doubleValueMethod = new CtMethod(CtClass.doubleType, "doubleValue", new CtClass[0], generatedClass);
-            doubleValueMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
-            generatedClass.addMethod(doubleValueMethod);
+            doubleValueMethod = createMethod("doubleValue", doubleDecl())
+                .setModifiers(Modifier.PUBLIC | Modifier.FINAL);
         }
 
-        validateMethod = new CtMethod(
-            CtClass.voidType,
-            VALIDATE_METHOD,
-            returnType.isPrimitive() ? new CtClass[] {CtClass.booleanType} : new CtClass[0],
-                generatedClass);
-        validateMethod.setModifiers(Modifier.PRIVATE | Modifier.FINAL);
-        generatedClass.addMethod(validateMethod);
+        TypeDeclaration[] validateParams = returnType.isPrimitive()
+            ? new TypeDeclaration[] { booleanDecl() }
+            : new TypeDeclaration[0];
+
+        validateMethod = createMethod(VALIDATE_METHOD, voidDecl(), validateParams)
+            .setModifiers(Modifier.PRIVATE | Modifier.FINAL);
 
         if (numObservables > 0) {
-            connectMethod = new CtMethod(CtClass.voidType, CONNECT_METHOD, new CtClass[0], generatedClass);
-            connectMethod.setModifiers(Modifier.PRIVATE | Modifier.FINAL);
-            generatedClass.addMethod(connectMethod);
+            connectMethod = createMethod(CONNECT_METHOD, voidDecl())
+                .setModifiers(Modifier.PRIVATE | Modifier.FINAL);
 
-            disconnectMethod = new CtMethod(CtClass.voidType, DISCONNECT_METHOD, new CtClass[0], generatedClass);
-            disconnectMethod.setModifiers(Modifier.PRIVATE | Modifier.FINAL);
-            generatedClass.addMethod(disconnectMethod);
+            disconnectMethod = createMethod(DISCONNECT_METHOD, voidDecl())
+                .setModifiers(Modifier.PRIVATE | Modifier.FINAL);
         }
 
         if (bidirectional) {
-            bindMethod = new CtMethod(CtClass.voidType, "bind", new CtClass[] {ObservableValueType()}, generatedClass);
-            bindMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
+            bindMethod = createMethod("bind", voidDecl(), ObservableValueDecl())
+                .setModifiers(Modifier.PUBLIC | Modifier.FINAL);
 
-            unbindMethod = new CtMethod(CtClass.voidType, "unbind", new CtClass[0], generatedClass);
-            unbindMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
+            unbindMethod = createMethod("unbind", voidDecl())
+                .setModifiers(Modifier.PUBLIC | Modifier.FINAL);
 
-            isBoundMethod = new CtMethod(CtClass.booleanType, "isBound", new CtClass[0], generatedClass);
-            isBoundMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
+            isBoundMethod = createMethod("isBound", booleanDecl())
+                .setModifiers(Modifier.PUBLIC | Modifier.FINAL);
 
-            bindBidirectionalMethod = new CtMethod(
-                CtClass.voidType, "bindBidirectional", new CtClass[] {PropertyType()}, generatedClass);
-            bindBidirectionalMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
+            bindBidirectionalMethod = createMethod("bindBidirectional", voidDecl(), PropertyDecl())
+                .setModifiers(Modifier.PUBLIC | Modifier.FINAL);
 
-            unbindBidirectionalMethod = new CtMethod(
-                CtClass.voidType, "unbindBidirectional", new CtClass[] {PropertyType()}, generatedClass);
-            unbindBidirectionalMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
+            unbindBidirectionalMethod = createMethod("unbindBidirectional", voidDecl(), PropertyDecl())
+                .setModifiers(Modifier.PUBLIC | Modifier.FINAL);
 
-            getBeanMethod = new CtMethod(ObjectType(), "getBean", new CtClass[0], generatedClass);
-            getBeanMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
+            getBeanMethod = createMethod("getBean", ObjectDecl())
+                .setModifiers(Modifier.PUBLIC | Modifier.FINAL);
 
-            getNameMethod = new CtMethod(StringType(), "getName", new CtClass[0], generatedClass);
-            getNameMethod.setModifiers(Modifier.PUBLIC | Modifier.FINAL);
-
-            generatedClass.addMethod(bindMethod);
-            generatedClass.addMethod(unbindMethod);
-            generatedClass.addMethod(isBoundMethod);
-            generatedClass.addMethod(bindBidirectionalMethod);
-            generatedClass.addMethod(unbindBidirectionalMethod);
-            generatedClass.addMethod(getBeanMethod);
-            generatedClass.addMethod(getNameMethod);
+            getNameMethod = createMethod("getName", StringDecl())
+                .setModifiers(Modifier.PUBLIC | Modifier.FINAL);
         }
     }
 
     @Override
-    public void emitCode(BytecodeEmitContext context) throws Exception {
-        super.emitCode(context);
-
+    public void emitCode(BytecodeEmitContext context) {
         emitConstructor(constructor, context);
         emitAddListenerMethod(addInvalidationListenerMethod, false);
         emitAddListenerMethod(addChangeListenerMethod, true);
@@ -396,29 +338,29 @@ public class ObservableFunctionGenerator extends ClassGenerator {
         }
 
         if (isNumeric) {
-            emitNumberValueMethod(intValueMethod, CtClass.intType);
-            emitNumberValueMethod(longValueMethod, CtClass.longType);
-            emitNumberValueMethod(floatValueMethod, CtClass.floatType);
-            emitNumberValueMethod(doubleValueMethod, CtClass.doubleType);
+            emitNumberValueMethod(intValueMethod, intDecl());
+            emitNumberValueMethod(longValueMethod, longDecl());
+            emitNumberValueMethod(floatValueMethod, floatDecl());
+            emitNumberValueMethod(doubleValueMethod, doubleDecl());
         }
 
         if (bidirectional) {
-            emitNotSupportedMethod(bindMethod, 2);
-            emitNotSupportedMethod(unbindMethod, 1);
-            emitNotSupportedMethod(bindBidirectionalMethod, 2);
-            emitNotSupportedMethod(unbindBidirectionalMethod, 2);
+            emitNotSupportedMethod(bindMethod);
+            emitNotSupportedMethod(unbindMethod);
+            emitNotSupportedMethod(bindBidirectionalMethod);
+            emitNotSupportedMethod(unbindBidirectionalMethod);
             emitIsBoundMethod(isBoundMethod);
             emitGetBeanOrNameMethod(getBeanMethod, true);
             emitGetBeanOrNameMethod(getNameMethod, false);
         }
     }
 
-    private void emitConstructor(CtConstructor constructor, BytecodeEmitContext parentContext) throws Exception {
-        BytecodeEmitContext context = new BytecodeEmitContext(parentContext, generatedClass, 2, 1);
+    private void emitConstructor(ConstructorDeclaration constructor, BytecodeEmitContext parentContext) {
+        BytecodeEmitContext context = new BytecodeEmitContext(parentContext, constructor, 1);
         Bytecode code = context.getOutput();
 
         code.aload(0)
-            .invokespecial(generatedClass.getSuperclass(), MethodInfo.nameInit, constructor());
+            .invoke(requireSuperClass().requireDeclaredConstructor());
 
         if (storeReceiver) {
             code.aload(0);
@@ -427,7 +369,7 @@ public class ObservableFunctionGenerator extends ClassGenerator {
                 context.emit(emitter);
             }
 
-            code.putfield(generatedClass, "receiver", function.getBehavior().getDeclaringClass());
+            code.putfield(requireDeclaredField(RECEIVER_FIELD));
         }
 
         if (storeInverseReceiver) {
@@ -437,7 +379,7 @@ public class ObservableFunctionGenerator extends ClassGenerator {
                 context.emit(emitter);
             }
 
-            code.putfield(generatedClass, "inverseReceiver", inverseFunction.getBehavior().getDeclaringClass());
+            code.putfield(requireDeclaredField(INVERSE_RECEIVER_FIELD));
         }
 
         int fieldIdx = 0;
@@ -448,108 +390,89 @@ public class ObservableFunctionGenerator extends ClassGenerator {
                     continue;
                 }
 
-                CtField field = paramFields.get(fieldIdx++);
+                FieldDeclaration field = paramFields.get(fieldIdx++);
                 code.aload(0);
                 context.emit(child);
-                code.putfield(generatedClass, field.getName(), field.getType());
+                code.putfield(field);
             }
         }
 
         code.vreturn();
 
-        constructor.getMethodInfo().setCodeAttribute(code.toCodeAttribute());
-        constructor.getMethodInfo().rebuildStackMap(constructor.getDeclaringClass().getClassPool());
+        constructor.setCode(code);
     }
 
-    private void emitAddListenerMethod(CtMethod method, boolean changeListenerIsTrue) throws Exception {
-        Bytecode code = new Bytecode(method.getDeclaringClass(), 2);
-        CtClass declaringClass = method.getDeclaringClass();
+    private void emitAddListenerMethod(MethodDeclaration method, boolean changeListenerIsTrue) {
+        Bytecode code = new Bytecode(method);
         String fieldName = changeListenerIsTrue ? CHANGE_LISTENER_FIELD : INVALIDATION_LISTENER_FIELD;
         String otherFieldName = changeListenerIsTrue ? INVALIDATION_LISTENER_FIELD : CHANGE_LISTENER_FIELD;
-        CtClass listenerType = changeListenerIsTrue ? ChangeListenerType() : InvalidationListenerType();
-        CtClass otherListenerType = changeListenerIsTrue ? InvalidationListenerType() : ChangeListenerType();
 
         if (numObservables > 0) {
             code.aload(0)
-                .getfield(declaringClass, fieldName, listenerType)
+                .getfield(requireDeclaredField(fieldName))
                 .ifnonnull(
                     () -> code
-                        // throw new RuntimeException()
-                        .anew(RuntimeExceptionType())
+                        .anew(RuntimeExceptionDecl())
                         .dup()
                         .ldc(changeListenerIsTrue ? CHANGE_LISTENERS_ERROR : INVALIDATION_LISTENERS_ERROR)
-                        .invokespecial(RuntimeExceptionType(), MethodInfo.nameInit,
-                                       constructor(StringType()))
+                        .invoke(RuntimeExceptionDecl().requireDeclaredConstructor(StringDecl()))
                         .athrow(),
                     () -> code
-                        // this.listener = $1
                         .aload(0)
                         .aload(1)
-                        .putfield(declaringClass, fieldName, listenerType))
-                        .aload(0)
-                        .getfield(declaringClass, otherFieldName, otherListenerType)
-                        .ifnull(() -> code
-                            .aload(0)
-                            .invokevirtual(declaringClass, CONNECT_METHOD, function(CtClass.voidType)));
+                        .putfield(requireDeclaredField(fieldName)))
+                .aload(0)
+                .getfield(requireDeclaredField(otherFieldName))
+                .ifnull(() -> code
+                    .aload(0)
+                    .invoke(requireDeclaredMethod(CONNECT_METHOD)));
         }
 
         code.vreturn();
-
-        method.getMethodInfo().setCodeAttribute(code.toCodeAttribute());
-        method.getMethodInfo().rebuildStackMap(method.getDeclaringClass().getClassPool());
+        method.setCode(code);
     }
 
-    private void emitRemoveListenerMethod(CtMethod method, boolean changeListenerIsTrue) throws Exception {
-        Bytecode code = new Bytecode(method.getDeclaringClass(), 2);
-        CtClass declaringClass = method.getDeclaringClass();
+    private void emitRemoveListenerMethod(MethodDeclaration method, boolean changeListenerIsTrue) {
+        Bytecode code = new Bytecode(method);
         String fieldName = changeListenerIsTrue ? CHANGE_LISTENER_FIELD : INVALIDATION_LISTENER_FIELD;
         String otherFieldName = changeListenerIsTrue ? INVALIDATION_LISTENER_FIELD : CHANGE_LISTENER_FIELD;
-        CtClass listenerType = changeListenerIsTrue ? ChangeListenerType() : InvalidationListenerType();
-        CtClass otherListenerType = changeListenerIsTrue ? InvalidationListenerType() : ChangeListenerType();
 
         if (numObservables > 0) {
-            // if (listener != null...
             code.aload(0)
-                .getfield(declaringClass, fieldName, listenerType)
+                .getfield(requireDeclaredField(fieldName))
                 .ifnonnull(() -> code
-                    // ... && listener.equals($1))
                     .aload(0)
-                    .getfield(declaringClass, fieldName, listenerType)
+                    .getfield(requireDeclaredField(fieldName))
                     .aload(1)
-                    .invokevirtual(ObjectType(), "equals",
-                                   function(CtClass.booleanType, ObjectType()))
+                    .invoke(ObjectDecl().requireDeclaredMethod("equals", ObjectDecl()))
                     .ifne(() -> code
-                        // listener = null
                         .aload(0)
                         .aconst_null()
-                        .putfield(declaringClass, fieldName, listenerType)
+                        .putfield(requireDeclaredField(fieldName))
                         .aload(0)
-                        .getfield(declaringClass, otherFieldName, otherListenerType)
+                        .getfield(requireDeclaredField(otherFieldName))
                         .ifnull(() -> code
                             .aload(0)
-                            .invokevirtual(declaringClass, DISCONNECT_METHOD,
-                                           function(CtClass.voidType)))));
+                            .invoke(requireDeclaredMethod(DISCONNECT_METHOD)))));
         }
 
         code.vreturn();
-
-        method.getMethodInfo().setCodeAttribute(code.toCodeAttribute());
-        method.getMethodInfo().rebuildStackMap(method.getDeclaringClass().getClassPool());
+        method.setCode(code);
     }
 
     @SuppressWarnings("ConstantConditions")
-    private void emitValidateMethod(CtBehavior method, BytecodeEmitContext parentContext) throws Exception {
-        var context = new BytecodeEmitContext(parentContext, generatedClass, returnType.isPrimitive() ? 2 : 1, -1);
+    private void emitValidateMethod(MethodDeclaration method, BytecodeEmitContext parentContext) {
+        var context = new BytecodeEmitContext(parentContext, method, -1);
         Bytecode code = context.getOutput();
 
         Local valueLocal = code.acquireLocal(returnType);
 
-        if (function.getBehavior() instanceof CtConstructor) {
-            code.anew(function.getBehavior().getDeclaringClass())
+        if (function.getBehavior() instanceof ConstructorDeclaration) {
+            code.anew(function.getBehavior().declaringType())
                 .dup();
-        } else if (!Modifier.isStatic(function.getBehavior().getModifiers())) {
+        } else if (!function.getBehavior().isStatic()) {
             code.aload(0)
-                .getfield(generatedClass, "receiver", function.getBehavior().getDeclaringClass());
+                .getfield(requireDeclaredField(RECEIVER_FIELD));
         }
 
         int fieldIdx = 0;
@@ -561,11 +484,11 @@ public class ObservableFunctionGenerator extends ClassGenerator {
 
         for (EmitMethodArgumentNode argument : arguments) {
             TypeInstance requestedType = argument.isVarargs() ?
-                argument.getType().getTypeInstance().getComponentType() :
+                argument.getType().getTypeInstance().componentType() :
                 argument.getType().getTypeInstance();
 
             if (argument.isVarargs()) {
-                code.newarray(requestedType.jvmType(), argument.getChildren().size())
+                code.newarray(requestedType.declaration(), argument.getChildren().size())
                     .astore(varargsLocal);
             }
 
@@ -580,44 +503,40 @@ public class ObservableFunctionGenerator extends ClassGenerator {
                 if (child instanceof EmitLiteralNode) {
                     context.emit(child);
                 } else {
-                    CtField field = paramFields.get(fieldIdx);
-                    CtClass fieldType = field.getType();
-                    CtClass paramType = paramTypes.get(fieldIdx);
+                    FieldDeclaration field = paramFields.get(fieldIdx);
+                    TypeDeclaration fieldType = field.type();
+                    TypeDeclaration paramType = paramTypes.get(fieldIdx);
                     fieldIdx++;
 
                     code.aload(0)
-                        .getfield(generatedClass, field.getName(), fieldType);
+                        .getfield(field);
 
                     if (isObservableArgument(child)) {
                         if (bidirectional) {
                             Local local = code.acquireLocal(fieldType);
 
-                            code.ext_store(fieldType, local)
-                                .ext_load(fieldType, local)
+                            code.store(fieldType, local)
+                                .load(fieldType, local)
                                 .ifnull(
-                                    () -> code.ext_defaultconst(requestedType.jvmType()),
-                                    () -> code.ext_load(fieldType, local)
-                                              .ext_ObservableUnbox(child.getSourceInfo(), fieldType,
-                                                                   requestedType.jvmType()))
+                                    () -> code.defaultconst(requestedType.declaration()),
+                                    () -> code.load(fieldType, local)
+                                              .unboxObservable(fieldType, requestedType.declaration()))
                                 .releaseLocal(local);
                         } else {
                             try {
-                                code.ext_ObservableUnbox(child.getSourceInfo(), fieldType, requestedType.jvmType());
+                                code.unboxObservable(fieldType, requestedType.declaration());
                             } catch (IllegalArgumentException ex) {
-                                // In some cases, we can't directly unbox an observable, for example when the
-                                // field type is ObservableValue<Integer>, and the requested type is int.
-                                // The solution is to cast the value to Integer first, then convert to int.
-                                code.ext_ObservableUnbox(child.getSourceInfo(), fieldType, paramType)
-                                    .ext_autoconv(child.getSourceInfo(), paramType, requestedType.jvmType());
+                                code.unboxObservable(fieldType, paramType)
+                                    .autoconv(paramType, requestedType.declaration());
                             }
                         }
                     } else {
-                        code.ext_autoconv(child.getSourceInfo(), fieldType, requestedType.jvmType());
+                        code.autoconv(fieldType, requestedType.declaration());
                     }
                 }
 
                 if (argument.isVarargs()) {
-                    code.ext_arraystore(requestedType.jvmType());
+                    code.arraystore(requestedType.declaration());
                 }
             }
 
@@ -626,167 +545,144 @@ public class ObservableFunctionGenerator extends ClassGenerator {
             }
         }
 
-        code.ext_invoke(function.getBehavior());
+        code.invoke(function.getBehavior());
 
         if (varargsLocal != null) {
             code.releaseLocal(varargsLocal);
         }
 
-        CtClass methodReturnType;
-        if (function.getBehavior() instanceof CtMethod m) {
-            methodReturnType = m.getReturnType();
-        } else if (function.getBehavior() instanceof CtConstructor c) {
-            methodReturnType = c.getDeclaringClass();
+        TypeDeclaration methodReturnType;
+        if (function.getBehavior() instanceof MethodDeclaration m) {
+            methodReturnType = m.returnType();
+        } else if (function.getBehavior() instanceof ConstructorDeclaration c) {
+            methodReturnType = c.declaringType();
         } else {
             throw new InternalError();
         }
 
-        code.ext_autoconv(function.getSourceInfo(), methodReturnType, returnType)
-            .ext_store(returnType, valueLocal);
+        code.autoconv(methodReturnType, returnType)
+            .store(returnType, valueLocal);
 
         if (returnType.isPrimitive()) {
-            // this.pvalue = $valueLocal
             code.aload(0)
-                .ext_load(returnType, valueLocal)
-                .putfield(generatedClass, PRIMITIVE_VALUE_FIELD, returnType);
+                .load(returnType, valueLocal)
+                .putfield(requireDeclaredField(PRIMITIVE_VALUE_FIELD));
 
-            // if (boxValue)
             code.iload(1)
                 .ifne(
                     () -> code
-                        // this.value = $1
                         .aload(0)
-                        .ext_load(returnType, valueLocal)
-                        .ext_box(returnType)
-                        .putfield(generatedClass, VALUE_FIELD, TypeHelper.getBoxedType(returnType))
+                        .load(returnType, valueLocal)
+                        .box(returnType)
+                        .putfield(requireDeclaredField(VALUE_FIELD))
                         .aload(0)
-                        .iconst(1) // 1 = valid, boxed
-                        .putfield(generatedClass, FLAGS_FIELD, CtClass.intType),
+                        .iconst(1)
+                        .putfield(requireDeclaredField(FLAGS_FIELD)),
                     () -> code
                         .aload(0)
-                        .iconst(2) // 2 = valid, unboxed
-                        .putfield(generatedClass, FLAGS_FIELD, CtClass.intType));
+                        .iconst(2)
+                        .putfield(requireDeclaredField(FLAGS_FIELD)));
         } else {
-            // this.value = $valueLocal
             code.aload(0)
                 .aload(valueLocal)
-                .putfield(generatedClass, VALUE_FIELD, TypeHelper.getBoxedType(returnType));
-
-            code.aload(0)
-                .iconst(1) // 1 = valid, boxed
-                .putfield(generatedClass, FLAGS_FIELD, CtClass.intType);
+                .putfield(requireDeclaredField(VALUE_FIELD))
+                .aload(0)
+                .iconst(1)
+                .putfield(requireDeclaredField(FLAGS_FIELD));
         }
 
         code.releaseLocal(valueLocal);
         code.vreturn();
-
-        method.getMethodInfo().setCodeAttribute(code.toCodeAttribute());
-        method.getMethodInfo().rebuildStackMap(method.getDeclaringClass().getClassPool());
+        method.setCode(code);
     }
 
-    private void emitGetMethod(CtMethod method) throws Exception {
-        Bytecode code = new Bytecode(method.getDeclaringClass(), 1);
+    private void emitGetMethod(MethodDeclaration method) {
+        Bytecode code = new Bytecode(method);
 
-        // if (this.valid == 0)
         code.aload(0)
-            .getfield(method.getDeclaringClass(), FLAGS_FIELD, CtClass.intType)
+            .getfield(requireDeclaredField(FLAGS_FIELD))
             .ifeq(() -> code
-                // validate(false)
                 .aload(0)
                 .iconst(0)
-                .invokevirtual(
-                    method.getDeclaringClass(),
-                    VALIDATE_METHOD,
-                    function(CtClass.voidType, CtClass.booleanType)))
+                .invoke(requireDeclaredMethod(VALIDATE_METHOD, booleanDecl())))
             .aload(0)
-            .getfield(method.getDeclaringClass(), PRIMITIVE_VALUE_FIELD, returnType)
-            .ext_return(method.getReturnType());
+            .getfield(requireDeclaredField(PRIMITIVE_VALUE_FIELD))
+            .ret(returnType);
 
-        method.getMethodInfo().setCodeAttribute(code.toCodeAttribute());
-        method.getMethodInfo().rebuildStackMap(method.getDeclaringClass().getClassPool());
+        method.setCode(code);
     }
 
-    private void emitSetMethod(CtMethod method) throws Exception {
-        Bytecode code = new Bytecode(method.getDeclaringClass(), 1 + TypeHelper.getSlots(returnType));
+    private void emitSetMethod(MethodDeclaration method) {
+        Bytecode code = new Bytecode(method);
         emitSetMethodImpl(method, code);
-        method.getMethodInfo().setCodeAttribute(code.toCodeAttribute());
-        method.getMethodInfo().rebuildStackMap(method.getDeclaringClass().getClassPool());
+        method.setCode(code);
     }
 
-    private void emitSetMethodImpl(CtMethod method, Bytecode code) throws Exception {
-        CtClass sourceObservableType = paramFields.get(0).getType();
-        CtClass paramType = method.getParameterTypes()[0];
+    private void emitSetMethodImpl(MethodDeclaration method, Bytecode code) {
+        TypeDeclaration sourceObservableType = paramFields.get(0).type();
+        TypeDeclaration paramType = method.parameters().get(0).type();
 
         Resolver resolver = new Resolver(SourceInfo.none());
         TypeInvoker invoker = new TypeInvoker(SourceInfo.none());
-        CtClass sourceValueType = resolver.findWritableArgument(invoker.invokeType(sourceObservableType)).jvmType();
+        TypeDeclaration sourceValueType = resolver.findWritableArgument(invoker.invokeType(sourceObservableType)).declaration();
+        FieldDeclaration currentValueField = requireDeclaredField(returnType.isPrimitive() ? PRIMITIVE_VALUE_FIELD : VALUE_FIELD);
 
         code.aload(0)
             .iconst(0)
-            .putfield(generatedClass, FLAGS_FIELD, CtClass.intType);
-
-        code.aload(0)
-            .ext_load(paramType, 1)
-            .ext_castconv(SourceInfo.none(), paramType, returnType)
-            .putfield(generatedClass, returnType.isPrimitive() ? PRIMITIVE_VALUE_FIELD : VALUE_FIELD, returnType);
+            .putfield(requireDeclaredField(FLAGS_FIELD))
+            .aload(0)
+            .load(paramType, 1)
+            .castconv(paramType, returnType)
+            .putfield(currentValueField);
 
         Local convertedValueLocal = code.acquireLocal(sourceValueType);
         int start = code.position();
-        CtClass methodReturnType;
+        TypeDeclaration methodReturnType;
 
-        if (inverseFunction.getBehavior() instanceof CtConstructor) {
-            methodReturnType = invalidatedMethod.getDeclaringClass();
+        if (inverseFunction.getBehavior() instanceof ConstructorDeclaration) {
+            methodReturnType = invalidatedMethod.declaringType();
+            TypeDeclaration inverseDeclaringClass = inverseFunction.getBehavior().declaringType();
 
-            code.anew(inverseFunction.getBehavior().getDeclaringClass())
+            code.anew(inverseDeclaringClass)
                 .dup();
         } else {
-            methodReturnType = ((CtMethod) inverseFunction.getBehavior()).getReturnType();
+            methodReturnType = ((MethodDeclaration)inverseFunction.getBehavior()).returnType();
 
-            if (!Modifier.isStatic(inverseFunction.getBehavior().getModifiers())) {
+            if (!inverseFunction.getBehavior().isStatic()) {
                 code.aload(0)
-                    .getfield(generatedClass, "inverseReceiver",
-                              inverseFunction.getBehavior().getDeclaringClass());
+                    .getfield(requireDeclaredField(INVERSE_RECEIVER_FIELD));
             }
         }
 
         code.aload(0)
-            .getfield(generatedClass, returnType.isPrimitive() ? PRIMITIVE_VALUE_FIELD : VALUE_FIELD, returnType);
-
-        code.ext_invoke(inverseFunction.getBehavior())
-            .ext_autoconv(SourceInfo.none(), methodReturnType, sourceValueType)
-            .ext_store(sourceValueType, convertedValueLocal);
+            .getfield(currentValueField)
+            .invoke(inverseFunction.getBehavior())
+            .autoconv(methodReturnType, sourceValueType)
+            .store(sourceValueType, convertedValueLocal);
 
         Local sourceObservableLocal = code.acquireLocal(false);
 
         code.aload(0)
-            .getfield(generatedClass, paramFields.get(0).getName(), sourceObservableType)
+            .getfield(paramFields.get(0))
             .astore(sourceObservableLocal)
             .aload(sourceObservableLocal)
             .ifnonnull(() -> {
                 code.aload(sourceObservableLocal)
-                    .ext_load(sourceValueType, convertedValueLocal);
+                    .load(sourceValueType, convertedValueLocal);
 
-                unchecked(SourceInfo.none(), () -> {
-                    if (sourceObservableType.subtypeOf(WritableBooleanValueType())) {
-                        code.invokeinterface(WritableBooleanValueType(), "set",
-                                             function(CtClass.voidType, CtClass.booleanType));
-                    } else if (sourceObservableType.subtypeOf(WritableIntegerValueType())) {
-                        code.invokeinterface(WritableIntegerValueType(), "set",
-                                             function(CtClass.voidType, CtClass.intType));
-                    } else if (sourceObservableType.subtypeOf(WritableLongValueType())) {
-                        code.invokeinterface(WritableLongValueType(), "set",
-                                             function(CtClass.voidType, CtClass.longType));
-                    } else if (sourceObservableType.subtypeOf(WritableFloatValueType())) {
-                        code.invokeinterface(WritableFloatValueType(), "set",
-                                             function(CtClass.voidType, CtClass.floatType));
-                    } else if (sourceObservableType.subtypeOf(WritableDoubleValueType())) {
-                        code.invokeinterface(WritableDoubleValueType(), "set",
-                                             function(CtClass.voidType, CtClass.doubleType));
-                    } else {
-                        code.invokeinterface(WritableValueType(), "setValue",
-                                             function(CtClass.voidType, ObjectType()));
-                    }
-                });
+                if (sourceObservableType.subtypeOf(WritableBooleanValueDecl())) {
+                    code.invoke(WritableBooleanValueDecl().requireDeclaredMethod("set", booleanDecl()));
+                } else if (sourceObservableType.subtypeOf(WritableIntegerValueDecl())) {
+                    code.invoke(WritableIntegerValueDecl().requireDeclaredMethod("set", intDecl()));
+                } else if (sourceObservableType.subtypeOf(WritableLongValueDecl())) {
+                    code.invoke(WritableLongValueDecl().requireDeclaredMethod("set", longDecl()));
+                } else if (sourceObservableType.subtypeOf(WritableFloatValueDecl())) {
+                    code.invoke(WritableFloatValueDecl().requireDeclaredMethod("set", floatDecl()));
+                } else if (sourceObservableType.subtypeOf(WritableDoubleValueDecl())) {
+                    code.invoke(WritableDoubleValueDecl().requireDeclaredMethod("set", doubleDecl()));
+                } else {
+                    code.invoke(WritableValueDecl().requireDeclaredMethod("setValue", ObjectDecl()));
+                }
             });
 
         code.releaseLocal(sourceObservableLocal);
@@ -801,12 +697,9 @@ public class ObservableFunctionGenerator extends ClassGenerator {
 
         code.aload(0)
             .iconst(returnType.isPrimitive() ? 2 : 1)
-            .putfield(generatedClass, FLAGS_FIELD, CtClass.intType);
-
-        code.vreturn();
-
-        code.getExceptionTable().add(
-            start, end, handler, code.getConstPool().addClassInfo(ThrowableType()));
+            .putfield(requireDeclaredField(FLAGS_FIELD))
+            .vreturn()
+            .handleException(ThrowableDecl(), start, end, handler);
     }
 
     private void emitLogException(Bytecode code) {
@@ -814,92 +707,80 @@ public class ObservableFunctionGenerator extends ClassGenerator {
         Local threadLocal = code.acquireLocal(false);
 
         code.astore(exceptionLocal)
-            .invokestatic(ThreadType(), "currentThread", function(ThreadType()))
+            .invoke(ThreadDecl().requireDeclaredMethod("currentThread"))
             .astore(threadLocal)
             .aload(threadLocal)
-            .invokevirtual(ThreadType(), "getUncaughtExceptionHandler", function(UncaughtExceptionHandlerType()))
+            .invoke(ThreadDecl().requireDeclaredMethod("getUncaughtExceptionHandler"))
             .aload(threadLocal)
             .aload(exceptionLocal)
-            .invokeinterface(UncaughtExceptionHandlerType(), "uncaughtException",
-                             function(CtClass.voidType, ThreadType(), ThrowableType()));
+            .invoke(UncaughtExceptionHandlerDecl().requireDeclaredMethod(
+                "uncaughtException", ThreadDecl(), ThrowableDecl()));
 
         code.releaseLocal(exceptionLocal);
         code.releaseLocal(threadLocal);
     }
 
-    private void emitGetValueMethod(CtMethod method) throws Exception {
-        Bytecode code = new Bytecode(method.getDeclaringClass(), 1);
-        CtClass declaringClass = method.getDeclaringClass();
+    private void emitGetValueMethod(MethodDeclaration method) {
+        Bytecode code = new Bytecode(method);
 
         code.aload(0)
-            .getfield(declaringClass, FLAGS_FIELD, CtClass.intType)
+            .getfield(requireDeclaredField(FLAGS_FIELD))
             .ifeq(
-                // if (this.flags == 0)
                 () -> {
                     if (returnType.isPrimitive()) {
-                        // validate(true)
                         code.aload(0)
                             .iconst(1)
-                            .invokevirtual(declaringClass, VALIDATE_METHOD,
-                                           function(CtClass.voidType, CtClass.booleanType));
+                            .invoke(requireDeclaredMethod(VALIDATE_METHOD, booleanDecl()));
                     } else {
-                        // validate()
                         code.aload(0)
-                            .invokevirtual(declaringClass, VALIDATE_METHOD, function(CtClass.voidType));
+                            .invoke(requireDeclaredMethod(VALIDATE_METHOD));
                     }
                 },
-
-                // if (this.flags == 2)
                 () -> {
                     if (returnType.isPrimitive()) {
                         code.aload(0)
-                            .getfield(declaringClass, FLAGS_FIELD, CtClass.intType)
+                            .getfield(requireDeclaredField(FLAGS_FIELD))
                             .iconst(2)
                             .if_icmpeq(() -> code
                                 .aload(0)
                                 .aload(0)
-                                .getfield(declaringClass, PRIMITIVE_VALUE_FIELD, returnType)
-                                .ext_box(returnType)
-                                .putfield(declaringClass, VALUE_FIELD, TypeHelper.getBoxedType(returnType))
+                                .getfield(requireDeclaredField(PRIMITIVE_VALUE_FIELD))
+                                .box(returnType)
+                                .putfield(requireDeclaredField(VALUE_FIELD))
                                 .aload(0)
                                 .iconst(1)
-                                .putfield(declaringClass, FLAGS_FIELD, CtClass.intType));
+                                .putfield(requireDeclaredField(FLAGS_FIELD)));
                     }
-                });
-
-        // return this.value
-        code.aload(0)
-            .getfield(declaringClass, VALUE_FIELD, TypeHelper.getBoxedType(returnType))
+                })
+            .aload(0)
+            .getfield(requireDeclaredField(VALUE_FIELD))
             .areturn();
 
-        method.getMethodInfo().setCodeAttribute(code.toCodeAttribute());
-        method.getMethodInfo().rebuildStackMap(method.getDeclaringClass().getClassPool());
+        method.setCode(code);
     }
 
-    private void emitSetValueMethod(CtMethod method) throws Exception {
-        Bytecode code = new Bytecode(method.getDeclaringClass(), 2);
+    private void emitSetValueMethod(MethodDeclaration method) {
+        Bytecode code = new Bytecode(method);
 
         if (setMethod != null) {
             code.aload(0)
-                .ext_load(ObjectType(), 1)
-                .ext_castconv(SourceInfo.none(), ObjectType(), returnType)
-                .invokevirtual(method.getDeclaringClass(), "set", function(CtClass.voidType, returnType))
+                .load(ObjectDecl(), 1)
+                .castconv(ObjectDecl(), returnType)
+                .invoke(requireDeclaredMethod("set", returnType))
                 .vreturn();
         } else {
             emitSetMethodImpl(method, code);
         }
 
-        method.getMethodInfo().setCodeAttribute(code.toCodeAttribute());
-        method.getMethodInfo().rebuildStackMap(method.getDeclaringClass().getClassPool());
+        method.setCode(code);
     }
 
-    private void emitInvalidatedMethod(CtMethod method) throws Exception {
-        Bytecode code = new Bytecode(method.getDeclaringClass(), 2);
+    private void emitInvalidatedMethod(MethodDeclaration method) {
+        Bytecode code = new Bytecode(method);
 
         if (numObservables == 0) {
             code.vreturn();
-            method.getMethodInfo().setCodeAttribute(code.toCodeAttribute());
-            method.getMethodInfo().rebuildStackMap(method.getDeclaringClass().getClassPool());
+            method.setCode(code);
             return;
         }
 
@@ -907,72 +788,64 @@ public class ObservableFunctionGenerator extends ClassGenerator {
         Local newValue = code.acquireLocal(false);
 
         code.aload(0)
-            .getfield(generatedClass, FLAGS_FIELD, CtClass.intType)
+            .getfield(requireDeclaredField(FLAGS_FIELD))
             .ifne(() -> code
                 .aload(0)
                 .iconst(0)
-                .putfield(generatedClass, FLAGS_FIELD, CtClass.intType)
+                .putfield(requireDeclaredField(FLAGS_FIELD))
                 .aload(0)
-                .getfield(generatedClass, CHANGE_LISTENER_FIELD, ChangeListenerType())
+                .getfield(requireDeclaredField(CHANGE_LISTENER_FIELD))
                 .ifnonnull(() -> {
                     if (returnType.isPrimitive()) {
-                        // if (this.flags == 2)
                         code.aload(0)
-                            .getfield(generatedClass, FLAGS_FIELD, CtClass.intType)
+                            .getfield(requireDeclaredField(FLAGS_FIELD))
                             .iconst(2)
                             .if_icmpeq(() -> code
-                                // this.value = this.pvalue
                                 .aload(0)
                                 .aload(0)
-                                .getfield(generatedClass, PRIMITIVE_VALUE_FIELD, returnType)
-                                .ext_box(returnType)
-                                .putfield(generatedClass, VALUE_FIELD, TypeHelper.getBoxedType(returnType))
-
-                                // this.flags = 1
+                                .getfield(requireDeclaredField(PRIMITIVE_VALUE_FIELD))
+                                .box(returnType)
+                                .putfield(requireDeclaredField(VALUE_FIELD))
                                 .aload(0)
                                 .iconst(1)
-                                .putfield(generatedClass, FLAGS_FIELD, CtClass.intType));
+                                .putfield(requireDeclaredField(FLAGS_FIELD)));
                     }
 
-                    // oldValue = this.value
                     code.aload(0)
-                        .getfield(generatedClass, VALUE_FIELD, TypeHelper.getBoxedType(returnType))
-                        .astore(oldValue);
-
-                    // newValue = getValue()
-                    code.aload(0)
-                        .invokeinterface(ObservableValueType(), "getValue", function(ObjectType()))
-                        .astore(newValue);
-
-                    // this.changeListener.changed(this, oldValue, newValue)
-                    code.aload(0)
-                        .getfield(generatedClass, CHANGE_LISTENER_FIELD, ChangeListenerType())
+                        .getfield(requireDeclaredField(VALUE_FIELD))
+                        .astore(oldValue)
+                        .aload(0)
+                        .invoke(ObservableValueDecl().requireDeclaredMethod("getValue"))
+                        .astore(newValue)
+                        .aload(0)
+                        .getfield(requireDeclaredField(CHANGE_LISTENER_FIELD))
                         .aload(0)
                         .aload(oldValue)
                         .aload(newValue)
-                        .invokeinterface(ChangeListenerType(), "changed",
-                                         function(CtClass.voidType, ObservableValueType(), ObjectType(), ObjectType()));
+                        .invoke(ChangeListenerDecl().requireDeclaredMethod(
+                            "changed", ObservableValueDecl(), ObjectDecl(), ObjectDecl()));
                 })
                 .aload(0)
-                .getfield(generatedClass, INVALIDATION_LISTENER_FIELD, InvalidationListenerType())
+                .getfield(requireDeclaredField(INVALIDATION_LISTENER_FIELD))
                 .ifnonnull(() -> code
                     .aload(0)
-                    .getfield(generatedClass, INVALIDATION_LISTENER_FIELD, InvalidationListenerType())
+                    .getfield(requireDeclaredField(INVALIDATION_LISTENER_FIELD))
                     .aload(0)
-                    .invokeinterface(InvalidationListenerType(), "invalidated",
-                                     function(CtClass.voidType, ObservableType()))))
+                    .invoke(InvalidationListenerDecl().requireDeclaredMethod(
+                        "invalidated", ObservableDecl()))))
             .vreturn();
 
         code.releaseLocal(oldValue);
         code.releaseLocal(newValue);
-
-        method.getMethodInfo().setCodeAttribute(code.toCodeAttribute());
-        method.getMethodInfo().rebuildStackMap(method.getDeclaringClass().getClassPool());
+        method.setCode(code);
     }
 
-    private void emitConnectDisconnectMethod(CtMethod method, boolean connectIsTrue) throws Exception {
-        Bytecode code = new Bytecode(method.getDeclaringClass(), 1);
+    private void emitConnectDisconnectMethod(MethodDeclaration method, boolean connectIsTrue) {
+        Bytecode code = new Bytecode(method);
         int fieldIdx = 0;
+
+        MethodDeclaration listenerMethod = ObservableDecl().requireDeclaredMethod(
+            connectIsTrue ? "addListener" : "removeListener", InvalidationListenerDecl());
 
         for (EmitMethodArgumentNode argument : arguments) {
             for (ValueNode child : argument.getChildren()) {
@@ -981,32 +854,26 @@ public class ObservableFunctionGenerator extends ClassGenerator {
                 }
 
                 if (isObservableArgument(child)) {
-                    CtField field = paramFields.get(fieldIdx);
-                    CtClass fieldType = field.getType();
+                    FieldDeclaration field = paramFields.get(fieldIdx);
+                    TypeDeclaration fieldType = field.type();
 
                     code.aload(0)
-                        .getfield(generatedClass, field.getName(), fieldType);
+                        .getfield(field);
 
                     if (bidirectional) {
                         Local local = code.acquireLocal(fieldType);
 
-                        code.ext_store(fieldType, local)
-                            .ext_load(fieldType, local)
+                        code.store(fieldType, local)
+                            .load(fieldType, local)
                             .ifnonnull(() -> code
-                                .ext_load(fieldType, local)
+                                .load(fieldType, local)
                                 .aload(0)
-                                .invokeinterface(
-                                    ObservableType(),
-                                    connectIsTrue ? "addListener" : "removeListener",
-                                    function(CtClass.voidType, InvalidationListenerType())));
+                                .invoke(listenerMethod));
 
                         code.releaseLocal(local);
                     } else {
                         code.aload(0)
-                            .invokeinterface(
-                                ObservableType(),
-                                connectIsTrue ? "addListener" : "removeListener",
-                                function(CtClass.voidType, InvalidationListenerType()));
+                            .invoke(listenerMethod);
                     }
                 }
 
@@ -1015,73 +882,65 @@ public class ObservableFunctionGenerator extends ClassGenerator {
         }
 
         code.vreturn();
-
-        method.getMethodInfo().setCodeAttribute(code.toCodeAttribute());
-        method.getMethodInfo().rebuildStackMap(method.getDeclaringClass().getClassPool());
+        method.setCode(code);
     }
 
-    private void emitNumberValueMethod(CtMethod method, CtClass primitiveType) throws Exception {
-        Bytecode code = new Bytecode(method.getDeclaringClass(), 1);
+    private void emitNumberValueMethod(MethodDeclaration method, TypeDeclaration primitiveType) {
+        Bytecode code = new Bytecode(method);
 
         code.aload(0)
-            .invokevirtual(method.getDeclaringClass(), "get", function(returnType))
-            .ext_primitiveconv(returnType, primitiveType)
-            .ext_return(primitiveType);
+            .invoke(requireDeclaredMethod("get"))
+            .primconv(returnType, primitiveType)
+            .ret(primitiveType);
 
-        method.getMethodInfo().setCodeAttribute(code.toCodeAttribute());
-        method.getMethodInfo().rebuildStackMap(method.getDeclaringClass().getClassPool());
+        method.setCode(code);
     }
 
-    private void emitNotSupportedMethod(CtMethod method, int maxLocals) throws Exception {
-        final String exceptionType = "java.lang.UnsupportedOperationException";
-        Bytecode code = new Bytecode(method.getDeclaringClass(), maxLocals);
+    private void emitNotSupportedMethod(MethodDeclaration method) {
+        Bytecode code = new Bytecode(method);
 
-        code.anew(exceptionType)
+        code.anew(UnsupportedOperationExceptionDecl())
             .dup()
-            .invokespecial(exceptionType, MethodInfo.nameInit, constructor())
+            .invoke(UnsupportedOperationExceptionDecl().requireDeclaredConstructor())
             .athrow();
 
-        method.getMethodInfo().setCodeAttribute(code.toCodeAttribute());
-        method.getMethodInfo().rebuildStackMap(method.getDeclaringClass().getClassPool());
+        method.setCode(code);
     }
 
-    private void emitIsBoundMethod(CtMethod method) throws Exception {
-        Bytecode code = new Bytecode(method.getDeclaringClass(), 1);
+    private void emitIsBoundMethod(MethodDeclaration method) {
+        Bytecode code = new Bytecode(method);
 
         code.iconst(0)
             .ireturn();
 
-        method.getMethodInfo().setCodeAttribute(code.toCodeAttribute());
-        method.getMethodInfo().rebuildStackMap(method.getDeclaringClass().getClassPool());
+        method.setCode(code);
     }
 
     @SuppressWarnings("Convert2MethodRef")
-    private void emitGetBeanOrNameMethod(CtMethod method, boolean beanIsTrue) throws Exception {
-        Bytecode code = new Bytecode(method.getDeclaringClass(), 1);
-        CtClass fieldType = paramFields.get(0).getType();
-        String methodName = beanIsTrue ? "getBean" : "getName";
-        String methodSignature = function(beanIsTrue ? ObjectType() : StringType());
+    private void emitGetBeanOrNameMethod(MethodDeclaration method, boolean beanIsTrue) {
+        Bytecode code = new Bytecode(method);
+        FieldDeclaration field = paramFields.get(0);
+        MethodDeclaration getterMethod = ReadOnlyPropertyDecl().requireDeclaredMethod(beanIsTrue ? "getBean" : "getName");
 
         code.aload(0)
-            .getfield(generatedClass, "param1", fieldType);
+            .getfield(field);
 
         if (bidirectional) {
-            Local local = code.acquireLocal(fieldType);
+            Local local = code.acquireLocal(field.type());
 
-            code.ext_store(fieldType, local)
-                .ext_load(fieldType, local)
+            code.store(field.type(), local)
+                .load(field.type(), local)
                 .ifnull(
                     () -> code.aconst_null(),
-                    () -> code.ext_load(fieldType, local)
-                              .invokeinterface(PropertyType(), methodName, methodSignature))
+                    () -> code.load(field.type(), local)
+                              .invoke(getterMethod))
                 .areturn();
         } else {
-            code.invokeinterface(PropertyType(), methodName, methodSignature)
+            code.invoke(getterMethod)
                 .areturn();
         }
 
-        method.getMethodInfo().setCodeAttribute(code.toCodeAttribute());
-        method.getMethodInfo().rebuildStackMap(method.getDeclaringClass().getClassPool());
+        method.setCode(code);
     }
 
     boolean isObservableArgument(ValueNode node) {

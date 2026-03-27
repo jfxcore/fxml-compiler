@@ -1,17 +1,16 @@
-// Copyright (c) 2022, 2025, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.emit;
 
-import javassist.CtClass;
 import org.jfxcore.compiler.ast.AbstractNode;
 import org.jfxcore.compiler.ast.ResolvedTypeNode;
 import org.jfxcore.compiler.ast.Visitor;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
+import org.jfxcore.compiler.type.TypeDeclaration;
+import org.jfxcore.compiler.type.TypeHelper;
+import org.jfxcore.compiler.type.TypeInstance;
 import org.jfxcore.compiler.util.Bytecode;
-import org.jfxcore.compiler.util.TypeHelper;
-import org.jfxcore.compiler.util.TypeInstance;
-
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -19,14 +18,14 @@ import java.util.Objects;
 
 public class EmitArrayNode extends AbstractNode implements ValueEmitterNode {
 
-    private final CtClass componentType;
+    private final TypeDeclaration componentType;
     private final List<? extends ValueEmitterNode> values;
     private ResolvedTypeNode type;
 
     public EmitArrayNode(TypeInstance arrayType, Collection<? extends ValueEmitterNode> values) {
         super(SourceInfo.span(values));
         this.type = new ResolvedTypeNode(checkNotNull(arrayType), getSourceInfo());
-        this.componentType = checkNotNull(arrayType.getComponentType().jvmType());
+        this.componentType = checkNotNull(arrayType.componentType()).declaration();
         this.values = new ArrayList<>(checkNotNull(values));
     }
 
@@ -48,14 +47,14 @@ public class EmitArrayNode extends AbstractNode implements ValueEmitterNode {
             context.emit(values.get(i));
 
             if (!componentType.isPrimitive()) {
-                TypeInstance valueType = TypeHelper.getTypeInstance(values.get(i));
+                TypeDeclaration valueType = TypeHelper.getTypeInstance(values.get(i)).declaration();
 
                 if (valueType.isPrimitive()) {
-                    code.ext_box(valueType.jvmType());
+                    code.box(valueType);
                 }
             }
 
-            code.ext_arraystore(componentType);
+            code.arraystore(componentType);
         }
     }
 
@@ -80,6 +79,6 @@ public class EmitArrayNode extends AbstractNode implements ValueEmitterNode {
 
     @Override
     public int hashCode() {
-        return Objects.hash(type, TypeHelper.hashCode(componentType), values);
+        return Objects.hash(type, componentType, values);
     }
 }

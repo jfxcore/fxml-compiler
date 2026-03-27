@@ -6,7 +6,7 @@ package org.jfxcore.compiler.ast.expression;
 import org.jetbrains.annotations.Nullable;
 import org.jfxcore.compiler.ast.BindingMode;
 import org.jfxcore.compiler.ast.Node;
-import org.jfxcore.compiler.util.TypeInstance;
+import org.jfxcore.compiler.type.TypeInstance;
 
 public interface ExpressionNode extends Node {
 

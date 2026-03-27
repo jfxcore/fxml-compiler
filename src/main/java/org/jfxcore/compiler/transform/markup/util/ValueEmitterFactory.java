@@ -4,14 +4,6 @@
 package org.jfxcore.compiler.transform.markup.util;
 
 import javafx.scene.paint.Color;
-import javassist.CtClass;
-import javassist.CtConstructor;
-import javassist.CtField;
-import javassist.CtMethod;
-import javassist.Modifier;
-import javassist.NotFoundException;
-import javassist.bytecode.ParameterAnnotationsAttribute;
-import javassist.bytecode.annotation.Annotation;
 import org.jfxcore.compiler.ast.BindingMode;
 import org.jfxcore.compiler.ast.BindingNode;
 import org.jfxcore.compiler.ast.Node;
@@ -39,16 +31,21 @@ import org.jfxcore.compiler.diagnostic.errors.GeneralErrors;
 import org.jfxcore.compiler.diagnostic.errors.PropertyAssignmentErrors;
 import org.jfxcore.compiler.diagnostic.errors.SymbolResolutionErrors;
 import org.jfxcore.compiler.transform.TransformContext;
-import org.jfxcore.compiler.util.Classes;
-import org.jfxcore.compiler.util.Descriptors;
+import org.jfxcore.compiler.type.AccessModifier;
+import org.jfxcore.compiler.type.AnnotationDeclaration;
+import org.jfxcore.compiler.type.ConstructorDeclaration;
+import org.jfxcore.compiler.type.FieldDeclaration;
+import org.jfxcore.compiler.type.MethodDeclaration;
+import org.jfxcore.compiler.type.Resolver;
+import org.jfxcore.compiler.type.TypeDeclaration;
+import org.jfxcore.compiler.type.TypeHelper;
+import org.jfxcore.compiler.type.TypeInstance;
+import org.jfxcore.compiler.type.TypeInvoker;
 import org.jfxcore.compiler.util.NameHelper;
 import org.jfxcore.compiler.util.NumberUtil;
 import org.jfxcore.compiler.util.PropertyHelper;
-import org.jfxcore.compiler.util.Resolver;
-import org.jfxcore.compiler.util.TypeHelper;
-import org.jfxcore.compiler.util.TypeInstance;
-import org.jfxcore.compiler.util.TypeInvoker;
 import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -58,6 +55,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+
+import static org.jfxcore.compiler.type.KnownSymbols.*;
 
 /**
  * Creates AST nodes that represent the creation of a new value.
@@ -73,9 +72,9 @@ public class ValueEmitterFactory {
             colorFields = new HashMap<>();
 
             for (Field field : Color.class.getDeclaredFields()) {
-                if (!java.lang.reflect.Modifier.isStatic(field.getModifiers())
-                        || !java.lang.reflect.Modifier.isPublic(field.getModifiers())
-                        || !java.lang.reflect.Modifier.isFinal(field.getModifiers())
+                if (!Modifier.isStatic(field.getModifiers())
+                        || !Modifier.isPublic(field.getModifiers())
+                        || !Modifier.isFinal(field.getModifiers())
                         || !field.getType().equals(Color.class)) {
                     continue;
                 }
@@ -148,9 +147,9 @@ public class ValueEmitterFactory {
         TypeInstance boxedTargetType = targetType.boxed();
         String trimmedValue = value.trim();
 
-        switch (targetType.getName()) {
+        switch (targetType.name()) {
         case "boolean":
-        case Classes.BooleanName:
+        case BooleanName:
             if (trimmedValue.equals("true")) {
                 return new EmitLiteralNode(id, TypeInstance.booleanType(), true, sourceInfo);
             } else if (trimmedValue.equals("false")) {
@@ -159,49 +158,49 @@ public class ValueEmitterFactory {
 
             break;
         case "char":
-        case Classes.CharacterName:
+        case CharacterName:
             if (trimmedValue.length() == 1) {
                 return new EmitLiteralNode(id, TypeInstance.charType(), trimmedValue.charAt(0), sourceInfo);
             }
 
             break;
         case "byte":
-        case Classes.ByteName:
+        case ByteName:
             try {
                 return new EmitLiteralNode(id, TypeInstance.byteType(), Byte.parseByte(trimmedValue), sourceInfo);
             } catch (NumberFormatException ex) {
                 break;
             }
         case "short":
-        case Classes.ShortName:
+        case ShortName:
             try {
                 return new EmitLiteralNode(id, TypeInstance.shortType(), Short.parseShort(trimmedValue), sourceInfo);
             } catch (NumberFormatException ex) {
                 break;
             }
         case "int":
-        case Classes.IntegerName:
+        case IntegerName:
             try {
                 return new EmitLiteralNode(id, TypeInstance.intType(), Integer.parseInt(trimmedValue), sourceInfo);
             } catch (NumberFormatException ex) {
                 break;
             }
         case "long":
-        case Classes.LongName:
+        case LongName:
             try {
                 return new EmitLiteralNode(id, TypeInstance.longType(), Long.parseLong(trimmedValue), sourceInfo);
             } catch (NumberFormatException ex) {
                 break;
             }
         case "float":
-        case Classes.FloatName:
+        case FloatName:
             try {
                 return new EmitLiteralNode(id, TypeInstance.floatType(), Float.parseFloat(trimmedValue), sourceInfo);
             } catch (NumberFormatException ex) {
                 break;
             }
         case "double":
-        case Classes.DoubleName:
+        case DoubleName:
             try {
                 return new EmitLiteralNode(id, TypeInstance.doubleType(), Double.parseDouble(trimmedValue), sourceInfo);
             } catch (NumberFormatException ex) {
@@ -209,12 +208,10 @@ public class ValueEmitterFactory {
             }
         }
 
-        if (targetType.jvmType().isEnum()) {
-            try {
-                return new EmitLiteralNode(id, targetType, targetType.jvmType().getField(trimmedValue), sourceInfo);
-            } catch (NotFoundException ex) {
-                throw SymbolResolutionErrors.memberNotFound(sourceInfo, targetType.jvmType(), value);
-            }
+        if (targetType.declaration().isEnum()) {
+            return targetType.declaration().field(trimmedValue)
+                .map(field -> new EmitLiteralNode(id, targetType, field, sourceInfo))
+                .orElseThrow(() -> SymbolResolutionErrors.memberNotFound(sourceInfo, targetType.declaration(), value));
         }
 
         if (TypeInstance.BooleanType().subtypeOf(boxedTargetType)) {
@@ -237,7 +234,7 @@ public class ValueEmitterFactory {
             }
         }
 
-        if (TypeInstance.of(Classes.ColorType()).subtypeOf(targetType)) {
+        if (TypeInstance.of(ColorDecl()).subtypeOf(targetType)) {
             try {
                 Color color = Color.valueOf(trimmedValue);
                 Field colorField = findColorField(color);
@@ -245,21 +242,21 @@ public class ValueEmitterFactory {
                 if (colorField != null) {
                     return new EmitClassConstantNode(
                         id,
-                        TypeInstance.of(Classes.ColorType()),
-                        Classes.ColorType(),
+                        TypeInstance.of(ColorDecl()),
+                        ColorDecl(),
                         colorField.getName(),
                         sourceInfo);
                 } else {
-                    CtMethod valueOfMethod = new Resolver(sourceInfo).tryResolveMethod(
-                        Classes.ColorType(), m -> "valueOf".equals(m.getName()));
+                    MethodDeclaration valueOfMethod = new Resolver(sourceInfo).tryResolveMethod(
+                        ColorDecl(), m -> "valueOf".equals(m.name()));
 
                     return EmitObjectNode
-                        .valueOf(TypeInstance.of(Classes.ColorType()), valueOfMethod, sourceInfo)
+                        .valueOf(TypeInstance.of(ColorDecl()), valueOfMethod, sourceInfo)
                         .textValue(trimmedValue)
                         .create();
                 }
             } catch (NullPointerException | IllegalArgumentException ex) {
-                if (boxedTargetType.subtypeOf(TypeInstance.of(Classes.ColorType()))) {
+                if (boxedTargetType.subtypeOf(TypeInstance.of(ColorDecl()))) {
                     return null;
                 }
             }
@@ -267,20 +264,20 @@ public class ValueEmitterFactory {
 
         for (TypeInstance declaringType : declaringTypes) {
             // Always use boxed type to support static fields on primitive wrapper classes.
-            CtClass boxedDeclaringType = TypeHelper.getBoxedType(declaringType.jvmType());
+            TypeDeclaration boxedDeclaringType = declaringType.boxed().declaration();
 
             var resolver = new Resolver(sourceInfo);
-            CtField field = resolver.tryResolveField(boxedDeclaringType, trimmedValue);
+            FieldDeclaration field = resolver.tryResolveField(boxedDeclaringType, trimmedValue);
 
             if (field != null) {
                 var fieldType = new TypeInvoker(sourceInfo).invokeFieldType(field, List.of(declaringType));
                 if (targetType.isAssignableFrom(fieldType)) {
-                    return new EmitClassConstantNode(id, targetType, boxedDeclaringType, field.getName(), sourceInfo);
+                    return new EmitClassConstantNode(id, targetType, boxedDeclaringType, field.name(), sourceInfo);
                 }
             }
         }
 
-        if (TypeInstance.of(Classes.StringType()).subtypeOf(targetType)) {
+        if (TypeInstance.of(StringDecl()).subtypeOf(targetType)) {
             return new EmitLiteralNode(id, TypeInstance.StringType(), value, sourceInfo);
         }
 
@@ -293,17 +290,11 @@ public class ValueEmitterFactory {
      * @return {@link EmitObjectNode} if successful; <code>null</code> otherwise.
      */
     public static EmitObjectNode newDefaultObject(ObjectNode objectNode) {
-        try {
-            TypeInstance type = TypeHelper.getTypeInstance(objectNode);
-            CtConstructor constructor = type.jvmType().getConstructor(Descriptors.constructor());
-
-            if (Modifier.isPublic(constructor.getModifiers())) {
-                return createObjectNode(objectNode, constructor, Collections.emptyList());
-            }
-        } catch (NotFoundException ignored) {
-        }
-
-        return null;
+        TypeInstance type = TypeHelper.getTypeInstance(objectNode);
+        return type.declaration().declaredConstructor()
+            .filter(c -> c.accessModifier() == AccessModifier.PUBLIC)
+            .map(c -> createObjectNode(objectNode, c, Collections.emptyList()))
+            .orElse(null);
     }
 
     /**
@@ -331,7 +322,7 @@ public class ValueEmitterFactory {
                 argIndex++;
 
                 boolean vararg = argIndex == namedArgsConstructor.namedArgs().length - 1
-                        && Modifier.isVarArgs(namedArgsConstructor.constructor().getModifiers());
+                        && namedArgsConstructor.constructor().isVarArgs();
 
                 PropertyNode propertyNode = objectNode.getProperties().stream()
                     .filter(p -> p.getName().equals(constructorParam.name()))
@@ -380,7 +371,7 @@ public class ValueEmitterFactory {
                                             ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT, "named",
                                             methodSignature,
                                             propertyNode.getName(),
-                                            errorType != null ? errorType.getJavaName() : "<error-type>"),
+                                            errorType != null ? errorType.javaName() : "<error-type>"),
                                         result.sourceInfo()));
                             }
 
@@ -407,7 +398,7 @@ public class ValueEmitterFactory {
                                                 "parent",
                                                 methodSignature,
                                                 propertyNode.getName(),
-                                                TypeHelper.getTypeInstance(referencedParent).getJavaName()),
+                                                TypeHelper.getTypeInstance(referencedParent).javaName()),
                                             result.sourceInfo()));
                                 }
                             }
@@ -434,7 +425,7 @@ public class ValueEmitterFactory {
             }
         }
 
-        if (constructorDiagnostics.size() > 0) {
+        if (!constructorDiagnostics.isEmpty()) {
             throw new MarkupException(
                 constructorDiagnostics.get(0).getSourceInfo(),
                 constructorDiagnostics.get(0).getDiagnostic());
@@ -509,7 +500,7 @@ public class ValueEmitterFactory {
         TypeInstance valueType = TypeHelper.getTypeInstance(value);
 
         if (targetType.isAssignableFrom(valueType) ||
-                vararg && targetType.getComponentType().isAssignableFrom(valueType)) {
+                vararg && targetType.componentType().isAssignableFrom(valueType)) {
             return AcceptArgumentResult.value(value);
         }
 
@@ -524,7 +515,7 @@ public class ValueEmitterFactory {
         List<ValueEmitterNode> values = new ArrayList<>();
 
         for (ValueNode item : listNode.getValues()) {
-            var result = acceptArgument(context, item, arrayType.getComponentType(), null,
+            var result = acceptArgument(context, item, arrayType.componentType(), null,
                                         invokingType, false, parentsUnderInitializationCount);
 
             if (result.errorCode() != null) {
@@ -533,7 +524,7 @@ public class ValueEmitterFactory {
                 values.add(valueEmitterNode);
             } else {
                 return AcceptArgumentResult.error(
-                    arrayType.getComponentType(), ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT, item.getSourceInfo());
+                    arrayType.componentType(), ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT, item.getSourceInfo());
             }
         }
 
@@ -596,7 +587,7 @@ public class ValueEmitterFactory {
     }
 
     private static EmitObjectNode createObjectNode(
-            ObjectNode objectNode, CtConstructor constructor, List<ValueNode> arguments) {
+            ObjectNode objectNode, ConstructorDeclaration constructor, List<ValueNode> arguments) {
         return EmitObjectNode
             .constructor(TypeHelper.getTypeInstance(objectNode), constructor, arguments, objectNode.getSourceInfo())
             .children(PropertyHelper.getSorted(objectNode, objectNode.getProperties()))
@@ -643,7 +634,7 @@ public class ValueEmitterFactory {
 
     private static ValueEmitterNode newObjectByCoercion(
             ObjectNode objectNode, TextNode textNode, Collection<? extends Node> children, TypeInstance targetType) {
-        if (TypeHelper.isPrimitiveBox(targetType.jvmType())) {
+        if (targetType.declaration().isPrimitiveBox()) {
             return null;
         }
 
@@ -682,8 +673,8 @@ public class ValueEmitterFactory {
     private static ConstructorWithParams findConstructor(TypeInstance type, TextNode[] literals, SourceInfo sourceInfo) {
         TypeInvoker invoker = new TypeInvoker(sourceInfo);
 
-        outer: for (CtConstructor constructor : type.jvmType().getConstructors()) {
-            if (!Modifier.isPublic(constructor.getModifiers())
+        outer: for (ConstructorDeclaration constructor : type.declaration().constructors()) {
+            if (constructor.accessModifier() != AccessModifier.PUBLIC
                     || invoker.invokeParameterTypes(constructor, List.of(type)).length != literals.length) {
                 continue;
             }
@@ -713,17 +704,17 @@ public class ValueEmitterFactory {
         return null;
     }
 
-    private record ConstructorWithParams(CtConstructor constructor, List<ValueEmitterNode> params) {}
+    private record ConstructorWithParams(ConstructorDeclaration constructor, List<ValueEmitterNode> params) {}
 
     private static ValueEmitterNode newArray(TextNode[] literals, TypeInstance targetType, SourceInfo sourceInfo) {
-        if (!targetType.isArray() || targetType.getDimensions() != 1) {
+        if (!targetType.isArray() || targetType.dimensions() != 1) {
             return null;
         }
 
         List<ValueEmitterNode> params = new ArrayList<>();
 
         for (TextNode literal : literals) {
-            ValueEmitterNode param = newLiteralValue(literal, targetType.getComponentType(), sourceInfo);
+            ValueEmitterNode param = newLiteralValue(literal, targetType.componentType(), sourceInfo);
             if (param != null) {
                 params.add(param);
             } else {
@@ -746,8 +737,8 @@ public class ValueEmitterFactory {
         TypeInstance type = TypeHelper.getTypeInstance(objectNode);
 
         // Enumerate all constructors that have named arguments
-        for (CtConstructor constructor : type.jvmType().getConstructors()) {
-            if (!Modifier.isPublic(constructor.getModifiers())) {
+        for (ConstructorDeclaration constructor : type.declaration().constructors()) {
+            if (constructor.accessModifier() != AccessModifier.PUBLIC) {
                 continue;
             }
 
@@ -795,28 +786,16 @@ public class ValueEmitterFactory {
     }
 
     private static List<NamedArgParam> getNamedArgParams(
-            TypeInstance type, CtConstructor constructor, SourceInfo sourceInfo) {
-        ParameterAnnotationsAttribute attr = (ParameterAnnotationsAttribute)constructor
-            .getMethodInfo2().getAttribute(ParameterAnnotationsAttribute.visibleTag);
-
-        if (attr == null) {
-            return List.of();
-        }
-
+            TypeInstance type, ConstructorDeclaration constructor, SourceInfo sourceInfo) {
         TypeInvoker invoker = new TypeInvoker(sourceInfo);
         TypeInstance[] constructorParamTypes = invoker.invokeParameterTypes(constructor, List.of(type));
-        Annotation[][] annotations = attr.getAnnotations();
-
-        if (annotations.length != constructorParamTypes.length) {
-            return List.of();
-        }
-
         List<NamedArgParam> namedArgs = new ArrayList<>();
 
-        for (int i = 0; i < annotations.length; ++i) {
-            Annotation namedArgAnnotation = null;
-            for (Annotation item : annotations[i]) {
-                if (item.getTypeName().equals(Classes.NamedArgAnnotationName)) {
+        for (int i = 0; i < constructorParamTypes.length; ++i) {
+            AnnotationDeclaration namedArgAnnotation = null;
+
+            for (AnnotationDeclaration item : constructor.parameters().get(i).annotations()) {
+                if (item.typeName().equals(NamedArgAnnotationName)) {
                     namedArgAnnotation = item;
                     break;
                 }
@@ -826,8 +805,8 @@ public class ValueEmitterFactory {
                 return List.of();
             }
 
-            String value = TypeHelper.getAnnotationString(namedArgAnnotation, "value");
-            String defaultValue = TypeHelper.getAnnotationString(namedArgAnnotation, "defaultValue");
+            String value = namedArgAnnotation.getString("value");
+            String defaultValue = namedArgAnnotation.getString("defaultValue");
 
             if (value != null) {
                 TypeInstance argType = constructorParamTypes[i];
@@ -844,7 +823,7 @@ public class ValueEmitterFactory {
         }
     }
 
-    private record NamedArgsConstructor(CtConstructor constructor, NamedArgParam[] namedArgs) {}
+    private record NamedArgsConstructor(ConstructorDeclaration constructor, NamedArgParam[] namedArgs) {}
 
     private static String findAndRemoveId(ObjectNode node) {
         PropertyNode propertyNode = node.findIntrinsicProperty(Intrinsics.ID);
@@ -856,7 +835,7 @@ public class ValueEmitterFactory {
 
         if (propertyNode.getValues().size() != 1 || !(propertyNode.getValues().get(0) instanceof TextNode)) {
             throw PropertyAssignmentErrors.propertyMustContainText(
-                propertyNode.getSourceInfo(), TypeHelper.getJvmType(node), Intrinsics.ID.getName());
+                propertyNode.getSourceInfo(), TypeHelper.getTypeDeclaration(node), Intrinsics.ID.getName());
         }
 
         return ((TextNode)propertyNode.getValues().get(0)).getText();

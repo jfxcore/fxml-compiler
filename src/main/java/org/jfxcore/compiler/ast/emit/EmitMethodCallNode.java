@@ -1,17 +1,15 @@
-// Copyright (c) 2021, 2024, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.emit;
 
-import javassist.CtMethod;
-import javassist.Modifier;
 import org.jfxcore.compiler.ast.AbstractNode;
-import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.ast.ResolvedTypeNode;
 import org.jfxcore.compiler.ast.Visitor;
+import org.jfxcore.compiler.diagnostic.SourceInfo;
+import org.jfxcore.compiler.type.MethodDeclaration;
+import org.jfxcore.compiler.type.TypeInstance;
 import org.jfxcore.compiler.util.Bytecode;
-import org.jfxcore.compiler.util.TypeHelper;
-import org.jfxcore.compiler.util.TypeInstance;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -19,20 +17,20 @@ import java.util.Objects;
 
 public class EmitMethodCallNode extends AbstractNode implements ValueEmitterNode {
 
-    private final CtMethod method;
+    private final MethodDeclaration method;
     private final ResolvedTypeNode type;
     private final List<ValueEmitterNode> methodReceiver;
     private final List<ValueEmitterNode> arguments;
 
     public EmitMethodCallNode(
-            CtMethod method,
+            MethodDeclaration method,
             TypeInstance returnType,
             Collection<ValueEmitterNode> methodReceiver,
             Collection<? extends ValueEmitterNode> arguments,
             SourceInfo sourceInfo) {
         super(sourceInfo);
-        boolean isStatic = Modifier.isStatic(method.getModifiers());
-        if (isStatic && methodReceiver.size() > 0 || !isStatic && methodReceiver.size() == 0){
+        boolean isStatic = method.isStatic();
+        if (isStatic && !methodReceiver.isEmpty() || !isStatic && methodReceiver.isEmpty()){
             throw new IllegalArgumentException("methodReceiver");
         }
 
@@ -43,7 +41,7 @@ public class EmitMethodCallNode extends AbstractNode implements ValueEmitterNode
     }
 
     private EmitMethodCallNode(
-            CtMethod method,
+            MethodDeclaration method,
             ResolvedTypeNode type,
             Collection<ValueEmitterNode> methodReceiver,
             Collection<? extends ValueEmitterNode> arguments,
@@ -72,8 +70,8 @@ public class EmitMethodCallNode extends AbstractNode implements ValueEmitterNode
             context.emit(argument);
         }
 
-        code.ext_invoke(method)
-            .ext_castconv(getSourceInfo(), unchecked(method::getReturnType), type.getJvmType());
+        code.invoke(method)
+            .castconv(method.returnType(), type.getTypeDeclaration());
     }
 
     @Override
@@ -98,7 +96,7 @@ public class EmitMethodCallNode extends AbstractNode implements ValueEmitterNode
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         EmitMethodCallNode that = (EmitMethodCallNode)o;
-        return TypeHelper.equals(method, that.method) &&
+        return method.equals(that.method) &&
             type.equals(that.type) &&
             arguments.equals(that.arguments) &&
             methodReceiver.equals(that.methodReceiver);
@@ -106,7 +104,6 @@ public class EmitMethodCallNode extends AbstractNode implements ValueEmitterNode
 
     @Override
     public int hashCode() {
-        return Objects.hash(TypeHelper.hashCode(method), type, arguments, methodReceiver);
+        return Objects.hash(method, type, arguments, methodReceiver);
     }
-
 }

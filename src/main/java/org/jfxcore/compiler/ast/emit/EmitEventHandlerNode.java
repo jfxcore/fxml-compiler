@@ -1,33 +1,30 @@
-// Copyright (c) 2021, 2025, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.emit;
 
-import javassist.CtClass;
-import javassist.bytecode.MethodInfo;
-import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.ast.AbstractNode;
 import org.jfxcore.compiler.ast.ResolvedTypeNode;
+import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.generate.ClassGenerator;
 import org.jfxcore.compiler.generate.EventHandlerGenerator;
+import org.jfxcore.compiler.type.TypeDeclaration;
+import org.jfxcore.compiler.type.TypeInstance;
+import org.jfxcore.compiler.type.TypeInvoker;
 import org.jfxcore.compiler.util.Bytecode;
-import org.jfxcore.compiler.util.TypeHelper;
-import org.jfxcore.compiler.util.TypeInstance;
-import org.jfxcore.compiler.util.TypeInvoker;
 import java.util.List;
 import java.util.Objects;
 
-import static org.jfxcore.compiler.util.Classes.*;
-import static org.jfxcore.compiler.util.Descriptors.*;
+import static org.jfxcore.compiler.type.KnownSymbols.*;
 
 public class EmitEventHandlerNode extends AbstractNode implements ValueEmitterNode {
 
-    private final CtClass declaringClass;
+    private final TypeDeclaration declaringClass;
     private final TypeInstance eventType;
     private final String eventHandlerName;
     private final ResolvedTypeNode type;
 
-    public EmitEventHandlerNode(CtClass declaringClass,
+    public EmitEventHandlerNode(TypeDeclaration declaringClass,
                                 TypeInstance eventType,
                                 String eventHandlerName,
                                 SourceInfo sourceInfo) {
@@ -36,7 +33,7 @@ public class EmitEventHandlerNode extends AbstractNode implements ValueEmitterNo
         this.eventType = checkNotNull(eventType);
         this.eventHandlerName = checkNotNull(eventHandlerName);
         this.type = new ResolvedTypeNode(
-            new TypeInvoker(sourceInfo).invokeType(EventHandlerType(), List.of(eventType)),
+            new TypeInvoker(sourceInfo).invokeType(EventHandlerDecl(), List.of(eventType)),
             sourceInfo);
     }
 
@@ -50,15 +47,15 @@ public class EmitEventHandlerNode extends AbstractNode implements ValueEmitterNo
         Bytecode code = context.getOutput();
 
         var generator = new EventHandlerGenerator(
-            context.getBindingContextClass(), eventType.jvmType(), eventHandlerName);
+            context.getBindingContextClass(), eventType.declaration(), eventHandlerName);
 
-        CtClass handlerClass = ClassGenerator.emit(context, generator);
+        TypeDeclaration handlerClass = ClassGenerator.emit(context, generator);
 
         code.anew(handlerClass)
             .dup()
             .aload(0)
             .checkcast(declaringClass)
-            .invokespecial(handlerClass, MethodInfo.nameInit, constructor(declaringClass));
+            .invoke(handlerClass.requireConstructor(declaringClass));
     }
 
     @Override
@@ -71,7 +68,7 @@ public class EmitEventHandlerNode extends AbstractNode implements ValueEmitterNo
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         EmitEventHandlerNode that = (EmitEventHandlerNode)o;
-        return TypeHelper.equals(declaringClass, that.declaringClass) &&
+        return declaringClass.equals(that.declaringClass) &&
             eventType.equals(that.eventType) &&
             eventHandlerName.equals(that.eventHandlerName) &&
             type.equals(that.type);
@@ -79,7 +76,6 @@ public class EmitEventHandlerNode extends AbstractNode implements ValueEmitterNo
 
     @Override
     public int hashCode() {
-        return Objects.hash(
-            TypeHelper.hashCode(declaringClass), eventType.hashCode(), eventHandlerName, type);
+        return Objects.hash(declaringClass, eventType, eventHandlerName, type);
     }
 }

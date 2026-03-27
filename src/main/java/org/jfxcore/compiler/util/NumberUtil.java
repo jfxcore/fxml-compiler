@@ -1,7 +1,9 @@
-// Copyright (c) 2021, 2024, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.util;
+
+import org.jfxcore.compiler.type.TypeInstance;
 
 public class NumberUtil {
 

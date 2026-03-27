@@ -1,19 +1,18 @@
-// Copyright (c) 2021, 2025, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.expression;
 
-import javassist.CtClass;
 import org.jfxcore.compiler.ast.BindingMode;
 import org.jfxcore.compiler.ast.NodeDataKey;
 import org.jfxcore.compiler.ast.emit.EmitConvertToBooleanNode;
 import org.jfxcore.compiler.ast.emit.EmitMapToBooleanNode;
 import org.jfxcore.compiler.ast.emit.ValueEmitterNode;
-import org.jfxcore.compiler.util.Resolver;
-import org.jfxcore.compiler.util.TypeHelper;
-import org.jfxcore.compiler.util.TypeInstance;
+import org.jfxcore.compiler.type.Resolver;
+import org.jfxcore.compiler.type.TypeHelper;
+import org.jfxcore.compiler.type.TypeInstance;
 
-import static org.jfxcore.compiler.util.Classes.*;
+import static org.jfxcore.compiler.type.KnownSymbols.*;
 
 public enum Operator {
 
@@ -39,7 +38,7 @@ public enum Operator {
     public boolean isInvertible(TypeInstance operandType) {
         return switch (this) {
             case IDENTITY -> true;
-            case NOT, BOOLIFY -> operandType.equals(CtClass.booleanType) || operandType.equals(BooleanType());
+            case NOT, BOOLIFY -> operandType.equals(booleanDecl()) || operandType.equals(BooleanDecl());
         };
     }
 
@@ -60,7 +59,7 @@ public enum Operator {
                 TypeInstance typeInstance = TypeHelper.getTypeInstance(child);
                 TypeInstance argType = resolver.findObservableArgument(typeInstance);
 
-                if (this == BOOLIFY && (argType.equals(BooleanType()) || argType.equals(CtClass.booleanType))) {
+                if (this == BOOLIFY && (argType.equals(BooleanDecl()) || argType.equals(booleanDecl()))) {
                     yield child;
                 }
 

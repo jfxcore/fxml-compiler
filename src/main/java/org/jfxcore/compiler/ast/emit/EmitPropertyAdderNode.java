@@ -1,27 +1,25 @@
-// Copyright (c) 2021, 2024, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.emit;
 
-import javassist.CtClass;
-import javassist.CtMethod;
-import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.ast.AbstractNode;
 import org.jfxcore.compiler.ast.ValueNode;
 import org.jfxcore.compiler.ast.Visitor;
+import org.jfxcore.compiler.diagnostic.SourceInfo;
+import org.jfxcore.compiler.type.MethodDeclaration;
+import org.jfxcore.compiler.type.TypeHelper;
+import org.jfxcore.compiler.type.TypeInstance;
 import org.jfxcore.compiler.util.Bytecode;
 import org.jfxcore.compiler.util.Local;
 import org.jfxcore.compiler.util.PropertyInfo;
-import org.jfxcore.compiler.util.TypeHelper;
-import org.jfxcore.compiler.util.TypeInstance;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
-import static org.jfxcore.compiler.util.Classes.*;
-import static org.jfxcore.compiler.util.Descriptors.*;
+import static org.jfxcore.compiler.type.KnownSymbols.*;
 
 /**
  * Emits opcodes to to add a list of values to a collection-type property or a map property.
@@ -48,15 +46,15 @@ public class EmitPropertyAdderNode extends AbstractNode implements EmitterNode {
 
     @Override
     public void emit(BytecodeEmitContext context) {
-        CtMethod method = propertyInfo.getGetterOrPropertyGetter();
+        MethodDeclaration method = propertyInfo.getGetterOrPropertyGetter();
         Bytecode code = context.getOutput();
         boolean isMap = !keys.isEmpty();
 
         code.dup()
-            .ext_invoke(method);
+            .invoke(method);
 
         if (propertyInfo.getGetter() == null) {
-            code.invokeinterface(ObservableValueType(), "getValue", function(ObjectType()));
+            code.invoke(ObservableValueDecl().requireDeclaredMethod("getValue"));
         }
 
         Local local = code.acquireLocal(false);
@@ -74,13 +72,13 @@ public class EmitPropertyAdderNode extends AbstractNode implements EmitterNode {
             context.emit(value);
 
             if (itemType != null) {
-                code.ext_autoconv(getSourceInfo(), TypeHelper.getJvmType(value), itemType.jvmType());
+                code.autoconv(TypeHelper.getTypeDeclaration(value), itemType.declaration());
             }
 
             if (isMap) {
-                code.invokeinterface(MapType(), "put", function(ObjectType(), ObjectType(), ObjectType()));
+                code.invoke(MapDecl().requireDeclaredMethod("put", ObjectDecl(), ObjectDecl()));
             } else {
-                code.invokeinterface(CollectionType(), "add", function(CtClass.booleanType, ObjectType()));
+                code.invoke(CollectionDecl().requireDeclaredMethod("add", ObjectDecl()));
             }
 
             code.pop();
@@ -120,5 +118,4 @@ public class EmitPropertyAdderNode extends AbstractNode implements EmitterNode {
     public int hashCode() {
         return Objects.hash(propertyInfo, keys, values, itemType);
     }
-
 }

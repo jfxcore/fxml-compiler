@@ -1,4 +1,4 @@
-// Copyright (c) 2022, 2023, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.util;
@@ -6,13 +6,13 @@ package org.jfxcore.compiler.util;
 import javafx.beans.property.Property;
 import javafx.beans.value.ObservableValue;
 import javafx.beans.value.WritableValue;
-import javassist.CtMethod;
-import javassist.NotFoundException;
 import org.jetbrains.annotations.Nullable;
 import org.jfxcore.compiler.ast.BindingMode;
+import org.jfxcore.compiler.type.MethodDeclaration;
+import org.jfxcore.compiler.type.TypeInstance;
 import java.util.Objects;
 
-import static org.jfxcore.compiler.util.Classes.*;
+import static org.jfxcore.compiler.type.KnownSymbols.*;
 
 /**
  * The compiler will recognize a JavaFX property if it is implemented by a well-defined set of methods.
@@ -45,9 +45,9 @@ import static org.jfxcore.compiler.util.Classes.*;
 public class PropertyInfo {
 
     private final String name;
-    private final CtMethod propertyGetter;
-    private final CtMethod getter;
-    private final CtMethod setter;
+    private final MethodDeclaration propertyGetter;
+    private final MethodDeclaration getter;
+    private final MethodDeclaration setter;
     private final TypeInstance typeInstance;
     private final TypeInstance observableType;
     private final TypeInstance declaringType;
@@ -56,15 +56,15 @@ public class PropertyInfo {
     private final boolean readonly;
     private final boolean bindable;
 
-    PropertyInfo(
+    public PropertyInfo(
             String name,
-            CtMethod propertyGetter,
-            CtMethod getter,
-            CtMethod setter,
+            MethodDeclaration propertyGetter,
+            MethodDeclaration getter,
+            MethodDeclaration setter,
             TypeInstance type,
             TypeInstance observableType,
             TypeInstance declaringType,
-            boolean isStatic) throws NotFoundException {
+            boolean isStatic) {
         this.name = name;
         this.propertyGetter = propertyGetter;
         this.getter = getter;
@@ -75,8 +75,8 @@ public class PropertyInfo {
         this.isStatic = isStatic;
         this.observable = propertyGetter != null;
         this.readonly = setter == null &&
-            (propertyGetter == null || !propertyGetter.getReturnType().subtypeOf(Classes.WritableValueType()));
-        this.bindable = propertyGetter != null && propertyGetter.getReturnType().subtypeOf(Classes.PropertyType());
+            (propertyGetter == null || !propertyGetter.returnType().subtypeOf(WritableValueDecl()));
+        this.bindable = propertyGetter != null && propertyGetter.returnType().subtypeOf(PropertyDecl());
     }
 
     public String getName() {
@@ -87,7 +87,7 @@ public class PropertyInfo {
      * Returns the property getter method.
      * This may be {@code null} if the property doesn't have an {@link ObservableValue}-based property getter.
      */
-    public @Nullable CtMethod getPropertyGetter() {
+    public @Nullable MethodDeclaration getPropertyGetter() {
         return propertyGetter;
     }
 
@@ -96,37 +96,38 @@ public class PropertyInfo {
      * This may be {@code null} if the property doesn't have a getter method.
      * If there is no getter method, the property must have an {@link ObservableValue}-based property getter.
      */
-    public @Nullable CtMethod getGetter() {
+    public @Nullable MethodDeclaration getGetter() {
         return getter;
     }
 
     /**
      * Returns the setter method. This may be {@code null} if the property doesn't have a setter method.
      */
-    public @Nullable CtMethod getSetter() {
+    public @Nullable MethodDeclaration getSetter() {
         return setter;
     }
 
     /**
      * Returns the property getter method. If there is no property getter method, returns the getter method.
      */
-    public CtMethod getPropertyGetterOrGetter() {
+    public MethodDeclaration getPropertyGetterOrGetter() {
         return propertyGetter != null ? propertyGetter : getter;
     }
 
     /**
      * Returns the getter method. If there is no getter method, returns the property getter method.
      */
-    public CtMethod getGetterOrPropertyGetter() {
+    public MethodDeclaration getGetterOrPropertyGetter() {
         return getter != null ? getter : propertyGetter;
     }
 
     /**
      * Returns the setter method. If there is no setter method, returns the property getter method.
      */
-    public CtMethod getSetterOrPropertyGetter() {
+    public MethodDeclaration getSetterOrPropertyGetter() {
         return setter != null ? setter : propertyGetter;
     }
+
 
     /**
      * Returns the type of the property.
@@ -188,18 +189,18 @@ public class PropertyInfo {
     public boolean isContentBindable(BindingMode forMode) {
         switch (forMode) {
             case CONTENT:
-                return typeInstance.subtypeOf(CollectionType())
-                    || typeInstance.subtypeOf(MapType());
+                return typeInstance.subtypeOf(CollectionDecl())
+                    || typeInstance.subtypeOf(MapDecl());
 
             case UNIDIRECTIONAL_CONTENT:
-                return (observableType == null || observableType.subtypeOf(ListType())) && typeInstance.subtypeOf(ListType())
-                    || (observableType == null || observableType.subtypeOf(SetType())) && typeInstance.subtypeOf(SetType())
-                    || (observableType == null || observableType.subtypeOf(MapType())) && typeInstance.subtypeOf(MapType());
+                return (observableType == null || observableType.subtypeOf(ListDecl())) && typeInstance.subtypeOf(ListDecl())
+                    || (observableType == null || observableType.subtypeOf(SetDecl())) && typeInstance.subtypeOf(SetDecl())
+                    || (observableType == null || observableType.subtypeOf(MapDecl())) && typeInstance.subtypeOf(MapDecl());
 
             case BIDIRECTIONAL_CONTENT:
-                return (observableType == null || observableType.subtypeOf(ObservableListType())) && typeInstance.subtypeOf(ObservableListType())
-                    || (observableType == null || observableType.subtypeOf(ObservableSetType())) && typeInstance.subtypeOf(ObservableSetType())
-                    || (observableType == null || observableType.subtypeOf(ObservableMapType())) && typeInstance.subtypeOf(ObservableMapType());
+                return (observableType == null || observableType.subtypeOf(ObservableListDecl())) && typeInstance.subtypeOf(ObservableListDecl())
+                    || (observableType == null || observableType.subtypeOf(ObservableSetDecl())) && typeInstance.subtypeOf(ObservableSetDecl())
+                    || (observableType == null || observableType.subtypeOf(ObservableMapDecl())) && typeInstance.subtypeOf(ObservableMapDecl());
 
             default:
                 return false;
@@ -208,7 +209,7 @@ public class PropertyInfo {
 
     @Override
     public String toString() {
-        return declaringType.getSimpleName() + "." + name;
+        return declaringType.simpleName() + "." + name;
     }
 
     @Override
@@ -224,5 +225,4 @@ public class PropertyInfo {
     public int hashCode() {
         return Objects.hash(name, declaringType);
     }
-
 }

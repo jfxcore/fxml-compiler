@@ -1,51 +1,44 @@
-// Copyright (c) 2023, 2025, JFXcore. All rights reserved.
+// Copyright (c) 2023, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.generate;
 
-import javassist.CtClass;
-import javassist.CtConstructor;
-import javassist.CtField;
-import javassist.CtMethod;
-import javassist.Modifier;
-import javassist.bytecode.MethodInfo;
 import org.jfxcore.compiler.ast.emit.BytecodeEmitContext;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
+import org.jfxcore.compiler.type.TypeDeclaration;
+import org.jfxcore.compiler.type.TypeInstance;
+import org.jfxcore.compiler.type.TypeInvoker;
 import org.jfxcore.compiler.util.NameHelper;
-import org.jfxcore.compiler.util.TypeHelper;
-import org.jfxcore.compiler.util.TypeInstance;
-import org.jfxcore.compiler.util.TypeInvoker;
+import java.lang.reflect.Modifier;
 import java.util.function.BiConsumer;
 
-import static org.jfxcore.compiler.util.Classes.*;
-import static org.jfxcore.compiler.util.Descriptors.*;
-import static org.jfxcore.compiler.util.ExceptionHelper.*;
+import static org.jfxcore.compiler.type.KnownSymbols.*;
 
 public class BooleanMapperGenerator extends ClassGenerator {
 
     private final TypeInstance typeInstance =
-        new TypeInvoker(SourceInfo.none()).invokeType(BooleanBindingType());
+        new TypeInvoker(SourceInfo.none()).invokeType(BooleanBindingDecl());
 
     private final String className;
-    private final CtClass valueType;
+    private final TypeDeclaration valueType;
     private final boolean invert;
 
-    public BooleanMapperGenerator(CtClass valueType, boolean invert) {
+    public BooleanMapperGenerator(TypeDeclaration valueType, boolean invert) {
         this.valueType = valueType;
         this.invert = invert;
 
         String name;
-        CtClass boxedType = TypeHelper.getBoxedType(valueType);
+        TypeDeclaration boxedType = valueType.boxed();
 
-        if (unchecked(SourceInfo.none(), () -> boxedType.subtypeOf(BooleanType()))) {
+        if (boxedType.subtypeOf(BooleanDecl())) {
             name = "Boolean";
-        } else if (unchecked(SourceInfo.none(), () -> boxedType.subtypeOf(FloatType()))) {
+        } else if (boxedType.subtypeOf(FloatDecl())) {
             name = "Float";
-        } else if (unchecked(SourceInfo.none(), () -> boxedType.subtypeOf(DoubleType()))) {
+        } else if (boxedType.subtypeOf(DoubleDecl())) {
             name = "Double";
-        } else if (unchecked(SourceInfo.none(), () -> boxedType.subtypeOf(CharacterType()))) {
+        } else if (boxedType.subtypeOf(CharacterDecl())) {
             name = "Character";
-        } else if (unchecked(SourceInfo.none(), () -> boxedType.subtypeOf(NumberType()))) {
+        } else if (boxedType.subtypeOf(NumberDecl())) {
             name = "Number";
         } else {
             name = "Object";
@@ -65,72 +58,66 @@ public class BooleanMapperGenerator extends ClassGenerator {
     }
 
     @Override
-    public void emitClass(BytecodeEmitContext context) throws Exception {
-        generatedClass = context.getNestedClasses().create(getClassName());
-        generatedClass.setModifiers(Modifier.PRIVATE | Modifier.FINAL);
-        generatedClass.setSuperclass(BooleanBindingType());
+    public TypeDeclaration emitClass(BytecodeEmitContext context) {
+        return super.emitClass(context)
+            .setModifiers(Modifier.PRIVATE | Modifier.FINAL)
+            .setSuperClass(BooleanBindingDecl());
     }
 
     @Override
-    public void emitFields(BytecodeEmitContext context) throws Exception {
-        CtField field =new CtField(ObservableValueType(), "observable", generatedClass);
-        field.setModifiers(Modifier.PRIVATE | Modifier.FINAL);
-        generatedClass.addField(field);
+    public void emitFields(BytecodeEmitContext context) {
+        createField("observable", ObservableValueDecl()).setModifiers(Modifier.PRIVATE | Modifier.FINAL);
     }
 
     @Override
-    public void emitCode(BytecodeEmitContext context) throws Exception {
-        super.emitCode(context);
-
-        CtConstructor constructor = new CtConstructor(new CtClass[] {ObservableValueType()}, generatedClass);
-        SharedMethodImpls.createBehavior(context, generatedClass, constructor, 2, code -> {
+    public void emitCode(BytecodeEmitContext context) {
+        SharedMethodImpls.createBehavior(createConstructor(ObservableValueDecl()), code -> {
             // super()
             code.aload(0)
-                .invokespecial(generatedClass.getSuperclass(), MethodInfo.nameInit, constructor());
+                .invoke(requireSuperClass().requireDeclaredConstructor());
 
             // this.observable = $1
             code.aload(0)
                 .aload(1)
-                .putfield(generatedClass, "observable", ObservableValueType());
+                .putfield(requireDeclaredField("observable"));
 
             // bind($1)
             code.aload(0)
-                .newarray(ObservableType(), 1)
+                .newarray(ObservableDecl(), 1)
                 .dup()
                 .iconst(0)
                 .aload(1)
-                .ext_arraystore(ObservableType())
-                .invokevirtual(generatedClass.getSuperclass(), "bind", "([Ljavafx/beans/Observable;)V")
+                .arraystore(ObservableDecl())
+                .invoke(requireSuperClass().requireDeclaredMethod("bind", ObservableDecl().arrayType(1)))
                 .vreturn();
         });
 
-        CtMethod method = new CtMethod(CtClass.booleanType, "computeValue", new CtClass[0], generatedClass);
-        SharedMethodImpls.createBehavior(context, generatedClass, method, 1, code -> {
+        SharedMethodImpls.createBehavior(createMethod("computeValue", booleanDecl()), code -> {
             BiConsumer<Runnable, Runnable> op = code::ifeq;
 
             code.aload(0)
-                .getfield(generatedClass, "observable", ObservableValueType())
-                .invokeinterface(ObservableValueType(), "getValue", function(ObjectType()));
+                .getfield(requireDeclaredField("observable"))
+                .invoke(ObservableValueDecl().requireDeclaredMethod("getValue"));
 
-            if (valueType.subtypeOf(BooleanType())) {
-                code.checkcast(BooleanType())
-                    .ext_castconv(SourceInfo.none(), BooleanType(), CtClass.booleanType);
-            } else if (valueType.subtypeOf(FloatType())) {
-                code.checkcast(FloatType())
-                    .ext_castconv(SourceInfo.none(), FloatType(), CtClass.floatType)
+            if (valueType.subtypeOf(BooleanDecl())) {
+                code.checkcast(BooleanDecl())
+                    .castconv(BooleanDecl(), booleanDecl());
+            } else if (valueType.subtypeOf(FloatDecl())) {
+                code.checkcast(FloatDecl())
+                    .castconv(FloatDecl(), floatDecl())
                     .fconst(0)
                     .fcmpl();
-            } else if (valueType.subtypeOf(DoubleType())) {
-                code.checkcast(DoubleType())
-                    .ext_castconv(SourceInfo.none(), DoubleType(), CtClass.doubleType)
+            } else if (valueType.subtypeOf(DoubleDecl())) {
+                code.checkcast(DoubleDecl())
+                    .castconv(DoubleDecl(), doubleDecl())
                     .dconst(0)
                     .dcmpl();
-            } else if (valueType.subtypeOf(CharacterType())) {
-                code.checkcast(CharacterType())
-                    .ext_castconv(SourceInfo.none(), CharacterType(), CtClass.intType);
-            } else if (valueType.subtypeOf(NumberType())) {
-                code.checkcast(NumberType())
-                    .ext_castconv(SourceInfo.none(), NumberType(), CtClass.intType);
+            } else if (valueType.subtypeOf(CharacterDecl())) {
+                code.checkcast(CharacterDecl())
+                    .castconv(CharacterDecl(), intDecl());
+            } else if (valueType.subtypeOf(NumberDecl())) {
+                code.checkcast(NumberDecl())
+                    .castconv(NumberDecl(), intDecl());
             } else {
                 op = code::ifnull;
             }

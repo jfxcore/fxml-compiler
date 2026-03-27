@@ -8,8 +8,7 @@ import org.jfxcore.compiler.ast.ValueNode;
 import org.jfxcore.compiler.ast.Visitor;
 import java.util.Objects;
 
-import static org.jfxcore.compiler.util.Classes.*;
-import static org.jfxcore.compiler.util.Descriptors.*;
+import static org.jfxcore.compiler.type.KnownSymbols.*;
 
 public class EmitMapAdderNode extends AbstractNode implements EmitterNode {
 
@@ -30,7 +29,7 @@ public class EmitMapAdderNode extends AbstractNode implements EmitterNode {
         context.emit(value);
 
         context.getOutput()
-            .invokeinterface(MapType(), "put", function(ObjectType(), ObjectType(), ObjectType()))
+            .invoke(MapDecl().requireDeclaredMethod("put", ObjectDecl(), ObjectDecl()))
             .pop();
     }
 
@@ -57,5 +56,4 @@ public class EmitMapAdderNode extends AbstractNode implements EmitterNode {
     public int hashCode() {
         return Objects.hash(key, value);
     }
-
 }

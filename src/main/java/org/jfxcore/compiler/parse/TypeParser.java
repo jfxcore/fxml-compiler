@@ -1,4 +1,4 @@
-// Copyright (c) 2021, 2025, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.parse;
@@ -6,13 +6,14 @@ package org.jfxcore.compiler.parse;
 import org.jfxcore.compiler.diagnostic.Location;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.diagnostic.errors.ParserErrors;
-import org.jfxcore.compiler.util.Classes;
+import org.jfxcore.compiler.type.Resolver;
+import org.jfxcore.compiler.type.TypeInstance;
+import org.jfxcore.compiler.type.TypeInvoker;
 import org.jfxcore.compiler.util.NameHelper;
-import org.jfxcore.compiler.util.Resolver;
-import org.jfxcore.compiler.util.TypeInstance;
-import org.jfxcore.compiler.util.TypeInvoker;
 import java.util.ArrayList;
 import java.util.List;
+
+import static org.jfxcore.compiler.type.KnownSymbols.*;
 
 public class TypeParser {
 
@@ -137,7 +138,7 @@ public class TypeParser {
                 objectInst = parseType(tokenizer);
             } else {
                 wildcardType = TypeInstance.WildcardType.ANY;
-                objectInst = invoker.invokeType(Classes.ObjectType());
+                objectInst = invoker.invokeType(ObjectDecl());
             }
 
             return objectInst.withWildcard(wildcardType);

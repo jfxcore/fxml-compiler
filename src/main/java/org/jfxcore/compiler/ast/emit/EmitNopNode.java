@@ -1,13 +1,12 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.emit;
 
 import org.jfxcore.compiler.ast.AbstractNode;
 import org.jfxcore.compiler.ast.ResolvedTypeNode;
-import org.jfxcore.compiler.ast.TypeNode;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
-import org.jfxcore.compiler.util.TypeInstance;
+import org.jfxcore.compiler.type.TypeInstance;
 
 public class EmitNopNode extends AbstractNode implements ValueEmitterNode {
 
@@ -30,5 +29,4 @@ public class EmitNopNode extends AbstractNode implements ValueEmitterNode {
     public EmitNopNode deepClone() {
         return new EmitNopNode(type.getTypeInstance(), getSourceInfo());
     }
-
 }

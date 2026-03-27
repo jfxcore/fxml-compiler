@@ -1,20 +1,19 @@
-// Copyright (c) 2021, 2025, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.emit;
 
-import javassist.CtClass;
 import org.jfxcore.compiler.ast.AbstractNode;
 import org.jfxcore.compiler.ast.ValueNode;
-import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.ast.Visitor;
+import org.jfxcore.compiler.diagnostic.SourceInfo;
+import org.jfxcore.compiler.type.TypeHelper;
+import org.jfxcore.compiler.type.TypeInstance;
 import org.jfxcore.compiler.util.Bytecode;
-import org.jfxcore.compiler.util.Classes;
-import org.jfxcore.compiler.util.Descriptors;
 import org.jfxcore.compiler.util.PropertyInfo;
-import org.jfxcore.compiler.util.TypeHelper;
-import org.jfxcore.compiler.util.TypeInstance;
 import java.util.Objects;
+
+import static org.jfxcore.compiler.type.KnownSymbols.*;
 
 public class EmitStaticPropertySetterNode extends AbstractNode implements EmitterNode {
 
@@ -36,19 +35,18 @@ public class EmitStaticPropertySetterNode extends AbstractNode implements Emitte
         code.dup();
 
         if (propertyInfo.getSetter() == null) {
-            code.ext_invoke(propertyInfo.getPropertyGetter());
+            code.invoke(Objects.requireNonNull(propertyInfo.getPropertyGetter()));
         }
 
         context.emit(value);
 
         if (value instanceof ValueEmitterNode) {
-            code.ext_autoconv(getSourceInfo(), TypeHelper.getJvmType(value), propertyInfo.getType().jvmType());
+            code.autoconv(TypeHelper.getTypeDeclaration(value), propertyInfo.getType().declaration());
 
             if (propertyInfo.getSetter() == null) {
-                code.invokeinterface(Classes.WritableValueType(), "setValue",
-                                     Descriptors.function(CtClass.voidType, Classes.ObjectType()));
+                code.invoke(WritableValueDecl().requireDeclaredMethod("setValue", ObjectDecl()));
             } else {
-                code.ext_invoke(propertyInfo.getSetter());
+                code.invoke(propertyInfo.getSetter());
             }
         } else {
             code.pop2();

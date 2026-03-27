@@ -1,15 +1,14 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.emit;
 
 import org.jfxcore.compiler.ast.AbstractNode;
 import org.jfxcore.compiler.ast.ResolvedTypeNode;
-import org.jfxcore.compiler.ast.TypeNode;
 import org.jfxcore.compiler.ast.Visitor;
+import org.jfxcore.compiler.type.Resolver;
+import org.jfxcore.compiler.type.TypeHelper;
 import org.jfxcore.compiler.util.Bytecode;
-import org.jfxcore.compiler.util.Resolver;
-import org.jfxcore.compiler.util.TypeHelper;
 
 public class EmitUnwrapObservableNode extends AbstractNode implements ValueEmitterNode, NullableInfo {
 
@@ -33,7 +32,7 @@ public class EmitUnwrapObservableNode extends AbstractNode implements ValueEmitt
     public void emit(BytecodeEmitContext context) {
         Bytecode code = context.getOutput();
         context.emit(child);
-        code.ext_ObservableUnbox(getSourceInfo(), TypeHelper.getJvmType(child), type.getJvmType());
+        code.unboxObservable(TypeHelper.getTypeDeclaration(child), type.getTypeDeclaration());
     }
 
     @Override
@@ -50,7 +49,6 @@ public class EmitUnwrapObservableNode extends AbstractNode implements ValueEmitt
 
     @Override
     public boolean isNullable() {
-        return !type.getJvmType().isPrimitive();
+        return !type.getTypeDeclaration().isPrimitive();
     }
-
 }

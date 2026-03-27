@@ -1,11 +1,11 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast;
 
-import javassist.CtClass;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
-import org.jfxcore.compiler.util.TypeInstance;
+import org.jfxcore.compiler.type.TypeDeclaration;
+import org.jfxcore.compiler.type.TypeInstance;
 
 /**
  * Represents a type that was successfully resolved.
@@ -15,7 +15,7 @@ public class ResolvedTypeNode extends TypeNode {
     private final TypeInstance type;
 
     public ResolvedTypeNode(TypeInstance type, SourceInfo sourceInfo) {
-        this(type, type.jvmType().getName(), type.jvmType().getName(), false, sourceInfo);
+        this(type, type.name(), type.name(), false, sourceInfo);
     }
 
     public ResolvedTypeNode(
@@ -24,12 +24,12 @@ public class ResolvedTypeNode extends TypeNode {
         this.type = checkNotNull(type);
     }
 
-    public CtClass getJvmType() {
-        return type.jvmType();
-    }
-
     public TypeInstance getTypeInstance() {
         return type;
+    }
+
+    public TypeDeclaration getTypeDeclaration() {
+        return type.declaration();
     }
 
     @Override
@@ -55,5 +55,4 @@ public class ResolvedTypeNode extends TypeNode {
     public int hashCode() {
         return type.hashCode();
     }
-
 }

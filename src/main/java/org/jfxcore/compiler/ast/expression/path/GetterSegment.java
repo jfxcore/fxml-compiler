@@ -1,21 +1,20 @@
-// Copyright (c) 2022, 2023, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.expression.path;
 
-import javassist.CtClass;
-import javassist.CtMethod;
+import org.jfxcore.compiler.ast.emit.EmitInvokeGetterNode;
 import org.jfxcore.compiler.ast.emit.ValueEmitterNode;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
-import org.jfxcore.compiler.ast.emit.EmitInvokeGetterNode;
+import org.jfxcore.compiler.type.MethodDeclaration;
+import org.jfxcore.compiler.type.TypeDeclaration;
+import org.jfxcore.compiler.type.TypeInstance;
 import org.jfxcore.compiler.util.ObservableKind;
-import org.jfxcore.compiler.util.TypeHelper;
-import org.jfxcore.compiler.util.TypeInstance;
 import java.util.Objects;
 
 public class GetterSegment extends Segment {
 
-    private final CtMethod getter;
+    private final MethodDeclaration getter;
     private final ObservableKind observableKind;
     private final boolean staticPropertyGetter;
 
@@ -24,7 +23,7 @@ public class GetterSegment extends Segment {
             String displayName,
             TypeInstance type,
             TypeInstance valueType,
-            CtMethod getter,
+            MethodDeclaration getter,
             boolean staticPropertyGetter,
             ObservableKind observableKind) {
         super(name, displayName, type, valueType, observableKind);
@@ -33,8 +32,13 @@ public class GetterSegment extends Segment {
         this.staticPropertyGetter = staticPropertyGetter;
     }
 
-    public CtMethod getGetter() {
+    public MethodDeclaration getGetter() {
         return getter;
+    }
+
+    @Override
+    public TypeDeclaration getDeclaringType() {
+        return getter.declaringType();
     }
 
     public boolean isStaticPropertyGetter() {
@@ -44,11 +48,6 @@ public class GetterSegment extends Segment {
     @Override
     public boolean isNullable() {
         return !observableKind.isNonNull();
-    }
-
-    @Override
-    public CtClass getDeclaringClass() {
-        return getter.getDeclaringClass();
     }
 
     @Override
@@ -63,14 +62,13 @@ public class GetterSegment extends Segment {
         if (o == null || getClass() != o.getClass()) return false;
         if (!super.equals(o)) return false;
         GetterSegment that = (GetterSegment)o;
-        return TypeHelper.equals(getter, that.getter)
+        return getter.equals(that.getter)
             && observableKind == that.observableKind
             && staticPropertyGetter == that.staticPropertyGetter;
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(super.hashCode(), TypeHelper.hashCode(getter), observableKind, staticPropertyGetter);
+        return Objects.hash(super.hashCode(), getter, observableKind, staticPropertyGetter);
     }
-
 }

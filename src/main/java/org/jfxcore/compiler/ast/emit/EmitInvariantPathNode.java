@@ -1,18 +1,18 @@
-// Copyright (c) 2021, 2024, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.emit;
 
-import javassist.CtClass;
-import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.ast.AbstractNode;
 import org.jfxcore.compiler.ast.Node;
 import org.jfxcore.compiler.ast.ResolvedTypeNode;
 import org.jfxcore.compiler.ast.Visitor;
+import org.jfxcore.compiler.diagnostic.SourceInfo;
+import org.jfxcore.compiler.type.TypeDeclaration;
+import org.jfxcore.compiler.type.TypeHelper;
 import org.jfxcore.compiler.util.Bytecode;
 import org.jfxcore.compiler.util.Label;
 import org.jfxcore.compiler.util.Local;
-import org.jfxcore.compiler.util.TypeHelper;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -50,7 +50,7 @@ public class EmitInvariantPathNode extends AbstractNode implements ValueEmitterN
     @Override
     public void emit(BytecodeEmitContext context) {
         Bytecode code = context.getOutput();
-        CtClass type = this.type.getJvmType();
+        TypeDeclaration type = this.type.getTypeDeclaration();
         boolean anyNullable = false;
 
         for (int i = 0; i < children.size() - 1; ++i) {
@@ -64,8 +64,8 @@ public class EmitInvariantPathNode extends AbstractNode implements ValueEmitterN
             Local resultLocal = code.acquireLocal(type);
             Local tempLocal = code.acquireLocal(false);
 
-            code.ext_defaultconst(type)
-                .ext_store(type, resultLocal);
+            code.defaultconst(type)
+                .store(type, resultLocal);
 
             List<Label> labels = new ArrayList<>();
 
@@ -77,7 +77,7 @@ public class EmitInvariantPathNode extends AbstractNode implements ValueEmitterN
                 context.emit(child);
 
                 if (lastChild) {
-                    code.ext_store(type, resultLocal);
+                    code.store(type, resultLocal);
                 } else if (nullable) {
                     Label label = code
                         .astore(tempLocal)
@@ -92,7 +92,7 @@ public class EmitInvariantPathNode extends AbstractNode implements ValueEmitterN
 
             labels.forEach(Label::resume);
 
-            code.ext_load(type, resultLocal);
+            code.load(type, resultLocal);
 
             code.releaseLocal(resultLocal);
             code.releaseLocal(tempLocal);
@@ -132,5 +132,4 @@ public class EmitInvariantPathNode extends AbstractNode implements ValueEmitterN
     public int hashCode() {
         return Objects.hash(children, type);
     }
-
 }

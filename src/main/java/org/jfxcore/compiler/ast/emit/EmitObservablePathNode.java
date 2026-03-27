@@ -1,24 +1,22 @@
-// Copyright (c) 2021, 2025, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.emit;
 
 import javafx.beans.value.ObservableValue;
-import javassist.CtClass;
-import javassist.bytecode.MethodInfo;
 import org.jetbrains.annotations.Nullable;
-import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.ast.AbstractNode;
 import org.jfxcore.compiler.ast.GeneratorEmitterNode;
 import org.jfxcore.compiler.ast.ResolvedTypeNode;
 import org.jfxcore.compiler.ast.Visitor;
 import org.jfxcore.compiler.ast.expression.path.ResolvedPath;
+import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.generate.ClassGenerator;
+import org.jfxcore.compiler.type.TypeDeclaration;
+import org.jfxcore.compiler.type.TypeInstance;
 import org.jfxcore.compiler.util.Bytecode;
-import org.jfxcore.compiler.util.Descriptors;
 import org.jfxcore.compiler.util.Local;
 import org.jfxcore.compiler.util.ObservableKind;
-import org.jfxcore.compiler.util.TypeInstance;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
@@ -162,7 +160,7 @@ public class EmitObservablePathNode
                         if (mayReturnNull || useCompiledPath) {
                             code.aconst_null();
                         } else {
-                            code.ext_defaultconst(leadingValueWrapper.getValueType());
+                            code.defaultconst(leadingValueWrapper.getValueType().declaration());
                             context.emit(leadingValueWrapper);
                         }
                     });
@@ -176,16 +174,12 @@ public class EmitObservablePathNode
             code.astore(constructorArgLocal);
 
             Runnable invokeConstructor = () -> {
-                CtClass compiledClass = context.getNestedClasses().find(compiledClassName);
+                TypeDeclaration compiledClass = context.getNestedClasses().find(compiledClassName);
 
                 code.anew(compiledClass)
                     .dup()
                     .aload(constructorArgLocal)
-                    .invokespecial(
-                        compiledClass,
-                        MethodInfo.nameInit,
-                        Descriptors.constructor(
-                            unchecked(() -> compiledClass.getDeclaredConstructors()[0].getParameterTypes()[0])));
+                    .invoke(compiledClass.declaredConstructors().get(0));
             };
 
             if (leadingInvariantSegments > 1) {
@@ -193,7 +187,7 @@ public class EmitObservablePathNode
                     .ifnonnull(
                         invokeConstructor,
                         () -> {
-                            code.ext_defaultconst(constructorWrapper.getValueType());
+                            code.defaultconst(constructorWrapper.getValueType().declaration());
                             context.emit(constructorWrapper);
                         });
             } else {

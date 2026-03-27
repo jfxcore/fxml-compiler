@@ -1,18 +1,17 @@
-// Copyright (c) 2022, 2025, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.diagnostic.errors;
 
-import javassist.CtBehavior;
-import javassist.CtClass;
 import org.jfxcore.compiler.diagnostic.Diagnostic;
 import org.jfxcore.compiler.diagnostic.ErrorCode;
 import org.jfxcore.compiler.diagnostic.MarkupException;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
-import org.jfxcore.compiler.util.NameHelper;
-import org.jfxcore.compiler.util.TypeInstance;
+import org.jfxcore.compiler.type.BehaviorDeclaration;
+import org.jfxcore.compiler.type.TypeDeclaration;
+import org.jfxcore.compiler.type.TypeInstance;
 
-import static org.jfxcore.compiler.util.NameHelper.formatPropertyName;
+import static org.jfxcore.compiler.util.NameHelper.*;
 
 public class BindingSourceErrors {
 
@@ -26,13 +25,14 @@ public class BindingSourceErrors {
             ErrorCode.CANNOT_CONVERT_SOURCE_TYPE, sourceType, targetType));
     }
 
-    public static MarkupException invalidContentAssignmentSource(SourceInfo sourceInfo, CtClass declaringType, String propertyName) {
+    public static MarkupException invalidContentAssignmentSource(
+            SourceInfo sourceInfo, TypeDeclaration declaringType, String propertyName) {
         return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
             ErrorCode.INVALID_CONTENT_ASSIGNMENT_SOURCE, formatPropertyName(declaringType, propertyName)));
     }
 
     public static MarkupException invalidContentBindingSource(
-            SourceInfo sourceInfo, CtClass declaringType, String propertyName, TypeInstance requiredType,
+            SourceInfo sourceInfo, TypeDeclaration declaringType, String propertyName, TypeInstance requiredType,
             boolean bidirectional, boolean assignHint) {
         if (bidirectional) {
             return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
@@ -42,13 +42,13 @@ public class BindingSourceErrors {
         return new MarkupException(sourceInfo, assignHint ?
             Diagnostic.newDiagnosticVariant(
                 ErrorCode.INVALID_CONTENT_BINDING_SOURCE, "assignHint",
-                formatPropertyName(declaringType, propertyName), requiredType.getJavaName()) :
+                formatPropertyName(declaringType, propertyName), requiredType.javaName()) :
             Diagnostic.newDiagnostic(
                 ErrorCode.INVALID_CONTENT_BINDING_SOURCE,
-                formatPropertyName(declaringType, propertyName), requiredType.getJavaName()));
+                formatPropertyName(declaringType, propertyName), requiredType.javaName()));
     }
 
-    public static MarkupException invalidUnidirectionalBindingSource(SourceInfo sourceInfo, CtClass declaringType,
+    public static MarkupException invalidUnidirectionalBindingSource(SourceInfo sourceInfo, TypeDeclaration declaringType,
                                                                      String propertyName, boolean function) {
         return new MarkupException(sourceInfo, function
             ? Diagnostic.newDiagnosticVariant(ErrorCode.INVALID_UNIDIRECTIONAL_BINDING_SOURCE,
@@ -57,17 +57,19 @@ public class BindingSourceErrors {
                                        formatPropertyName(declaringType, propertyName)));
     }
 
-    public static MarkupException invalidBidirectionalBindingSource(SourceInfo sourceInfo, CtClass declaringType, String propertyName) {
+    public static MarkupException invalidBidirectionalBindingSource(
+            SourceInfo sourceInfo, TypeDeclaration declaringType, String propertyName) {
         return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
             ErrorCode.INVALID_BIDIRECTIONAL_BINDING_SOURCE, formatPropertyName(declaringType, propertyName)));
     }
 
-    public static MarkupException invalidBidirectionalBindingSource(SourceInfo sourceInfo, CtClass sourceType, boolean contentHint) {
+    public static MarkupException invalidBidirectionalBindingSource(
+            SourceInfo sourceInfo, TypeInstance sourceType, boolean contentHint) {
         return new MarkupException(sourceInfo, contentHint ?
             Diagnostic.newDiagnosticVariant(ErrorCode.INVALID_BIDIRECTIONAL_BINDING_SOURCE, "contentHint",
-                NameHelper.getJavaClassName(sourceInfo, sourceType)) :
+                sourceType.javaName()) :
             Diagnostic.newDiagnostic(ErrorCode.INVALID_BIDIRECTIONAL_BINDING_SOURCE,
-                NameHelper.getJavaClassName(sourceInfo, sourceType)));
+                sourceType.javaName()));
     }
 
     public static MarkupException expressionNotInvertible(SourceInfo sourceInfo) {
@@ -105,19 +107,21 @@ public class BindingSourceErrors {
             ErrorCode.CANNOT_BIND_FUNCTION, causes));
     }
 
-    public static MarkupException methodNotInvertible(SourceInfo sourceInfo, CtBehavior method) {
+    public static MarkupException methodNotInvertible(SourceInfo sourceInfo, BehaviorDeclaration method) {
         return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
-            ErrorCode.METHOD_NOT_INVERTIBLE, NameHelper.getLongMethodSignature(method)));
+            ErrorCode.METHOD_NOT_INVERTIBLE, method.displaySignature(false, false)));
     }
 
-    public static MarkupException invalidInverseMethod(SourceInfo sourceInfo, CtBehavior method, Diagnostic[] causes) {
+    public static MarkupException invalidInverseMethod(
+            SourceInfo sourceInfo, BehaviorDeclaration method, Diagnostic[] causes) {
         return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
-            ErrorCode.INVALID_INVERSE_METHOD, causes, NameHelper.getLongMethodSignature(method)));
+            ErrorCode.INVALID_INVERSE_METHOD, causes, method.displaySignature(false, false)));
     }
 
-    public static MarkupException invalidInverseMethodAnnotationValue(SourceInfo sourceInfo, CtBehavior behavior) {
+    public static MarkupException invalidInverseMethodAnnotationValue(
+            SourceInfo sourceInfo, BehaviorDeclaration behavior) {
         return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
-            ErrorCode.INVALID_INVERSE_METHOD_ANNOTATION_VALUE, NameHelper.getLongMethodSignature(behavior)));
+            ErrorCode.INVALID_INVERSE_METHOD_ANNOTATION_VALUE, behavior.displaySignature(false, false)));
     }
 
     public static MarkupException stringConversionNotApplicable(SourceInfo sourceInfo, String propertyName) {

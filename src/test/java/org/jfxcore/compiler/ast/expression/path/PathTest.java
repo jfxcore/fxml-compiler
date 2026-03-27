@@ -1,4 +1,4 @@
-// Copyright (c) 2021, 2025, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.expression.path;
@@ -15,9 +15,9 @@ import org.jfxcore.compiler.ast.text.TextSegmentNode;
 import org.jfxcore.compiler.diagnostic.ErrorCode;
 import org.jfxcore.compiler.diagnostic.MarkupException;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
-import org.jfxcore.compiler.util.Resolver;
-import org.jfxcore.compiler.util.TypeInstance;
-import org.jfxcore.compiler.util.TypeInvoker;
+import org.jfxcore.compiler.type.Resolver;
+import org.jfxcore.compiler.type.TypeInstance;
+import org.jfxcore.compiler.type.TypeInvoker;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
@@ -244,12 +244,12 @@ public class PathTest extends TestBase {
         ResolvedPath path = ResolvedPath.parse(firstSegment, segments("testProp_Property"), true, SourceInfo.none());
         assertEquals("PathTest$TypeInvocationTest1", path.get(0).getTypeInstance().toString());
         assertEquals("PathTest$Type2<String>", path.get(1).getValueTypeInstance().toString());
-        assertEquals("PathTest$Type1<String>", path.get(1).getValueTypeInstance().getSuperTypes().get(0).toString());
+        assertEquals("PathTest$Type1<String>", path.get(1).getValueTypeInstance().superTypes().get(0).toString());
 
         path = ResolvedPath.parse(firstSegment, segments("testProp_NonProperty"), true, SourceInfo.none());
         assertEquals("PathTest$TypeInvocationTest1", path.get(0).getTypeInstance().toString());
         assertEquals("PathTest$Type2<String>", path.get(1).getTypeInstance().toString());
-        assertEquals("PathTest$Type1<String>", path.get(1).getTypeInstance().getSuperTypes().get(0).toString());
+        assertEquals("PathTest$Type1<String>", path.get(1).getTypeInstance().superTypes().get(0).toString());
     }
 
     public static class DerivedPropertyTypeTestClass {
@@ -294,8 +294,8 @@ public class PathTest extends TestBase {
 
         assertEquals("PathTest$RecurringTestClass", path.get(0).getTypeInstance().toString());
         assertEquals("PathTest$RecurringType<PathTest$TestEnum>", path.get(1).getTypeInstance().toString());
-        assertEquals("Object", path.get(1).getTypeInstance().getSuperTypes().get(0).toString());
-        assertEquals("Comparable<PathTest$RecurringType<PathTest$TestEnum>>", path.get(1).getTypeInstance().getSuperTypes().get(1).toString());
+        assertEquals("Object", path.get(1).getTypeInstance().superTypes().get(0).toString());
+        assertEquals("Comparable<PathTest$RecurringType<PathTest$TestEnum>>", path.get(1).getTypeInstance().superTypes().get(1).toString());
     }
 
     public static class GenericListTestClass {
@@ -339,7 +339,7 @@ public class PathTest extends TestBase {
         Segment firstSegment = new ParentSegment(TypeInstance.of(resolver.resolveClass(OverrideMethodDerived.class.getName())), -1);
         ResolvedPath target = ResolvedPath.parse(firstSegment, segments("value"), true, SourceInfo.none());
 
-        assertEquals("java.lang.String", target.getTypeInstance().jvmType().getName());
+        assertEquals("java.lang.String", target.getTypeInstance().name());
     }
 
     public static class Type9<T> {

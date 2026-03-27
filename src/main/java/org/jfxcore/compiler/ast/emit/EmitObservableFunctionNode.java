@@ -1,33 +1,26 @@
-// Copyright (c) 2022, 2024, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.emit;
 
-import javassist.CannotCompileException;
-import javassist.CtBehavior;
-import javassist.CtClass;
-import javassist.CtConstructor;
-import javassist.CtMethod;
-import javassist.NotFoundException;
-import javassist.bytecode.BadBytecode;
-import javassist.bytecode.MethodInfo;
 import org.jetbrains.annotations.Nullable;
 import org.jfxcore.compiler.ast.AbstractNode;
 import org.jfxcore.compiler.ast.GeneratorEmitterNode;
 import org.jfxcore.compiler.ast.ResolvedTypeNode;
 import org.jfxcore.compiler.ast.Visitor;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
-import org.jfxcore.compiler.diagnostic.errors.SymbolResolutionErrors;
 import org.jfxcore.compiler.generate.Generator;
 import org.jfxcore.compiler.generate.ObservableFunctionGenerator;
+import org.jfxcore.compiler.type.BehaviorDeclaration;
+import org.jfxcore.compiler.type.ConstructorDeclaration;
+import org.jfxcore.compiler.type.MethodDeclaration;
+import org.jfxcore.compiler.type.TypeDeclaration;
+import org.jfxcore.compiler.type.TypeInstance;
 import org.jfxcore.compiler.util.AccessVerifier;
 import org.jfxcore.compiler.util.Bytecode;
 import org.jfxcore.compiler.util.Callable;
 import org.jfxcore.compiler.util.CompilationContext;
-import org.jfxcore.compiler.util.ExceptionHelper;
 import org.jfxcore.compiler.util.NameHelper;
-import org.jfxcore.compiler.util.TypeHelper;
-import org.jfxcore.compiler.util.TypeInstance;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -37,8 +30,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-import static org.jfxcore.compiler.util.Descriptors.function;
-
 public class EmitObservableFunctionNode
         extends AbstractNode
         implements ValueEmitterNode, GeneratorEmitterNode, ParentStackInfo, NullableInfo {
@@ -47,7 +38,7 @@ public class EmitObservableFunctionNode
     private final Callable inverseFunction;
     private final List<EmitMethodArgumentNode> arguments;
     private final ResolvedTypeNode type;
-    private final CtClass invocationContext;
+    private final TypeDeclaration invocationContext;
     private transient String compiledClassName;
 
     public EmitObservableFunctionNode(
@@ -55,7 +46,7 @@ public class EmitObservableFunctionNode
             Callable function,
             @Nullable Callable inverseFunction,
             Collection<? extends EmitMethodArgumentNode> arguments,
-            CtClass invocationContext,
+            TypeDeclaration invocationContext,
             SourceInfo sourceInfo) {
         super(sourceInfo);
         this.type = new ResolvedTypeNode(checkNotNull(type), sourceInfo);
@@ -105,7 +96,7 @@ public class EmitObservableFunctionNode
         }
 
         var generator = new ObservableFunctionGenerator(
-            ensureAccessible(context, function), ensureAccessible(context, inverseFunction), arguments);
+            ensureAccessible(function), ensureAccessible(inverseFunction), arguments);
 
         compiledClassName = generator.getClassName();
         getClassCache().put(this, compiledClassName);
@@ -116,24 +107,20 @@ public class EmitObservableFunctionNode
     @Override
     public void emit(BytecodeEmitContext context) {
         Bytecode code = context.getOutput();
-        CtClass compiledClass = context.getNestedClasses().find(compiledClassName);
+        TypeDeclaration compiledClass = context.getNestedClasses().find(compiledClassName);
 
-        if (!AccessVerifier.isAccessible(function.getBehavior(), compiledClass, function.getSourceInfo())) {
+        if (!AccessVerifier.isAccessible(function.getBehavior(), compiledClass)) {
             AccessVerifier.verifyAccessible(function.getBehavior(), invocationContext, function.getSourceInfo());
         }
 
-        if (inverseFunction != null &&
-                !AccessVerifier.isAccessible(inverseFunction.getBehavior(), compiledClass, inverseFunction.getSourceInfo())) {
+        if (inverseFunction != null && !AccessVerifier.isAccessible(inverseFunction.getBehavior(), compiledClass)) {
             AccessVerifier.verifyAccessible(inverseFunction.getBehavior(), invocationContext, inverseFunction.getSourceInfo());
         }
 
         code.anew(compiledClass)
             .dup()
             .aload(context.getRuntimeContextLocal())
-            .invokespecial(
-                compiledClass,
-                MethodInfo.nameInit,
-                function(CtClass.voidType, context.getRuntimeContextClass()));
+            .invoke(compiledClass.requireDeclaredConstructor(context.getRuntimeContextClass()));
     }
 
     /**
@@ -144,7 +131,7 @@ public class EmitObservableFunctionNode
      * the protected method of its base class, and referencing the bridge method from the generated
      * nested class.
      */
-    private Callable ensureAccessible(BytecodeEmitContext context, Callable function) {
+    private Callable ensureAccessible(Callable function) {
         if (function == null) {
             return null;
         }
@@ -153,9 +140,9 @@ public class EmitObservableFunctionNode
         var behavior = function.getBehavior();
         var sourceInfo = function.getSourceInfo();
 
-        if (!AccessVerifier.isNestedAccessible(behavior, invocationContext, sourceInfo)) {
+        if (!AccessVerifier.isNestedAccessible(behavior, invocationContext)) {
             if (receiver.size() == 1 && equalsInvocationContext(receiver.get(0))) {
-                function = new Callable(receiver, emitBridgeMethod(context, behavior), sourceInfo);
+                function = new Callable(receiver, emitBridgeMethod(behavior), sourceInfo);
             } else {
                 AccessVerifier.verifyNestedAccessible(behavior, invocationContext, sourceInfo);
             }
@@ -176,52 +163,47 @@ public class EmitObservableFunctionNode
         return false;
     }
 
-    private CtMethod emitBridgeMethod(BytecodeEmitContext context, CtBehavior behavior) {
-        String methodName = NameHelper.getMangledMethodName(
-            "bridge$" + (behavior instanceof CtConstructor ctor ?
-                ctor.getDeclaringClass().getSimpleName() : behavior.getName()));
+    private MethodDeclaration emitBridgeMethod(BehaviorDeclaration behavior) {
+        String methodName = NameHelper.getMangledMethodName("bridge$" +
+            (behavior instanceof ConstructorDeclaration ctor
+                ? ctor.declaringType().simpleName()
+                : behavior.name()));
 
-        try {
-            return invocationContext.getDeclaredMethod(methodName, behavior.getParameterTypes());
-        } catch (NotFoundException e) {
-            try {
-                CtClass[] paramTypes = behavior.getParameterTypes();
-                CtClass returnType = behavior instanceof CtConstructor constructor ?
-                    constructor.getDeclaringClass() : ((CtMethod)behavior).getReturnType();
+        return invocationContext
+            .declaredMethod(methodName, behavior.parameters().stream()
+                .map(BehaviorDeclaration.Parameter::type)
+                .toArray(TypeDeclaration[]::new))
+            .orElseGet(() -> {
+                List<BehaviorDeclaration.Parameter> params = behavior.parameters();
+                TypeDeclaration returnType = behavior instanceof ConstructorDeclaration constructor ?
+                    constructor.declaringType() : ((MethodDeclaration) behavior).returnType();
 
-                CtMethod bridgeMethod = new CtMethod(returnType, methodName, paramTypes, invocationContext);
-                bridgeMethod.setModifiers(Modifier.FINAL);
-                invocationContext.addMethod(bridgeMethod);
+                MethodDeclaration bridgeMethod = invocationContext
+                    .createMethod(methodName, returnType, params.stream()
+                        .map(BehaviorDeclaration.Parameter::type)
+                        .toArray(TypeDeclaration[]::new))
+                    .setModifiers(Modifier.FINAL);
 
-                int slotCount = Bytecode.getSlotCount(bridgeMethod.getSignature());
-                var ctx = new BytecodeEmitContext(context, invocationContext, slotCount, -1);
-                var code = ctx.getOutput();
+                var code = new Bytecode(bridgeMethod);
 
-                if (behavior instanceof CtConstructor constructor) {
+                if (behavior instanceof ConstructorDeclaration constructor) {
                     bridgeMethod.setModifiers(Modifier.STATIC);
 
-                    code.anew(constructor.getDeclaringClass())
+                    code.anew(constructor.declaringType())
                         .dup();
                 } else {
                     code.aload(0);
                 }
 
-                for (int i = 0, slots = 1; i < paramTypes.length; slots += TypeHelper.getSlots(paramTypes[i]), ++i) {
-                    code.ext_load(paramTypes[i], slots);
+                for (int i = 0, slots = 1; i < params.size(); slots += params.get(i).type().slots(), ++i) {
+                    code.load(params.get(i).type(), slots);
                 }
 
-                code.ext_invoke(behavior)
-                    .ext_return(returnType);
+                code.invoke(behavior)
+                    .ret(returnType);
 
-                bridgeMethod.getMethodInfo().setCodeAttribute(code.toCodeAttribute());
-                bridgeMethod.getMethodInfo().rebuildStackMap(invocationContext.getClassPool());
-                return bridgeMethod;
-            } catch (NotFoundException ex) {
-                throw SymbolResolutionErrors.classNotFound(SourceInfo.none(), ex.getMessage());
-            } catch (BadBytecode | CannotCompileException ex) {
-                throw ExceptionHelper.unchecked(ex);
-            }
-        }
+                return bridgeMethod.setCode(code);
+            });
     }
 
     @Override
@@ -238,14 +220,14 @@ public class EmitObservableFunctionNode
         EmitObservableFunctionNode that = (EmitObservableFunctionNode)o;
         return Objects.equals(function, that.function)
             && Objects.equals(inverseFunction, that.inverseFunction)
-            && TypeHelper.equals(invocationContext, that.invocationContext)
+            && invocationContext.equals(that.invocationContext)
             && arguments.equals(that.arguments)
             && type.equals(that.type);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(function, inverseFunction, arguments, TypeHelper.hashCode(invocationContext), type);
+        return Objects.hash(function, inverseFunction, arguments, invocationContext, type);
     }
 
     @SuppressWarnings("unchecked")
@@ -253,5 +235,4 @@ public class EmitObservableFunctionNode
         return (Map<EmitObservableFunctionNode, String>)CompilationContext.getCurrent()
             .computeIfAbsent(EmitObservableFunctionNode.class, key -> new HashMap<EmitObservableFunctionNode, String>());
     }
-
 }

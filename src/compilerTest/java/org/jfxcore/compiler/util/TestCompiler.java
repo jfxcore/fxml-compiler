@@ -4,7 +4,6 @@
 package org.jfxcore.compiler.util;
 
 import javassist.ClassPool;
-import javassist.CtClass;
 import javassist.bytecode.MethodInfo;
 import org.jfxcore.compiler.ast.DocumentNode;
 import org.jfxcore.compiler.ast.codebehind.ClassNode;
@@ -13,6 +12,7 @@ import org.jfxcore.compiler.ast.emit.BytecodeEmitContext;
 import org.jfxcore.compiler.ast.emit.EmitInitializeRootNode;
 import org.jfxcore.compiler.parse.FxmlParser;
 import org.jfxcore.compiler.transform.Transformer;
+import org.jfxcore.compiler.type.TypeDeclaration;
 import javax.tools.Diagnostic;
 import javax.tools.JavaFileObject;
 import javax.tools.StandardJavaFileManager;
@@ -29,6 +29,7 @@ import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 import java.util.function.Consumer;
 
 public class TestCompiler extends AbstractCompiler {
@@ -132,14 +133,17 @@ public class TestCompiler extends AbstractCompiler {
                 file.delete();
             }
 
-            throw new RuntimeException(diagnostics.get(0).getCode());
+            throw new RuntimeException(diagnostics.get(0).getMessage(Locale.ROOT));
         }
 
         try (CompilationScope ignored = new CompilationScope(context)) {
             String packageName = classNode.getPackageName();
             String className = packageName + "." + simpleClassName;
-            EmitInitializeRootNode transformedNode = (EmitInitializeRootNode)Transformer.getBytecodeTransformer(classPool)
-                .transform(document, classPool.get(className), classPool.get(className));
+            EmitInitializeRootNode transformedNode =
+                (EmitInitializeRootNode)Transformer.getBytecodeTransformer(classPool).transform(
+                    document,
+                    TypeDeclaration.of(classPool.get(className)),
+                    TypeDeclaration.of(classPool.get(className)));
 
             URL classUrl = classPool.find(className);
 
@@ -147,17 +151,17 @@ public class TestCompiler extends AbstractCompiler {
                 throw new RuntimeException(String.format("%s can not be found on the classpath", className));
             }
 
-            CtClass generatedClass = classPool.get(className);
-            generatedClass.defrost();
+            var generatedClass = TypeDeclaration.of(classPool.get(className));
+            generatedClass.jvmType().defrost();
 
             Bytecode bytecode = new Bytecode(generatedClass, 1);
             BytecodeEmitContext bytecodeContext = new BytecodeEmitContext(
                 generatedClass, generatedClass, transformedNode, document.getImports(), bytecode);
             bytecodeContext.emitRootNode();
 
-            MethodInfo methodInfo = generatedClass.getClassFile().getMethod("initializeComponent");
+            MethodInfo methodInfo = generatedClass.jvmType().getClassFile().getMethod("initializeComponent");
             methodInfo.setCodeAttribute(bytecode.toCodeAttribute());
-            methodInfo.rebuildStackMap(generatedClass.getClassPool());
+            methodInfo.rebuildStackMap(generatedClass.jvmType().getClassPool());
 
             flushModifiedClasses(context);
 
@@ -165,13 +169,13 @@ public class TestCompiler extends AbstractCompiler {
             Path classFile = Paths.get(classUrl.toURI());
             Path outDir = FileUtil.removeLastN(classFile, packages + 1);
 
-            generatedClass.writeFile(outDir.toString());
+            generatedClass.jvmType().writeFile(outDir.toString());
 
-            for (CtClass nestedClass : bytecodeContext.getNestedClasses()) {
-                nestedClass.writeFile(outDir.toString());
+            for (TypeDeclaration nestedClass : bytecodeContext.getNestedClasses()) {
+                nestedClass.jvmType().writeFile(outDir.toString());
             }
 
-            return (Class<T>)Class.forName(generatedClass.getName());
+            return (Class<T>)Class.forName(generatedClass.name());
         } catch (RuntimeException ex) {
             throw ex;
         } catch (Throwable ex) {

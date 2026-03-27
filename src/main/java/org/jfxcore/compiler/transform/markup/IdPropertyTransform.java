@@ -1,17 +1,18 @@
-// Copyright (c) 2022, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.transform.markup;
 
-import javassist.bytecode.annotation.Annotation;
 import org.jfxcore.compiler.ast.Node;
 import org.jfxcore.compiler.ast.ObjectNode;
 import org.jfxcore.compiler.ast.PropertyNode;
 import org.jfxcore.compiler.ast.intrinsic.Intrinsics;
 import org.jfxcore.compiler.transform.Transform;
 import org.jfxcore.compiler.transform.TransformContext;
-import org.jfxcore.compiler.util.Resolver;
-import org.jfxcore.compiler.util.TypeHelper;
+import org.jfxcore.compiler.type.AnnotationDeclaration;
+import org.jfxcore.compiler.type.TypeHelper;
+
+import static org.jfxcore.compiler.type.KnownSymbols.*;
 
 /**
  * If a node specifies the fx:id intrinsic property, but not the 'id' property as indicated by the IDProperty
@@ -29,11 +30,12 @@ public class IdPropertyTransform implements Transform {
         PropertyNode idNode = objectNode.findIntrinsicProperty(Intrinsics.ID);
 
         if (idNode != null) {
-            Annotation idAnnotation = new Resolver(idNode.getSourceInfo()).tryResolveClassAnnotation(
-                TypeHelper.getJvmType(objectNode), "com.sun.javafx.beans.IDProperty");
+            AnnotationDeclaration idAnnotation = TypeHelper.getTypeDeclaration(objectNode)
+                .annotation(IDPropertyAnnotationName)
+                .orElse(null);
 
             if (idAnnotation != null) {
-                String value = TypeHelper.getAnnotationString(idAnnotation, "value");
+                String value = idAnnotation.getString("value");
                 PropertyNode idProperty = objectNode.findProperty(value);
 
                 if (idProperty == null) {
@@ -46,5 +48,4 @@ public class IdPropertyTransform implements Transform {
 
         return node;
     }
-
 }
