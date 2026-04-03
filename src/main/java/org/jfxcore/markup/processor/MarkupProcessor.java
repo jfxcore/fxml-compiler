@@ -3,6 +3,7 @@
 
 package org.jfxcore.markup.processor;
 
+import com.sun.source.tree.ClassTree;
 import com.sun.source.tree.CompilationUnitTree;
 import com.sun.source.tree.ImportTree;
 import com.sun.source.tree.LineMap;
@@ -140,17 +141,24 @@ public final class MarkupProcessor extends AbstractProcessor {
             return;
         }
 
+        AnnotationMirror annotation = getAnnotationMirror(typeElement, MARKUP_ANNOTATION_NAME);
+
+        if (!hasExplicitSuperclass(typeElement)) {
+            error(typeElement, annotation, null, String.format(
+                "Class annotated with @%s must extend the generated base class",
+                Markup.class.getSimpleName()));
+            return;
+        }
+
         try {
-            processAnnotatedClass(typeElement);
+            processAnnotatedClass(typeElement, annotation);
         } catch (Exception ex) {
-            AnnotationMirror annotation = getAnnotationMirror(typeElement, MARKUP_ANNOTATION_NAME);
             AnnotationValue markupValue = getAnnotationValue(annotation);
             error(typeElement, annotation, markupValue, ex.getMessage());
         }
     }
 
-    private void processAnnotatedClass(TypeElement typeElement) {
-        AnnotationMirror annotation = getAnnotationMirror(typeElement, MARKUP_ANNOTATION_NAME);
+    private void processAnnotatedClass(TypeElement typeElement, AnnotationMirror annotation) {
         AnnotationValue markupValue = getAnnotationValue(annotation);
         String markupText = (String)markupValue.getValue();
 
@@ -185,6 +193,15 @@ public final class MarkupProcessor extends AbstractProcessor {
         } catch (MarkupException ex) {
             error(typeElement, annotation, markupValue, ex.getMessageWithSourceInfo());
         }
+    }
+
+    private boolean hasExplicitSuperclass(TypeElement typeElement) {
+        TreePath path = trees.getPath(typeElement);
+        if (path == null || !(path.getLeaf() instanceof ClassTree classTree)) {
+            return true;
+        }
+
+        return classTree.getExtendsClause() != null;
     }
 
     private List<String> getImports(TypeElement typeElement) {
