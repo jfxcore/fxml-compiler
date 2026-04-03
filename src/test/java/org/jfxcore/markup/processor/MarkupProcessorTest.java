@@ -43,7 +43,7 @@ public class MarkupProcessorTest {
 
         assertFalse(result.success(), result.formatDiagnostics());
         assertTrue(
-            result.hasErrorContaining("must explicitly extend the generated base class"),
+            result.hasErrorContaining("must extend the generated base class"),
             result.formatDiagnostics());
     }
 
