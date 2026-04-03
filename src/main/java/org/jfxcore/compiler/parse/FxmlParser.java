@@ -3,6 +3,7 @@
 
 package org.jfxcore.compiler.parse;
 
+import org.jetbrains.annotations.Nullable;
 import org.jfxcore.compiler.ast.intrinsic.IntrinsicProperty;
 import org.jfxcore.compiler.ast.text.BooleanNode;
 import org.jfxcore.compiler.ast.text.ListNode;
@@ -18,6 +19,7 @@ import org.jfxcore.compiler.ast.intrinsic.Intrinsics;
 import org.jfxcore.compiler.ast.text.TextNode;
 import org.jfxcore.compiler.ast.TypeNode;
 import org.jfxcore.compiler.ast.ValueNode;
+import org.jfxcore.compiler.diagnostic.errors.GeneralErrors;
 import org.jfxcore.compiler.diagnostic.errors.ParserErrors;
 import org.jfxcore.compiler.util.NameHelper;
 import org.jfxcore.compiler.util.NumberUtil;
@@ -29,16 +31,16 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.w3c.dom.ProcessingInstruction;
 import org.w3c.dom.Text;
-import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class FxmlParser {
 
@@ -73,27 +75,30 @@ public class FxmlParser {
 
     private static final String RESERVED_PREFIX_CHARACTERS = "{}()[]<>,;:=*/.#&\"'?";
 
-    private final String source;
+    private final String sourceText;
     private final Path documentFile;
+    private final @Nullable EmbeddingContext embeddingContext;
+
     private Map<Character, String> prefixMappings;
 
-    public FxmlParser(String source) {
-        this.source = source;
+    public FxmlParser(String sourceText) {
+        this.sourceText = sourceText;
         this.documentFile = Paths.get(".");
+        this.embeddingContext = null;
     }
 
-    public FxmlParser(Path baseDir, Path sourceFile) throws IOException {
-        this.source = Files.readString(sourceFile);
-        this.documentFile = baseDir.relativize(sourceFile);
-    }
-
-    public FxmlParser(Path baseDir, Path sourceFile, String source) {
-        this.source = source;
-        this.documentFile = baseDir.relativize(sourceFile);
+    public FxmlParser(Path sourceFile, String sourceText, @Nullable EmbeddingContext embeddingContext) {
+        this.sourceText = sourceText;
+        this.documentFile = sourceFile;
+        this.embeddingContext = embeddingContext;
     }
 
     public DocumentNode parseDocument() {
-        Document document = new XmlReader(source).getDocument();
+        Map<String, String> implicitNamespaces = embeddingContext != null
+            ? FxmlNamespace.getDefaultMap()
+            : Map.of();
+
+        Document document = new XmlReader(sourceText, implicitNamespaces).getDocument();
         NodeList nodes = document.getChildNodes();
         List<String> imports = new ArrayList<>();
         Map<Character, String> prefixMappings = new HashMap<>();
@@ -107,6 +112,19 @@ public class FxmlParser {
                     parsePrefixInstruction(pi, prefixMappings);
                 }
             }
+        }
+
+        if (embeddingContext != null && !embeddingContext.imports().isEmpty()) {
+            Set<String> existingImports = new HashSet<>(imports);
+            List<String> newImports = new ArrayList<>(embeddingContext.imports().size());
+
+            for (String additionalImport : embeddingContext.imports()) {
+                if (!existingImports.contains(additionalImport)) {
+                    newImports.add(additionalImport);
+                }
+            }
+
+            imports.addAll(0, newImports);
         }
 
         for (var entry : DEFAULT_PREFIX_MAPPINGS.entrySet()) {
@@ -132,7 +150,21 @@ public class FxmlParser {
             imports.add(0, "java.lang.*");
         }
 
-        return new DocumentNode(documentFile, imports, parseElementNode(rootElement));
+        ObjectNode rootNode = parseElementNode(rootElement);
+
+        if (embeddingContext != null) {
+            PropertyNode classProperty = rootNode.findIntrinsicProperty(Intrinsics.CLASS);
+            if (classProperty != null) {
+                throw GeneralErrors.unexpectedIntrinsic(classProperty.getSourceInfo(), classProperty.getMarkupName());
+            }
+
+            rootNode.getProperties().add(new PropertyNode(
+                new String[] { Intrinsics.CLASS.getName() }, Intrinsics.CLASS.getName(),
+                List.of(new TextNode(embeddingContext.embeddingHost().fullName(), getSourceInfo(rootElement))),
+                true, false, getSourceInfo(rootElement)));
+        }
+
+        return new DocumentNode(documentFile, imports, rootNode);
     }
 
     private ObjectNode parseElementNode(Element element) {

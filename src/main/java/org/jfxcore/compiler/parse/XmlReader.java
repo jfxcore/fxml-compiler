@@ -38,12 +38,14 @@ public class XmlReader {
 
     private final static String XML_RESERVED_NAMESPACE = "http://www.w3.org/XML/1998/namespace";
 
+    private final Map<String, String> implicitNamespaces;
     private final Deque<Map<String, String>> namespaceStack = new ArrayDeque<>();
     private final XmlTokenizer tokenizer;
     private final Document document;
 
-    public XmlReader(String source) {
-        tokenizer = new XmlTokenizer(source);
+    public XmlReader(String source, Map<String, String> implicitNamespaces) {
+        this.implicitNamespaces = implicitNamespaces;
+        this.tokenizer = new XmlTokenizer(source);
 
         try {
             document = DocumentBuilderFactory.newInstance().newDocumentBuilder().newDocument();
@@ -285,6 +287,22 @@ public class XmlReader {
             } else if (attribute.name.prefix.isEmpty() && "xmlns".equals(attribute.name.localName)) {
                 namespaceStack.getFirst().put("", attribute.value);
                 it.remove();
+            }
+        }
+
+        // Use implicit namespaces if we have no user-specified namespaces in the XML document.
+        if (namespaceStack.size() == 1) {
+            Map<String, String> namespaces = namespaceStack.getFirst();
+
+            for (Map.Entry<String, String> entry : implicitNamespaces.entrySet()) {
+                String prefix = entry.getKey();
+                String uri = entry.getValue();
+
+                if (prefix.isEmpty()) {
+                    namespaces.putIfAbsent("", uri);
+                } else if (!namespaces.containsKey(prefix) && !namespaces.containsValue(uri)) {
+                    namespaces.put(prefix, uri);
+                }
             }
         }
     }

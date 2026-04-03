@@ -1,4 +1,4 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.diagnostic;
@@ -12,6 +12,7 @@ public class MarkupException extends RuntimeException {
     private final Diagnostic diagnostic;
     private final SourceInfo sourceInfo;
     private Map<Object, Object> properties;
+    private Location sourceOffset;
     private File sourceFile;
 
     public MarkupException(SourceInfo sourceInfo, Diagnostic diagnostic) {
@@ -52,6 +53,14 @@ public class MarkupException extends RuntimeException {
         return sourceInfo;
     }
 
+    public Location getSourceOffset() {
+        return sourceOffset;
+    }
+
+    public void setSourceOffset(Location offset) {
+        this.sourceOffset = offset;
+    }
+
     public File getSourceFile() {
         return sourceFile;
     }
@@ -67,5 +76,4 @@ public class MarkupException extends RuntimeException {
 
         return properties;
     }
-
 }

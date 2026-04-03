@@ -10,7 +10,6 @@ plugins {
     `java-library`
     `maven-publish`
     signing
-    kotlin("jvm") version "2.3.10"
     id("com.gradleup.shadow") version "9.4.0"
 }
 
@@ -30,9 +29,8 @@ sourceSets {
 
 dependencies {
     implementation("org.javassist:javassist:3.30.2-GA")
-    implementation("org.jetbrains.kotlinx:kotlinx-metadata-jvm:0.4.1")
 
-    compileOnly("org.jetbrains:annotations:13.0")
+    compileOnly("org.jetbrains:annotations:26.1.0")
     compileOnly(files("${gradle.includedBuild("jfx").projectDir}/build/sdk/lib/javafx.base.jar"))
     compileOnly(files("${gradle.includedBuild("jfx").projectDir}/build/sdk/lib/javafx.graphics.jar"))
     compileOnly(files("${gradle.includedBuild("jfx").projectDir}/build/sdk/lib/javafx.controls.jar"))
@@ -87,12 +85,6 @@ java {
     targetCompatibility = JavaVersion.VERSION_17
 }
 
-kotlin {
-    compilerOptions {
-        jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
-    }
-}
-
 val copyVersionInfo = tasks.register<Copy>("copyVersionInfo") {
     from("$projectDir/src/main/version-info/VersionInfo.java")
     into("${layout.buildDirectory.get()}/generated/java/main/org/jfxcore/compiler")
@@ -104,12 +96,6 @@ val copyVersionInfo = tasks.register<Copy>("copyVersionInfo") {
 }
 
 tasks.compileJava {
-    dependsOn(copyVersionInfo)
-    dependsOn(gradle.includedBuild("jfx").task(":sdk"))
-    dependsOn(gradle.includedBuild("markup").task(":jar"))
-}
-
-tasks.compileKotlin {
     dependsOn(copyVersionInfo)
     dependsOn(gradle.includedBuild("jfx").task(":sdk"))
     dependsOn(gradle.includedBuild("markup").task(":jar"))
@@ -146,20 +132,11 @@ tasks.jar {
 
 tasks.shadowJar {
     archiveClassifier.set("")
+    excludes.remove("module-info.class") // the shadow plugin excludes the module descriptor by default
     include("*.jar")
-    include("META-INF/services/org.jfxcore.*")
     include("org/jfxcore/**/*.*")
-    include("kotlinx/**/*.*")
     include("javassist/**/*.*")
-    relocate("javassist", "org.jfxcore.javassist")
-    relocate("kotlinx", "org.jfxcore.kotlinx")
-    dependencies {
-        exclude(dependency("org.jetbrains.kotlin:kotlin-stdlib"))
-        exclude(dependency("org.jetbrains.kotlin:kotlin-stdlib-common"))
-        exclude(dependency("org.jetbrains.kotlin:kotlin-stdlib-jdk7"))
-        exclude(dependency("org.jetbrains.kotlin:kotlin-stdlib-jdk8"))
-        exclude(dependency("org.jetbrains.kotlin:kotlin-reflect"))
-    }
+    relocate("javassist", "org.jfxcore.compiler.internal")
 }
 
 tasks.withType<GenerateModuleMetadata> {
@@ -240,4 +217,12 @@ publishing {
 
 signing {
     sign(publishing.publications["maven"])
+}
+
+tasks.withType<Sign>().configureEach {
+    val taskNames = gradle.startParameter.taskNames.map { it.substringAfterLast(':') }
+    val publishToMavenLocal = taskNames.isNotEmpty() && taskNames.all { name -> name == "publishToMavenLocal" }
+    onlyIf {
+        !publishToMavenLocal
+    }
 }
