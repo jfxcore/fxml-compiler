@@ -184,11 +184,11 @@ public final class MarkupProcessor extends AbstractProcessor {
         }
 
         QualifiedName sourceClassName = QualifiedName.of(typeElement.getQualifiedName().toString());
-        List<String> javaImports = getImports(typeElement);
         Location sourceOffset = getSourceOffset(typeElement, annotation, markupValue);
+        List<String> imports = getImports(typeElement);
 
         try {
-            generator.addEmbeddedSource(sourceDir, sourceFile, markupText, javaImports, sourceClassName, sourceOffset);
+            generator.addEmbeddedSource(sourceDir, sourceFile, markupText, imports, sourceClassName, sourceOffset);
             sourceFiles.put(sourceFile, new AnnotationInfo(typeElement, annotation, markupValue));
         } catch (MarkupException ex) {
             error(typeElement, annotation, markupValue, ex.getMessageWithSourceInfo());

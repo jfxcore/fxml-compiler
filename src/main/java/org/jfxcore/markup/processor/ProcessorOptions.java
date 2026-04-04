@@ -7,6 +7,7 @@ import javax.annotation.processing.ProcessingEnvironment;
 import java.io.File;
 import java.nio.file.Path;
 import java.util.LinkedHashSet;
+import java.util.Map;
 import java.util.Set;
 
 record ProcessorOptions(Set<Path> sourceDirs, Set<Path> searchPath, Path intermediateBuildDir) {
@@ -16,9 +17,13 @@ record ProcessorOptions(Set<Path> sourceDirs, Set<Path> searchPath, Path interme
     static final String INTERMEDIATE_BUILD_DIR_OPT = "org.jfxcore.markup.processor.intermediateBuildDir";
 
     static ProcessorOptions parse(ProcessingEnvironment processingEnv) {
-        Set<Path> searchPath = parseOption(processingEnv, SEARCH_PATH_OPT);
-        Set<Path> sourceDirs = parseOption(processingEnv, SOURCE_DIRS_OPT);
-        Set<Path> descDir = parseOption(processingEnv, INTERMEDIATE_BUILD_DIR_OPT);
+        return parse(processingEnv.getOptions());
+    }
+
+    static ProcessorOptions parse(Map<String, String> options) {
+        Set<Path> searchPath = parseOption(options, SEARCH_PATH_OPT);
+        Set<Path> sourceDirs = parseOption(options, SOURCE_DIRS_OPT);
+        Set<Path> descDir = parseOption(options, INTERMEDIATE_BUILD_DIR_OPT);
 
         return new ProcessorOptions(
             sourceDirs,
@@ -26,8 +31,8 @@ record ProcessorOptions(Set<Path> sourceDirs, Set<Path> searchPath, Path interme
             descDir.iterator().next());
     }
 
-    private static Set<Path> parseOption(ProcessingEnvironment processingEnv, String option) {
-        String value = processingEnv.getOptions().get(option);
+    private static Set<Path> parseOption(Map<String, String> options, String option) {
+        String value = options.get(option);
         if (value == null) {
             throw new IllegalArgumentException("Missing annotation processor option: " + option);
         }

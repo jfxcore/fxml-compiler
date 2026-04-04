@@ -11,6 +11,7 @@ plugins {
     `maven-publish`
     signing
     id("com.gradleup.shadow") version "9.4.0"
+    id("org.gradlex.extra-java-module-info") version "1.14"
 }
 
 group = "org.jfxcore"
@@ -27,10 +28,15 @@ sourceSets {
     }
 }
 
+extraJavaModuleInfo {
+    deriveAutomaticModuleNamesFromFileNames = true
+}
+
 dependencies {
     implementation("org.javassist:javassist:3.30.2-GA")
 
     compileOnly("org.jetbrains:annotations:26.1.0")
+    compileOnly("com.google.devtools.ksp:symbol-processing-api:2.1.20-2.0.1")
     compileOnly(files("${gradle.includedBuild("jfx").projectDir}/build/sdk/lib/javafx.base.jar"))
     compileOnly(files("${gradle.includedBuild("jfx").projectDir}/build/sdk/lib/javafx.graphics.jar"))
     compileOnly(files("${gradle.includedBuild("jfx").projectDir}/build/sdk/lib/javafx.controls.jar"))
@@ -134,6 +140,7 @@ tasks.shadowJar {
     archiveClassifier.set("")
     excludes.remove("module-info.class") // the shadow plugin excludes the module descriptor by default
     include("*.jar")
+    include("META-INF/services/**/*.*")
     include("org/jfxcore/**/*.*")
     include("javassist/**/*.*")
     relocate("javassist", "org.jfxcore.compiler.internal")
