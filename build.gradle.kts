@@ -29,6 +29,8 @@ sourceSets {
 
 dependencies {
     implementation("org.javassist:javassist:3.30.2-GA")
+    implementation("org.jetbrains.kotlinx:kotlinx-metadata-jvm:0.4.1")
+
     compileOnly("org.jetbrains:annotations:26.1.0")
     compileOnly("com.google.devtools.ksp:symbol-processing-api:2.1.20-2.0.1")
     compileOnly(files("${gradle.includedBuild("jfx").projectDir}/build/sdk/lib/javafx.base.jar"))
@@ -133,12 +135,20 @@ tasks.jar {
 
 tasks.shadowJar {
     archiveClassifier.set("")
-    excludes.remove("module-info.class") // the shadow plugin excludes the module descriptor by default
     include("*.jar")
     include("META-INF/services/**/*.*")
     include("org/jfxcore/**/*.*")
+    include("kotlinx/**/*.*")
     include("javassist/**/*.*")
     relocate("javassist", "org.jfxcore.compiler.internal")
+    relocate("kotlinx", "org.jfxcore.compiler.kotlinx")
+    dependencies {
+        exclude(dependency("org.jetbrains.kotlin:kotlin-stdlib"))
+        exclude(dependency("org.jetbrains.kotlin:kotlin-stdlib-common"))
+        exclude(dependency("org.jetbrains.kotlin:kotlin-stdlib-jdk7"))
+        exclude(dependency("org.jetbrains.kotlin:kotlin-stdlib-jdk8"))
+        exclude(dependency("org.jetbrains.kotlin:kotlin-reflect"))
+    }
 }
 
 tasks.withType<GenerateModuleMetadata> {

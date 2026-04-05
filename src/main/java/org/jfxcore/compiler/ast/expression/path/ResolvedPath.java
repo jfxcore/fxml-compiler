@@ -3,6 +3,19 @@
 
 package org.jfxcore.compiler.ast.expression.path;
 
+import kotlinx.metadata.Flag;
+import kotlinx.metadata.KmClass;
+import kotlinx.metadata.KmExtensionType;
+import kotlinx.metadata.KmProperty;
+import kotlinx.metadata.KmPropertyExtensionVisitor;
+import kotlinx.metadata.KmPropertyVisitor;
+import kotlinx.metadata.jvm.JvmFieldSignature;
+import kotlinx.metadata.jvm.JvmMethodSignature;
+import kotlinx.metadata.jvm.JvmPropertyExtensionVisitor;
+import kotlinx.metadata.jvm.KotlinClassHeader;
+import kotlinx.metadata.jvm.KotlinClassMetadata;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.jfxcore.compiler.ast.emit.ValueEmitterNode;
 import org.jfxcore.compiler.ast.text.PathNode;
 import org.jfxcore.compiler.ast.text.PathSegmentNode;
@@ -11,6 +24,8 @@ import org.jfxcore.compiler.ast.text.TextSegmentNode;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.diagnostic.errors.ParserErrors;
 import org.jfxcore.compiler.diagnostic.errors.SymbolResolutionErrors;
+import org.jfxcore.compiler.type.AccessModifier;
+import org.jfxcore.compiler.type.AnnotationDeclaration;
 import org.jfxcore.compiler.type.FieldDeclaration;
 import org.jfxcore.compiler.type.MethodDeclaration;
 import org.jfxcore.compiler.type.Resolver;
@@ -266,8 +281,9 @@ public class ResolvedPath {
             boolean preferObservable,
             boolean suppressObservableSelector) {
         ResolveSegmentMethod[] methods = new ResolveSegmentMethod[] {
-            this::getPathSegmentFromField,
-            this::getPathSegmentFromGetter
+                this::getPathSegmentFromField,
+                this::getPathSegmentFromGetter,
+                this::getPathSegmentFromKotlinDelegate
         };
 
         boolean attachedProperty = false;
@@ -471,6 +487,155 @@ public class ResolvedPath {
                 getterDeclaration.name(), propertyName, type, valueType,
                 getterDeclaration, attachedProperty, observableKind),
             observableKind.isReadOnly());
+    }
+
+    private SegmentInfo getPathSegmentFromKotlinDelegate(
+            Resolver resolver,
+            TypeInvoker invoker,
+            String propertyName,
+            TypeDeclaration declaringClass,
+            TypeDeclaration receiverClass,
+            boolean staticContext,
+            boolean attachedProperty,
+            boolean selectObservable,
+            List<TypeInstance> providedArguments) {
+        if (attachedProperty) {
+            return null;
+        }
+
+        KotlinDelegateInfo delegateInfo = getKotlinDelegateInfo(resolver, declaringClass, propertyName);
+        if (delegateInfo == null) {
+            return null;
+        }
+
+        List<TypeInstance> invocationContext = segments.stream().map(segment -> {
+            if (segment.getObservableKind() == ObservableKind.NONE) {
+                return segment.getTypeInstance();
+            }
+
+            return segment.getValueTypeInstance();
+        }).collect(Collectors.toList());
+
+        TypeDeclaration fieldType = delegateInfo.delegateField.type();
+        ObservableKind observableKind = ObservableKind.get(fieldType);
+        if (selectObservable && observableKind == ObservableKind.NONE) {
+            return null;
+        }
+
+        if (staticContext && !delegateInfo.getter.isStatic()) {
+            throw SymbolResolutionErrors.instanceMemberReferencedFromStaticContext(sourceInfo, delegateInfo.getter);
+        }
+
+        if (!delegateInfo.publicSetter) {
+            observableKind = observableKind.toReadOnly();
+        }
+
+        TypeInstance valueType = invoker.invokeReturnType(delegateInfo.getter, invocationContext, providedArguments);
+        TypeInstance type = invoker.invokeType(fieldType);
+        TypeInstance argument = resolver.tryFindObservableArgument(type);
+        TypeDeclaration returnType = delegateInfo.getter.returnType();
+
+        if (argument == null || !returnType.equals(argument.declaration())) {
+            type = invoker.invokeType(type.declaration(), List.of(valueType));
+        }
+
+        if (selectObservable) {
+            return new SegmentInfo(
+                new KotlinDelegateSegment(
+                    delegateInfo.delegateField.name(), propertyName, type, type,
+                    delegateInfo.delegateField, ObservableKind.NONE),
+                observableKind.isReadOnly());
+        }
+
+        TypeInstance typeArg = observableKind != ObservableKind.NONE ? valueType : type;
+
+        return new SegmentInfo(
+            new KotlinDelegateSegment(
+                delegateInfo.delegateField.name(), propertyName, type, typeArg,
+                delegateInfo.delegateField, observableKind),
+            observableKind.isReadOnly());
+    }
+
+    @Nullable
+    private KotlinDelegateInfo getKotlinDelegateInfo(Resolver resolver, TypeDeclaration declaringType, String name) {
+        AnnotationDeclaration kotlinMetadataAnnotation = declaringType.annotation("kotlin.Metadata").orElse(null);
+        if (kotlinMetadataAnnotation == null) {
+            return null;
+        }
+
+        KotlinClassMetadata metadata = KotlinClassMetadata.read(new KotlinClassHeader(
+            kotlinMetadataAnnotation.getInt("k"),
+            kotlinMetadataAnnotation.getIntArray("mv"),
+            kotlinMetadataAnnotation.getStringArray("d1"),
+            kotlinMetadataAnnotation.getStringArray("d2"),
+            null,
+            declaringType.packageName(),
+            null));
+
+        if (!(metadata instanceof KotlinClassMetadata.Class classMetadata)) {
+            return null;
+        }
+
+        KmClass kmClass = classMetadata.toKmClass();
+
+        for (KmProperty property : kmClass.getProperties()) {
+            if (!property.getName().equals(name)
+                    || !Flag.Property.IS_DELEGATED.invoke(property.getFlags())
+                    || !Flag.IS_PUBLIC.invoke(property.getFlags())) {
+                continue;
+            }
+
+            KotlinDelegateInfo[] result = new KotlinDelegateInfo[1];
+
+            property.accept(new KmPropertyVisitor() {
+                @Nullable
+                @Override
+                public KmPropertyExtensionVisitor visitExtensions(@NotNull KmExtensionType type) {
+                    if (type != JvmPropertyExtensionVisitor.TYPE) {
+                        return null;
+                    }
+
+                    return new JvmPropertyExtensionVisitor() {
+                        @Override
+                        public void visit(
+                                int jvmFlags,
+                                @Nullable JvmFieldSignature fieldSignature,
+                                @Nullable JvmMethodSignature getterSignature,
+                                @Nullable JvmMethodSignature setterSignature) {
+                            boolean publicSetter = false;
+
+                            if (fieldSignature == null) {
+                                throw new NullPointerException("fieldSignature");
+                            }
+
+                            if (getterSignature == null) {
+                                throw new NullPointerException("getterSignature");
+                            }
+
+                            if (setterSignature != null) {
+                                MethodDeclaration setter = resolver.tryResolveMethod(
+                                    declaringType, m -> m.name().equals(setterSignature.getName()));
+
+                                publicSetter = setter != null && setter.accessModifier() == AccessModifier.PUBLIC;
+                            }
+
+                            FieldDeclaration field = resolver.resolveField(declaringType, fieldSignature.getName(), false);
+                            MethodDeclaration getter = resolver.resolveGetter(declaringType, getterSignature.getName(), true, null);
+
+                            if (field.type().subtypeOf(ObservableValueDecl())) {
+                                result[0] = new KotlinDelegateInfo(field, getter, publicSetter);
+                            } else {
+                                result[0] = null;
+                            }
+                        }
+                    };
+                }
+            });
+
+            return result[0];
+        }
+
+        return null;
     }
 
     /**

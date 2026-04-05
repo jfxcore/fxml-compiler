@@ -6,7 +6,9 @@ package org.jfxcore.compiler.generate;
 import org.jfxcore.compiler.ast.expression.path.FieldSegment;
 import org.jfxcore.compiler.ast.expression.path.FoldedGroup;
 import org.jfxcore.compiler.ast.expression.path.GetterSegment;
+import org.jfxcore.compiler.ast.expression.path.KotlinDelegateSegment;
 import org.jfxcore.compiler.ast.expression.path.Segment;
+import org.jfxcore.compiler.ast.expression.util.KotlinDelegateHelper;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.type.FieldDeclaration;
 import org.jfxcore.compiler.type.MethodDeclaration;
@@ -46,6 +48,11 @@ abstract class SegmentGeneratorBase extends ClassGenerator {
                 code.getfield(field);
             } else if (path[i] instanceof GetterSegment getterSegment) {
                 MethodDeclaration getter = getterSegment.getGetter();
+                type = getter.returnType();
+                code.invoke(getter);
+            } else if (path[i] instanceof KotlinDelegateSegment delegateSegment) {
+                FieldDeclaration field = delegateSegment.getDelegateField();
+                MethodDeclaration getter = KotlinDelegateHelper.getKotlinDelegateGetter(field);
                 type = getter.returnType();
                 code.invoke(getter);
             } else {
