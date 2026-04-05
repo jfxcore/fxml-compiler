@@ -1,7 +1,7 @@
 ---
 layout: default
 title: Property notation
-nav_order: 5
+nav_order: 4
 ---
 
 # Properties

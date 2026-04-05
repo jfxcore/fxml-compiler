@@ -1,7 +1,7 @@
 // Copyright (c) 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
-package org.jfxcore.markup.processor;
+package org.jfxcore.compiler;
 
 import com.sun.source.tree.ClassTree;
 import com.sun.source.tree.CompilationUnitTree;
@@ -13,11 +13,9 @@ import com.sun.source.util.Trees;
 import org.jfxcore.compiler.util.CompilationUnit;
 import org.jfxcore.compiler.util.CompilationUnitDescriptor;
 import org.jfxcore.compiler.diagnostic.Logger;
-import org.jfxcore.compiler.ClassGenerator;
 import org.jfxcore.compiler.diagnostic.Location;
 import org.jfxcore.compiler.diagnostic.MarkupException;
 import org.jfxcore.compiler.util.QualifiedName;
-import org.jfxcore.markup.embed.Markup;
 import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.Filer;
 import javax.annotation.processing.Messager;
@@ -48,10 +46,12 @@ import java.util.Map;
 import java.util.Set;
 
 @SupportedAnnotationTypes(MarkupProcessor.MARKUP_ANNOTATION_NAME)
-@SupportedOptions({ProcessorOptions.SOURCE_DIRS_OPT, ProcessorOptions.SEARCH_PATH_OPT, ProcessorOptions.INTERMEDIATE_BUILD_DIR_OPT})
+@SupportedOptions({ProcessorOptions.SOURCE_DIRS_OPT,
+                   ProcessorOptions.SEARCH_PATH_OPT,
+                   ProcessorOptions.INTERMEDIATE_BUILD_DIR_OPT})
 public final class MarkupProcessor extends AbstractProcessor {
 
-    static final String MARKUP_ANNOTATION_NAME = "org.jfxcore.markup.embed.Markup";
+    static final String MARKUP_ANNOTATION_NAME = "org.jfxcore.markup.ComponentView";
 
     private Elements elements;
     private Filer filer;
@@ -125,19 +125,19 @@ public final class MarkupProcessor extends AbstractProcessor {
 
         if (typeElement.getKind() != ElementKind.CLASS) {
             error(typeElement, null, null, String.format(
-                "@%s can only be used on classes", Markup.class.getSimpleName()));
+                "@%s can only be used on classes", getSimpleName(MARKUP_ANNOTATION_NAME)));
             return;
         }
 
         if (typeElement.getNestingKind() != NestingKind.TOP_LEVEL) {
             error(typeElement, null, null, String.format(
-                "@%s can only be used on top-level classes", Markup.class.getSimpleName()));
+                "@%s can only be used on top-level classes", getSimpleName(MARKUP_ANNOTATION_NAME)));
             return;
         }
 
         if (typeElement.getModifiers().contains(Modifier.PRIVATE)) {
             error(typeElement, null, null, String.format(
-                "Class annotated with @%s must not be private", Markup.class.getSimpleName()));
+                "Class annotated with @%s must not be private", getSimpleName(MARKUP_ANNOTATION_NAME)));
             return;
         }
 
@@ -146,7 +146,7 @@ public final class MarkupProcessor extends AbstractProcessor {
         if (!hasExplicitSuperclass(typeElement)) {
             error(typeElement, annotation, null, String.format(
                 "Class annotated with @%s must extend the generated base class",
-                Markup.class.getSimpleName()));
+                getSimpleName(MARKUP_ANNOTATION_NAME)));
             return;
         }
 
@@ -164,7 +164,7 @@ public final class MarkupProcessor extends AbstractProcessor {
 
         if (markupText == null || markupText.isBlank()) {
             throw new IllegalArgumentException(String.format(
-                "@%s value must not be empty", Markup.class.getSimpleName()));
+                "@%s value must not be empty", getSimpleName(MARKUP_ANNOTATION_NAME)));
         }
 
         Path sourceFile = getSourceFile(typeElement, annotation);
@@ -178,9 +178,9 @@ public final class MarkupProcessor extends AbstractProcessor {
             .orElse(null);
 
         if (sourceDir == null) {
-            throw new IllegalArgumentException(String.format(
-                "Annotated source file is not contained in one of the recognized source directories: %s",
-                options.sourceDirs()));
+            throw new IllegalArgumentException(
+                "Annotated source file is not contained in one of the recognized source directories: "
+                + options.sourceDirs());
         }
 
         QualifiedName sourceClassName = QualifiedName.of(typeElement.getQualifiedName().toString());
@@ -298,6 +298,10 @@ public final class MarkupProcessor extends AbstractProcessor {
         }
 
         throw new RuntimeException("Annotation element not found: value");
+    }
+
+    private String getSimpleName(String name) {
+        return name.substring(name.lastIndexOf('.') + 1);
     }
 
     private void error(Element element, AnnotationMirror annotation, AnnotationValue value, String message) {

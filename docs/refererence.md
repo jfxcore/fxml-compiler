@@ -1,7 +1,7 @@
 ---
 layout: default
 title: FXML 2.0 language reference
-nav_order: 10
+nav_order: 9
 has_children: true
 ---
 

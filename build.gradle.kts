@@ -11,7 +11,6 @@ plugins {
     `maven-publish`
     signing
     id("com.gradleup.shadow") version "9.4.0"
-    id("org.gradlex.extra-java-module-info") version "1.14"
 }
 
 group = "org.jfxcore"
@@ -28,13 +27,8 @@ sourceSets {
     }
 }
 
-extraJavaModuleInfo {
-    deriveAutomaticModuleNamesFromFileNames = true
-}
-
 dependencies {
     implementation("org.javassist:javassist:3.30.2-GA")
-
     compileOnly("org.jetbrains:annotations:26.1.0")
     compileOnly("com.google.devtools.ksp:symbol-processing-api:2.1.20-2.0.1")
     compileOnly(files("${gradle.includedBuild("jfx").projectDir}/build/sdk/lib/javafx.base.jar"))
@@ -48,8 +42,9 @@ testing {
             useJUnitJupiter()
 
             dependencies {
-                implementation("org.junit.jupiter:junit-jupiter:5.12.2")
                 runtimeOnly("org.junit.platform:junit-platform-launcher")
+                implementation("org.junit.jupiter:junit-jupiter:5.12.2")
+                implementation(files("${gradle.includedBuild("markup").projectDir}/build/libs/markup-1.0-SNAPSHOT.jar"))
             }
         }
 

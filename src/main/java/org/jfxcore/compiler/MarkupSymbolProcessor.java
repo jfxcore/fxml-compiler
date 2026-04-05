@@ -1,7 +1,7 @@
 // Copyright (c) 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
-package org.jfxcore.markup.processor;
+package org.jfxcore.compiler;
 
 import com.google.devtools.ksp.processing.CodeGenerator;
 import com.google.devtools.ksp.processing.Dependencies;
@@ -22,14 +22,12 @@ import com.google.devtools.ksp.symbol.KSTypeReference;
 import com.google.devtools.ksp.symbol.KSValueArgument;
 import com.google.devtools.ksp.symbol.Modifier;
 import org.jetbrains.annotations.NotNull;
-import org.jfxcore.compiler.ClassGenerator;
 import org.jfxcore.compiler.diagnostic.Location;
 import org.jfxcore.compiler.diagnostic.Logger;
 import org.jfxcore.compiler.diagnostic.MarkupException;
 import org.jfxcore.compiler.util.CompilationUnit;
 import org.jfxcore.compiler.util.CompilationUnitDescriptor;
 import org.jfxcore.compiler.util.QualifiedName;
-import org.jfxcore.markup.embed.Markup;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
@@ -47,9 +45,9 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public final class MarkupSymbolProcessor implements SymbolProcessor {
+final class MarkupSymbolProcessor implements SymbolProcessor {
 
-    private static final String MARKUP_ANNOTATION_NAME = Markup.class.getName();
+    private static final String MARKUP_ANNOTATION_NAME = "org.jfxcore.markup.ComponentView";
     private static final Pattern IMPORT_PATTERN = Pattern.compile(
         "^\\s*import\\s+([^\\s;]+?)(?:\\s+as\\s+([A-Za-z_][A-Za-z0-9_]*))?\\s*;?\\s*$");
 
@@ -61,7 +59,7 @@ public final class MarkupSymbolProcessor implements SymbolProcessor {
     private final Map<Path, AnnotationInfo> sourceFiles = new HashMap<>();
     private final Set<String> processedOwners = new HashSet<>();
 
-    public MarkupSymbolProcessor(SymbolProcessorEnvironment environment) {
+    MarkupSymbolProcessor(SymbolProcessorEnvironment environment) {
         this.codeGenerator = environment.getCodeGenerator();
         this.logger = environment.getLogger();
         this.options = ProcessorOptions.parse(environment.getOptions());
@@ -77,7 +75,7 @@ public final class MarkupSymbolProcessor implements SymbolProcessor {
                 processSingleElement(declaration);
             } else {
                 error(symbol, null, null, String.format(
-                    "@%s can only be used on classes", Markup.class.getSimpleName()));
+                    "@%s can only be used on classes", getSimpleName(MARKUP_ANNOTATION_NAME)));
             }
         }
 
@@ -128,19 +126,19 @@ public final class MarkupSymbolProcessor implements SymbolProcessor {
 
         if (declaration.getClassKind() != ClassKind.CLASS) {
             error(declaration, null, null, String.format(
-                "@%s can only be used on classes", Markup.class.getSimpleName()));
+                "@%s can only be used on classes", getSimpleName(MARKUP_ANNOTATION_NAME)));
             return;
         }
 
         if (declaration.getParentDeclaration() != null) {
             error(declaration, null, null, String.format(
-                "@%s can only be used on top-level classes", Markup.class.getSimpleName()));
+                "@%s can only be used on top-level classes", getSimpleName(MARKUP_ANNOTATION_NAME)));
             return;
         }
 
         if (declaration.getModifiers().contains(Modifier.PRIVATE)) {
             error(declaration, null, null, String.format(
-                "Class annotated with @%s must not be private", Markup.class.getSimpleName()));
+                "Class annotated with @%s must not be private", getSimpleName(MARKUP_ANNOTATION_NAME)));
             return;
         }
 
@@ -149,7 +147,7 @@ public final class MarkupSymbolProcessor implements SymbolProcessor {
         if (!hasExplicitSuperclass(declaration)) {
             error(declaration, annotation, null, String.format(
                 "Class annotated with @%s must extend the generated base class",
-                Markup.class.getSimpleName()));
+                getSimpleName(MARKUP_ANNOTATION_NAME)));
             return;
         }
 
@@ -168,13 +166,13 @@ public final class MarkupSymbolProcessor implements SymbolProcessor {
 
         if (markupText == null || markupText.isBlank()) {
             throw new IllegalArgumentException(String.format(
-                "@%s value must not be empty", Markup.class.getSimpleName()));
+                "@%s value must not be empty", getSimpleName(MARKUP_ANNOTATION_NAME)));
         }
 
         KSFile containingFile = declaration.getContainingFile();
         if (containingFile == null) {
             throw new IllegalArgumentException(String.format(
-                "@%s can only be used in a source file", Markup.class.getSimpleName()));
+                "@%s can only be used in a source file", getSimpleName(MARKUP_ANNOTATION_NAME)));
         }
 
         Path sourceFile = getSourceFile(containingFile);
@@ -184,9 +182,9 @@ public final class MarkupSymbolProcessor implements SymbolProcessor {
             .orElse(null);
 
         if (sourceDir == null) {
-            throw new IllegalArgumentException(String.format(
-                "Annotated source file is not contained in one of the recognized source directories: %s",
-                options.sourceDirs()));
+            throw new IllegalArgumentException(
+                "Annotated source file is not contained in one of the recognized source directories: "
+                + options.sourceDirs());
         }
 
         KSName qualifiedName = Objects.requireNonNull(declaration.getQualifiedName());
@@ -237,7 +235,7 @@ public final class MarkupSymbolProcessor implements SymbolProcessor {
                 if (alias != null) {
                     logger.warn(String.format(
                         "Ignoring aliased Kotlin import '%s' for @%s processing", qualifiedImport,
-                        Markup.class.getSimpleName()), annotation);
+                        getSimpleName(MARKUP_ANNOTATION_NAME)), annotation);
                 } else if (!MARKUP_ANNOTATION_NAME.equals(qualifiedImport)) {
                     imports.add(qualifiedImport);
                 }
@@ -293,6 +291,10 @@ public final class MarkupSymbolProcessor implements SymbolProcessor {
         }
 
         throw new IllegalStateException("Annotation element not found: value");
+    }
+
+    private String getSimpleName(String name) {
+        return name.substring(name.lastIndexOf('.') + 1);
     }
 
     private void error(KSNode element, KSNode annotation, KSNode value, String message) {

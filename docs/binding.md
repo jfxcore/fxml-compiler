@@ -1,12 +1,13 @@
 ---
 layout: default
 title: Compiled bindings
-nav_order: 9
+nav_order: 8
 has_children: true
 ---
 
 # Compiled bindings
-FXML 2.0 supports all binding types afforded by JavaFX, and extends binding expressions with operators and functions. Binding paths are compiled down to specialized code by the FXML compiler, which can increase the performance of the resulting code.
+FXML 2.0 supports all binding types afforded by JavaFX, and extends binding expressions with operators and functions.
+Binding paths are compiled down to specialized code by the FXML compiler, which can increase the performance of the resulting code.
 
 Here's how a simple binding is specified in FXML 2.0, using different (but equivalent) notations:
 
@@ -40,4 +41,5 @@ public class MyControl extends MyControlBase {
 }
 ```
 
-`fx:bind` is an intrinsic markup extension of the FMXL 2.0 language. It corresponds to calling the `Property.bind(ObservableValue)` method with the `caption` argument, which is the binding source path.
+`fx:bind` is an intrinsic markup extension of the FMXL 2.0 language.
+It corresponds to calling the `Property.bind(ObservableValue)` method with the `caption` argument, which is the binding source path.
