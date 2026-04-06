@@ -32,7 +32,7 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-metadata-jvm:0.4.1")
 
     compileOnly("org.jetbrains:annotations:26.1.0")
-    compileOnly("com.google.devtools.ksp:symbol-processing-api:2.1.20-2.0.1")
+    compileOnly("com.google.devtools.ksp:symbol-processing-api:2.3.6")
     compileOnly(files("${gradle.includedBuild("jfx").projectDir}/build/sdk/lib/javafx.base.jar"))
     compileOnly(files("${gradle.includedBuild("jfx").projectDir}/build/sdk/lib/javafx.graphics.jar"))
     compileOnly(files("${gradle.includedBuild("jfx").projectDir}/build/sdk/lib/javafx.controls.jar"))
