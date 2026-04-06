@@ -14,6 +14,7 @@ import com.google.devtools.ksp.symbol.FileLocation;
 import com.google.devtools.ksp.symbol.KSAnnotated;
 import com.google.devtools.ksp.symbol.KSAnnotation;
 import com.google.devtools.ksp.symbol.KSClassDeclaration;
+import com.google.devtools.ksp.symbol.KSClassifierReference;
 import com.google.devtools.ksp.symbol.KSDeclaration;
 import com.google.devtools.ksp.symbol.KSFile;
 import com.google.devtools.ksp.symbol.KSName;
@@ -90,9 +91,17 @@ final class MarkupSymbolProcessor implements SymbolProcessor {
                 AnnotationInfo info = sourceFiles.get(descriptor.absoluteSourceFile());
                 QualifiedName generatedClass = descriptor.markupClass();
                 String packageName = generatedClass.packageName().fullName();
+                String superClassName = info != null ? getSuperClassName(info.element()) : null;
                 Dependencies dependencies = info != null && info.element().getContainingFile() != null
                     ? new Dependencies(false, info.element().getContainingFile())
                     : new Dependencies(false);
+
+                if (info != null && !generatedClass.simpleName().equals(superClassName)) {
+                    error(info.element(), null, null, String.format(
+                        "Annotated class %s must extend %s",
+                        info.element().getSimpleName().asString(),
+                        generatedClass.simpleName()));
+                }
 
                 try (Writer writer = new OutputStreamWriter(
                         codeGenerator.createNewFile(dependencies, packageName, generatedClass.simpleName(), "java"),
@@ -144,13 +153,6 @@ final class MarkupSymbolProcessor implements SymbolProcessor {
 
         KSAnnotation annotation = getAnnotation(declaration);
 
-        if (!hasExplicitSuperclass(declaration)) {
-            error(declaration, annotation, null, String.format(
-                "Class annotated with @%s must extend the generated base class",
-                getSimpleName(MARKUP_ANNOTATION_NAME)));
-            return;
-        }
-
         try {
             processAnnotatedClass(declaration, annotation);
         } catch (Exception ex) {
@@ -200,22 +202,43 @@ final class MarkupSymbolProcessor implements SymbolProcessor {
         }
     }
 
-    private boolean hasExplicitSuperclass(KSClassDeclaration declaration) {
+    private String getSuperClassName(KSClassDeclaration declaration) {
         Iterator<KSTypeReference> it = declaration.getSuperTypes().iterator();
         while (it.hasNext()) {
             KSTypeReference superType = it.next();
-            KSDeclaration superDeclaration = superType.resolve().getDeclaration();
+            var resolvedType = superType.resolve();
+            if (resolvedType.isError()) {
+                String referencedName = getReferencedSuperClassName(superType);
+                if (referencedName != null) {
+                    return referencedName;
+                }
+
+                continue;
+            }
+
+            KSDeclaration superDeclaration = resolvedType.getDeclaration();
 
             if (superDeclaration instanceof KSClassDeclaration superClass
                     && superClass.getClassKind() == ClassKind.CLASS) {
                 KSName qualifiedName = superClass.getQualifiedName();
                 if (qualifiedName == null || !"kotlin.Any".equals(qualifiedName.asString())) {
-                    return true;
+                    return superClass.getSimpleName().asString();
                 }
             }
         }
 
-        return false;
+        return null;
+    }
+
+    private String getReferencedSuperClassName(KSTypeReference superType) {
+        if (superType.getElement() instanceof KSClassifierReference classifierReference) {
+            String referencedName = classifierReference.referencedName();
+            if (!referencedName.isBlank() && !"Any".equals(referencedName)) {
+                return referencedName;
+            }
+        }
+
+        return null;
     }
 
     private List<String> getImports(KSFile containingFile, KSNode annotation) {

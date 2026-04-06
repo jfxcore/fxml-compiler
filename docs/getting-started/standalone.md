@@ -18,7 +18,7 @@ The basic structure of a FXML 2.0 source file consists of any number of `import`
 ```
 
 There are two XML namespaces involved:
-- `xmlns="http://javafx.com/javafx"` is the default namespace for all elements declared in the standalone FXML file. It <b>must</b> include the `javafx.com/javafx` part, and <b>may</b> include any number of additional path segments for informational purposes.
+- `xmlns="http://javafx.com/javafx"` is the default namespace for all elements declared in the FXML file. It <b>must</b> include the `javafx.com/javafx` part, and <b>may</b> include any number of additional path segments for informational purposes.
 - `xmlns:fx="http://jfxcore.org/fxml/2.0"` contains intrinsic types of the FXML 2.0 markup language.
 
 {: .note }

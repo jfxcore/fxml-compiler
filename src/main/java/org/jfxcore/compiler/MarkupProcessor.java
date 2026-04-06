@@ -3,18 +3,17 @@
 
 package org.jfxcore.compiler;
 
-import com.sun.source.tree.ClassTree;
 import com.sun.source.tree.CompilationUnitTree;
 import com.sun.source.tree.ImportTree;
 import com.sun.source.tree.LineMap;
 import com.sun.source.util.SourcePositions;
 import com.sun.source.util.TreePath;
 import com.sun.source.util.Trees;
+import org.jfxcore.compiler.diagnostic.Location;
+import org.jfxcore.compiler.diagnostic.Logger;
+import org.jfxcore.compiler.diagnostic.MarkupException;
 import org.jfxcore.compiler.util.CompilationUnit;
 import org.jfxcore.compiler.util.CompilationUnitDescriptor;
-import org.jfxcore.compiler.diagnostic.Logger;
-import org.jfxcore.compiler.diagnostic.Location;
-import org.jfxcore.compiler.diagnostic.MarkupException;
 import org.jfxcore.compiler.util.QualifiedName;
 import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.Filer;
@@ -31,7 +30,9 @@ import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.NestingKind;
 import javax.lang.model.element.TypeElement;
+import javax.lang.model.type.TypeKind;
 import javax.lang.model.util.Elements;
+import javax.lang.model.util.Types;
 import javax.tools.Diagnostic;
 import java.io.IOException;
 import java.io.Writer;
@@ -53,20 +54,22 @@ public final class MarkupProcessor extends AbstractProcessor {
 
     static final String MARKUP_ANNOTATION_NAME = "org.jfxcore.markup.ComponentView";
 
+    private final Map<Path, AnnotationInfo> sourceFiles = new HashMap<>();
+    private final Set<String> processedOwners = new HashSet<>();
+
     private Elements elements;
+    private Types types;
     private Filer filer;
     private Messager messager;
     private Trees trees;
     private ProcessorOptions options;
     private ClassGenerator generator;
 
-    private final Map<Path, AnnotationInfo> sourceFiles = new HashMap<>();
-    private final Set<String> processedOwners = new HashSet<>();
-
     @Override
     public synchronized void init(ProcessingEnvironment processingEnv) {
         super.init(processingEnv);
         this.elements = processingEnv.getElementUtils();
+        this.types = processingEnv.getTypeUtils();
         this.filer = processingEnv.getFiler();
         this.messager = processingEnv.getMessager();
         this.trees = Trees.instance(processingEnv);
@@ -101,6 +104,14 @@ public final class MarkupProcessor extends AbstractProcessor {
                 CompilationUnitDescriptor descriptor = compilationUnit.descriptor();
                 String fileName = descriptor.markupClass().fullName();
                 TypeElement originatingElement = sourceFiles.get(descriptor.absoluteSourceFile()).element();
+                String superClassName = getSuperClassName(originatingElement);
+
+                if (!descriptor.markupClass().simpleName().equals(superClassName)) {
+                    error(originatingElement, null, null, String.format(
+                        "Annotated class %s must extend %s",
+                        originatingElement.getSimpleName(),
+                        compilationUnit.descriptor().markupClass().simpleName()));
+                }
 
                 try (Writer writer = filer.createSourceFile(fileName, originatingElement).openWriter()) {
                     writer.write(compilationUnit.generatedSourceText());
@@ -142,13 +153,6 @@ public final class MarkupProcessor extends AbstractProcessor {
         }
 
         AnnotationMirror annotation = getAnnotationMirror(typeElement, MARKUP_ANNOTATION_NAME);
-
-        if (!hasExplicitSuperclass(typeElement)) {
-            error(typeElement, annotation, null, String.format(
-                "Class annotated with @%s must extend the generated base class",
-                getSimpleName(MARKUP_ANNOTATION_NAME)));
-            return;
-        }
 
         try {
             processAnnotatedClass(typeElement, annotation);
@@ -195,13 +199,18 @@ public final class MarkupProcessor extends AbstractProcessor {
         }
     }
 
-    private boolean hasExplicitSuperclass(TypeElement typeElement) {
-        TreePath path = trees.getPath(typeElement);
-        if (path == null || !(path.getLeaf() instanceof ClassTree classTree)) {
-            return true;
+    private String getSuperClassName(TypeElement typeElement) {
+        var superclass = typeElement.getSuperclass();
+        if (superclass.getKind() == TypeKind.NONE) {
+            return null;
         }
 
-        return classTree.getExtendsClause() != null;
+        Element superElement = types.asElement(superclass);
+        if (!(superElement instanceof TypeElement superTypeElement)) {
+            return null;
+        }
+
+        return superTypeElement.getSimpleName().toString();
     }
 
     private List<String> getImports(TypeElement typeElement) {

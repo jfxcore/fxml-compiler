@@ -28,7 +28,7 @@ public class MarkupProcessorTest {
     Path tempDir;
 
     @Test
-    public void MarkupClass_Without_Explicit_Superclass_Fails_Compilation() throws IOException {
+    public void MarkupClass_Without_Superclass_Fails_Compilation() throws IOException {
         CompilationResult result = compile("SampleControl", """
             package sample;
 
@@ -44,12 +44,33 @@ public class MarkupProcessorTest {
 
         assertFalse(result.success(), result.formatDiagnostics());
         assertTrue(
-            result.hasErrorContaining("must extend the generated base class"),
+            result.hasErrorContaining("must extend SampleControlBase"),
             result.formatDiagnostics());
     }
 
     @Test
-    public void MarkupClass_With_Explicit_Superclass_Compiles() throws IOException {
+    public void MarkupClass_With_Wrong_Superclass_Fails_Compilation() throws IOException {
+        CompilationResult result = compile("SampleControl", """
+            package sample;
+
+            import javafx.scene.layout.Pane;
+            import org.jfxcore.markup.ComponentView;
+
+            @ComponentView(""\"
+                <Pane/>
+            ""\")
+            public class SampleControl extends Pane {
+            }
+            """);
+
+        assertFalse(result.success(), result.formatDiagnostics());
+        assertTrue(
+            result.hasErrorContaining("must extend SampleControlBase"),
+            result.formatDiagnostics());
+    }
+
+    @Test
+    public void MarkupClass_With_Expected_Superclass_Compiles() throws IOException {
         CompilationResult result = compile("SampleControl", """
             package sample;
 
@@ -132,7 +153,7 @@ public class MarkupProcessorTest {
     }
 
     @Test
-    public void MarkupClass_With_Explicit_Superclass_Writes_Descriptor_File() throws IOException {
+    public void MarkupClass_With_Superclass_Writes_Descriptor_File() throws IOException {
         CompilationResult result = compile("SampleControl", """
             package sample;
 
@@ -160,7 +181,7 @@ public class MarkupProcessorTest {
     }
 
     @Test
-    public void Package_Private_MarkupClass_With_Explicit_Superclass_Compiles() throws IOException {
+    public void Package_Private_MarkupClass_With_Superclass_Compiles() throws IOException {
         CompilationResult result = compile("SampleControl", """
             package sample;
 

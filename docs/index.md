@@ -80,7 +80,7 @@ NumberDialog.fxml:8: 'textFiel' in NumberDialog cannot be resolved
 
 ## Embedded markup in Java or Kotlin files
 
-FXML 2.0 also supports embedding markup directly into Java or Kotlin source files with the `@ComponentView` annotation, keeping markup and imperative code in the same file.
+FXML 2.0 also supports embedding markup directly into Java or Kotlin source code with the `@ComponentView` annotation, keeping markup and imperative code in the same file.
 With `@ComponentView`, the annotated class supplies the FXML source text, and the compiler treats it like a regular FXML view associated with that class:
 
 ```java
