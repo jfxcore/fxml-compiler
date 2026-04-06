@@ -11,7 +11,7 @@ FXML 2.0 markup can be embedded directly into Java or Kotlin source code with th
 {: .note }
 The `@ComponentView` annotation is available in the [markup](https://github.com/jfxcore/markup) library.
 
-With `@ComponentView`, the annotated class supplies the markup source text, and the compiler treats it like a regular FXML view associated with that component:
+The annotated class supplies the markup source text, and the compiler treats it like a regular FXML view associated with that component:
 
 ```java
 package com.sample;
@@ -47,7 +47,7 @@ The generated base class still follows the usual naming convention, so `MyContro
 In Kotlin projects, the embedded FXML document can not reference type aliases.
 
 ## Enable annotation processing
-The `ComponentView` annotation is processed at compile time by the FXML 2.0 annotation processor, it is not retained in the compiled class file.
+The `ComponentView` annotation is processed at compile time by an annotation processor, it is not retained in the compiled class file.
 The [FXML 2.0 Gradle plugin](https://plugins.gradle.org/plugin/org.jfxcore.fxmlplugin) automatically runs the annotation processor for Java projects.
 
 In Kotlin projects, the KSP plugin needs to be explicitly applied to enable annotation processing:

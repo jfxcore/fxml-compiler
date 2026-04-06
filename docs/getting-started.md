@@ -31,7 +31,7 @@ After the plugin is applied, `.fxml` files in your Gradle project will be automa
 > Usually you don't need to run these tasks manually, as they are automatically run when you build the project.
 
 ## Annotation processing for Kotlin
-If you want to use [embedded markup](markup-deployment/embedded.html) in a Kotlin project, you also need to apply the KSP plugin to support annotation processing:
+If you want to use [embedded markup](getting-started/embedded.html) in a Kotlin project, you also need to apply the KSP plugin to support annotation processing:
 ```kotlin
 plugins {
     id("com.google.devtools.ksp") version "2.3.6"

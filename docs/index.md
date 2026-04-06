@@ -68,20 +68,10 @@ public class NumberDialog extends VBox {
 
 In many cases, custom controls or user interfaces require imperative code for additional functionality. FXML 2.0 supports this with an optional [code-behind](code-behind.html) class to combine FXML markup and Java code.
 
-## Compile-time type safety
-All symbols referenced in FXML 2.0 markup are resolved at compile time. Errors are surfaced early in the build, instead of later at runtime. Compiler diagnostics make it easy to see what went wrong:
+## Embed markup into Java or Kotlin files
 
-```
-NumberDialog.fxml:8: 'textFiel' in NumberDialog cannot be resolved
-
-    <Label text="The value cannot be empty" visible="${textFiel.text.empty}"/>
-                                                       ^^^^^^^^
-```
-
-## Embedded markup in Java or Kotlin files
-
-FXML 2.0 also supports embedding markup directly into Java or Kotlin source code with the `@ComponentView` annotation, keeping markup and imperative code in the same file.
-With `@ComponentView`, the annotated class supplies the FXML source text, and the compiler treats it like a regular FXML view associated with that class:
+FXML 2.0 markup can optionally be embedded into Java or Kotlin source code, keeping markup and imperative code in the same file.
+The annotated class supplies the FXML source text, and the compiler treats it like a regular FXML view associated with that class:
 
 ```java
 import javafx.scene.control.Button;
@@ -103,6 +93,16 @@ public class MyControl extends MyControlBase {
 ```
 
 This makes it easy to build components in a single source file while still getting the benefits of compiled FXML, including type-safe symbol resolution and seamless integration with imperative code.
+
+## Compile-time type safety
+All symbols referenced in FXML 2.0 markup are resolved at compile time. Errors are surfaced early in the build, instead of later at runtime. Compiler diagnostics make it easy to see what went wrong:
+
+```
+NumberDialog.fxml:8: 'textFiel' in NumberDialog cannot be resolved
+
+    <Label text="The value cannot be empty" visible="${textFiel.text.empty}"/>
+                                                       ^^^^^^^^
+```
 
 ## Bring your own pattern
 FXML 2.0 does not use the markup/controller pattern as featured in FXML 1.0 with `FXMLLoader`. Instead, FXML 2.0 markup compiles down to scene graph nodes, optionally including a [code-behind](code-behind.html) class to combine it with imperative code.

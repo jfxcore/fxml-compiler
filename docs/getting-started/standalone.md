@@ -24,8 +24,8 @@ There are two XML namespaces involved:
 {: .note }
 When the default namespace `xmlns="http://javafx.com/javafx"` is omitted or does not contain the `javafx.com/javafx` part, the FXML 2.0 compiler will skip the file.
 
-## FXML without code-behind class
-An FXML 2.0 file without [code-behind](../code-behind.html) class is compiled to a Java class with the same name.
+## FXML file without code-behind class
+An FXML 2.0 source file without [code-behind](../code-behind.html) class is compiled to a Java class with the same name.
 For example, if you place a `MyButton.fxml` file in the `com/sample/control` package, the compiler will create the Java class `com.sample.control.MyButton`.
 
 ## Deployment
