@@ -13,13 +13,13 @@ Add the following line to the `plugins` block of your `build.gradle` file:
 ### Kotlin
 ```kotlin
 plugins {
-    id("org.jfxcore.fxmlplugin") version "0.12.1"
+    id("org.jfxcore.fxmlplugin") version "0.13.0"
 }
 ```
 ### Groovy
 ```groovy
 plugins {
-    id "org.jfxcore.fxmlplugin" version "0.12.1"
+    id "org.jfxcore.fxmlplugin" version "0.13.0"
 }
 ```
 After the plugin is applied, `.fxml` files in your Gradle project will be automatically compiled with the rest of your source files.
