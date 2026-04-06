@@ -23,18 +23,10 @@ plugins {
 }
 ```
 After the plugin is applied, `.fxml` files in your Gradle project will be automatically compiled with the rest of your source files.
+Annotation processing for [embedded markup](getting-started/embedded.html) is disabled by default and needs to be enabled in the Gradle build script; see [Enable annotation processing](getting-started/embedded.html#enable-annotation-processing).
 
 {: .highlight}
 > The plugin adds a new task for each of your source sets to the Gradle project.
 > The task is named `processFxml`, `processTestFxml`, etc. and is responsible for parsing FXML markup files and generating Java code files.
 >
 > Usually you don't need to run these tasks manually, as they are automatically run when you build the project.
-
-## Annotation processing for Kotlin
-If you want to use [embedded markup](getting-started/embedded.html) in a Kotlin project, you also need to apply the KSP plugin to support annotation processing:
-```kotlin
-plugins {
-    id("com.google.devtools.ksp") version "2.3.6"
-    id("org.jfxcore.fxmlplugin") version "0.12.1"
-}
-```

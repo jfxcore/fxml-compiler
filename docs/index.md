@@ -11,7 +11,7 @@ FXML 2.0 is a declarative markup language for JavaFX based on the [FXML 1.0](htt
 ## Compile markup directly to bytecode
 FXML 2.0 markup is compiled directly to bytecode, and doesn't require `FXMLLoader` to load the document at runtime. No parsing is required, and no reflection is necessary to instantiate the JavaFX object graph. This dramatically improves the loading performance of FXML documents.
 
-Here's how an FXML 2.0 file is compiled to a Java class:
+Here's how an [FXML 2.0 file](getting-started/standalone.html) is compiled to a Java class:
 <div class="filename">com/sample/NumberDialog.fxml</div>
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
@@ -70,7 +70,7 @@ In many cases, custom controls or user interfaces require imperative code for ad
 
 ## Embed markup into Java or Kotlin files
 
-FXML 2.0 markup can optionally be embedded into Java or Kotlin source code, keeping markup and imperative code in the same file.
+FXML 2.0 markup can optionally be [embedded](getting-started/embedded.html) into Java or Kotlin source code, keeping markup and imperative code in the same file.
 The annotated class supplies the FXML source text, and the compiler treats it like a regular FXML view associated with that class:
 
 ```java

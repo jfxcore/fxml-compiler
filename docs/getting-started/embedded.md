@@ -47,10 +47,16 @@ The generated base class still follows the usual naming convention, so `MyContro
 In Kotlin projects, the embedded FXML document can not reference type aliases.
 
 ## Enable annotation processing
-The `ComponentView` annotation is processed at compile time by an annotation processor, it is not retained in the compiled class file.
-The [FXML 2.0 Gradle plugin](https://plugins.gradle.org/plugin/org.jfxcore.fxmlplugin) automatically runs the annotation processor for Java projects.
+The `@ComponentView` annotation is processed at compile time by an annotation processor, it is not retained in the compiled class file.
+The [FXML 2.0 Gradle plugin](https://plugins.gradle.org/plugin/org.jfxcore.fxmlplugin) does not enable annotation processing by default, you need to opt in explicitly in your Gradle build script:
 
-In Kotlin projects, the KSP plugin needs to be explicitly applied to enable annotation processing:
+```kotlin
+fxml {
+    annotationProcessing = true
+}
+```
+
+In Kotlin projects, the KSP plugin also needs to be explicitly applied:
 ```kotlin
 plugins {
     kotlin("jvm") version "2.3.20"
