@@ -6,10 +6,10 @@ nav_order: 14
 ---
 
 # fx:markupClassName attribute
-The `fx:markupClassName` attribute controls the name of the class that contains the compiled markup of the FXML file. If this attribute is not specified, the name of the markup class defaults to the file name of the FXML document (without the file extension) and the `Base` suffix. For example, the default markup class name for `MyControl.fxml` will be `MyControlBase`.
+The `fx:markupClassName` attribute controls the name of the compiled markup class. If this attribute is not specified, the name of the markup class defaults to the standalone `.fxml` file name or the annotated Java class name, plus the `Base` suffix. For example, the default markup class name for `MyControl.fxml` will be `MyControlBase`.
 
 {: .highlight }
-The `fx:markupClassName` attribute can only be used when the `fx:class` attribute is also specified.
+In `.fxml` files, the `fx:markupClassName` attribute can only be used when the `fx:class` attribute is also specified.
 
 ## Usage
 

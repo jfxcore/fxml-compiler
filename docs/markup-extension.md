@@ -1,7 +1,7 @@
 ---
 layout: default
 title: Markup extensions
-nav_order: 8
+nav_order: 7
 has_children: true
 ---
 
@@ -36,7 +36,7 @@ The FXML 2.0 runtime library includes markup extensions for resolving classpath 
 | [`DynamicResource`](markup-extension/dynamic-resource.html) | Resolves a localizable resource for a property and updates that property when the resource changes |
 
 ## Prefix shorthand in attribute notation
-Markup extensions that use attribute notation can also be written with a single-character prefix. The `%` and `@` prefixes are available implicitly and expand to `StaticResource` and `ClassPathResource`, even if the FXML file does not import these markup extensions and does not declare any prefixes:
+Markup extensions that use attribute notation can also be written with a single-character prefix. The `%` and `@` prefixes are available implicitly and expand to `StaticResource` and `ClassPathResource`, even if the FXML document does not import these markup extensions and does not declare any prefixes:
 
 ```xml
 <?import javafx.scene.control.Label?>

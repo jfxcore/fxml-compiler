@@ -3,7 +3,6 @@
 
 package org.jfxcore.compiler.util;
 
-import javassist.ClassPool;
 import javassist.bytecode.MethodInfo;
 import org.jfxcore.compiler.ast.DocumentNode;
 import org.jfxcore.compiler.ast.codebehind.ClassNode;
@@ -30,6 +29,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 import java.util.function.Consumer;
 
 public class TestCompiler extends AbstractCompiler {
@@ -57,19 +57,18 @@ public class TestCompiler extends AbstractCompiler {
         }
     }
 
+    public TestCompiler() {
+        super(Set.of());
+    }
+
     @SuppressWarnings("unchecked")
     public <T> Class<T> compileClass(String fileName, String source, Consumer<CompilationContext> configure) {
-        var classPool = new ClassPool();
-        classPool.appendSystemPath();
-
+        var classPool = newClassPool();
         ClassNode classNode;
         StringBuilder codeBehind = new StringBuilder();
         DocumentNode document;
         String simpleClassName;
-
-        Path sourceBaseDir = Path.of("").toAbsolutePath().resolve("src/compilerTest/java");
-        Path fxmlTestSourcePath = Path.of("").toAbsolutePath()
-            .resolve("src/compilerTest/java/org/jfxcore/compiler/classes/" + fileName + ".fxml");
+        Path fxmlTestSourcePath = Path.of("org/jfxcore/compiler/classes/" + fileName + ".fxml");
 
         CompilationContext context = new CompilationContext(new CompilationSource.InMemory(source));
         if (configure != null) {
@@ -77,7 +76,7 @@ public class TestCompiler extends AbstractCompiler {
         }
 
         try (CompilationScope ignored = new CompilationScope(context)) {
-            document = new FxmlParser(sourceBaseDir, fxmlTestSourcePath, source).parseDocument();
+            document = new FxmlParser(fxmlTestSourcePath, source, null).parseDocument();
 
             DocumentNode codeDocument = (DocumentNode)Transformer.getCodeTransformer(classPool)
                 .transform(document, null, null);

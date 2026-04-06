@@ -1,7 +1,7 @@
 ---
 layout: default
 title: Value coercion
-nav_order: 6
+nav_order: 5
 ---
 
 # Value coercion

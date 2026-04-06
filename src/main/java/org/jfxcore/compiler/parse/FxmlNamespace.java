@@ -1,9 +1,10 @@
-// Copyright (c) 2021, 2023, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.parse;
 
 import java.util.Locale;
+import java.util.Map;
 
 public enum FxmlNamespace {
 
@@ -12,6 +13,10 @@ public enum FxmlNamespace {
 
     FxmlNamespace(String namespace) {
         this.namespace = namespace;
+    }
+
+    public static Map<String, String> getDefaultMap() {
+        return Map.of("", JAVAFX.namespace, "fx", FXML.namespace);
     }
 
     public boolean isParentOf(String s) {
@@ -34,5 +39,4 @@ public enum FxmlNamespace {
     }
 
     private final String namespace;
-
 }

@@ -7,14 +7,15 @@ nav_order: 5
 
 # fx:class attribute
 The `fx:class` attribute identifies the fully-qualified name of the code-behind class. The FXML compiler generates a base class which must be extended by the code-behind class.
+Embedded markup in a `@ComponentView` annotation uses the annotated class as its code-behind class automatically, so `fx:class` is neither required nor supported in this scenario.
 
 The generated base class contains an `initializeComponent()` method, which must be called in the constructor of the code-behind class to initialize the scene graph.
 
 {: .highlight }
 The `fx:class` attribute can only be set on the root element.
 
-## FXML documents without code-behind class
-If the `fx:class` attribute is omitted, the FXML file is compiled down to a class with the same name. For example, the document `com/sample/MyControl.fxml` will yield the class `com.sample.MyControl`. This is a supported scenario for FXML documents that don't require a code-behind class with custom code.
+## FXML files without code-behind class
+If the `fx:class` attribute is omitted in an FXML file, it is compiled down to a standalone class with the same name. For example, the document `com/sample/MyControl.fxml` will yield the class `com.sample.MyControl`. This is a supported scenario for FXML documents that don't require a code-behind class with custom code.
 
 ## Usage
 

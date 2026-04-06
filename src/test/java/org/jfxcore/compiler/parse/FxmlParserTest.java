@@ -3,17 +3,22 @@
 
 package org.jfxcore.compiler.parse;
 
+import org.jfxcore.compiler.TestBase;
 import org.jfxcore.compiler.ast.DocumentNode;
 import org.jfxcore.compiler.ast.ObjectNode;
+import org.jfxcore.compiler.ast.intrinsic.Intrinsics;
 import org.jfxcore.compiler.ast.text.BooleanNode;
 import org.jfxcore.compiler.ast.text.ListNode;
 import org.jfxcore.compiler.ast.text.NumberNode;
 import org.jfxcore.compiler.ast.text.TextNode;
 import org.jfxcore.compiler.diagnostic.ErrorCode;
+import org.jfxcore.compiler.diagnostic.Location;
 import org.jfxcore.compiler.diagnostic.MarkupException;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
+import org.jfxcore.compiler.util.QualifiedName;
 import org.junit.jupiter.api.Test;
-import org.jfxcore.compiler.TestBase;
+import java.nio.file.Path;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -66,6 +71,46 @@ public class FxmlParserTest extends TestBase {
 
         //noinspection ConstantConditions
         assertEquals("10", ((ObjectNode)document.getRoot()).findProperty("prefWidth").getTrimmedTextNotEmpty(null));
+    }
+
+    @Test
+    public void Implicit_FxNamespace() {
+        DocumentNode document = new FxmlParser(Path.of("."), """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <?import javafx.scene.layout.*?>
+                <GridPane prefWidth="10" fx:id="myGridPane"/>
+            """, new EmbeddingContext(List.of(), QualifiedName.of("TestHost"), new Location(0, 0))).parseDocument();
+
+        var root = (ObjectNode)document.getRoot();
+
+        //noinspection ConstantConditions
+        assertEquals("myGridPane", root.findIntrinsicProperty(Intrinsics.ID).getTrimmedTextNotEmpty(null));
+    }
+
+    @Test
+    public void Custom_FxNamespace() {
+        DocumentNode document = new FxmlParser(Path.of("."), """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <?import javafx.scene.layout.*?>
+                <GridPane prefWidth="10" xmlns:foo="http://jfxcore.org/fxml/2.0" foo:id="myGridPane"/>
+            """, new EmbeddingContext(List.of(), QualifiedName.of("TestHost"), new Location(0, 0))).parseDocument();
+
+        var root = (ObjectNode)document.getRoot();
+
+        //noinspection ConstantConditions
+        assertEquals("myGridPane", root.findIntrinsicProperty(Intrinsics.ID).getTrimmedTextNotEmpty(null));
+    }
+
+    @Test
+    public void Custom_FxNamespace_Hides_Implicit_FxNamespace() {
+        MarkupException ex = assertThrows(MarkupException.class, () -> new FxmlParser(Path.of("."), """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <?import javafx.scene.layout.*?>
+                <GridPane prefWidth="10" xmlns:foo="http://jfxcore.org/fxml/2.0" fx:id="myGridPane"/>
+            """, new EmbeddingContext(List.of(), QualifiedName.of("TestHost"), new Location(0, 0))).parseDocument());
+
+        assertEquals(ErrorCode.UNKNOWN_NAMESPACE, ex.getDiagnostic().getCode());
+        assertEquals("Unknown XML namespace: fx", ex.getDiagnostic().getMessage());
     }
 
     @Test
