@@ -30,6 +30,11 @@ public sealed interface MarkupExtensionInfo {
                             boolean readOnly) implements MarkupExtensionInfo {}
 
     static MarkupExtensionInfo of(Node node) {
+        return of(node, null);
+    }
+
+    @SuppressWarnings("unchecked")
+    static <T extends MarkupExtensionInfo> T of(Node node, Class<T> expectedType) {
         if (!Markup.isAvailable()) {
             return null;
         }
@@ -38,7 +43,7 @@ public sealed interface MarkupExtensionInfo {
         var resolver = new Resolver(node.getSourceInfo());
         var invoker = new TypeInvoker(node.getSourceInfo());
 
-        if (type.subtypeOf(Markup.MarkupExtension.SupplierDecl())) {
+        if (expectedType != PropertyConsumer.class && type.subtypeOf(Markup.MarkupExtension.SupplierDecl())) {
             var applyMethod = resolver.tryResolveMethod(type.declaration(), method ->
                 method.name().equals("get")
                 && method.parameters().size() == 1
@@ -76,50 +81,54 @@ public sealed interface MarkupExtensionInfo {
                 }
             }
 
-            return new Supplier(returnType, providedTypes, Markup.MarkupExtension.SupplierDecl());
+            return (T)new Supplier(returnType, providedTypes, Markup.MarkupExtension.SupplierDecl());
         }
 
-        if (type.subtypeOf(Markup.MarkupExtension.BooleanSupplierDecl())) {
-            return new Supplier(TypeInstance.booleanType(), Markup.MarkupExtension.BooleanSupplierDecl());
-        }
-
-        if (type.subtypeOf(Markup.MarkupExtension.IntSupplierDecl())) {
-            return new Supplier(TypeInstance.intType(), Markup.MarkupExtension.IntSupplierDecl());
-        }
-
-        if (type.subtypeOf(Markup.MarkupExtension.LongSupplierDecl())) {
-            return new Supplier(TypeInstance.longType(), Markup.MarkupExtension.LongSupplierDecl());
-        }
-
-        if (type.subtypeOf(Markup.MarkupExtension.FloatSupplierDecl())) {
-            return new Supplier(TypeInstance.floatType(), Markup.MarkupExtension.FloatSupplierDecl());
-        }
-
-        if (type.subtypeOf(Markup.MarkupExtension.DoubleSupplierDecl())) {
-            return new Supplier(TypeInstance.doubleType(), Markup.MarkupExtension.DoubleSupplierDecl());
-        }
-
-        TypeDeclaration propertyType = type.subtypeOf(Markup.MarkupExtension.PropertyConsumerDecl())
-            ? PropertyDecl()
-            : type.subtypeOf(Markup.MarkupExtension.ReadOnlyPropertyConsumerDecl())
-                ? ReadOnlyPropertyDecl()
-                : null;
-
-        if (propertyType != null) {
-            var consumeMethod = resolver.tryResolveMethod(type.declaration(), method ->
-                method.name().equals("accept")
-                && method.parameters().size() == 2
-                && method.parameters().get(0).type().equals(propertyType)
-                && method.parameters().get(1).type().equals(Markup.MarkupContextDecl()));
-
-            var paramType = invoker.invokeParameterTypes(consumeMethod, List.of(type))[0];
-
-            if (propertyType == PropertyDecl()) {
-                return new PropertyConsumer(paramType, Markup.MarkupExtension.PropertyConsumerDecl(), false);
+        if (expectedType != PropertyConsumer.class) {
+            if (type.subtypeOf(Markup.MarkupExtension.BooleanSupplierDecl())) {
+                return (T)new Supplier(TypeInstance.booleanType(), Markup.MarkupExtension.BooleanSupplierDecl());
             }
 
-            if (propertyType == ReadOnlyPropertyDecl()) {
-                return new PropertyConsumer(paramType, Markup.MarkupExtension.ReadOnlyPropertyConsumerDecl(), true);
+            if (type.subtypeOf(Markup.MarkupExtension.IntSupplierDecl())) {
+                return (T)new Supplier(TypeInstance.intType(), Markup.MarkupExtension.IntSupplierDecl());
+            }
+
+            if (type.subtypeOf(Markup.MarkupExtension.LongSupplierDecl())) {
+                return (T)new Supplier(TypeInstance.longType(), Markup.MarkupExtension.LongSupplierDecl());
+            }
+
+            if (type.subtypeOf(Markup.MarkupExtension.FloatSupplierDecl())) {
+                return (T)new Supplier(TypeInstance.floatType(), Markup.MarkupExtension.FloatSupplierDecl());
+            }
+
+            if (type.subtypeOf(Markup.MarkupExtension.DoubleSupplierDecl())) {
+                return (T)new Supplier(TypeInstance.doubleType(), Markup.MarkupExtension.DoubleSupplierDecl());
+            }
+        }
+
+        if (expectedType != Supplier.class) {
+            TypeDeclaration propertyType = type.subtypeOf(Markup.MarkupExtension.PropertyConsumerDecl())
+                ? PropertyDecl()
+                : type.subtypeOf(Markup.MarkupExtension.ReadOnlyPropertyConsumerDecl())
+                    ? ReadOnlyPropertyDecl()
+                    : null;
+
+            if (propertyType != null) {
+                var consumeMethod = resolver.tryResolveMethod(type.declaration(), method ->
+                    method.name().equals("accept")
+                    && method.parameters().size() == 2
+                    && method.parameters().get(0).type().equals(propertyType)
+                    && method.parameters().get(1).type().equals(Markup.MarkupContextDecl()));
+
+                var paramType = invoker.invokeParameterTypes(consumeMethod, List.of(type))[0];
+
+                if (propertyType == PropertyDecl()) {
+                    return (T)new PropertyConsumer(paramType, Markup.MarkupExtension.PropertyConsumerDecl(), false);
+                }
+
+                if (propertyType == ReadOnlyPropertyDecl()) {
+                    return (T)new PropertyConsumer(paramType, Markup.MarkupExtension.ReadOnlyPropertyConsumerDecl(), true);
+                }
             }
         }
 
