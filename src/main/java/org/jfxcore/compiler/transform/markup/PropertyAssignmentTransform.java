@@ -421,12 +421,21 @@ public class PropertyAssignmentTransform implements Transform {
 
     private MarkupExtensionResolution resolveMarkupExtension(
             Node node, PropertyInfo targetProperty, TypeInstance targetType) {
-        var extensionInfo = MarkupExtensionInfo.of(node);
-        if (extensionInfo == null || !(node instanceof ValueEmitterNode valueEmitterNode)) {
+        if (!(node instanceof ValueEmitterNode valueEmitterNode)) {
             return new MarkupExtensionResolution.None();
         }
 
-        if (extensionInfo instanceof MarkupExtensionInfo.Supplier supplierInfo) {
+        var propertyConsumerInfo = MarkupExtensionInfo.of(node, MarkupExtensionInfo.PropertyConsumer.class);
+        if (propertyConsumerInfo != null
+                && targetProperty.isObservable()
+                && propertyConsumerInfo.propertyType().isAssignableFrom(targetProperty.getObservableType())) {
+            return new MarkupExtensionResolution.ConsumeProperty(new EmitApplyMarkupExtensionNode(
+                valueEmitterNode, propertyConsumerInfo.markupExtensionInterface(), targetProperty.getName(),
+                targetType, TypeInstance.voidType(), targetProperty));
+        }
+
+        var supplierInfo = MarkupExtensionInfo.of(node, MarkupExtensionInfo.Supplier.class);
+        if (supplierInfo != null) {
             if (supplierInfo.providedTypes().stream().noneMatch(targetType::isAssignableFrom)) {
                 return new MarkupExtensionResolution.Error(PropertyAssignmentErrors.markupExtensionNotApplicable(
                     node.getSourceInfo(), targetProperty, TypeHelper.getTypeDeclaration(node),
@@ -438,20 +447,13 @@ public class PropertyAssignmentTransform implements Transform {
                 targetType, supplierInfo.returnType(), targetProperty));
         }
 
-        if (extensionInfo instanceof MarkupExtensionInfo.PropertyConsumer propertyConsumerInfo) {
-            if (targetProperty.getObservableType() == null
-                    || !propertyConsumerInfo.propertyType().isAssignableFrom(targetProperty.getObservableType())) {
-                return new MarkupExtensionResolution.Error(PropertyAssignmentErrors.markupExtensionNotApplicable(
-                    node.getSourceInfo(), targetProperty, TypeHelper.getTypeDeclaration(node),
-                    new TypeInstance[] {propertyConsumerInfo.propertyType()}));
-            }
-
-            return new MarkupExtensionResolution.ConsumeProperty(new EmitApplyMarkupExtensionNode(
-                valueEmitterNode, propertyConsumerInfo.markupExtensionInterface(), targetProperty.getName(),
-                targetType, TypeInstance.voidType(), targetProperty));
+        if (propertyConsumerInfo != null) {
+            return new MarkupExtensionResolution.Error(PropertyAssignmentErrors.markupExtensionNotApplicable(
+                node.getSourceInfo(), targetProperty, TypeHelper.getTypeDeclaration(node),
+                new TypeInstance[] {propertyConsumerInfo.propertyType()}));
         }
 
-        throw GeneralErrors.internalError("Unexpected markup extension");
+        return new MarkupExtensionResolution.None();
     }
 
     private ValueEmitterNode createEventHandlerNode(TransformContext context, ValueNode node, TypeInstance targetType) {

@@ -1,4 +1,4 @@
-// Copyright (c) 2021, 2025, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler;
@@ -510,6 +510,82 @@ public class MarkupExtensionTest extends CompilerTestBase {
 
             assertEquals(ErrorCode.MARKUP_EXTENSION_NOT_APPLICABLE, ex.getDiagnostic().getCode());
             assertCodeHighlight("{ReadOnlyPropertyConsumerExtension}", ex);
+        }
+    }
+
+    @Nested
+    @Execution(ExecutionMode.SAME_THREAD)
+    public class PropertyConsumerAndValueSupplierExtensionTest extends CompilerTestBase {
+
+        static List<ExtensionInvocation> propertyConsumerInvocations = new ArrayList<>();
+        static List<ExtensionInvocation> supplierInvocations = new ArrayList<>();
+
+        @BeforeEach
+        void setup() {
+            propertyConsumerInvocations.clear();
+            supplierInvocations.clear();
+        }
+
+        @SuppressWarnings("unused")
+        public static class PropertyConsumerAndDoubleSupplierExtension
+                implements MarkupExtension.PropertyConsumer<Number>, MarkupExtension.DoubleSupplier {
+            private final double param;
+
+            public PropertyConsumerAndDoubleSupplierExtension(@NamedArg("param") double param) {
+                this.param = param;
+            }
+
+            @Override
+            public void accept(Property<Number> property, MarkupContext context) {
+                propertyConsumerInvocations.add(ExtensionInvocation.of(property, context));
+                property.setValue(-1);
+            }
+
+            @Override
+            public double get(MarkupContext context) {
+                supplierInvocations.add(ExtensionInvocation.of(context));
+                return param;
+            }
+        }
+
+        @Test
+        public void PropertyConsumer_And_ValueSupplier_Prefers_PropertyConsumer_When_Assigned_To_Property() {
+            TestPane root = compileAndRun("""
+                <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                          doubleProp1="{PropertyConsumerAndDoubleSupplierExtension param=123.0}"/>
+            """);
+
+            assertEquals(-1.0, root.getDoubleProp1(), 0.001);
+            assertEquals(1, propertyConsumerInvocations.size());
+            assertEquals(0, supplierInvocations.size());
+            assertExtensionInvocation(propertyConsumerInvocations.get(0), root, 1, root, "doubleProp1",
+                                      double.class, root.doubleProp1Property());
+        }
+
+        @Test
+        public void PropertyConsumer_And_ValueSupplier_Falls_Back_To_Supplier_When_PropertyConsumer_Is_Not_Applicable() {
+            TestPane root = compileAndRun("""
+                <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                          doubleProp2="{PropertyConsumerAndDoubleSupplierExtension param=123.0}"/>
+            """);
+
+            assertEquals(123.0, root.getDoubleProp2(), 0.001);
+            assertEquals(0, propertyConsumerInvocations.size());
+            assertEquals(1, supplierInvocations.size());
+            assertExtensionInvocation(supplierInvocations.get(0), root, 1, root, "doubleProp2", double.class, null);
+        }
+
+        @Test
+        public void PropertyConsumer_And_ValueSupplier_Can_Be_Used_As_Function_Argument() {
+            TestPane root = compileAndRun("""
+                <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                          doubleProp1="$add(1, {PropertyConsumerAndDoubleSupplierExtension param=2.5})"/>
+            """);
+
+            assertEquals(3.5, root.getDoubleProp1(), 0.001);
+            assertEquals(0, propertyConsumerInvocations.size());
+            assertEquals(1, supplierInvocations.size());
+            assertExtensionInvocation(supplierInvocations.get(0), root, 1, null, null, double.class, null);
         }
     }
 
