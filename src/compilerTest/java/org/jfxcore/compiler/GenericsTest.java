@@ -1,4 +1,4 @@
-// Copyright (c) 2022, 2025, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler;
@@ -438,7 +438,7 @@ public class GenericsTest extends CompilerTestBase {
     public void Bind_Unidirectional_To_Method_With_TypeWitness_LongNotation() {
         Pane root = compileAndRun("""
             <GenericMethodsObject xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                                  id="1" minWidth="{fx:bind m1<Double>(id)}"/>
+                                  id="1" minWidth="{fx:observe m1<Double>(id)}"/>
         """);
 
         assertEquals(1, root.getMinWidth());

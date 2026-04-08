@@ -335,14 +335,14 @@ public class InlineParserTest extends TestBase {
         ObjectNode root = new InlineParser("{GridPane prefWidth=$foo}", "fx").parseObject();
         assertTrue(((ObjectNode)root.getProperty("prefWidth").getValues().get(0)).getType().isIntrinsic());
 
-        root = new InlineParser("{GridPane prefWidth={foo:once foo}}", "foo").parseObject();
+        root = new InlineParser("{GridPane prefWidth={foo:evaluate foo}}", "foo").parseObject();
         assertTrue(((ObjectNode)root.getProperty("prefWidth").getValues().get(0)).getType().isIntrinsic());
     }
 
     @Test
     public void Invalid_Intrinsic_Namespace_Fails() {
         MarkupException ex = assertThrows(MarkupException.class,
-            () -> new InlineParser("{GridPane prefWidth={foo:once foo}}", "bar").parseObject());
+            () -> new InlineParser("{GridPane prefWidth={foo:evaluate foo}}", "bar").parseObject());
 
         assertEquals(ErrorCode.UNKNOWN_NAMESPACE, ex.getDiagnostic().getCode());
     }
@@ -503,9 +503,9 @@ public class InlineParserTest extends TestBase {
 
     @ParameterizedTest
     @CsvSource({
-        "$foo.bar.baz,once",
-        "${foo.bar.baz},bind",
-        "#{foo.bar.baz},bindBidirectional"
+        "$foo.bar.baz,evaluate",
+        "${foo.bar.baz},observe",
+        "#{foo.bar.baz},synchronize"
     })
     public void Compact_Syntax_Is_Expanded(String compactIntrinsic, String intrinsicName) {
         ObjectNode objectNode = new InlineParser(compactIntrinsic, "fx").parseObject();
@@ -515,9 +515,9 @@ public class InlineParserTest extends TestBase {
 
     @ParameterizedTest
     @CsvSource({
-        "$::foo::bar::baz,once",
-        "${::foo::bar::baz},bind",
-        "#{::foo::bar::baz},bindBidirectional"
+        "$::foo::bar::baz,evaluate",
+        "${::foo::bar::baz},observe",
+        "#{::foo::bar::baz},synchronize"
     })
     public void Compact_Syntax_With_ObservableSelector_Is_Expanded(String compactIntrinsic, String intrinsicName) {
         ObjectNode objectNode = new InlineParser(compactIntrinsic, "fx").parseObject();
@@ -527,9 +527,9 @@ public class InlineParserTest extends TestBase {
 
     @ParameterizedTest
     @CsvSource({
-        "$..foo.bar.baz,once",
-        "${..foo.bar.baz},bind",
-        "#{..foo.bar.baz},bindBidirectional"
+        "$..foo.bar.baz,evaluate",
+        "${..foo.bar.baz},observe",
+        "#{..foo.bar.baz},synchronize"
     })
     public void Compact_Content_Syntax_Is_Expanded(String compactIntrinsic, String intrinsicName) {
         ObjectNode objectNode = new InlineParser(compactIntrinsic, "fx").parseObject();
@@ -543,9 +543,9 @@ public class InlineParserTest extends TestBase {
 
     @ParameterizedTest
     @CsvSource({
-        "$parent[Pane:1]/foo.bar.baz,once",
-        "${parent[Pane:1]/foo.bar.baz},bind",
-        "#{parent[Pane:1]/foo.bar.baz},bindBidirectional"
+        "$parent[Pane:1]/foo.bar.baz,evaluate",
+        "${parent[Pane:1]/foo.bar.baz},observe",
+        "#{parent[Pane:1]/foo.bar.baz},synchronize"
     })
     public void Compact_Syntax_With_ContextSelector_Is_Expanded(String compactIntrinsic, String intrinsicName) {
         ObjectNode objectNode = new InlineParser(compactIntrinsic, "fx").parseObject();
@@ -562,9 +562,9 @@ public class InlineParserTest extends TestBase {
 
     @ParameterizedTest
     @CsvSource({
-        "$[..parent[Pane:1]/foo.bar.baz],once",
-        "${[..parent[Pane:1]/foo.bar.baz]},bind",
-        "#{[..parent[Pane:1]/foo.bar.baz]},bindBidirectional"
+        "$[..parent[Pane:1]/foo.bar.baz],evaluate",
+        "${[..parent[Pane:1]/foo.bar.baz]},observe",
+        "#{[..parent[Pane:1]/foo.bar.baz]},synchronize"
     })
     public void Compact_Content_Syntax_With_ContextSelector_Is_Expanded(String compactIntrinsic, String intrinsicName) {
         ObjectNode objectNode = new InlineParser(compactIntrinsic, "fx").parseObject();
@@ -587,9 +587,9 @@ public class InlineParserTest extends TestBase {
 
     @ParameterizedTest
     @CsvSource({
-        "$foo.bar.baz,once",
-        "${foo.bar.baz},bind",
-        "#{foo.bar.baz},bindBidirectional"
+        "$foo.bar.baz,evaluate",
+        "${foo.bar.baz},observe",
+        "#{foo.bar.baz},synchronize"
     })
     public void Compact_Syntax_Is_Expanded_Within_ListExpression(String compactIntrinsic, String intrinsicName) {
         String input = String.format("{Test qux, %s}", compactIntrinsic);
@@ -603,9 +603,9 @@ public class InlineParserTest extends TestBase {
 
     @ParameterizedTest
     @CsvSource({
-        "$..foo.bar.baz,once",
-        "${..foo.bar.baz},bind",
-        "#{..foo.bar.baz},bindBidirectional"
+        "$..foo.bar.baz,evaluate",
+        "${..foo.bar.baz},observe",
+        "#{..foo.bar.baz},synchronize"
     })
     public void Compact_Content_Syntax_Is_Expanded_Within_ListExpression(String compactIntrinsic, String intrinsicName) {
         String input = String.format("{Test qux, %s}", compactIntrinsic);
@@ -623,9 +623,9 @@ public class InlineParserTest extends TestBase {
 
     @ParameterizedTest
     @CsvSource({
-        "$foo.bar.baz,once",
-        "${foo.bar.baz},bind",
-        "#{foo.bar.baz},bindBidirectional"
+        "$foo.bar.baz,evaluate",
+        "${foo.bar.baz},observe",
+        "#{foo.bar.baz},synchronize"
     })
     public void Compact_Syntax_Is_Expanded_Within_PropertyExpression(String compactIntrinsic, String intrinsicName) {
         String input = String.format("{Test qux=%s}", compactIntrinsic);
@@ -639,9 +639,9 @@ public class InlineParserTest extends TestBase {
 
     @ParameterizedTest
     @CsvSource({
-        "$..foo.bar.baz,once",
-        "${..foo.bar.baz},bind",
-        "#{..foo.bar.baz},bindBidirectional"
+        "$..foo.bar.baz,evaluate",
+        "${..foo.bar.baz},observe",
+        "#{..foo.bar.baz},synchronize"
     })
     public void Compact_Content_Syntax_Is_Expanded_Within_PropertyExpression(String compactIntrinsic, String intrinsicName) {
         String input = String.format("{Test qux=%s}", compactIntrinsic);
@@ -659,9 +659,9 @@ public class InlineParserTest extends TestBase {
 
     @ParameterizedTest
     @CsvSource({
-        "$foo.bar.baz,once",
-        "${foo.bar.baz},bind",
-        "#{foo.bar.baz},bindBidirectional"
+        "$foo.bar.baz,evaluate",
+        "${foo.bar.baz},observe",
+        "#{foo.bar.baz},synchronize"
     })
     public void Compact_Syntax_Is_Expanded_Within_FunctionExpression(String compactIntrinsic, String intrinsicName) {
         String input = String.format("{Test qux=func(%s, 'quux')}", compactIntrinsic);
@@ -679,9 +679,9 @@ public class InlineParserTest extends TestBase {
 
     @ParameterizedTest
     @CsvSource({
-        "$..foo.bar.baz,once",
-        "${..foo.bar.baz},bind",
-        "#{..foo.bar.baz},bindBidirectional"
+        "$..foo.bar.baz,evaluate",
+        "${..foo.bar.baz},observe",
+        "#{..foo.bar.baz},synchronize"
     })
     public void Compact_Content_Syntax_Is_Expanded_Within_FunctionExpression(String compactIntrinsic, String intrinsicName) {
         String input = String.format("{Test qux=func(%s, 'quux')}", compactIntrinsic);
