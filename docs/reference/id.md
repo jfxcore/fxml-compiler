@@ -2,11 +2,13 @@
 layout: default
 title: fx:id
 parent: FXML 2.0 language reference
-nav_order: 13
+nav_order: 9
 ---
 
 # fx:id attribute
-The `fx:id` attribute is used to name elements in an FXML document. If the document has a [code-behind](../code-behind.html) class, the FXML compiler generates a protected field with the same name to make the named element accessible from Java code.
+The `fx:id` attribute is used to name elements in an FXML document. If the document has a
+[code-behind](../code-behind.html) class, the FXML compiler generates a protected field with
+the same name to make the named element accessible from Java code.
 
 {: .highlight }
 The `fx:id` attribute also sets the `Node.id` property to the same value.

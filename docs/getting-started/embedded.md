@@ -6,12 +6,15 @@ nav_order: 2
 ---
 
 # Embedded markup
-FXML 2.0 markup can be embedded directly into Java or Kotlin source code with the `@ComponentView` annotation. This can be useful for custom controls and reusable components that benefit from keeping markup and imperative logic in the same file.
+FXML 2.0 markup can be embedded directly into Java or Kotlin source code with the `@ComponentView` annotation.
+This can be useful for custom controls and reusable components that benefit from keeping markup and imperative
+logic in the same file.
 
 {: .note }
 The `@ComponentView` annotation is available in the [markup](https://github.com/jfxcore/markup) library.
 
-The annotated class supplies the markup source text, and the compiler treats it like a regular FXML view associated with that component:
+The annotated class supplies the markup source text, and the compiler treats it like a regular FXML view
+associated with that component:
 
 ```java
 package com.sample;
@@ -35,20 +38,25 @@ public class MyControl extends MyControlBase {
 ```
 
 ## How embedded markup differs from standalone files
-Embedded markup follows the same language rules as standalone FXML, but some information is provided by the surrounding Java or Kotlin source:
+Embedded markup follows the same language rules as standalone FXML, but some information is provided by the
+surrounding Java or Kotlin source:
 
-- The annotated class is already known to be the [code-behind](../code-behind.html) class, so the `fx:class` attribute is neither required nor supported.
-- Import declarations from the Java or Kotlin source file are also available to the embedded FXML document, they do not need to be redeclared as `<?import?>` processing instructions.
-- The `xmlns="http://javafx.com/javafx"` and `xmlns:fx="http://jfxcore.org/fxml/2.0"` namespaces are implied and do not need to be explicitly declared.
+- The annotated class is already known to be the [code-behind](../code-behind.html) class, so the `fx:class` attribute
+  is neither required nor supported.
+- Import declarations from the Java or Kotlin source file are also available to the embedded FXML document,
+  they do not need to be redeclared as `<?import?>` processing instructions.
+- The `xmlns="http://javafx.com/javafx"` and `xmlns:fx="http://jfxcore.org/fxml/2.0"` namespaces are implied
+  and do not need to be explicitly declared.
 
 The generated base class still follows the usual naming convention, so `MyControl` extends `MyControlBase`.
 
 {: .note }
-In Kotlin projects, the embedded FXML document can not reference type aliases.
+In Kotlin projects, the embedded FXML document cannot reference type aliases.
 
 ## Enable annotation processing
-The `@ComponentView` annotation is processed at compile time by an annotation processor, it is not retained in the compiled class file.
-The [FXML 2.0 Gradle plugin](https://plugins.gradle.org/plugin/org.jfxcore.fxmlplugin) does not enable annotation processing by default, you need to opt in explicitly in your Gradle build script:
+The `@ComponentView` annotation is processed at compile time by an annotation processor, it is not retained in
+the compiled class file. The [FXML 2.0 Gradle plugin](https://plugins.gradle.org/plugin/org.jfxcore.fxmlplugin)
+does not enable annotation processing by default, you need to opt in explicitly in your Gradle build script:
 
 ```kotlin
 fxml {

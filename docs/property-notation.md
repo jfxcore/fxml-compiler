@@ -5,7 +5,9 @@ nav_order: 4
 ---
 
 # Properties
-The FXML 2.0 property syntax is similar to FXML 1.0, and most of the time the notations look identical. However, FXML 2.0 relaxes the restriction that property names must be lower-cased, and allows a qualified notation to resolve ambiguities.
+The FXML 2.0 property syntax is similar to FXML 1.0, and most of the time the notations look identical.
+However, FXML 2.0 relaxes the restriction that property names must be lower-cased, and allows a qualified
+notation to resolve ambiguities.
 
 ## Instance property notation
 Properties of scene graph elements can either be specified using attribute notation or element notation:
@@ -25,7 +27,8 @@ Properties of scene graph elements can either be specified using attribute notat
 ```
 
 ## Static property notation
-Static properties can be specified using the following notation, where the static property name is prefixed with the declaring class:
+Static properties can be specified using the following notation, where the static property name is prefixed
+with the declaring class:
 ```xml
 <!-- 1. Attribute notation -->
 <Button VBox.margin="10"/>
@@ -37,7 +40,8 @@ Static properties can be specified using the following notation, where the stati
 ```
 
 ## Chained property notation
-Properties can be chained using the dot operator. This is equivalent to following the chain of properties, and then assigning the attribute value to the last property.
+Properties can be chained using the dot operator. This is equivalent to following the chain of properties,
+and then assigning the attribute value to the last property.
 
 ```xml
 <!-- equivalent to getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE) -->
@@ -56,9 +60,11 @@ The default property name can be omitted when the value is instead provided as t
 
 ## Resolving ambiguities
 In the short element notation example, the `text` element can be unambiguously resolved to the `Button.text` property. 
-However, if a class named `text` was imported into the document, the meaning would change: a `text` element would then create a new instance of this class.
+However, if a class named `text` was imported into the document, the meaning would change: a `text` element would
+then create a new instance of this class.
 
-This can be resolved by qualifying the property name with the declaring class, as seen in the qualified element notation example:
+This can be resolved by qualifying the property name with the declaring class, as seen in the qualified
+element notation example:
 ```xml
 <Button.text>My button 2</Button.text>
 ```
