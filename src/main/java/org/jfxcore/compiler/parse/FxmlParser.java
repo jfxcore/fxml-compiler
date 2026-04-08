@@ -46,12 +46,9 @@ public class FxmlParser {
 
     // Intrinsic properties that are always interpreted as paths.
     private static final IntrinsicProperty[] PATH_INTRINSICS = new IntrinsicProperty[] {
-        Intrinsics.ONCE.findProperty("path"),
-        Intrinsics.CONTENT.findProperty("path"),
-        Intrinsics.BIND.findProperty("path"),
-        Intrinsics.BIND_CONTENT.findProperty("path"),
-        Intrinsics.BIND_BIDIRECTIONAL.findProperty("path"),
-        Intrinsics.BIND_CONTENT_BIDIRECTIONAL.findProperty("path")
+        Intrinsics.EVALUATE.findProperty("path"),
+        Intrinsics.OBSERVE.findProperty("path"),
+        Intrinsics.SYNCHRONIZE.findProperty("path")
     };
 
     // Intrinsics that are not interpreted by the inline parser.
@@ -63,9 +60,9 @@ public class FxmlParser {
 
     private static final String[] INLINE_EXPR_TOKENS = new String[] {
         "{",
-        InlineParser.BIND_BIDIRECTIONAL_EXPR_PREFIX,
-        InlineParser.BIND_EXPR_PREFIX,
-        InlineParser.ONCE_EXPR_PREFIX
+        InlineParser.SYNCHRONIZE_EXPR_PREFIX,
+        InlineParser.OBSERVE_EXPR_PREFIX,
+        InlineParser.EVALUATE_EXPR_PREFIX
     };
 
     private static final Map<Character, String> DEFAULT_PREFIX_MAPPINGS = Map.of(

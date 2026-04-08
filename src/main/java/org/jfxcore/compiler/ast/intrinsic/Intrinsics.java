@@ -57,37 +57,24 @@ public class Intrinsics {
         "type", Kind.OBJECT, Placement.ANY, KnownSymbols::ClassDecl,
         new IntrinsicProperty("name", KnownSymbols::StringDecl, true));
 
-    public static final Intrinsic ONCE = new Intrinsic(
-        "once", Kind.OBJECT, Placement.ANY, KnownSymbols::BottomTypeDecl,
+    public static final Intrinsic EVALUATE = new Intrinsic(
+        "evaluate", Kind.OBJECT, Placement.ANY, KnownSymbols::BottomTypeDecl,
         new IntrinsicProperty("path", KnownSymbols::StringDecl, true));
 
-    public static final Intrinsic CONTENT = new Intrinsic(
-        "content", Kind.OBJECT, Placement.ANY, KnownSymbols::BottomTypeDecl,
+    public static final Intrinsic OBSERVE = new Intrinsic(
+        "observe", Kind.OBJECT, Placement.ANY, KnownSymbols::BottomTypeDecl,
         new IntrinsicProperty("path", KnownSymbols::StringDecl, true));
 
-    public static final Intrinsic BIND = new Intrinsic(
-        "bind", Kind.OBJECT, Placement.ANY, KnownSymbols::BottomTypeDecl,
-        new IntrinsicProperty("path", KnownSymbols::StringDecl, true));
-
-    public static final Intrinsic BIND_CONTENT = new Intrinsic(
-        "bindContent", Kind.OBJECT, Placement.ANY, KnownSymbols::BottomTypeDecl,
-        new IntrinsicProperty("path", KnownSymbols::StringDecl, true));
-
-    public static final Intrinsic BIND_BIDIRECTIONAL = new Intrinsic(
-        "bindBidirectional", Kind.OBJECT, Placement.ANY, KnownSymbols::BottomTypeDecl,
+    public static final Intrinsic SYNCHRONIZE = new Intrinsic(
+        "synchronize", Kind.OBJECT, Placement.ANY, KnownSymbols::BottomTypeDecl,
         new IntrinsicProperty("path", KnownSymbols::StringDecl, true),
         new IntrinsicProperty("format", KnownSymbols::FormatDecl),
         new IntrinsicProperty("converter", KnownSymbols::StringConverterDecl),
         new IntrinsicProperty("inverseMethod", KnownSymbols::StringDecl));
 
-    public static final Intrinsic BIND_CONTENT_BIDIRECTIONAL = new Intrinsic(
-        "bindContentBidirectional", Kind.OBJECT, Placement.ANY, KnownSymbols::BottomTypeDecl,
-        new IntrinsicProperty("path", KnownSymbols::StringDecl, true));
-
     private static final List<Intrinsic> NODES = List.of(
         NULL, CLASS, CLASS_MODIFIER, CLASS_PARAMETERS, MARKUP_CLASS_NAME, CONTEXT, ID, VALUE, CONSTANT,
-        FACTORY, TYPE_ARGUMENTS, ITEM_TYPE, DEFINE, STYLESHEET, TYPE, ONCE, CONTENT, BIND, BIND_CONTENT,
-        BIND_BIDIRECTIONAL, BIND_CONTENT_BIDIRECTIONAL);
+        FACTORY, TYPE_ARGUMENTS, ITEM_TYPE, DEFINE, STYLESHEET, TYPE, EVALUATE, OBSERVE, SYNCHRONIZE);
 
     public static Intrinsic find(ObjectNode node) {
         if (node.getType().isIntrinsic()){

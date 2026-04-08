@@ -321,7 +321,7 @@ public class IntrinsicsTest extends CompilerTestBase {
             """));
 
             assertEquals(ErrorCode.PROPERTY_MUST_BE_SPECIFIED, ex.getDiagnostic().getCode());
-            assertTrue(ex.getDiagnostic().getMessage().startsWith("fx:bind.path"));
+            assertTrue(ex.getDiagnostic().getMessage().startsWith("fx:observe.path"));
             assertCodeHighlight("${}", ex);
         }
 
@@ -330,12 +330,12 @@ public class IntrinsicsTest extends CompilerTestBase {
             MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
                 <?import javafx.scene.control.*?>
                 <Button xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                        prefHeight="{fx:bindBidirectional}"/>
+                        prefHeight="{fx:synchronize}"/>
             """));
 
             assertEquals(ErrorCode.PROPERTY_MUST_BE_SPECIFIED, ex.getDiagnostic().getCode());
-            assertTrue(ex.getDiagnostic().getMessage().startsWith("fx:bindBidirectional.path"));
-            assertCodeHighlight("{fx:bindBidirectional}", ex);
+            assertTrue(ex.getDiagnostic().getMessage().startsWith("fx:synchronize.path"));
+            assertCodeHighlight("{fx:synchronize}", ex);
         }
 
         @Test
@@ -427,11 +427,11 @@ public class IntrinsicsTest extends CompilerTestBase {
             MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
                 <?import javafx.scene.control.*?>
                 <Button xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                        styleClass="{fx:content path=..foo.bar}"/>
+                        styleClass="{fx:evaluate path=..foo.bar}"/>
             """));
 
-            assertEquals(ErrorCode.UNEXPECTED_TOKEN, ex.getDiagnostic().getCode());
-            assertCodeHighlight(".", ex);
+            assertEquals(ErrorCode.MEMBER_NOT_FOUND, ex.getDiagnostic().getCode());
+            assertCodeHighlight("foo", ex);
         }
 
         @Test
@@ -439,11 +439,11 @@ public class IntrinsicsTest extends CompilerTestBase {
             MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
                 <?import javafx.scene.control.*?>
                 <Button xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                        styleClass="{fx:bindContent path=..foo.bar}"/>
+                        styleClass="{fx:observe path=..foo.bar}"/>
             """));
 
-            assertEquals(ErrorCode.UNEXPECTED_TOKEN, ex.getDiagnostic().getCode());
-            assertCodeHighlight(".", ex);
+            assertEquals(ErrorCode.MEMBER_NOT_FOUND, ex.getDiagnostic().getCode());
+            assertCodeHighlight("foo", ex);
         }
 
         @Test
@@ -451,11 +451,11 @@ public class IntrinsicsTest extends CompilerTestBase {
             MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
                 <?import javafx.scene.control.*?>
                 <Button xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                        styleClass="{fx:bindContent path=..foo.bar}"/>
+                        styleClass="{fx:synchronize path=..foo.bar}"/>
             """));
 
-            assertEquals(ErrorCode.UNEXPECTED_TOKEN, ex.getDiagnostic().getCode());
-            assertCodeHighlight(".", ex);
+            assertEquals(ErrorCode.MEMBER_NOT_FOUND, ex.getDiagnostic().getCode());
+            assertCodeHighlight("foo", ex);
         }
     }
 }

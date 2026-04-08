@@ -129,9 +129,9 @@ public class BindingPathTest extends CompilerTestBase {
     public void Bindings_With_Explicit_Intrinsic_Syntax() {
         TestPane root = compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                      managed="{fx:once context.boolVal}"
-                      prefWidth="{fx:bind context.doubleVal}"
-                      prefHeight="{fx:bindBidirectional context.doubleVal}"/>
+                      managed="{fx:evaluate context.boolVal}"
+                      prefWidth="{fx:observe context.doubleVal}"
+                      prefHeight="{fx:synchronize context.doubleVal}"/>
         """);
 
         assertFalse(root.managedProperty().isBound());
@@ -148,9 +148,9 @@ public class BindingPathTest extends CompilerTestBase {
     public void Bindings_With_Element_Syntax() {
         TestPane root = compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
-                <managed><fx:once path="context.boolVal"/></managed>
-                <prefWidth><fx:bind path="context.doubleVal"/></prefWidth>
-                <prefHeight><fx:bindBidirectional path="context.doubleVal"/></prefHeight>
+                <managed><fx:evaluate path="context.boolVal"/></managed>
+                <prefWidth><fx:observe path="context.doubleVal"/></prefWidth>
+                <prefHeight><fx:synchronize path="context.doubleVal"/></prefHeight>
             </TestPane>
         """);
 
@@ -169,7 +169,7 @@ public class BindingPathTest extends CompilerTestBase {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <managed>
-                    <fx:once>context.boolVal</fx:once>
+                    <fx:evaluate>context.boolVal</fx:evaluate>
                 </managed>
             </TestPane>
         """));

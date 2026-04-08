@@ -1,4 +1,4 @@
-// Copyright (c) 2024, 2025, JFXcore. All rights reserved.
+// Copyright (c) 2024, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.bindings;
@@ -39,7 +39,7 @@ public class StringConversionBindingTest extends CompilerTestBase {
     }
 
     @ParameterizedTest
-    @CsvSource({"fx:once", "fx:bind", "fx:content", "fx:bindContent", "fx:bindContentBidirectional"})
+    @CsvSource({"fx:evaluate", "fx:observe"})
     public void Converter_Property_Is_Only_Available_In_BidirectionalBinding(String bindMode) {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.util.converter.*?>
@@ -54,7 +54,7 @@ public class StringConversionBindingTest extends CompilerTestBase {
     }
 
     @ParameterizedTest
-    @CsvSource({"fx:once", "fx:bind", "fx:content", "fx:bindContent", "fx:bindContentBidirectional"})
+    @CsvSource({"fx:evaluate", "fx:observe"})
     public void Format_Property_Is_Only_Available_In_BidirectionalBinding(String bindMode) {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.util.converter.*?>
@@ -127,6 +127,21 @@ public class StringConversionBindingTest extends CompilerTestBase {
 
         assertEquals(ErrorCode.CANNOT_CONVERT_SOURCE_TYPE, ex.getDiagnostic().getCode());
         assertCodeHighlight("DBL_CONVERTER", ex);
+    }
+
+    @Test
+    public void Content_And_StringConverter_Cannot_Be_Used_At_Same_Time() {
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <?import java.text.*?>
+            <?import javafx.util.converter.*?>
+            <?import javafx.scene.control.*?>
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0" prefWidth="10">
+                <Label text="#{..prefWidth; converter=DBL_CONVERTER}"/>
+            </TestPane>
+        """));
+
+        assertEquals(ErrorCode.CONFLICTING_PROPERTIES, ex.getDiagnostic().getCode());
+        assertCodeHighlight("converter=DBL_CONVERTER", ex);
     }
 
     @Test

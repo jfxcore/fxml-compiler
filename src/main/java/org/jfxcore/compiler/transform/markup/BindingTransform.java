@@ -8,6 +8,7 @@ import org.jfxcore.compiler.ast.BindingMode;
 import org.jfxcore.compiler.ast.BindingNode;
 import org.jfxcore.compiler.ast.ContextNode;
 import org.jfxcore.compiler.ast.Node;
+import org.jfxcore.compiler.ast.NodeDataKey;
 import org.jfxcore.compiler.ast.ObjectNode;
 import org.jfxcore.compiler.ast.PropertyNode;
 import org.jfxcore.compiler.ast.TemplateContentNode;
@@ -87,21 +88,19 @@ public class BindingTransform implements Transform {
     }
 
     private BindingMode getBindingMode(ObjectNode node) {
-        if (node.isIntrinsic(Intrinsics.ONCE)) {
-            return BindingMode.ONCE;
-        } else if (node.isIntrinsic(Intrinsics.CONTENT)) {
-            return BindingMode.CONTENT;
-        } else if (node.isIntrinsic(Intrinsics.BIND)) {
-            return BindingMode.UNIDIRECTIONAL;
-        } else if (node.isIntrinsic(Intrinsics.BIND_CONTENT)) {
-            return BindingMode.UNIDIRECTIONAL_CONTENT;
-        } else if (node.isIntrinsic(Intrinsics.BIND_BIDIRECTIONAL)) {
-            return BindingMode.BIDIRECTIONAL;
-        } else if (node.isIntrinsic(Intrinsics.BIND_CONTENT_BIDIRECTIONAL)) {
-            return BindingMode.BIDIRECTIONAL_CONTENT;
+        if (node.isIntrinsic(Intrinsics.EVALUATE)) {
+            return getBindingMode(node, BindingMode.ONCE, BindingMode.CONTENT);
+        } else if (node.isIntrinsic(Intrinsics.OBSERVE)) {
+            return getBindingMode(node, BindingMode.UNIDIRECTIONAL, BindingMode.UNIDIRECTIONAL_CONTENT);
+        } else if (node.isIntrinsic(Intrinsics.SYNCHRONIZE)) {
+            return getBindingMode(node, BindingMode.BIDIRECTIONAL, BindingMode.BIDIRECTIONAL_CONTENT);
         }
 
         return null;
+    }
+
+    private BindingMode getBindingMode(ObjectNode node, BindingMode defaultMode, BindingMode contentMode) {
+        return node.getNodeData(NodeDataKey.CONTENT_EXPRESSION) == Boolean.TRUE ? contentMode : defaultMode;
     }
 
     private ExpressionNode tryParseExpression(
