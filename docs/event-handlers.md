@@ -1,23 +1,24 @@
 ---
 layout: default
 title: Event handlers
-nav_order: 6
+nav_order: 5
 ---
 
 # Event handlers
-Event handlers are implementations of the `javafx.event.EventHandler` interface, and can be set on event handler properties with a [binding expression](binding/binding-path.html):
+Event handlers are implementations of the `javafx.event.EventHandler` interface, and can be set on event handler
+properties with an [`fx:evaluate`](reference/evaluate.html) or [`fx:observe`](reference/observe.html) expression:
 
 <div class="filename">com/sample/MyControl.fxml</div>
 ```xml
 <StackPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
            fx:class="com.sample.MyControl">
     <Button onAction="$myActionHandler"/>
-<StackPane/>
+</StackPane>
 ```
 
 <div class="filename">com/sample/MyControl.java</div>
 ```java
-public class MyControl extends StackPane {
+public class MyControl extends MyControlBase {
     final EventHandler<ActionEvent> myActionHandler = (event) -> {
         ...
     };
@@ -29,23 +30,25 @@ public class MyControl extends StackPane {
 ```
 
 {: .note }
-Usually, event handlers don't change dynamically. It is therefore advisable to use a [one-time assignment](reference/once.html) instead of a [unidirectional binding](reference/bind.html).
+Usually, event handlers don't change dynamically. It is therefore advisable to use
+[`fx:evaluate`](reference/evaluate.html) instead of [`fx:observe`](reference/observe.html).
 
 ## Method event handlers
-Event handlers can also be implemented as methods on the code-behind class that have a signature compatible with the `javafx.event.EventHandler` interface. The method name must be prefixed with `#` in the FXML attribute:
+Event handlers can also be implemented as methods on the code-behind class that have a signature compatible with the
+`javafx.event.EventHandler` interface. The method name must be prefixed with `#` in the FXML attribute:
 
 <div class="filename">com/sample/MyControl.fxml</div>
 ```xml
 <StackPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
            fx:class="com.sample.MyControl">
     <!-- Note that # identifies a method handler -->
-    <Button onAction="#myActionHandler"/>
-<StackPane/>
+    <Button onAction="#handleActionEvent"/>
+</StackPane>
 ```
 
 <div class="filename">com/sample/MyControl.java</div>
 ```java
-public class MyControl extends StackPane {
+public class MyControl extends MyControlBase {
     public MyControl() {
         initializeComponent();
     }

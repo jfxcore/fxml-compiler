@@ -2,12 +2,12 @@
 layout: default
 title: fx:factory
 parent: FXML 2.0 language reference
-nav_order: 12
+nav_order: 8
 ---
 
 # fx:factory attribute
-The `fx:factory` attribute can be used to initialize an element with a factory method instead of a constructor. The factory method must be accessible and parameterless.
-Type witnesses may be provided after the method name.
+The `fx:factory` attribute can be used to initialize an element with a factory method instead of a constructor.
+The factory method must be accessible and parameterless. Type witnesses may be provided after the method name.
 
 ## Usage
 

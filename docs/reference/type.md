@@ -2,7 +2,7 @@
 layout: default
 title: fx:type
 parent: FXML 2.0 language reference
-nav_order: 17
+nav_order: 14
 ---
 
 # fx:type markup extension

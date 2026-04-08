@@ -2,13 +2,15 @@
 layout: default
 title: fx:typeArguments
 parent: FXML 2.0 language reference
-nav_order: 18
+nav_order: 15
 ---
 
 # fx:typeArguments attribute
-FXML 2.0 documents are strongly typed and support generic types. When a generic class is instantiated, the type arguments are specified with the `fx:typeArguments` attribute.
+FXML 2.0 documents are strongly typed and support generic types. When a generic class is instantiated,
+the type arguments are specified with the `fx:typeArguments` attribute.
 
-If this attribute is omitted on a generic class, it is used as a raw type. Note that using raw types affects compile-time type safety and should be avoided.
+If this attribute is omitted on a generic class, it is used as a raw type.
+Note that using raw types affects compile-time type safety and should be avoided.
 
 {: .note }
 Generic type inference is not supported. Type arguments must always be specified explicitly.
@@ -27,4 +29,5 @@ Generic type inference is not supported. Type arguments must always be specified
 ```
 
 {: .note }
-In XML files, the `<` character can only be used as a markup delimiter, and must be escaped using `&lt;` in attribute text. However, the FXML 2.0 compiler accepts the non-standard literal form for better code readability.
+In XML files, the `<` character can only be used as a markup delimiter, and must be escaped using `&lt;` in
+attribute text. However, the FXML 2.0 compiler accepts the non-standard literal form for better code readability.

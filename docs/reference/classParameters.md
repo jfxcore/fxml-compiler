@@ -2,11 +2,12 @@
 layout: default
 title: fx:classParameters
 parent: FXML 2.0 language reference
-nav_order: 7
+nav_order: 3
 ---
 
 # fx:classParameters attribute
-The `fx:classParameters` attribute specifies the constructor parameters of the generated class. If omitted, the generated class has a parameterless constructor.
+The `fx:classParameters` attribute specifies the constructor parameters of the generated class.
+If omitted, the generated class has a parameterless constructor.
 
 {: .highlight }
 The `fx:classParameters` attribute can only be set on the root element.
@@ -20,4 +21,5 @@ The `fx:classParameters` attribute can only be set on the root element.
 ```
 
 {: .note }
-In XML files, the < character can only be used as a markup delimiter, and must be escaped using &lt; in attribute text. However, the FXML 2.0 compiler accepts the non-standard literal form for better code readability.
+In XML files, the < character can only be used as a markup delimiter, and must be escaped using &lt; in attribute text.
+However, the FXML 2.0 compiler accepts the non-standard literal form for better code readability.

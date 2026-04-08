@@ -2,11 +2,13 @@
 layout: default
 title: fx:markupClassName
 parent: FXML 2.0 language reference
-nav_order: 14
+nav_order: 10
 ---
 
 # fx:markupClassName attribute
-The `fx:markupClassName` attribute controls the name of the compiled markup class. If this attribute is not specified, the name of the markup class defaults to the standalone `.fxml` file name or the annotated Java class name, plus the `Base` suffix. For example, the default markup class name for `MyControl.fxml` will be `MyControlBase`.
+The `fx:markupClassName` attribute controls the name of the compiled markup class. If this attribute is not specified,
+the name of the markup class defaults to the standalone `.fxml` file name or the annotated Java class name,
+plus the `Base` suffix. For example, the default markup class name for `MyControl.fxml` will be `MyControlBase`.
 
 {: .highlight }
 In `.fxml` files, the `fx:markupClassName` attribute can only be used when the `fx:class` attribute is also specified.
