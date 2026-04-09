@@ -94,7 +94,7 @@ public class BindingContextNode extends AbstractNode {
     @Override
     public BindingContextNode deepClone() {
         return new BindingContextNode(
-            selector, type, valueType, observableType, contextField, bindingDistance, getSourceInfo());
+            selector, type, valueType, observableType, contextField, bindingDistance, getSourceInfo()).copy(this);
     }
 
     @Override

@@ -100,7 +100,7 @@ public class EmitPropertyAdderNode extends AbstractNode implements EmitterNode {
             keys.stream().map(ValueNode::deepClone).collect(Collectors.toList()),
             values.stream().map(ValueNode::deepClone).collect(Collectors.toList()),
             itemType,
-            getSourceInfo());
+            getSourceInfo()).copy(this);
     }
 
     @Override

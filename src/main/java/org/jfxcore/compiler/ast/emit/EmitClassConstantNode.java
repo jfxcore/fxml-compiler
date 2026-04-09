@@ -70,7 +70,8 @@ public class EmitClassConstantNode extends ReferenceableNode {
 
     @Override
     public EmitClassConstantNode deepClone() {
-        return new EmitClassConstantNode(getId(), getType().getTypeInstance(), declaringType, fieldName, getSourceInfo());
+        return new EmitClassConstantNode(
+            getId(), getType().getTypeInstance(), declaringType, fieldName, getSourceInfo()).copy(this);
     }
 
     @Override

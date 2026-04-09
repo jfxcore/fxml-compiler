@@ -1,4 +1,4 @@
-// Copyright (c) 2022, 2023, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast;
@@ -71,7 +71,6 @@ public class DocumentNode extends AbstractNode implements JavaEmitterNode {
 
     @Override
     public DocumentNode deepClone() {
-        return new DocumentNode(sourceFile, imports, root.deepClone());
+        return new DocumentNode(sourceFile, imports, root.deepClone()).copy(this);
     }
-
 }

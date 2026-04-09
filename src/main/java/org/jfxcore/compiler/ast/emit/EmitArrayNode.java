@@ -66,7 +66,7 @@ public class EmitArrayNode extends AbstractNode implements ValueEmitterNode {
 
     @Override
     public EmitArrayNode deepClone() {
-        return new EmitArrayNode(type.getTypeInstance(), deepClone(values));
+        return new EmitArrayNode(type.getTypeInstance(), deepClone(values)).copy(this);
     }
 
     @Override

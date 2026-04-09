@@ -478,7 +478,7 @@ public class EmitObjectNode extends ReferenceableNode {
             deepClone(arguments),
             deepClone(children),
             createKind,
-            getSourceInfo());
+            getSourceInfo()).copy(this);
     }
 
     @Override

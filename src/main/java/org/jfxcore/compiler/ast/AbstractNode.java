@@ -1,4 +1,4 @@
-// Copyright (c) 2021, 2024, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast;
@@ -12,8 +12,8 @@ import java.util.Map;
 
 public abstract class AbstractNode implements Node {
 
-    private final transient SourceInfo sourceInfo;
-    private final transient Map<NodeDataKey, Object> userData = new HashMap<>();
+    private final SourceInfo sourceInfo;
+    private final Map<NodeDataKey, Object> userData = new HashMap<>();
     private transient boolean markedForRemoval;
 
     public AbstractNode(SourceInfo sourceInfo) {
@@ -106,4 +106,9 @@ public abstract class AbstractNode implements Node {
         return collection;
     }
 
+    @SuppressWarnings("unchecked")
+    protected <T extends AbstractNode> T copy(T node) {
+        userData.putAll(((AbstractNode)node).userData);
+        return (T)this;
+    }
 }

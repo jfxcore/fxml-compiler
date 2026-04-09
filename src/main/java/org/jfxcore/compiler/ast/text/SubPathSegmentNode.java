@@ -1,4 +1,4 @@
-// Copyright (c) 2021, 2024, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.text;
@@ -65,7 +65,7 @@ public class SubPathSegmentNode extends PathSegmentNode {
 
     @Override
     public SubPathSegmentNode deepClone() {
-        return new SubPathSegmentNode(observableSelector, deepClone(segments), getSourceInfo());
+        return new SubPathSegmentNode(observableSelector, deepClone(segments), getSourceInfo()).copy(this);
     }
 
     private static String formatPath(Collection<? extends PathSegmentNode> segments) {
@@ -88,5 +88,4 @@ public class SubPathSegmentNode extends PathSegmentNode {
 
         return text.toString();
     }
-
 }

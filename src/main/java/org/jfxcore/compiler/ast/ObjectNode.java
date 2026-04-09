@@ -156,7 +156,7 @@ public class ObjectNode extends AbstractNode implements ValueNode {
             deepClone(properties),
             deepClone(children),
             markupExtension,
-            getSourceInfo());
+            getSourceInfo()).copy(this);
     }
 
     private class PropertyList extends AbstractList<PropertyNode> {

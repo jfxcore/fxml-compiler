@@ -34,7 +34,7 @@ public class ResolvedTypeNode extends TypeNode {
 
     @Override
     public ResolvedTypeNode deepClone() {
-        return new ResolvedTypeNode(type, getName(), getMarkupName(), isIntrinsic(), getSourceInfo());
+        return new ResolvedTypeNode(type, getName(), getMarkupName(), isIntrinsic(), getSourceInfo()).copy(this);
     }
 
     @Override

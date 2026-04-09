@@ -187,7 +187,8 @@ public class PathExpressionNode extends AbstractNode implements ExpressionNode {
 
     @Override
     public PathExpressionNode deepClone() {
-        return new PathExpressionNode(operator, bindingContext.deepClone(), deepClone(segments), getSourceInfo());
+        return new PathExpressionNode(
+            operator, bindingContext.deepClone(), deepClone(segments), getSourceInfo()).copy(this);
     }
 
     @Override

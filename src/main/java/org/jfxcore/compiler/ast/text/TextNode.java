@@ -71,7 +71,7 @@ public class TextNode extends AbstractNode implements ValueNode {
 
     @Override
     public TextNode deepClone() {
-        return new TextNode(text, rawText, type.deepClone(), getSourceInfo());
+        return new TextNode(text, rawText, type.deepClone(), getSourceInfo()).copy(this);
     }
 
     @Override

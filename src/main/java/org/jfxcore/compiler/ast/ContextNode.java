@@ -63,7 +63,7 @@ public class ContextNode extends AbstractNode implements ValueNode {
 
     @Override
     public ContextNode deepClone() {
-        return new ContextNode(field, type, valueType, observableType, value.deepClone(), getSourceInfo());
+        return new ContextNode(field, type, valueType, observableType, value.deepClone(), getSourceInfo()).copy(this);
     }
 
     @Override

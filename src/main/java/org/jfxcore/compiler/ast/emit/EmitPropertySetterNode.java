@@ -136,7 +136,7 @@ public class EmitPropertySetterNode extends AbstractNode implements EmitterNode 
 
     @Override
     public EmitPropertySetterNode deepClone() {
-        return new EmitPropertySetterNode(propertyInfo, value.deepClone(), content, getSourceInfo());
+        return new EmitPropertySetterNode(propertyInfo, value.deepClone(), content, getSourceInfo()).copy(this);
     }
 
     @Override

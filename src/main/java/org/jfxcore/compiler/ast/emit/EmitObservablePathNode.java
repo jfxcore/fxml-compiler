@@ -208,7 +208,7 @@ public class EmitObservablePathNode
 
     @Override
     public EmitObservablePathNode deepClone() {
-        return new EmitObservablePathNode(path, bidirectional, invariantPath.deepClone(), getSourceInfo());
+        return new EmitObservablePathNode(path, bidirectional, invariantPath.deepClone(), getSourceInfo()).copy(this);
     }
 
     @Override

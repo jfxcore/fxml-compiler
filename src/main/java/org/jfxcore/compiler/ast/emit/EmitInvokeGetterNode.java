@@ -67,7 +67,8 @@ public class EmitInvokeGetterNode extends AbstractNode implements ValueEmitterNo
 
     @Override
     public EmitInvokeGetterNode deepClone() {
-        return new EmitInvokeGetterNode(getter, type.getTypeInstance(), observableKind, requireNonNull, getSourceInfo());
+        return new EmitInvokeGetterNode(
+            getter, type.getTypeInstance(), observableKind, requireNonNull, getSourceInfo()).copy(this);
     }
 
     @Override

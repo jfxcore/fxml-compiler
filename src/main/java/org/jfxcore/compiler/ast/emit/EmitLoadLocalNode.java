@@ -56,7 +56,7 @@ public class EmitLoadLocalNode extends AbstractNode implements ValueEmitterNode,
 
     @Override
     public EmitLoadLocalNode deepClone() {
-        return new EmitLoadLocalNode(variable, type.getTypeInstance(), getSourceInfo());
+        return new EmitLoadLocalNode(variable, type.getTypeInstance(), getSourceInfo()).copy(this);
     }
 
     @Override

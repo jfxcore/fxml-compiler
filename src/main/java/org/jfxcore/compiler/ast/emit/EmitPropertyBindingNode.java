@@ -253,7 +253,7 @@ public class EmitPropertyBindingNode extends AbstractNode implements EmitterNode
             child.deepClone(),
             converter != null ? converter.deepClone() : null,
             format != null ? format.deepClone() : null,
-            getSourceInfo());
+            getSourceInfo()).copy(this);
     }
 
     @Override

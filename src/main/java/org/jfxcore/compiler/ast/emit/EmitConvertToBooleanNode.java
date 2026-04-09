@@ -85,7 +85,7 @@ public class EmitConvertToBooleanNode extends AbstractNode implements ValueEmitt
 
     @Override
     public EmitConvertToBooleanNode deepClone() {
-        return new EmitConvertToBooleanNode(child.deepClone(), operator, getSourceInfo());
+        return new EmitConvertToBooleanNode(child.deepClone(), operator, getSourceInfo()).copy(this);
     }
 
     @Override

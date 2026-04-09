@@ -1,4 +1,4 @@
-// Copyright (c) 2021, 2024, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.text;
@@ -48,7 +48,7 @@ public class CompositeNode extends TextNode {
 
     @Override
     public CompositeNode deepClone() {
-        return new CompositeNode(deepClone(values), getType(), getSourceInfo());
+        return new CompositeNode(deepClone(values), getType(), getSourceInfo()).copy(this);
     }
 
     private static String format(Collection<? extends ValueNode> arguments) {
@@ -61,5 +61,4 @@ public class CompositeNode extends TextNode {
                 return node.getType().getMarkupName();
             }).collect(Collectors.toList()));
     }
-
 }

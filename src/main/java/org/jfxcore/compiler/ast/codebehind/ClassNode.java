@@ -1,4 +1,4 @@
-// Copyright (c) 2022, 2025, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.codebehind;
@@ -153,7 +153,7 @@ public class ClassNode extends ObjectNode implements JavaEmitterNode {
     public ClassNode deepClone() {
         return new ClassNode(
             packageName, className, markupClassName, classModifiers, parameters, parameterAnnotations,
-            typeArguments, hasCodeBehind, getType(), getProperties(), getSourceInfo());
+            typeArguments, hasCodeBehind, getType(), getProperties(), getSourceInfo()).copy(this);
     }
 
     @Override

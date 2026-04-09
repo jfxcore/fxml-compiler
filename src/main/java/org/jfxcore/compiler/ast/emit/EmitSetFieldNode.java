@@ -55,7 +55,7 @@ public class EmitSetFieldNode extends AbstractNode implements ValueEmitterNode {
 
     @Override
     public EmitSetFieldNode deepClone() {
-        return new EmitSetFieldNode(field, value.deepClone(), getSourceInfo());
+        return new EmitSetFieldNode(field, value.deepClone(), getSourceInfo()).copy(this);
     }
 
     @Override

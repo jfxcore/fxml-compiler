@@ -210,7 +210,7 @@ public class EmitObservableFunctionNode
     public EmitObservableFunctionNode deepClone() {
         return new EmitObservableFunctionNode(
             type.getTypeInstance(), function.deepClone(), inverseFunction.deepClone(),
-            deepClone(arguments), invocationContext, getSourceInfo());
+            deepClone(arguments), invocationContext, getSourceInfo()).copy(this);
     }
 
     @Override

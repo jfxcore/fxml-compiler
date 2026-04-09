@@ -129,7 +129,7 @@ public class EmitMapToBooleanNode extends AbstractNode
 
     @Override
     public EmitMapToBooleanNode deepClone() {
-        return new EmitMapToBooleanNode(child.deepClone(), invert, getSourceInfo());
+        return new EmitMapToBooleanNode(child.deepClone(), invert, getSourceInfo()).copy(this);
     }
 
     @Override

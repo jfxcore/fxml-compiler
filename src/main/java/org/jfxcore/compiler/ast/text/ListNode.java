@@ -46,7 +46,7 @@ public class ListNode extends TextNode {
 
     @Override
     public ListNode deepClone() {
-        return new ListNode(getText(), deepClone(values), getType(), getSourceInfo());
+        return new ListNode(getText(), deepClone(values), getType(), getSourceInfo()).copy(this);
     }
 
     @Override

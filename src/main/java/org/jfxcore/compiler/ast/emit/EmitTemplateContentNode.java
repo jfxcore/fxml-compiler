@@ -78,7 +78,7 @@ public class EmitTemplateContentNode extends AbstractNode implements ValueEmitte
     @Override
     public EmitTemplateContentNode deepClone() {
         return new EmitTemplateContentNode(
-            type.getTypeInstance(), itemType, bindingContextClass, content, preamble, getSourceInfo());
+            type.getTypeInstance(), itemType, bindingContextClass, content, preamble, getSourceInfo()).copy(this);
     }
 
     @Override

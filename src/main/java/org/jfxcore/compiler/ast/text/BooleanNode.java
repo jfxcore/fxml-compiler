@@ -1,4 +1,4 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.text;
@@ -18,7 +18,6 @@ public class BooleanNode extends TextNode {
 
     @Override
     public BooleanNode deepClone() {
-        return new BooleanNode(getText(), getType(), getSourceInfo());
+        return new BooleanNode(getText(), getType(), getSourceInfo()).copy(this);
     }
-
 }

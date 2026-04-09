@@ -37,7 +37,7 @@ public class EmitCollectionAdderNode extends AbstractNode implements EmitterNode
 
     @Override
     public EmitterNode deepClone() {
-        return new EmitCollectionAdderNode(value.deepClone());
+        return new EmitCollectionAdderNode(value.deepClone()).copy(this);
     }
 
     @Override

@@ -88,7 +88,7 @@ public class EmitMethodCallNode extends AbstractNode implements ValueEmitterNode
             type.deepClone(),
             deepClone(methodReceiver),
             deepClone(arguments),
-            getSourceInfo());
+            getSourceInfo()).copy(this);
     }
 
     @Override

@@ -87,7 +87,7 @@ public class PathNode extends TextNode {
 
     @Override
     public PathNode deepClone() {
-        return new PathNode(contextSelector, deepClone(segments), deepClone(arguments), getSourceInfo());
+        return new PathNode(contextSelector, deepClone(segments), deepClone(arguments), getSourceInfo()).copy(this);
     }
 
     private static String formatPath(
