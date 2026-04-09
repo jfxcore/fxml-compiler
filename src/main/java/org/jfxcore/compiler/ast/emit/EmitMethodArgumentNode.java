@@ -112,7 +112,8 @@ public class EmitMethodArgumentNode extends AbstractNode implements ValueEmitter
 
     @Override
     public EmitMethodArgumentNode deepClone() {
-        return new EmitMethodArgumentNode(type.deepClone(), deepClone(children), varargs, observable, getSourceInfo());
+        return new EmitMethodArgumentNode(
+            type.deepClone(), deepClone(children), varargs, observable, getSourceInfo()).copy(this);
     }
 
     @Override

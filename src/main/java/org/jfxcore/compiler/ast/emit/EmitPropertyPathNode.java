@@ -58,7 +58,7 @@ public class EmitPropertyPathNode extends AbstractNode implements ValueEmitterNo
 
     @Override
     public EmitPropertyPathNode deepClone() {
-        return new EmitPropertyPathNode(deepClone(propertyGetters), property.deepClone(), getSourceInfo());
+        return new EmitPropertyPathNode(deepClone(propertyGetters), property.deepClone(), getSourceInfo()).copy(this);
     }
 
     @Override

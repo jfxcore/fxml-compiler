@@ -64,7 +64,7 @@ public class EmitGetParentNode
 
     @Override
     public EmitGetParentNode deepClone() {
-        return new EmitGetParentNode(type.getTypeInstance(), parentIndex, getSourceInfo());
+        return new EmitGetParentNode(type.getTypeInstance(), parentIndex, getSourceInfo()).copy(this);
     }
 
     @Override

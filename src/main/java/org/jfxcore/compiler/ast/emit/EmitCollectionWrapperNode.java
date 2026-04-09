@@ -108,7 +108,7 @@ public class EmitCollectionWrapperNode extends AbstractNode
     @Override
     public EmitCollectionWrapperNode deepClone() {
         return new EmitCollectionWrapperNode(
-            child.deepClone(), sourceValueType, sourceObservableType, getSourceInfo());
+            child.deepClone(), sourceValueType, sourceObservableType, getSourceInfo()).copy(this);
     }
 
     @Override

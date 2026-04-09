@@ -1,4 +1,4 @@
-// Copyright (c) 2021, 2024, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.text;
@@ -53,7 +53,8 @@ public class TextSegmentNode extends PathSegmentNode {
 
     @Override
     public TextSegmentNode deepClone() {
-        return new TextSegmentNode(observableSelector, value.deepClone(), deepClone(witnesses), getSourceInfo());
+        return new TextSegmentNode(
+            observableSelector, value.deepClone(), deepClone(witnesses), getSourceInfo()).copy(this);
     }
 
     @Override
@@ -76,5 +77,4 @@ public class TextSegmentNode extends PathSegmentNode {
     public int hashCode() {
         return Objects.hash(super.hashCode(), observableSelector, value, witnesses);
     }
-
 }

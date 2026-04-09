@@ -1,4 +1,4 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast;
@@ -56,7 +56,7 @@ public class TypeNode extends AbstractNode {
 
     @Override
     public TypeNode deepClone() {
-        return new TypeNode(name, markupName, intrinsic, getSourceInfo());
+        return new TypeNode(name, markupName, intrinsic, getSourceInfo()).copy(this);
     }
 
     @Override
@@ -70,5 +70,4 @@ public class TypeNode extends AbstractNode {
             && Objects.equals(markupName, that.markupName)
             && intrinsic == that.intrinsic;
     }
-
 }

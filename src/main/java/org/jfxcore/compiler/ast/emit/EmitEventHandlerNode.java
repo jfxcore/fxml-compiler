@@ -60,7 +60,7 @@ public class EmitEventHandlerNode extends AbstractNode implements ValueEmitterNo
 
     @Override
     public EmitEventHandlerNode deepClone() {
-        return new EmitEventHandlerNode(declaringClass, eventType, eventHandlerName, getSourceInfo());
+        return new EmitEventHandlerNode(declaringClass, eventType, eventHandlerName, getSourceInfo()).copy(this);
     }
 
     @Override

@@ -53,6 +53,6 @@ public class TemplateContentNode extends AbstractNode implements ValueNode {
     @Override
     public TemplateContentNode deepClone() {
         return new TemplateContentNode(
-            type.deepClone(), content.deepClone(), itemType, bindingContextClass, getSourceInfo());
+            type.deepClone(), content.deepClone(), itemType, bindingContextClass, getSourceInfo()).copy(this);
     }
 }

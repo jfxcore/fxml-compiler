@@ -161,7 +161,7 @@ public class EmitApplyMarkupExtensionNode extends AbstractNode implements ValueN
     public EmitApplyMarkupExtensionNode deepClone() {
         return new EmitApplyMarkupExtensionNode(
             markupExtensionNode.deepClone(), markupExtensionInterface, targetName,
-            targetType.getTypeInstance(), returnType, propertyInfo);
+            targetType.getTypeInstance(), returnType, propertyInfo).copy(this);
     }
 
     @Override
@@ -195,7 +195,7 @@ public class EmitApplyMarkupExtensionNode extends AbstractNode implements ValueN
         @Override
         public Supplier deepClone() {
             return new Supplier(getMarkupExtensionNode(), getMarkupExtensionInterface(), getTargetName(),
-                                getTargetType(), getReturnType(), getPropertyInfo());
+                                getTargetType(), getReturnType(), getPropertyInfo()).copy(this);
         }
     }
 }

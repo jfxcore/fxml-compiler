@@ -92,7 +92,8 @@ public class EmitInitializeRootNode extends AbstractNode implements RootNode, Em
 
     @Override
     public EmitInitializeRootNode deepClone() {
-        return new EmitInitializeRootNode(root.deepClone(), deepClone(preamble), templateRoot, getSourceInfo());
+        return new EmitInitializeRootNode(
+            root.deepClone(), deepClone(preamble), templateRoot, getSourceInfo()).copy(this);
     }
 
     @Override

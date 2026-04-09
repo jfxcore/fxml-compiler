@@ -53,7 +53,7 @@ public class EmitGetRootNode
 
     @Override
     public EmitGetRootNode deepClone() {
-        return new EmitGetRootNode(type.getTypeInstance(), getSourceInfo());
+        return new EmitGetRootNode(type.getTypeInstance(), getSourceInfo()).copy(this);
     }
 
     @Override

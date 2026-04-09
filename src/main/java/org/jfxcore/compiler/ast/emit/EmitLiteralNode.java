@@ -195,7 +195,7 @@ public class EmitLiteralNode extends ReferenceableNode {
 
     @Override
     public EmitLiteralNode deepClone() {
-        return new EmitLiteralNode(getId(), requestedType.getTypeInstance(), literal, getSourceInfo());
+        return new EmitLiteralNode(getId(), requestedType.getTypeInstance(), literal, getSourceInfo()).copy(this);
     }
 
     @Override

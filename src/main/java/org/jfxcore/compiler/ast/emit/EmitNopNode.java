@@ -27,6 +27,6 @@ public class EmitNopNode extends AbstractNode implements ValueEmitterNode {
 
     @Override
     public EmitNopNode deepClone() {
-        return new EmitNopNode(type.getTypeInstance(), getSourceInfo());
+        return new EmitNopNode(type.getTypeInstance(), getSourceInfo()).copy(this);
     }
 }

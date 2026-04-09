@@ -117,7 +117,7 @@ public class EmitInvariantPathNode extends AbstractNode implements ValueEmitterN
 
     @Override
     public EmitInvariantPathNode deepClone() {
-        return new EmitInvariantPathNode(deepClone(children), getSourceInfo());
+        return new EmitInvariantPathNode(deepClone(children), getSourceInfo()).copy(this);
     }
 
     @Override

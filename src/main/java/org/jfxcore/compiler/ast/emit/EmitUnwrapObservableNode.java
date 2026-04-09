@@ -44,7 +44,7 @@ public class EmitUnwrapObservableNode extends AbstractNode implements ValueEmitt
 
     @Override
     public EmitUnwrapObservableNode deepClone() {
-        return new EmitUnwrapObservableNode(child.deepClone());
+        return new EmitUnwrapObservableNode(child.deepClone()).copy(this);
     }
 
     @Override

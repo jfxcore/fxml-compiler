@@ -112,7 +112,7 @@ public class BindingNode extends AbstractNode {
             path.deepClone(),
             format != null ? format.deepClone() : null,
             converter != null ? converter.deepClone() : null,
-            getSourceInfo());
+            getSourceInfo()).copy(this);
     }
 
     @Override
@@ -156,7 +156,7 @@ public class BindingNode extends AbstractNode {
 
         @Override
         public ListValue deepClone() {
-            return new ListValue(getMode(), getPath(), getConverter(), getFormat(), getSourceInfo());
+            return new ListValue(getMode(), getPath(), getConverter(), getFormat(), getSourceInfo()).copy(this);
         }
     }
 }

@@ -85,7 +85,7 @@ public class EmitValueWrapperNode extends AbstractNode implements ValueEmitterNo
 
     @Override
     public EmitValueWrapperNode deepClone() {
-        return new EmitValueWrapperNode(child.deepClone());
+        return new EmitValueWrapperNode(child.deepClone()).copy(this);
     }
 
     @Override

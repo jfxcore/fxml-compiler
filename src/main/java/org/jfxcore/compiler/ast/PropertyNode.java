@@ -181,6 +181,7 @@ public class PropertyNode extends AbstractNode {
 
     @Override
     public PropertyNode deepClone() {
-        return new PropertyNode(names, markupName, deepClone(values), intrinsic, allowQualifiedName, getSourceInfo());
+        return new PropertyNode(
+            names, markupName, deepClone(values), intrinsic, allowQualifiedName, getSourceInfo()).copy(this);
     }
 }

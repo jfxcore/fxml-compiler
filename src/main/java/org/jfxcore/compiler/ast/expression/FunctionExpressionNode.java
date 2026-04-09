@@ -90,7 +90,7 @@ public class FunctionExpressionNode extends AbstractNode implements ExpressionNo
             path.deepClone(),
             deepClone(arguments),
             inversePath != null ? inversePath.deepClone() : null,
-            getSourceInfo());
+            getSourceInfo()).copy(this);
     }
 
     @Override
