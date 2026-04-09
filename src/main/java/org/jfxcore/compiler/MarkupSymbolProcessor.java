@@ -35,6 +35,7 @@ import java.io.Writer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -73,7 +74,7 @@ final class MarkupSymbolProcessor implements SymbolProcessor {
         while (symbols.hasNext()) {
             KSAnnotated symbol = symbols.next();
             if (symbol instanceof KSClassDeclaration declaration) {
-                processSingleElement(declaration);
+                processSingleElement(declaration, resolver);
             } else {
                 error(symbol, null, null, String.format(
                     "@%s can only be used on classes", getSimpleName(MARKUP_ANNOTATION_NAME)));
@@ -123,7 +124,7 @@ final class MarkupSymbolProcessor implements SymbolProcessor {
         }
     }
 
-    private void processSingleElement(KSClassDeclaration declaration) {
+    private void processSingleElement(KSClassDeclaration declaration, Resolver resolver) {
         KSName qualifiedName = declaration.getQualifiedName();
         String ownerName = qualifiedName != null
             ? qualifiedName.asString()
@@ -154,14 +155,14 @@ final class MarkupSymbolProcessor implements SymbolProcessor {
         KSAnnotation annotation = getAnnotation(declaration);
 
         try {
-            processAnnotatedClass(declaration, annotation);
+            processAnnotatedClass(declaration, annotation, resolver);
         } catch (Exception ex) {
             KSValueArgument markupValue = getAnnotationValue(annotation);
             error(declaration, annotation, markupValue, ex.getMessage());
         }
     }
 
-    private void processAnnotatedClass(KSClassDeclaration declaration, KSAnnotation annotation) {
+    private void processAnnotatedClass(KSClassDeclaration declaration, KSAnnotation annotation, Resolver resolver) {
         KSValueArgument markupValue = getAnnotationValue(annotation);
         Object markupValueObject = markupValue.getValue();
         String markupText = markupValueObject instanceof String text ? text : null;
@@ -192,7 +193,7 @@ final class MarkupSymbolProcessor implements SymbolProcessor {
         KSName qualifiedName = Objects.requireNonNull(declaration.getQualifiedName());
         QualifiedName sourceClassName = QualifiedName.of(qualifiedName.asString());
         Location sourceOffset = getSourceOffset(annotation, markupValue);
-        List<String> imports = getImports(containingFile, annotation);
+        List<String> imports = getImports(containingFile, annotation, resolver);
 
         try {
             generator.addEmbeddedSource(sourceDir, sourceFile, markupText, imports, sourceClassName, sourceOffset);
@@ -241,7 +242,7 @@ final class MarkupSymbolProcessor implements SymbolProcessor {
         return null;
     }
 
-    private List<String> getImports(KSFile containingFile, KSNode annotation) {
+    private List<String> getImports(KSFile containingFile, KSNode annotation, Resolver resolver) {
         Path sourceFile = getSourceFile(containingFile);
         Set<String> imports = new LinkedHashSet<>();
 
@@ -252,14 +253,16 @@ final class MarkupSymbolProcessor implements SymbolProcessor {
                     continue;
                 }
 
-                String qualifiedImport = matcher.group(1);
+                String rawImport = matcher.group(1);
+                String qualifiedImport = normalizeImport(rawImport);
                 String alias = matcher.group(2);
 
                 if (alias != null) {
-                    logger.warn(String.format(
-                        "Ignoring aliased Kotlin import '%s' for @%s processing", qualifiedImport,
+                    logger.info(String.format(
+                        "Ignoring aliased Kotlin import '%s' for @%s processing", rawImport,
                         getSimpleName(MARKUP_ANNOTATION_NAME)), annotation);
-                } else if (!MARKUP_ANNOTATION_NAME.equals(qualifiedImport)) {
+                } else if (!MARKUP_ANNOTATION_NAME.equals(qualifiedImport)
+                        && isJavaCompatibleImport(resolver, qualifiedImport)) {
                     imports.add(qualifiedImport);
                 }
             }
@@ -268,6 +271,71 @@ final class MarkupSymbolProcessor implements SymbolProcessor {
         }
 
         return List.copyOf(imports);
+    }
+
+    private boolean isJavaCompatibleImport(Resolver resolver, String qualifiedImport) {
+        return qualifiedImport.endsWith(".*") || resolvesToClass(resolver, qualifiedImport);
+    }
+
+    static String normalizeImport(String qualifiedImport) {
+        return Arrays.stream(qualifiedImport.split("\\."))
+            .map(MarkupSymbolProcessor::stripBackticks)
+            .reduce((left, right) -> left + "." + right)
+            .orElse(qualifiedImport);
+    }
+
+    static boolean resolvesToClass(Resolver resolver, String qualifiedName) {
+        if (resolver.getClassDeclarationByName(resolver.getKSNameFromString(qualifiedName)) != null) {
+            return true;
+        }
+
+        String[] parts = qualifiedName.split("\\.");
+
+        for (int split = parts.length - 1; split > 0; --split) {
+            String enclosingName = String.join(".", Arrays.copyOf(parts, split));
+            KSClassDeclaration enclosingClass = resolver.getClassDeclarationByName(
+                resolver.getKSNameFromString(enclosingName));
+
+            if (enclosingClass != null && resolvesNestedClass(
+                    enclosingClass, Arrays.copyOfRange(parts, split, parts.length))) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static boolean resolvesNestedClass(KSClassDeclaration enclosingClass, String[] nestedNames) {
+        KSClassDeclaration currentClass = enclosingClass;
+
+        for (String nestedName : nestedNames) {
+            currentClass = findNestedClass(currentClass, nestedName);
+            if (currentClass == null) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static KSClassDeclaration findNestedClass(KSClassDeclaration enclosingClass, String nestedName) {
+        Iterator<KSDeclaration> it = enclosingClass.getDeclarations().iterator();
+        while (it.hasNext()) {
+            if (it.next() instanceof KSClassDeclaration nestedClass
+                    && nestedClass.getSimpleName().asString().equals(nestedName)) {
+                return nestedClass;
+            }
+        }
+
+        return null;
+    }
+
+    private static String stripBackticks(String identifier) {
+        return identifier.length() >= 2
+            && identifier.charAt(0) == '`'
+            && identifier.charAt(identifier.length() - 1) == '`'
+                ? identifier.substring(1, identifier.length() - 1)
+                : identifier;
     }
 
     private Path getSourceFile(KSFile containingFile) {
