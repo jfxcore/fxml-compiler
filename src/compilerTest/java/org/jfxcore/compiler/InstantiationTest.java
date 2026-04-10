@@ -425,7 +425,7 @@ public class InstantiationTest extends CompilerTestBase {
                 <?import javafx.scene.layout.*?>
                 <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                     <fx:define>
-                        <BackgroundFill fx:id="bf" fill="{fx:null}" radii="EMPTY" insets="0"/>
+                        <BackgroundFill fx:id="bf" fill="{fx:Null}" radii="EMPTY" insets="0"/>
                     </fx:define>
                 </GridPane>
             """);
@@ -440,7 +440,7 @@ public class InstantiationTest extends CompilerTestBase {
                 <?import javafx.scene.layout.*?>
                 <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                     <fx:define>
-                        <BackgroundFill fx:id="bf" fill="{fx:null}" radii="{fx:null}" insets="1"/>
+                        <BackgroundFill fx:id="bf" fill="{fx:Null}" radii="{fx:Null}" insets="1"/>
                     </fx:define>
                 </GridPane>
             """);
@@ -458,7 +458,7 @@ public class InstantiationTest extends CompilerTestBase {
                 <?import javafx.scene.layout.*?>
                 <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                     <fx:define>
-                        <BackgroundFill fx:id="bf" fill="{fx:null}" radii="{fx:null}" insets="1,2,3,4"/>
+                        <BackgroundFill fx:id="bf" fill="{fx:Null}" radii="{fx:Null}" insets="1,2,3,4"/>
                     </fx:define>
                 </GridPane>
             """);

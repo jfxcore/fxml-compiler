@@ -49,7 +49,7 @@ String resources can be formatted with arguments:
 ```
 
 `$amount` is evaluated once before formatting. Observable expressions such as `${amount}`
-(see [fx:observe](../reference/observe.html)) are not supported and will result in an exception
+(see [fx:Observe](../reference/observe.html)) are not supported and will result in an exception
 when the markup extension is applied.
 
 Non-string resources are converted to the target type:

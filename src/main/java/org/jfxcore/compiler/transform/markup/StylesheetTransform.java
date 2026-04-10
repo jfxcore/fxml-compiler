@@ -35,7 +35,7 @@ import java.util.List;
 import static org.jfxcore.compiler.type.KnownSymbols.*;
 
 /**
- * Compiles stylesheets defined in markup using the fx:stylesheet intrinsic and stores the binary stylesheets
+ * Compiles stylesheets defined in markup using the fx:Stylesheet intrinsic and stores the binary stylesheets
  * embedded into data-URLs. The result is returned as a {@link TextNode}.
  *
  * Inline styles specified in {@link javafx.scene.Node#styleProperty()} are minified.

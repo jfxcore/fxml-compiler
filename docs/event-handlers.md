@@ -6,7 +6,7 @@ nav_order: 5
 
 # Event handlers
 Event handlers are implementations of the `javafx.event.EventHandler` interface, and can be set on event handler
-properties with an [`fx:evaluate`](reference/evaluate.html) or [`fx:observe`](reference/observe.html) expression:
+properties with an [`fx:Evaluate`](reference/evaluate.html) or [`fx:Observe`](reference/observe.html) expression:
 
 <div class="filename">com/sample/MyControl.fxml</div>
 ```xml
@@ -31,7 +31,7 @@ public class MyControl extends MyControlBase {
 
 {: .note }
 Usually, event handlers don't change dynamically. It is therefore advisable to use
-[`fx:evaluate`](reference/evaluate.html) instead of [`fx:observe`](reference/observe.html).
+[`fx:Evaluate`](reference/evaluate.html) instead of [`fx:Observe`](reference/observe.html).
 
 ## Method event handlers
 Event handlers can also be implemented as methods on the code-behind class that have a signature compatible with the

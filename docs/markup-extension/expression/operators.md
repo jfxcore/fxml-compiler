@@ -29,6 +29,6 @@ However, restrictions apply depending on which expression type is used.
 
 | Markup extension | Applicable |
 |:-|:-|
-| [`fx:evaluate`](../../reference/evaluate.html) | all non-content expressions |
-| [`fx:observe`](../../reference/observe.html) | all non-content expressions |
-| [`fx:synchronize`](../../reference/synchronize.html) | only if the binding source implements `WritableValue<Boolean>` |
+| [`fx:Evaluate`](../../reference/evaluate.html) | all non-content expressions |
+| [`fx:Observe`](../../reference/observe.html) | all non-content expressions |
+| [`fx:Synchronize`](../../reference/synchronize.html) | only if the binding source implements `WritableValue<Boolean>` |

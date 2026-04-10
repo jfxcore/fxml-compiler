@@ -25,7 +25,7 @@ Context selectors are specified as part of the expression path, separated by a f
 ```
 
 {: .warning }
-> Using [`fx:evaluate`](../../reference/evaluate.html) with `self` or `parent` selectors may lead to unexpected results,
+> Using [`fx:Evaluate`](../../reference/evaluate.html) with `self` or `parent` selectors may lead to unexpected results,
 > since the evaluated value may depend on the order of element initialization.
 >
 > Consider the following example:
@@ -37,7 +37,7 @@ Context selectors are specified as part of the expression path, separated by a f
 > ```
 >
 > Perhaps surprisingly, `Label.prefWidth` will be `-1.0` instead of `123.0`. The reason for this behavior is that
-> child elements are initialized before parent elements, which means that when the `fx:evaluate` expression is
+> child elements are initialized before parent elements, which means that when the `fx:Evaluate` expression is
 > evaluated, `Pane.prefWidth` still has its default value of `-1.0`.
 >
 > In cases like these, an observable binding expression should be preferred.

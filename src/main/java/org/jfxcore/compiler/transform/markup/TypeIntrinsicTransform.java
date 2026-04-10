@@ -20,7 +20,7 @@ import java.util.List;
 import static org.jfxcore.compiler.type.KnownSymbols.*;
 
 /**
- * Transforms the fx:type intrinsic into a class literal.
+ * Transforms the fx:Type intrinsic into a class literal.
  */
 public class TypeIntrinsicTransform implements Transform {
 

@@ -1,4 +1,4 @@
-// Copyright (c) 2021, 2025, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.bindings;
@@ -129,9 +129,9 @@ public class BindingPathTest extends CompilerTestBase {
     public void Bindings_With_Explicit_Intrinsic_Syntax() {
         TestPane root = compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                      managed="{fx:evaluate context.boolVal}"
-                      prefWidth="{fx:observe context.doubleVal}"
-                      prefHeight="{fx:synchronize context.doubleVal}"/>
+                      managed="{fx:Evaluate context.boolVal}"
+                      prefWidth="{fx:Observe context.doubleVal}"
+                      prefHeight="{fx:Synchronize context.doubleVal}"/>
         """);
 
         assertFalse(root.managedProperty().isBound());
@@ -148,9 +148,9 @@ public class BindingPathTest extends CompilerTestBase {
     public void Bindings_With_Element_Syntax() {
         TestPane root = compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
-                <managed><fx:evaluate path="context.boolVal"/></managed>
-                <prefWidth><fx:observe path="context.doubleVal"/></prefWidth>
-                <prefHeight><fx:synchronize path="context.doubleVal"/></prefHeight>
+                <managed><fx:Evaluate path="context.boolVal"/></managed>
+                <prefWidth><fx:Observe path="context.doubleVal"/></prefWidth>
+                <prefHeight><fx:Synchronize path="context.doubleVal"/></prefHeight>
             </TestPane>
         """);
 
@@ -169,7 +169,7 @@ public class BindingPathTest extends CompilerTestBase {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <managed>
-                    <fx:evaluate>context.boolVal</fx:evaluate>
+                    <fx:Evaluate>context.boolVal</fx:Evaluate>
                 </managed>
             </TestPane>
         """));

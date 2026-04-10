@@ -37,9 +37,9 @@ Markup extensions fall into two semantic categories, which determine the positio
   This is the most general form of a markup extension, as it works in any position where a value is expected.
 
   ```xml
-  <!-- fx:observe in supplier position: provides an ObservableValue
+  <!-- fx:Observe in supplier position: provides an ObservableValue
        for the 'formatArguments' constructor argument -->
-  <Label text="{DynamicResource message; formatArguments={fx:observe amount}}"/>
+  <Label text="{DynamicResource message; formatArguments={fx:Observe amount}}"/>
   ```
 
 - **Property consumer**, which can only be applied directly to a
@@ -48,8 +48,8 @@ Markup extensions fall into two semantic categories, which determine the positio
   A property consumer extension receives the target property and can manipulate it, such as by setting up a binding.
 
   ```xml
-  <!-- fx:observe in property-consumer position: binds the 'text' property to 'title' -->
-  <Label text="{fx:observe title}"/>
+  <!-- fx:Observe in property-consumer position: binds the 'text' property to 'title' -->
+  <Label text="{fx:Observe title}"/>
   ```
 
 - Some markup extensions support both roles and are valid in both positions.
@@ -58,9 +58,9 @@ The [expression-related](markup-extension/expression.html) intrinsic markup exte
 
 | Intrinsic markup extension | Property consumer | Supplier |
 |:-|:-|:-|
-| [`fx:evaluate`](reference/evaluate.html) | yes | yes |
-| [`fx:observe`](reference/observe.html) | yes | yes |
-| [`fx:synchronize`](reference/synchronize.html) | yes | no |
+| [`fx:Evaluate`](reference/evaluate.html) | yes | yes |
+| [`fx:Observe`](reference/observe.html) | yes | yes |
+| [`fx:Synchronize`](reference/synchronize.html) | yes | no |
 
 ## User-defined markup extensions
 User-defined markup extensions must implement one or both types of the following interfaces in the

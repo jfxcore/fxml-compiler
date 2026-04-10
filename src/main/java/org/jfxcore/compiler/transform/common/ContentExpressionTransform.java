@@ -21,7 +21,7 @@ import java.util.List;
 import static org.jfxcore.compiler.ast.intrinsic.Intrinsics.*;
 
 /**
- * Detects the content literal form in {@code fx:once}, {@code fx:observe}, and {@code fx:sync}
+ * Detects the content literal form in {@code fx:Evaluate}, {@code fx:Observe}, and {@code fx:Synchronize}
  * intrinsics and adds {@link NodeDataKey#CONTENT_EXPRESSION} to the node.
  */
 public class ContentExpressionTransform implements Transform {

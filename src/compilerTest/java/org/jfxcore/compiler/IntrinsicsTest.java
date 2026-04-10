@@ -74,7 +74,7 @@ public class IntrinsicsTest extends CompilerTestBase {
             Label root = compileAndRun("""
                 <?import javafx.scene.control.*?>
                 <Label xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                       text="{fx:null}"/>
+                       text="{fx:Null}"/>
             """);
 
             assertNull(root.getText());
@@ -85,11 +85,11 @@ public class IntrinsicsTest extends CompilerTestBase {
             MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
                 <?import javafx.scene.control.*?>
                 <Label xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                       prefWidth="{fx:null}"/>
+                       prefWidth="{fx:Null}"/>
             """));
 
             assertEquals(ErrorCode.INCOMPATIBLE_PROPERTY_TYPE, ex.getDiagnostic().getCode());
-            assertCodeHighlight("{fx:null}", ex);
+            assertCodeHighlight("{fx:Null}", ex);
         }
 
         public static class ReferenceTypeTestPane extends Pane {
@@ -108,7 +108,7 @@ public class IntrinsicsTest extends CompilerTestBase {
             Pane root = compileAndRun("""
                 <?import javafx.scene.layout.*?>
                 <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
-                    <ReferenceTypeTestPane text="{fx:null}"/>
+                    <ReferenceTypeTestPane text="{fx:Null}"/>
                 </Pane>
             """);
 
@@ -128,12 +128,12 @@ public class IntrinsicsTest extends CompilerTestBase {
             MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
                 <?import javafx.scene.layout.*?>
                 <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
-                    <PrimitiveTypeTestPane value="{fx:null}"/>
+                    <PrimitiveTypeTestPane value="{fx:Null}"/>
                 </Pane>
             """));
 
             assertEquals(ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT, ex.getDiagnostic().getCode());
-            assertCodeHighlight("{fx:null}", ex);
+            assertCodeHighlight("{fx:Null}", ex);
         }
     }
 
@@ -159,7 +159,7 @@ public class IntrinsicsTest extends CompilerTestBase {
             TypeIntrinsicTestPane root = compileAndRun("""
                 <?import javafx.scene.control.*?>
                 <TypeIntrinsicTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                       wildcardClass="{fx:type TextField}"/>
+                       wildcardClass="{fx:Type TextField}"/>
             """);
 
             assertEquals(TextField.class, root.getWildcardClass());
@@ -170,7 +170,7 @@ public class IntrinsicsTest extends CompilerTestBase {
             TypeIntrinsicTestPane root = compileAndRun("""
                 <?import javafx.scene.control.*?>
                 <TypeIntrinsicTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                       wildcardClassUpperBound="{fx:type TextField}"/>
+                       wildcardClassUpperBound="{fx:Type TextField}"/>
             """);
 
             assertEquals(TextField.class, root.getWildcardClassUpperBound());
@@ -181,11 +181,11 @@ public class IntrinsicsTest extends CompilerTestBase {
             MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
                 <?import javafx.scene.control.*?>
                 <TypeIntrinsicTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                       wildcardClassIncompatibleUpperBound="{fx:type TextField}"/>
+                       wildcardClassIncompatibleUpperBound="{fx:Type TextField}"/>
             """));
 
             assertEquals(ErrorCode.INCOMPATIBLE_PROPERTY_TYPE, ex.getDiagnostic().getCode());
-            assertCodeHighlight("{fx:type TextField}", ex);
+            assertCodeHighlight("{fx:Type TextField}", ex);
         }
     }
 
@@ -321,7 +321,7 @@ public class IntrinsicsTest extends CompilerTestBase {
             """));
 
             assertEquals(ErrorCode.PROPERTY_MUST_BE_SPECIFIED, ex.getDiagnostic().getCode());
-            assertTrue(ex.getDiagnostic().getMessage().startsWith("fx:observe.path"));
+            assertTrue(ex.getDiagnostic().getMessage().startsWith("fx:Observe.path"));
             assertCodeHighlight("${}", ex);
         }
 
@@ -330,12 +330,12 @@ public class IntrinsicsTest extends CompilerTestBase {
             MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
                 <?import javafx.scene.control.*?>
                 <Button xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                        prefHeight="{fx:synchronize}"/>
+                        prefHeight="{fx:Synchronize}"/>
             """));
 
             assertEquals(ErrorCode.PROPERTY_MUST_BE_SPECIFIED, ex.getDiagnostic().getCode());
-            assertTrue(ex.getDiagnostic().getMessage().startsWith("fx:synchronize.path"));
-            assertCodeHighlight("{fx:synchronize}", ex);
+            assertTrue(ex.getDiagnostic().getMessage().startsWith("fx:Synchronize.path"));
+            assertCodeHighlight("{fx:Synchronize}", ex);
         }
 
         @Test
@@ -427,7 +427,7 @@ public class IntrinsicsTest extends CompilerTestBase {
             MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
                 <?import javafx.scene.control.*?>
                 <Button xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                        styleClass="{fx:evaluate path=..foo.bar}"/>
+                        styleClass="{fx:Evaluate path=..foo.bar}"/>
             """));
 
             assertEquals(ErrorCode.MEMBER_NOT_FOUND, ex.getDiagnostic().getCode());
@@ -439,7 +439,7 @@ public class IntrinsicsTest extends CompilerTestBase {
             MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
                 <?import javafx.scene.control.*?>
                 <Button xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                        styleClass="{fx:observe path=..foo.bar}"/>
+                        styleClass="{fx:Observe path=..foo.bar}"/>
             """));
 
             assertEquals(ErrorCode.MEMBER_NOT_FOUND, ex.getDiagnostic().getCode());
@@ -451,7 +451,7 @@ public class IntrinsicsTest extends CompilerTestBase {
             MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
                 <?import javafx.scene.control.*?>
                 <Button xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                        styleClass="{fx:synchronize path=..foo.bar}"/>
+                        styleClass="{fx:Synchronize path=..foo.bar}"/>
             """));
 
             assertEquals(ErrorCode.MEMBER_NOT_FOUND, ex.getDiagnostic().getCode());

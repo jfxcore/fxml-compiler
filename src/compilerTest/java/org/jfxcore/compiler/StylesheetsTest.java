@@ -1,4 +1,4 @@
-// Copyright (c) 2021, 2023, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler;
@@ -28,11 +28,11 @@ public class StylesheetsTest extends CompilerTestBase {
             <?import javafx.scene.control.*?>
             <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <stylesheets>
-                    <fx:stylesheet>
+                    <fx:Stylesheet>
                         .label {
                             -fx-pref-width: 5.0;
                         }
-                    </fx:stylesheet>
+                    </fx:Stylesheet>
                 </stylesheets>
                 <Label/>
             </Pane>
@@ -52,16 +52,16 @@ public class StylesheetsTest extends CompilerTestBase {
             <?import javafx.scene.control.*?>
             <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <stylesheets>
-                    <fx:stylesheet>
+                    <fx:Stylesheet>
                         .label {
                             -fx-pref-width: 5.0;
                         }
-                    </fx:stylesheet>
-                    <fx:stylesheet>
+                    </fx:Stylesheet>
+                    <fx:Stylesheet>
                         .label {
                             -fx-pref-height: 7.0;
                         }
-                    </fx:stylesheet>
+                    </fx:Stylesheet>
                 </stylesheets>
                 <Label/>
             </Pane>
@@ -83,7 +83,7 @@ public class StylesheetsTest extends CompilerTestBase {
             <?import javafx.scene.control.*?>
             <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <stylesheets>
-                    <fx:stylesheet>
+                    <fx:Stylesheet>
                         .table-view:constrained-resize .filler,
                         .tree-table-view:constrained-resize .filler {
                             -fx-border-color:
@@ -95,7 +95,7 @@ public class StylesheetsTest extends CompilerTestBase {
                                 transparent -fx-table-header-border-color -fx-table-header-border-color -fx-table-header-border-color;
                             -fx-border-insets: 0 1 1 1, 0 0 0 0;
                         }
-                    </fx:stylesheet>
+                    </fx:Stylesheet>
                 </stylesheets>
                 <Label/>
             </Pane>
@@ -113,11 +113,11 @@ public class StylesheetsTest extends CompilerTestBase {
             <?import javafx.scene.control.*?>
             <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <stylesheets>
-                    <fx:stylesheet>
+                    <fx:Stylesheet>
                         .label {
                             -fx-pref-width: 5.0;
                         }
-                    </fx:stylesheet>
+                    </fx:Stylesheet>
                     path/to/external_stylesheet1.css
                     path/to/external_stylesheet2.css
                 </stylesheets>
@@ -142,15 +142,15 @@ public class StylesheetsTest extends CompilerTestBase {
             <?import javafx.scene.layout.*?>
             <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <prefWidth>
-                    <fx:stylesheet>
+                    <fx:Stylesheet>
                         .text { -fx-pref-width: 5.0; }
-                    </fx:stylesheet>
+                    </fx:Stylesheet>
                 </prefWidth>
             </Pane>
         """));
 
         assertEquals(ErrorCode.CANNOT_COERCE_PROPERTY_VALUE, ex.getDiagnostic().getCode());
-        assertCodeHighlight("<fx:stylesheet>", ex);
+        assertCodeHighlight("<fx:Stylesheet>", ex);
     }
 
     @Test
@@ -161,11 +161,11 @@ public class StylesheetsTest extends CompilerTestBase {
             <?import javafx.scene.control.*?>
             <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <stylesheets>
-                    <fx:stylesheet>
+                    <fx:Stylesheet>
                         grid-pane?selected {
                             -fx-stroke-line-join: miter;
                         }
-                    </fx:stylesheet>
+                    </fx:Stylesheet>
                 </stylesheets>
             </Pane>
         """));
@@ -180,11 +180,11 @@ public class StylesheetsTest extends CompilerTestBase {
             <?import javafx.scene.control.*?>
             <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <stylesheets>
-                    <fx:stylesheet>
+                    <fx:Stylesheet>
                         grid-pane:selected {
                             -fx-stroke-line-join: foo bar baz;
                         }
-                    </fx:stylesheet>
+                    </fx:Stylesheet>
                 </stylesheets>
             </Pane>
         """));
@@ -200,9 +200,9 @@ public class StylesheetsTest extends CompilerTestBase {
             <?import javafx.scene.control.*?>
             <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <stylesheets>
-                    <fx:stylesheet>
+                    <fx:Stylesheet>
                         -fx-stroke-line-join: miter;
-                    </fx:stylesheet>
+                    </fx:Stylesheet>
                 </stylesheets>
                 <Label/>
             </Pane>
@@ -218,9 +218,9 @@ public class StylesheetsTest extends CompilerTestBase {
             <?import javafx.scene.control.*?>
             <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <stylesheets>
-                    <fx:stylesheet>
+                    <fx:Stylesheet>
                         .label { -fx-pref-width: 5.0;
-                    </fx:stylesheet>
+                    </fx:Stylesheet>
                 </stylesheets>
             </Pane>
         """));

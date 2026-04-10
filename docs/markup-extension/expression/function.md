@@ -13,8 +13,8 @@ different type. In the following example, the `String.format` method is used to 
 <Button text="${String.format('Width: %.0f', self/width)}"/>
 ```
 
-If the method or constructor is used in a [`{fx:observe}`](../../reference/observe.html) or
-[`{fx:synchronize}`](../../reference/synchronize.html) expression, and it has observable arguments,
+If the method or constructor is used in a [`{fx:Observe}`](../../reference/observe.html) or
+[`{fx:Synchronize}`](../../reference/synchronize.html) expression, and it has observable arguments,
 then the method will be re-evaluated whenever an observable argument changes.
 
 ## Method path
@@ -42,15 +42,15 @@ Method arguments can be any of the following:
   optionally also including a context selector separated with a forward slash, for example: `parent[Label]/text` 
 * String literals: `'text'`
 * Number literals: `1` (int), `1L` (long), `1F` (float), `1D` (double)
-* Class literal: `{fx:type MyClass}`
+* Class literal: `{fx:Type MyClass}`
 * [Constants](../../reference/constant.html): `{Double fx:constant=POSITIVE_INFINITY}` or `Double.POSITIVE_INFINITY`
-* Null: `{fx:null}`
+* Null: `{fx:Null}`
 
 {: .note }
 Constructor invocations have the same syntax as method invocations, they do not use the `new` keyword.
 
 ## Bidirectional function binding with inverse method
-A method that is used in a [`{fx:synchronize}`](../../reference/synchronize.html) expression must have exactly
+A method that is used in a [`{fx:Synchronize}`](../../reference/synchronize.html) expression must have exactly
 one argument, and an inverse method must be available; either by annotating the referenced method with
 [`@InverseMethod`](../../reference/synchronize.html#inverse-method-in-a-bidirectional-method-binding)
 or by specifying the inverse method name in the binding expression:

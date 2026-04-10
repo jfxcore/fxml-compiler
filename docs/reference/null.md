@@ -1,15 +1,15 @@
 ---
 layout: default
-title: fx:null
+title: fx:Null
 parent: FXML 2.0 language reference
 nav_order: 11
 ---
 
-# fx:null markup extension
-The `fx:null` markup extension specifies a `null` value for a property.
+# fx:Null markup extension
+The `fx:Null` markup extension specifies the `null` value.
 
 ## Usage
 
 ```xml
-<Button graphic="{fx:null}"/>
+<Button graphic="{fx:Null}"/>
 ```
