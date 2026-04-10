@@ -1,21 +1,21 @@
 ---
 layout: default
-title: fx:synchronize, <span class="nav-inline-code">#{x}</span>
+title: fx:Synchronize, <span class="nav-inline-code">#{x}</span>
 parent: FXML 2.0 language reference
 nav_order: 13
 ---
 
-# fx:synchronize markup extension, #{x}
-The `fx:synchronize` markup extension establishes a bidirectional binding.  It is only valid in
+# fx:Synchronize markup extension, #{x}
+The `fx:Synchronize` markup extension establishes a bidirectional binding.  It is only valid in
 [property-consumer](../markup-extension.html#where-markup-extensions-can-be-used) position and cannot be used
 where a value or [`ObservableValue`](https://openjfx.io/javadoc/17/javafx.base/javafx/beans/value/ObservableValue.html)
 is expected.
 
-`fx:synchronize` establishes a bidirectional binding between the target and source
+`fx:Synchronize` establishes a bidirectional binding between the target and source
 [`Property`](https://openjfx.io/javadoc/17/javafx.base/javafx/beans/property/Property.html).
 
-A leading `..` in the `path` value selects the [content](../markup-extension/expression/path.html#content-selection-operator-)
-of the target and source collection. In that form, `fx:synchronize` establishes a bidirectional content binding between
+A leading `..` in the source path selects the [content](../markup-extension/expression/path.html#content-selection-operator-)
+of the target and source collection. In that form, `fx:Synchronize` establishes a bidirectional content binding between
 the source and target collections.
 
 Its prefix notation is `#{x}`, where <span class="inline-code">x</span> is the [source path](../markup-extension/expression/path.html).
@@ -34,16 +34,16 @@ Its prefix notation is `#{x}`, where <span class="inline-code">x</span> is the [
 ```xml
 <!-- Element notation -->
 <object>
-	<property>
-		<fx:synchronize path="myPath"/>
-	</property>
+    <property>
+        <fx:Synchronize path="myPath"/>
+    </property>
 </object>
 
 <!-- Attribute notation -->
-<object property="{fx:synchronize path=myPath}"/>
+<object property="{fx:Synchronize path=myPath}"/>
 
 <!-- Attribute notation with omitted "path" -->
-<object property="{fx:synchronize myPath}"/>
+<object property="{fx:Synchronize myPath}"/>
 
 <!-- Prefix notation -->
 <object property="#{myPath}"/>
@@ -60,7 +60,7 @@ Its prefix notation is `#{x}`, where <span class="inline-code">x</span> is the [
 {: .note }
 The `@InverseMethod` annotation is available in the [markup](https://github.com/jfxcore/markup) runtime library.
 
-If a `fx:synchronize` expression converts the source property with a [method call](../markup-extension/expression/function.html),
+If a `fx:Synchronize` expression converts the source property with a [method call](../markup-extension/expression/function.html),
 the compiler needs a way to translate changes on the target property back to the source property.
 
 For a method <em>m(B)→A</em>, the inverse method must have the corresponding shape <em>n(A)→B</em>.

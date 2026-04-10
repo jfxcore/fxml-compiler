@@ -12,12 +12,12 @@ These expressions are implemented as intrinsic markup extensions and compiled to
 
 | Markup extension | [Prefix notation](../markup-extension.html#prefix-shorthand-in-attribute-notation) | [Usage](../markup-extension.html#where-markup-extensions-can-be-used) |
 |:-|:-|:-|
-| [`fx:evaluate`](../reference/evaluate.html) | `$source` | value supplier, property consumer |
-| [`fx:observe`](../reference/observe.html) | `${source}` | value supplier, property consumer |
-| [`fx:synchronize`](../reference/synchronize.html) | `#{source}` | property consumer |
+| [`fx:Evaluate`](../reference/evaluate.html) | `$source` | value supplier, property consumer |
+| [`fx:Observe`](../reference/observe.html) | `${source}` | value supplier, property consumer |
+| [`fx:Synchronize`](../reference/synchronize.html) | `#{source}` | property consumer |
 
-`{fx:evaluate}` has the lowest runtime overhead, since no listener maintenance is required after the initial assignment.
-`{fx:observe}` and `{fx:synchronize}` may require listeners or additional generated code to keep the target synchronized with the source.
+`{fx:Evaluate}` has the lowest runtime overhead, since no listener maintenance is required after the initial assignment.
+`{fx:Observe}` and `{fx:Synchronize}` may require listeners or additional generated code to keep the target synchronized with the source.
 
 ## Setting up a binding
 Here's how a simple binding is specified in FXML 2.0, using different but equivalent notations:
@@ -26,11 +26,11 @@ Here's how a simple binding is specified in FXML 2.0, using different but equiva
 ```xml
 <VBox xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
       fx:class="com.sample.MyControl">
-    <!-- fx:observe markup extension with source path -->
-    <Button text="{fx:observe path=caption}"/>
+    <!-- fx:Observe markup extension with source path -->
+    <Button text="{fx:Observe path=caption}"/>
 
-    <!-- 'path' is the default property of the fx:observe markup extension, so it can be omitted -->
-    <Button text="{fx:observe caption}"/>
+    <!-- 'path' is the default property of the fx:Observe markup extension, so it can be omitted -->
+    <Button text="{fx:Observe caption}"/>
 
     <!-- Prefix notation, similar to FXML 1.0 -->
     <Button text="${caption}"/>
@@ -59,15 +59,15 @@ the following operations are performed on the target property:
 
 | Markup extension | Prefix notation | Operation |
 |:-|:-|:-|
-| `{fx:evaluate source}` | `$source` | assign the resolved value once |
-| `{fx:observe source}` | `${source}` | `Property.bind(source)` |
-| `{fx:synchronize source}` | `#{source}` | `Property.bindBidirectional(source)` |
-| `{fx:evaluate ..source}` | `$..source` | `Collection.addAll(source)`<br>`Map.putAll(source)` |
-| `{fx:observe ..source}` | `${..source}` | `ListProperty.bindContent(source)`<br>`SetProperty.bindContent(source)`<br>`MapProperty.bindContent(source)` |
-| `{fx:synchronize ..source}` | `#{..source}` | `ListProperty.bindContentBidirectional(source)`<br>`SetProperty.bindContentBidirectional(source)`<br>`MapProperty.bindContentBidirectional(source)` |
+| `{fx:Evaluate source}` | `$source` | assign the resolved value once |
+| `{fx:Observe source}` | `${source}` | `Property.bind(source)` |
+| `{fx:Synchronize source}` | `#{source}` | `Property.bindBidirectional(source)` |
+| `{fx:Evaluate ..source}` | `$..source` | `Collection.addAll(source)`<br>`Map.putAll(source)` |
+| `{fx:Observe ..source}` | `${..source}` | `ListProperty.bindContent(source)`<br>`SetProperty.bindContent(source)`<br>`MapProperty.bindContent(source)` |
+| `{fx:Synchronize ..source}` | `#{..source}` | `ListProperty.bindContentBidirectional(source)`<br>`SetProperty.bindContentBidirectional(source)`<br>`MapProperty.bindContentBidirectional(source)` |
 
 {: .note }
-Since `path` is the [default property](../property-notation.html#default-property) of all intrinsic expression extensions, `{fx:observe path=source}` and `{fx:observe source}` are equivalent.
+Since `path` is the [default property](../property-notation.html#default-property) of all intrinsic expression extensions, `{fx:Observe path=source}` and `{fx:Observe source}` are equivalent.
 
 {: .note }
 This documentation will use the prefix notation in most code samples.

@@ -39,7 +39,7 @@ public class StringConversionBindingTest extends CompilerTestBase {
     }
 
     @ParameterizedTest
-    @CsvSource({"fx:evaluate", "fx:observe"})
+    @CsvSource({"fx:Evaluate", "fx:Observe"})
     public void Converter_Property_Is_Only_Available_In_BidirectionalBinding(String bindMode) {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.util.converter.*?>
@@ -54,7 +54,7 @@ public class StringConversionBindingTest extends CompilerTestBase {
     }
 
     @ParameterizedTest
-    @CsvSource({"fx:evaluate", "fx:observe"})
+    @CsvSource({"fx:Evaluate", "fx:Observe"})
     public void Format_Property_Is_Only_Available_In_BidirectionalBinding(String bindMode) {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.util.converter.*?>

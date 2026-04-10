@@ -14,7 +14,7 @@ import org.jfxcore.compiler.transform.TransformContext;
 import org.jfxcore.compiler.type.TypeInstance;
 
 /**
- * Transforms the fx:null intrinsic into a null literal.
+ * Transforms the fx:Null intrinsic into a null literal.
  */
 public class NullIntrinsicTransform implements Transform {
 

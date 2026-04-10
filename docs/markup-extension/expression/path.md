@@ -6,7 +6,7 @@ nav_order: 1
 ---
 
 # Source path
-The source path in an expression like `{fx:observe path=myModel.userName}` or its short form `${myModel.userName}`
+The source path in an expression like `{fx:Observe path=myModel.userName}` or its short form `${myModel.userName}`
 may refer to any of the following elements on `myModel`:
 * a plain field or method with the name `userName`, returning a `String`
 * a Java Beans-style method with the name `getUserName`, returning a `String`
@@ -36,7 +36,7 @@ expression evaluates to the default value of its last member. For example, if th
 `${user.address.postalCode}` is of type `int`, the expression evaluates to zero if `user` or `address` is `null`.
 
 If the path contains `ObservableValue` members, the expression is automatically re-evaluated when any of the
-observable values are changed. This does not apply to [`fx:evaluate`](../../reference/evaluate.html), which
+observable values are changed. This does not apply to [`fx:Evaluate`](../../reference/evaluate.html), which
 resolves its path once and does not observe it afterward.
 
 {: .note }
@@ -81,27 +81,27 @@ Content selection is available for all three expression types:
 
 | Intrinsic | Normal form | Content selection form |
 |:-|:-|:-|
-| [`fx:evaluate`](../../reference/evaluate.html) | `$source` | `$..source` |
-| [`fx:observe`](../../reference/observe.html) | `${source}` | `${..source}` |
-| [`fx:synchronize`](../../reference/synchronize.html) | `#{source}` | `#{..source}` |
+| [`fx:Evaluate`](../../reference/evaluate.html) | `$source` | `$..source` |
+| [`fx:Observe`](../../reference/observe.html) | `${source}` | `${..source}` |
+| [`fx:Synchronize`](../../reference/synchronize.html) | `#{source}` | `#{..source}` |
 
 ### Content selection semantics
 
-1. `fx:evaluate` resolves the source collection once, and adds its content to the target collection:
+1. `fx:Evaluate` resolves the source collection once, and adds its content to the target collection:
 
    ```xml
    <!-- corresponds to itemsProperty().addAll(source) -->
    <ListView items="$..source"/>
    ```
 
-2. `fx:observe` establishes a content binding between the target collection property and the source collection:
+2. `fx:Observe` establishes a content binding between the target collection property and the source collection:
 
    ```xml
    <!-- corresponds to itemsProperty().bindContent(source) -->
    <ListView items="${..source}"/>
    ```
 
-3. `fx:synchronize` establishes a bidirectional content binding between the target collection property and the source collection:
+3. `fx:Synchronize` establishes a bidirectional content binding between the target collection property and the source collection:
 
    ```xml
    <!-- corresponds to itemsProperty().bindContentBidirectional(source) -->

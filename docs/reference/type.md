@@ -1,12 +1,12 @@
 ---
 layout: default
-title: fx:type
+title: fx:Type
 parent: FXML 2.0 language reference
 nav_order: 14
 ---
 
-# fx:type markup extension
-The `fx:type` markup extension resolves a name to a class literal.
+# fx:Type markup extension
+The `fx:Type` markup extension resolves a name to a class literal.
 
 ## Properties
 
@@ -20,13 +20,13 @@ The `fx:type` markup extension resolves a name to a class literal.
 <!-- Element notation -->
 <object>
     <property>
-        <fx:type name="MyClass"/>
+        <fx:Type name="MyClass"/>
     </property>
 <object>
 
 <!-- Attribute notation -->
-<object property="{fx:type name=MyClass}"/>
+<object property="{fx:Type name=MyClass}"/>
 
 <!-- Attribute notation with omitted "name" -->
-<object property="{fx:type MyClass}"/>
+<object property="{fx:Type MyClass}"/>
 ```

@@ -438,7 +438,7 @@ public class GenericsTest extends CompilerTestBase {
     public void Bind_Unidirectional_To_Method_With_TypeWitness_LongNotation() {
         Pane root = compileAndRun("""
             <GenericMethodsObject xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                                  id="1" minWidth="{fx:observe m1<Double>(id)}"/>
+                                  id="1" minWidth="{fx:Observe m1<Double>(id)}"/>
         """);
 
         assertEquals(1, root.getMinWidth());

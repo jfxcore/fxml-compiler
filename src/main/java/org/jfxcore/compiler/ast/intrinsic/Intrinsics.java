@@ -11,9 +11,6 @@ import static org.jfxcore.compiler.ast.intrinsic.Intrinsic.*;
 
 public class Intrinsics {
 
-    public static final Intrinsic NULL = new Intrinsic(
-        "null", Kind.OBJECT, Placement.NOT_ROOT, KnownSymbols::NullTypeDecl);
-
     public static final Intrinsic CLASS = new Intrinsic(
         "class", Kind.PROPERTY, Placement.ROOT, KnownSymbols::StringDecl);
 
@@ -50,31 +47,34 @@ public class Intrinsics {
     public static final Intrinsic DEFINE = new Intrinsic(
         "define", Kind.PROPERTY, Placement.ANY, KnownSymbols::BottomTypeDecl);
 
-    public static final Intrinsic STYLESHEET = new Intrinsic(
-        "stylesheet", Kind.OBJECT, Placement.ANY, KnownSymbols::StringDecl);
+    public static final Intrinsic NULL = new Intrinsic(
+        "Null", Kind.OBJECT, Placement.NOT_ROOT, KnownSymbols::NullTypeDecl);
 
     public static final Intrinsic TYPE = new Intrinsic(
-        "type", Kind.OBJECT, Placement.ANY, KnownSymbols::ClassDecl,
+        "Type", Kind.OBJECT, Placement.ANY, KnownSymbols::ClassDecl,
         new IntrinsicProperty("name", KnownSymbols::StringDecl, true));
 
+    public static final Intrinsic STYLESHEET = new Intrinsic(
+        "Stylesheet", Kind.OBJECT, Placement.ANY, KnownSymbols::StringDecl);
+
     public static final Intrinsic EVALUATE = new Intrinsic(
-        "evaluate", Kind.OBJECT, Placement.ANY, KnownSymbols::BottomTypeDecl,
+        "Evaluate", Kind.OBJECT, Placement.ANY, KnownSymbols::BottomTypeDecl,
         new IntrinsicProperty("path", KnownSymbols::StringDecl, true));
 
     public static final Intrinsic OBSERVE = new Intrinsic(
-        "observe", Kind.OBJECT, Placement.ANY, KnownSymbols::BottomTypeDecl,
+        "Observe", Kind.OBJECT, Placement.ANY, KnownSymbols::BottomTypeDecl,
         new IntrinsicProperty("path", KnownSymbols::StringDecl, true));
 
     public static final Intrinsic SYNCHRONIZE = new Intrinsic(
-        "synchronize", Kind.OBJECT, Placement.ANY, KnownSymbols::BottomTypeDecl,
+        "Synchronize", Kind.OBJECT, Placement.ANY, KnownSymbols::BottomTypeDecl,
         new IntrinsicProperty("path", KnownSymbols::StringDecl, true),
         new IntrinsicProperty("format", KnownSymbols::FormatDecl),
         new IntrinsicProperty("converter", KnownSymbols::StringConverterDecl),
         new IntrinsicProperty("inverseMethod", KnownSymbols::StringDecl));
 
     private static final List<Intrinsic> NODES = List.of(
-        NULL, CLASS, CLASS_MODIFIER, CLASS_PARAMETERS, MARKUP_CLASS_NAME, CONTEXT, ID, VALUE, CONSTANT,
-        FACTORY, TYPE_ARGUMENTS, ITEM_TYPE, DEFINE, STYLESHEET, TYPE, EVALUATE, OBSERVE, SYNCHRONIZE);
+        CLASS, CLASS_MODIFIER, CLASS_PARAMETERS, MARKUP_CLASS_NAME, CONTEXT, ID, VALUE, CONSTANT, FACTORY,
+        TYPE_ARGUMENTS, ITEM_TYPE, DEFINE, NULL, TYPE, STYLESHEET, EVALUATE, OBSERVE, SYNCHRONIZE);
 
     public static Intrinsic find(ObjectNode node) {
         if (node.getType().isIntrinsic()){
