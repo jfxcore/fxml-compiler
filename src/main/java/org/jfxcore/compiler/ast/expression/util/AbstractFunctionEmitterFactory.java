@@ -246,13 +246,13 @@ abstract class AbstractFunctionEmitterFactory {
                     factory = new SimpleFunctionEmitterFactory(funcExpressionArg, invokingType, paramType);
                 }
             } else if (argument instanceof PathExpressionNode pathExpressionArg) {
-                Keyword literal = Keyword.of(pathExpressionArg.getSimplePath());
-                if (literal != null) {
+                Keyword keyword = Keyword.of(pathExpressionArg.getSimplePath());
+                if (keyword != null) {
                     if (pathExpressionArg.getOperator() != Operator.IDENTITY) {
                         throw ParserErrors.unexpectedExpression(pathExpressionArg.getSourceInfo());
                     }
 
-                    return literal.newEmitter(paramType, sourceInfo);
+                    return keyword.newEmitter(paramType, sourceInfo);
                 }
 
                 if (preferObservable && pathExpressionArg.resolvePath(true).isObservable()) {
@@ -462,9 +462,9 @@ abstract class AbstractFunctionEmitterFactory {
                 return TypeInstance.booleanType();
             }
 
-            Keyword literal = Keyword.of(pathExpressionArg.getSimplePath());
-            return literal != null
-                ? literal.getType()
+            Keyword keyword = Keyword.of(pathExpressionArg.getSimplePath());
+            return keyword != null
+                ? keyword.getType()
                 : pathExpressionArg.resolvePath(preferObservable).getValueTypeInstance();
         } else if (argument instanceof TextNode) {
             if (argument instanceof NumberNode numberNode) {
