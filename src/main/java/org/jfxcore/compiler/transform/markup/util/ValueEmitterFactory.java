@@ -42,7 +42,6 @@ import org.jfxcore.compiler.type.TypeHelper;
 import org.jfxcore.compiler.type.TypeInstance;
 import org.jfxcore.compiler.type.TypeInvoker;
 import org.jfxcore.compiler.util.NameHelper;
-import org.jfxcore.compiler.util.NumberUtil;
 import org.jfxcore.compiler.util.PropertyHelper;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
@@ -212,26 +211,6 @@ public class ValueEmitterFactory {
             return targetType.declaration().field(trimmedValue)
                 .map(field -> new EmitLiteralNode(id, targetType, field, sourceInfo))
                 .orElseThrow(() -> SymbolResolutionErrors.memberNotFound(sourceInfo, targetType.declaration(), value));
-        }
-
-        if (TypeInstance.BooleanType().subtypeOf(boxedTargetType)) {
-            if (trimmedValue.equals("true")) {
-                return new EmitLiteralNode(id, TypeInstance.booleanType(), true, sourceInfo);
-            } else if (trimmedValue.equals("false")) {
-                return new EmitLiteralNode(id, TypeInstance.booleanType(), false, sourceInfo);
-            } else if (boxedTargetType.subtypeOf(TypeInstance.BooleanType())) {
-                return null;
-            }
-        }
-
-        if (TypeInstance.NumberType().subtypeOf(boxedTargetType)) {
-            try {
-                return new EmitLiteralNode(id, targetType, NumberUtil.parse(trimmedValue), sourceInfo);
-            } catch (NumberFormatException ignored) {
-                if (boxedTargetType.subtypeOf(TypeInstance.NumberType())) {
-                    return null;
-                }
-            }
         }
 
         if (TypeInstance.of(ColorDecl()).subtypeOf(targetType)) {

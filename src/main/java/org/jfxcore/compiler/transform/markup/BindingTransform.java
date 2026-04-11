@@ -20,7 +20,6 @@ import org.jfxcore.compiler.ast.expression.FunctionExpressionNode;
 import org.jfxcore.compiler.ast.expression.Operator;
 import org.jfxcore.compiler.ast.expression.PathExpressionNode;
 import org.jfxcore.compiler.ast.intrinsic.Intrinsics;
-import org.jfxcore.compiler.ast.text.BooleanNode;
 import org.jfxcore.compiler.ast.text.CompositeNode;
 import org.jfxcore.compiler.ast.text.ContextSelectorNode;
 import org.jfxcore.compiler.ast.text.FunctionNode;
@@ -149,7 +148,7 @@ public class BindingTransform implements Transform {
     }
 
     private Node parseFunctionArgumentNode(TransformContext context, ValueNode value) {
-        if (value instanceof BooleanNode || value instanceof NumberNode || value instanceof ObjectNode) {
+        if (value instanceof NumberNode || value instanceof ObjectNode) {
             return value;
         }
 

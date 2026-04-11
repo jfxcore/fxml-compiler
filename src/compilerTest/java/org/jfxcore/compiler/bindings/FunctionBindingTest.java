@@ -80,6 +80,13 @@ public class FunctionBindingTest extends CompilerTestBase {
             return res;
         }
 
+        public Object[] formatMethodArgs;
+
+        public String formatMethod(String format, Object... params) {
+            formatMethodArgs = params;
+            return String.format(format, params);
+        }
+
         private final ObjectProperty<Stringifier> objProp = new SimpleObjectProperty<>();
         public ObjectProperty<Stringifier> objPropProperty() {
             return objProp;
@@ -89,8 +96,8 @@ public class FunctionBindingTest extends CompilerTestBase {
             FXCollections.observableArrayList("foo", "bar", "baz"));
 
         public final Container1 c1 = new Container1(new Container2(new DecimalFormat("000")));
-        public static record Container1(Container2 c2) {}
-        public static record Container2(DecimalFormat fmt) {}
+        public record Container1(Container2 c2) {}
+        public record Container2(DecimalFormat fmt) {}
 
         public final DecimalFormat fmt = new DecimalFormat("000");
     }
@@ -484,6 +491,52 @@ public class FunctionBindingTest extends CompilerTestBase {
 
         assertEquals(ErrorCode.EXPRESSION_NOT_APPLICABLE, ex.getDiagnostic().getCode());
         assertCodeHighlight("$doubleProp", ex);
+    }
+
+    @Test
+    public void Null_Literal_Cannot_Have_Operator() {
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                      id="$defaultMethod('foo-%s', !null)"/>
+        """));
+
+        assertEquals(ErrorCode.UNEXPECTED_EXPRESSION, ex.getDiagnostic().getCode());
+        assertCodeHighlight("null", ex);
+    }
+
+    @Test
+    public void Boolean_Literal_Cannot_Have_Operator() {
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                      id="$defaultMethod('foo-%s', !true)"/>
+        """));
+
+        assertEquals(ErrorCode.UNEXPECTED_EXPRESSION, ex.getDiagnostic().getCode());
+        assertCodeHighlight("true", ex);
+    }
+
+    @Test
+    public void Bind_Once_With_Boolean_And_Null_Literals() {
+        TestPane root = compileAndRun("""
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                      id="$formatMethod('foo-%s', 123.5, true, null)"/>
+        """);
+
+        assertArrayEquals(new Object[] { 123.5, true, null }, root.formatMethodArgs);
+    }
+
+    @Test
+    public void Bind_Unidirectional_With_Boolean_And_Null_Literals() {
+        TestPane root = compileAndRun("""
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                      id="${formatMethod('foo-%s', prefWidth, true, null)}"/>
+        """);
+
+        root.getId(); // Force evaluation of the binding expression
+        assertArrayEquals(new Object[] { -1.0, true, null }, root.formatMethodArgs);
+        root.setPrefWidth(123.5);
+        root.getId();
+        assertArrayEquals(new Object[] { 123.5, true, null }, root.formatMethodArgs);
     }
 
     @Test

@@ -208,6 +208,18 @@ public class InstantiationTest extends CompilerTestBase {
             assertEquals("foo", ((TestPaneWithArg)root.getChildren().get(0)).arg);
         }
 
+        @Test
+        public void String_Constructor_Argument_Null_Is_Preserved_As_String() {
+            GridPane root = compileAndRun("""
+                <?import javafx.scene.layout.*?>
+                <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
+                    <TestPaneWithArg arg="null"/>
+                </GridPane>
+            """);
+
+            assertEquals("null", ((TestPaneWithArg)root.getChildren().get(0)).arg);
+        }
+
         @SuppressWarnings("unused")
         public static class MyButton extends Button {
             boolean defaultCtorCalled = false, namedArgCtorCalled = false;

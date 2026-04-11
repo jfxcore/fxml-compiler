@@ -5,7 +5,6 @@ package org.jfxcore.compiler.parse;
 
 import org.jetbrains.annotations.Nullable;
 import org.jfxcore.compiler.ast.intrinsic.IntrinsicProperty;
-import org.jfxcore.compiler.ast.text.BooleanNode;
 import org.jfxcore.compiler.ast.text.ListNode;
 import org.jfxcore.compiler.ast.text.NumberNode;
 import org.jfxcore.compiler.diagnostic.Diagnostic;
@@ -257,10 +256,6 @@ public class FxmlParser {
     }
 
     private TextNode createTextNode(String text, SourceInfo sourceInfo, boolean allowList) {
-        if ("true".equals(text) || "false".equals(text)) {
-            return new BooleanNode(text, sourceInfo);
-        }
-
         try {
             NumberUtil.parse(text);
             return new NumberNode(text, sourceInfo);

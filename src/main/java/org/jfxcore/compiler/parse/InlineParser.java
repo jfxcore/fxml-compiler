@@ -11,7 +11,6 @@ import org.jfxcore.compiler.ast.ValueNode;
 import org.jfxcore.compiler.ast.intrinsic.Intrinsics;
 import org.jfxcore.compiler.ast.text.CompositeNode;
 import org.jfxcore.compiler.ast.text.ContextSelectorNode;
-import org.jfxcore.compiler.ast.text.BooleanNode;
 import org.jfxcore.compiler.ast.text.FunctionNode;
 import org.jfxcore.compiler.ast.text.ListNode;
 import org.jfxcore.compiler.ast.text.NumberNode;
@@ -163,11 +162,6 @@ public class InlineParser {
             case NUMBER -> {
                 InlineToken number = tokenizer.remove(NUMBER);
                 yield new NumberNode(number.getValue(), number.getSourceInfo());
-            }
-
-            case BOOLEAN -> {
-                InlineToken bool = tokenizer.remove(BOOLEAN);
-                yield new BooleanNode(bool.getValue(), bool.getSourceInfo());
             }
 
             case STRING -> {

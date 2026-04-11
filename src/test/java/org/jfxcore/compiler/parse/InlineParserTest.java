@@ -6,7 +6,6 @@ package org.jfxcore.compiler.parse;
 import org.jfxcore.compiler.ast.PropertyNode;
 import org.jfxcore.compiler.ast.ValueNode;
 import org.jfxcore.compiler.ast.intrinsic.Intrinsics;
-import org.jfxcore.compiler.ast.text.BooleanNode;
 import org.jfxcore.compiler.ast.text.CompositeNode;
 import org.jfxcore.compiler.ast.text.FunctionNode;
 import org.jfxcore.compiler.ast.text.ListNode;
@@ -348,9 +347,9 @@ public class InlineParserTest extends TestBase {
     }
 
     @Test
-    public void Literal_Is_Parsed_As_Boolean() {
+    public void Literal_Is_Parsed_As_Text() {
         ObjectNode root = new InlineParser("{Foo bar=true}", null).parseObject();
-        assertTrue(root.getProperty("bar").getValues().get(0) instanceof BooleanNode);
+        assertTrue(root.getProperty("bar").getValues().get(0) instanceof TextNode);
     }
 
     @Test
