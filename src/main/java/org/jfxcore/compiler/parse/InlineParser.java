@@ -465,59 +465,44 @@ public class InlineParser {
                     null, null, contextName.getSourceInfo());
             }
 
-            if (tokenizer.poll(OPEN_BRACKET) == null) {
-                return null;
-            }
-
             TextNode typeName = null;
             NumberNode depth = null;
+            InlineToken endToken = contextName;
 
-            if (tokenizer.peek(IDENTIFIER) != null) {
-                typeName = parseIdentifier(tokenizer);
-            } else if (tokenizer.peek(NUMBER) != null) {
-                var token = tokenizer.remove(NUMBER);
-                depth = new NumberNode(token.getValue(), token.getSourceInfo());
-            } else {
-                return null;
-            }
-
-            if (depth != null) {
-                if (!tokenizer.containsAhead(CLOSE_BRACKET, SLASH)) {
+            if (tokenizer.poll(OPEN_ANGLE) != null) {
+                if (tokenizer.peek(IDENTIFIER) == null) {
                     return null;
                 }
 
-                var token = tokenizer.remove(CLOSE_BRACKET);
-                tokenizer.remove(SLASH);
-
-                return result = new ContextSelectorNode(
-                    new TextNode(contextName.getValue(), contextName.getSourceInfo()),
-                    null,
-                    depth,
-                    SourceInfo.span(contextName.getSourceInfo(), token.getSourceInfo()));
+                typeName = parseIdentifier(tokenizer);
+                endToken = tokenizer.poll(CLOSE_ANGLE);
+                if (endToken == null) {
+                    return null;
+                }
             }
 
-            if (tokenizer.containsAhead(CLOSE_BRACKET, SLASH)) {
-                var token = tokenizer.remove(CLOSE_BRACKET);
-                tokenizer.remove(SLASH);
+            if (tokenizer.poll(OPEN_BRACKET) != null) {
+                if (tokenizer.peek(NUMBER) == null) {
+                    return null;
+                }
 
-                return result = new ContextSelectorNode(
-                    new TextNode(contextName.getValue(), contextName.getSourceInfo()),
-                    typeName,
-                    null,
-                    SourceInfo.span(contextName.getSourceInfo(), token.getSourceInfo()));
+                var token = tokenizer.remove(NUMBER);
+                depth = new NumberNode(token.getValue(), token.getSourceInfo());
+                endToken = tokenizer.poll(CLOSE_BRACKET);
+                if (endToken == null) {
+                    return null;
+                }
             }
 
-            if (!tokenizer.containsAhead(COLON, NUMBER, CLOSE_BRACKET, SLASH)) {
+            if (typeName == null && depth == null) {
                 return null;
             }
 
-            tokenizer.remove(COLON);
-            var token = tokenizer.remove(NUMBER);
-            depth = new NumberNode(token.getValue(), token.getSourceInfo());
-            token = tokenizer.remove(CLOSE_BRACKET);
-            tokenizer.remove(SLASH);
+            if (tokenizer.poll(SLASH) == null) {
+                return null;
+            }
 
-            var sourceInfo = SourceInfo.span(contextName.getSourceInfo(), token.getSourceInfo());
+            var sourceInfo = SourceInfo.span(contextName.getSourceInfo(), endToken.getSourceInfo());
 
             return result = new ContextSelectorNode(
                 new TextNode(contextName.getValue(), contextName.getSourceInfo()), typeName, depth, sourceInfo);

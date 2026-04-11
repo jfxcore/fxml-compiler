@@ -165,28 +165,41 @@ public class BindingTransform implements Transform {
     }
 
     private ExpressionNode parseCompositeNode(TransformContext context, CompositeNode node) {
+        List<ValueNode> values = node.getValues();
         Operator operator;
 
-        if (node.getValues().get(0) instanceof TextNode textNode) {
+        if (values.get(0) instanceof TextNode textNode) {
             operator = switch (textNode.getText()) {
                 case "!" -> Operator.NOT;
                 case "!!" -> Operator.BOOLIFY;
-                default -> throw ParserErrors.unexpectedToken(textNode.getSourceInfo());
+                default -> {
+                    // A malformed context selector like parent[Button] will end up here as a CompositeNode
+                    // instead of a ContextSelectorNode. We generate a better error message than the message
+                    // that is generated in the general case below.
+                    if (values.size() >= 4
+                            && "parent".equals(textNode.getText())
+                            && values.get(1) instanceof TextNode t1 && "[".equals(t1.getText())
+                            && values.get(3) instanceof TextNode t2 && "]".equals(t2.getText())) {
+                        throw ParserErrors.unexpectedToken(values.get(2).getSourceInfo());
+                    }
+
+                    throw ParserErrors.unexpectedExpression(node.getSourceInfo());
+                }
             };
         } else {
             throw ParserErrors.unexpectedExpression(node.getSourceInfo());
         }
 
-        if (node.getValues().size() > 2) {
-            throw ParserErrors.unexpectedExpression(node.getValues().get(2).getSourceInfo());
+        if (values.size() > 2) {
+            throw ParserErrors.unexpectedExpression(values.get(2).getSourceInfo());
         }
 
-        if (node.getValues().get(1) instanceof PathNode pathNode) {
+        if (values.get(1) instanceof PathNode pathNode) {
             return parsePathNode(context, operator, pathNode);
-        } else if (node.getValues().get(1) instanceof FunctionNode functionNode) {
+        } else if (values.get(1) instanceof FunctionNode functionNode) {
             return parseFunctionNode(context, operator, functionNode, null);
         } else {
-            throw ParserErrors.unexpectedExpression(node.getValues().get(1).getSourceInfo());
+            throw ParserErrors.unexpectedExpression(values.get(1).getSourceInfo());
         }
     }
 
