@@ -111,7 +111,11 @@ public class DynamicResourceExtensionTest extends CompilerTestBase {
         LocalizedLabel root = compileAndRun("""
             <?import org.jfxcore.markup.resource.*?>
             <LocalizedLabel xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                            text="{DynamicResource message; formatArguments=World, 1234.5}"/>
+                            text="{DynamicResource message; formatArguments=World, $arg}">
+                <fx:define>
+                    <Double fx:id="arg">1234.5</Double>
+                </fx:define>
+            </LocalizedLabel>
         """);
 
         assertEquals("Hello World, amount = 1,234.5", root.getText());
@@ -127,8 +131,12 @@ public class DynamicResourceExtensionTest extends CompilerTestBase {
         NonStringTarget root = compileAndRun("""
             <?import org.jfxcore.markup.resource.*?>
             <NonStringTarget xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                             charSequence="{DynamicResource message; formatArguments=World, 1234.5}"
-                             objectValue="{DynamicResource message; formatArguments=World, 1234.5}"/>
+                             charSequence="{DynamicResource message; formatArguments=World, $arg}"
+                             objectValue="{DynamicResource message; formatArguments=World, $arg}">
+                 <fx:define>
+                    <Double fx:id="arg">1234.5</Double>
+                </fx:define>
+            </NonStringTarget>
         """);
 
         assertEquals("Hello World, amount = 1,234.5", root.getCharSequence().toString());
@@ -188,7 +196,11 @@ public class DynamicResourceExtensionTest extends CompilerTestBase {
         LocalizedLabel root = compileAndRun("""
             <?import org.jfxcore.markup.resource.*?>
             <LocalizedLabel xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                            text="{DynamicResource message; formatArguments=1234.5}"/>
+                            text="{DynamicResource message; formatArguments=$arg}">
+                <fx:define>
+                    <Double fx:id="arg">1234.5</Double>
+                </fx:define>
+            </LocalizedLabel>
         """);
 
         assertEquals("Amount = 1,234.5", root.getText());

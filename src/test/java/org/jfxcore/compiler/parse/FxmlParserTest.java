@@ -7,7 +7,6 @@ import org.jfxcore.compiler.TestBase;
 import org.jfxcore.compiler.ast.DocumentNode;
 import org.jfxcore.compiler.ast.ObjectNode;
 import org.jfxcore.compiler.ast.intrinsic.Intrinsics;
-import org.jfxcore.compiler.ast.text.BooleanNode;
 import org.jfxcore.compiler.ast.text.ListNode;
 import org.jfxcore.compiler.ast.text.NumberNode;
 import org.jfxcore.compiler.ast.text.TextNode;
@@ -434,7 +433,7 @@ public class FxmlParserTest extends TestBase {
         assertEquals("", item4.getText());
         assertSourceInfo(6, 21, 6, 21, item4.getSourceInfo());
 
-        var item5 = assertInstanceOf(BooleanNode.class, list.get(4));
+        var item5 = assertInstanceOf(TextNode.class, list.get(4));
         assertEquals("true", item5.getText());
         assertSourceInfo(7, 21, 7, 25, item5.getSourceInfo());
     }

@@ -20,7 +20,6 @@ import org.jfxcore.compiler.ast.expression.Operator;
 import org.jfxcore.compiler.ast.expression.PathExpressionNode;
 import org.jfxcore.compiler.ast.expression.path.InconvertibleArgumentException;
 import org.jfxcore.compiler.ast.expression.path.ResolvedPath;
-import org.jfxcore.compiler.ast.text.BooleanNode;
 import org.jfxcore.compiler.ast.text.NumberNode;
 import org.jfxcore.compiler.ast.text.PathNode;
 import org.jfxcore.compiler.ast.text.TextNode;
@@ -31,6 +30,7 @@ import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.diagnostic.errors.BindingSourceErrors;
 import org.jfxcore.compiler.diagnostic.errors.GeneralErrors;
 import org.jfxcore.compiler.diagnostic.errors.ObjectInitializationErrors;
+import org.jfxcore.compiler.diagnostic.errors.ParserErrors;
 import org.jfxcore.compiler.diagnostic.errors.SymbolResolutionErrors;
 import org.jfxcore.compiler.transform.markup.util.MarkupExtensionInfo;
 import org.jfxcore.compiler.type.AnnotationDeclaration;
@@ -204,17 +204,6 @@ abstract class AbstractFunctionEmitterFactory {
             Node argument, TypeInstance paramType, boolean bidirectional, boolean preferObservable) {
         SourceInfo sourceInfo = argument.getSourceInfo();
 
-        if (argument instanceof BooleanNode booleanArg) {
-            if (!paramType.isAssignableFrom(TypeInstance.BooleanType())) {
-                throw new InconvertibleArgumentException(BooleanName);
-            }
-
-            boolean value = Boolean.parseBoolean(booleanArg.getText());
-
-            return EmitMethodArgumentNode.newScalar(
-                paramType, new EmitLiteralNode(paramType, value, sourceInfo), false, sourceInfo);
-        }
-
         if (argument instanceof NumberNode numberArg) {
             TypeInstance numberType;
             Number value;
@@ -250,18 +239,23 @@ abstract class AbstractFunctionEmitterFactory {
             EmitterFactory factory;
 
             if (argument instanceof FunctionExpressionNode funcExpressionArg) {
-                InvocationInfo invocationInfo = createInvocation(
-                    funcExpressionArg, false, preferObservable);
-
+                InvocationInfo invocationInfo = createInvocation(funcExpressionArg, false, preferObservable);
                 if (invocationInfo.observable()) {
                     factory = new ObservableFunctionEmitterFactory(funcExpressionArg, invokingType, paramType);
                 } else {
                     factory = new SimpleFunctionEmitterFactory(funcExpressionArg, invokingType, paramType);
                 }
             } else if (argument instanceof PathExpressionNode pathExpressionArg) {
-                ResolvedPath path = pathExpressionArg.resolvePath(preferObservable);
+                Keyword keyword = Keyword.of(pathExpressionArg.getSimplePath());
+                if (keyword != null) {
+                    if (pathExpressionArg.getOperator() != Operator.IDENTITY) {
+                        throw ParserErrors.unexpectedExpression(pathExpressionArg.getSourceInfo());
+                    }
 
-                if (preferObservable && path.isObservable()) {
+                    return keyword.newEmitter(paramType, sourceInfo);
+                }
+
+                if (preferObservable && pathExpressionArg.resolvePath(true).isObservable()) {
                     factory = new ObservablePathEmitterFactory(pathExpressionArg);
                 } else {
                     factory = new SimplePathEmitterFactory(pathExpressionArg);
@@ -464,16 +458,16 @@ abstract class AbstractFunctionEmitterFactory {
             return createInvocation(funcExpressionArg, false, true).type();
         } else if (argument instanceof PathExpressionNode pathExpressionArg) {
             Operator operator = pathExpressionArg.getOperator();
-
             if (operator == Operator.NOT || operator == Operator.BOOLIFY) {
                 return TypeInstance.booleanType();
-            } else {
-                return pathExpressionArg.resolvePath(preferObservable).getValueTypeInstance();
             }
+
+            Keyword keyword = Keyword.of(pathExpressionArg.getSimplePath());
+            return keyword != null
+                ? keyword.getType()
+                : pathExpressionArg.resolvePath(preferObservable).getValueTypeInstance();
         } else if (argument instanceof TextNode) {
-            if (argument instanceof BooleanNode) {
-                return TypeInstance.BooleanType();
-            } else if (argument instanceof NumberNode numberNode) {
+            if (argument instanceof NumberNode numberNode) {
                 return NumberUtil.parseType(numberNode.getText());
             } else {
                 return TypeInstance.StringType();
@@ -542,6 +536,47 @@ abstract class AbstractFunctionEmitterFactory {
         }
 
         return new Callable(method.getReceiver(), foundMethod, sourceInfo);
+    }
+
+    private enum Keyword {
+        NULL,
+        TRUE,
+        FALSE;
+
+        TypeInstance getType() {
+            return switch (this) {
+                case NULL -> TypeInstance.nullType();
+                case TRUE, FALSE -> TypeInstance.booleanType();
+            };
+        }
+
+        EmitMethodArgumentNode newEmitter(TypeInstance paramType, SourceInfo sourceInfo) {
+            Object literal = null;
+
+            if (this == NULL) {
+                if (paramType.isPrimitive()) {
+                    throw new InconvertibleArgumentException(NullTypeDecl().name());
+                }
+            } else {
+                if (paramType.isAssignableFrom(TypeInstance.booleanType())) {
+                    literal = this == TRUE;
+                } else {
+                    throw new InconvertibleArgumentException(BooleanName);
+                }
+            }
+
+            return EmitMethodArgumentNode.newScalar(
+                paramType, new EmitLiteralNode(paramType, literal, sourceInfo), false, sourceInfo);
+        }
+
+        static @Nullable AbstractFunctionEmitterFactory.Keyword of(String text) {
+            return switch (text) {
+                case "null" -> NULL;
+                case "true" -> TRUE;
+                case "false" -> FALSE;
+                default -> null;
+            };
+        }
     }
 
     private record InvocationInfoKey(

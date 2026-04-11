@@ -41,10 +41,12 @@ Method arguments can be any of the following:
 * Expressions resolved against the [evaluation context](context.html), including method or constructor invocations;
   optionally also including a context selector separated with a forward slash, for example: `parent[Label]/text` 
 * String literals: `'text'`
-* Number literals: `1` (int), `1L` (long), `1F` (float), `1D` (double)
+* Number literals: `1` (int), `1L` (long), `1F` (float), `1D`/`1.0` (double)
+* Boolean literals: `true`, `false`
+* Null literal: `null`
 * Class literal: `{fx:Type MyClass}`
 * [Constants](../../reference/constant.html): `{Double fx:constant=POSITIVE_INFINITY}` or `Double.POSITIVE_INFINITY`
-* Null: `{fx:Null}`
+* [Value-supplier markup extensions](../../markup-extension.html#where-markup-extensions-can-be-used)
 
 {: .note }
 Constructor invocations have the same syntax as method invocations, they do not use the `new` keyword.

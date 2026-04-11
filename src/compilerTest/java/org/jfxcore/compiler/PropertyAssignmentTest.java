@@ -460,6 +460,21 @@ public class PropertyAssignmentTest {
 
     @Nested
     public class CoercionTest extends CompilerTestBase {
+        @SuppressWarnings("unused")
+        public static class NullCoercionPane extends Pane {
+            private Object objectProp = Boolean.TRUE;
+            public Object getObjectProp() { return objectProp; }
+            public void setObjectProp(Object objectProp) { this.objectProp = objectProp; }
+
+            private String stringProp = "unset";
+            public String getStringProp() { return stringProp; }
+            public void setStringProp(String stringProp) { this.stringProp = stringProp; }
+
+            private double doubleProp;
+            public double getDoubleProp() { return doubleProp; }
+            public void setDoubleProp(double doubleProp) { this.doubleProp = doubleProp; }
+        }
+
         @Test
         public void AttributeValue_Is_Coerced_To_String() {
             Button root = compileAndRun("""
@@ -483,7 +498,7 @@ public class PropertyAssignmentTest {
         }
 
         @Test
-        public void AttributeValue_Is_Coerced_To_Number() {
+        public void AttributeValue_Is_Coerced_To_Number_In_Double_Context() {
             Button root = compileAndRun("""
                 <?import javafx.scene.control.*?>
                 <Button xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
@@ -491,11 +506,11 @@ public class PropertyAssignmentTest {
             """);
 
             assertEquals(123.5, root.getPrefWidth(), 0.001);
-            assertEquals(123.5, assertInstanceOf(Double.class, root.getUserData()), 0.001);
+            assertEquals("123.5", assertInstanceOf(String.class, root.getUserData()));
         }
 
         @Test
-        public void AttributeValue_Is_Coerced_To_InfiniteDouble() {
+        public void AttributeValue_Is_Coerced_To_InfiniteDouble_In_Double_Context() {
             Button root = compileAndRun("""
                 <?import javafx.scene.control.*?>
                 <Button xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
@@ -503,7 +518,7 @@ public class PropertyAssignmentTest {
             """);
 
             assertEquals(Double.NEGATIVE_INFINITY, root.getPrefWidth(), 0.001);
-            assertEquals(Double.NEGATIVE_INFINITY, assertInstanceOf(Double.class, root.getUserData()));
+            assertEquals("-Infinity", assertInstanceOf(String.class, root.getUserData()));
         }
 
         @Test
@@ -516,7 +531,60 @@ public class PropertyAssignmentTest {
 
             assertTrue(root.isManaged());
             assertFalse(root.isVisible());
-            assertFalse(assertInstanceOf(Boolean.class, root.getUserData()));
+            assertEquals("false", assertInstanceOf(String.class, root.getUserData()));
+        }
+
+        @Test
+        public void AttributeValue_Is_Not_Coerced_To_Boolean_In_ObjectContext() {
+            NullCoercionPane root = compileAndRun("""
+                <NullCoercionPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                                  objectProp="true"/>
+            """);
+
+            assertEquals("true", assertInstanceOf(String.class, root.getObjectProp()));
+        }
+
+        @Test
+        public void AttributeValue_Null_Is_Not_Coerced_In_Object_Context() {
+            NullCoercionPane root = compileAndRun("""
+                <NullCoercionPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                                  objectProp="null"/>
+            """);
+
+            assertEquals("null", assertInstanceOf(String.class, root.getObjectProp()));
+        }
+
+        @Test
+        public void AttributeValue_Null_Is_Preserved_As_String() {
+            NullCoercionPane root = compileAndRun("""
+                <NullCoercionPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                                  stringProp="null"/>
+            """);
+
+            assertEquals("null", root.getStringProp());
+        }
+
+        @Test
+        public void AttributeValue_Null_Cannot_Be_Coerced_To_PrimitiveType() {
+            MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+                <NullCoercionPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                                  doubleProp="null"/>
+            """));
+
+            assertEquals(ErrorCode.CANNOT_COERCE_PROPERTY_VALUE, ex.getDiagnostic().getCode());
+            assertCodeHighlight("null", ex);
+        }
+
+        @Test
+        public void AttributeValue_Null_Cannot_Be_Coerced_To_ReferenceType() {
+            MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+                <?import javafx.scene.control.*?>
+                <Button xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                        graphic="null"/>
+            """));
+
+            assertEquals(ErrorCode.CANNOT_COERCE_PROPERTY_VALUE, ex.getDiagnostic().getCode());
+            assertCodeHighlight("null", ex);
         }
 
         @Test
@@ -698,6 +766,25 @@ public class PropertyAssignmentTest {
 
             assertTrue(root.isManaged());
             assertFalse(root.isVisible());
+        }
+
+        @Test
+        public void ElementValue_Is_Not_Coerced_In_Object_Context() {
+            GridPane root = compileAndRun("""
+                <?import javafx.scene.control.*?>
+                <?import javafx.scene.layout.*?>
+                <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
+                    <Button><userData>true</userData></Button>
+                    <Button><userData>123.5</userData></Button>
+                    <Button><userData>-Infinity</userData></Button>
+                    <Button><userData>null</userData></Button>
+                </GridPane>
+            """);
+
+            assertEquals("true", assertInstanceOf(String.class, root.getChildren().get(0).getUserData()));
+            assertEquals("123.5", assertInstanceOf(String.class, root.getChildren().get(1).getUserData()));
+            assertEquals("-Infinity", assertInstanceOf(String.class, root.getChildren().get(2).getUserData()));
+            assertEquals("null", assertInstanceOf(String.class, root.getChildren().get(3).getUserData()));
         }
 
         @Test

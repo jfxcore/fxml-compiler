@@ -502,6 +502,7 @@ public class ObservableFunctionGenerator extends ClassGenerator {
 
                 if (child instanceof EmitLiteralNode) {
                     context.emit(child);
+                    code.autoconv(TypeHelper.getTypeDeclaration(child), requestedType.declaration());
                 } else {
                     FieldDeclaration field = paramFields.get(fieldIdx);
                     TypeDeclaration fieldType = field.type();

@@ -121,6 +121,9 @@ public class EmitLiteralNode extends ReferenceableNode {
             case ObjectName:
                 if (literal instanceof Number) {
                     emitNumber(code, literal);
+                } else if (literal instanceof Boolean bool) {
+                    code.iconst(bool ? 1 : 0)
+                        .box(booleanDecl());
                 } else {
                     code.ldc(getLiteral(String.class));
                 }
