@@ -542,9 +542,9 @@ public class InlineParserTest extends TestBase {
 
     @ParameterizedTest
     @CsvSource({
-        "$parent[Pane:1]/foo.bar.baz,Evaluate",
-        "${parent[Pane:1]/foo.bar.baz},Observe",
-        "#{parent[Pane:1]/foo.bar.baz},Synchronize"
+        "$parent<Pane>[1]/foo.bar.baz,Evaluate",
+        "${parent<Pane>[1]/foo.bar.baz},Observe",
+        "#{parent<Pane>[1]/foo.bar.baz},Synchronize"
     })
     public void Compact_Syntax_With_ContextSelector_Is_Expanded(String compactIntrinsic, String intrinsicName) {
         ObjectNode objectNode = new InlineParser(compactIntrinsic, "fx").parseObject();
@@ -561,9 +561,9 @@ public class InlineParserTest extends TestBase {
 
     @ParameterizedTest
     @CsvSource({
-        "$[..parent[Pane:1]/foo.bar.baz],Evaluate",
-        "${[..parent[Pane:1]/foo.bar.baz]},Observe",
-        "#{[..parent[Pane:1]/foo.bar.baz]},Synchronize"
+        "$[..parent<Pane>[1]/foo.bar.baz],Evaluate",
+        "${[..parent<Pane>[1]/foo.bar.baz]},Observe",
+        "#{[..parent<Pane>[1]/foo.bar.baz]},Synchronize"
     })
     public void Compact_Content_Syntax_With_ContextSelector_Is_Expanded(String compactIntrinsic, String intrinsicName) {
         ObjectNode objectNode = new InlineParser(compactIntrinsic, "fx").parseObject();

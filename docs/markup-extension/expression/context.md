@@ -15,9 +15,9 @@ For other use cases, alternative evaluation contexts can be specified:
 | (no notation) | root element, or [`fx:context`](../../reference/context.html) if set |
 | `self` | current element |
 | `parent` | parent of the current element, equivalent to `parent[0]` |
-| `parent[N]` | N-th parent of the current element |
-| `parent[MyType]` | first `MyType` parent of the current element |
-| `parent[MyType:N]` | N-th `MyType` parent of the current element |
+| `parent[N]` | N-th ancestor of the current element |
+| `parent<MyType>` | first `MyType` ancestor of the current element |
+| `parent<MyType>[N]` | N-th `MyType` ancestor of the current element |
 
 Context selectors are specified as part of the expression path, separated by a forward slash:
 ```xml

@@ -52,7 +52,7 @@ public class BindingSourceTest extends CompilerTestBase {
             <?import javafx.scene.layout.*?>
             <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                       prefWidth="123">
-                <Pane prefWidth="$parent[Pane]/prefWidth"/>
+                <Pane prefWidth="$parent<Pane>/prefWidth"/>
             </Pane>
         """);
 
@@ -142,8 +142,8 @@ public class BindingSourceTest extends CompilerTestBase {
             <StackPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                        prefHeight="123">
                 <Pane prefWidth="234">
-                    <Pane prefWidth="${parent[Pane]/prefWidth}"
-                          prefHeight="${parent[StackPane]/prefHeight}"/>
+                    <Pane prefWidth="${parent<Pane>/prefWidth}"
+                          prefHeight="${parent<StackPane>/prefHeight}"/>
                 </Pane>
             </StackPane>
         """);
@@ -160,8 +160,8 @@ public class BindingSourceTest extends CompilerTestBase {
             <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                        prefHeight="123">
                 <Pane prefWidth="234">
-                    <Pane prefWidth="${parent[Pane:0]/prefWidth}"
-                          prefHeight="${parent[Pane:1]/prefHeight}"/>
+                    <Pane prefWidth="${parent<Pane>[0]/prefWidth}"
+                          prefHeight="${parent<Pane>[1]/prefHeight}"/>
                 </Pane>
             </Pane>
         """);
@@ -218,12 +218,40 @@ public class BindingSourceTest extends CompilerTestBase {
             <?import org.jfxcore.compiler.bindings.BindingPathTest.TestPane?>
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                       prefWidth="123">
-                <Label prefWidth="$parent[Button]/prefWidth"/>
+                <Label prefWidth="$parent<Button>/prefWidth"/>
             </TestPane>
         """));
 
         assertEquals(ErrorCode.PARENT_TYPE_NOT_FOUND, ex.getDiagnostic().getCode());
-        assertCodeHighlight("parent[Button]", ex);
+        assertCodeHighlight("parent<Button>", ex);
+    }
+
+    @Test
+    public void Bind_To_Parent_With_Invalid_Type_Fails() {
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <?import javafx.scene.control.*?>
+            <?import org.jfxcore.compiler.bindings.BindingPathTest.TestPane?>
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
+                <Label prefWidth="$parent<1>/prefWidth"/>
+            </TestPane>
+        """));
+
+        assertEquals(ErrorCode.EXPECTED_IDENTIFIER, ex.getDiagnostic().getCode());
+        assertCodeHighlight("1", ex);
+    }
+
+    @Test
+    public void Bind_To_Parent_With_Invalid_Index_Fails() {
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <?import javafx.scene.control.*?>
+            <?import org.jfxcore.compiler.bindings.BindingPathTest.TestPane?>
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
+                <Label prefWidth="$parent[Button]/prefWidth"/>
+            </TestPane>
+        """));
+
+        assertEquals(ErrorCode.UNEXPECTED_TOKEN, ex.getDiagnostic().getCode());
+        assertCodeHighlight("Button", ex);
     }
 
     @Test
