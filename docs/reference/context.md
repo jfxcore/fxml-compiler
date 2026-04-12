@@ -4,13 +4,13 @@ title: fx:context
 parent: FXML 2.0 language reference
 ---
 
-# fx:context attribute
+# fx:context directive
 The default [evaluation context](../markup-extension/expression/context.html) is the root element of the FXML document.
-This can be changed with the `fx:context` attribute, which can be set to an arbitrary object.
+This can be changed with the `fx:context` directive, which can be set to an arbitrary object.
 Paths in an expression will then be resolved against the object referenced by `fx:context`.
 
 {: .highlight }
-The `fx:context` attribute can only be set on the root node of the FXML document.
+`fx:context` can only be set on the root node of the FXML document.
 
 ## Static object in element notation
 The value of `fx:context` can be a static object that is instantiated in the FXML document with element notation.
@@ -72,6 +72,6 @@ class MyBindingContext {
 ```
 
 {: .note }
-If the evaluation context object can change and is exposed as an `ObservableValue`, the `fx:context` attribute
-can be bound with a [unidirectional binding](observe.html). Note that this will incur listener management overhead.
-If possible, a one-time assignment should be preferred.
+The `fx:context` directive supports [unidirectional bindings](observe.html), which is useful when the evaluation
+context object can change and is exposed as an `ObservableValue`. Note that this will incur listener management
+overhead. If possible, a one-time assignment should be preferred.

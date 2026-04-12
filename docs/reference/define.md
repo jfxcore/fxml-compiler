@@ -6,7 +6,7 @@ parent: FXML 2.0 language reference
 
 # fx:define element
 The `fx:define` element allows FXML documents to store arbitrary objects outside of the scene graph.
-The objects can be named with the [`fx:id`](id.html) attribute and referenced in expressions.
+The objects can be named with the [`fx:id`](id.html) directive and referenced in expressions.
 
 ## Usage
 
