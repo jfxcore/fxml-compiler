@@ -191,6 +191,30 @@ public class StaticResourceExtensionTest extends CompilerTestBase {
     }
 
     @Test
+    public void String_Is_Formatted_With_Element_Notation() {
+        resourceContext = ResourceContext.ofResourceBundle(
+                bundle(new Object[][] {
+                        { "message", "Hello {0}, amount = {1,number,#,##0.0}" }
+                }, Locale.US));
+
+        LocalizedLabel root = compileAndRun("""
+            <?import org.jfxcore.markup.resource.*?>
+            <LocalizedLabel xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
+                <text>
+                    <StaticResource key="message">
+                        <formatArguments>
+                            World
+                            <Double>1234.5</Double>
+                        </formatArguments>
+                    </StaticResource>
+                </text>
+            </LocalizedLabel>
+        """);
+
+        assertEquals("Hello World, amount = 1,234.5", root.getText());
+    }
+
+    @Test
     public void Formatted_String_Is_Assigned_Correctly_To_NonString_Targets() {
         resourceContext = ResourceContext.ofResourceBundle(
             bundle(new Object[][] {

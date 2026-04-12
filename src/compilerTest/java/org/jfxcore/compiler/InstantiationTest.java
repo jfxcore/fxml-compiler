@@ -17,6 +17,9 @@ import javafx.scene.layout.BackgroundFill;
 import javafx.scene.layout.CornerRadii;
 import javafx.scene.layout.GridPane;
 import javafx.scene.paint.Color;
+import javafx.scene.paint.CycleMethod;
+import javafx.scene.paint.RadialGradient;
+import javafx.scene.paint.Stop;
 import javafx.scene.shape.Rectangle;
 import org.jfxcore.compiler.diagnostic.ErrorCode;
 import org.jfxcore.compiler.diagnostic.MarkupException;
@@ -158,7 +161,7 @@ public class InstantiationTest extends CompilerTestBase {
                 </GridPane>
             """);
 
-            assertTrue(root.getChildren().get(0) instanceof MultiArgCtorObject);
+            assertInstanceOf(MultiArgCtorObject.class, root.getChildren().get(0));
         }
 
         @Test
@@ -241,7 +244,7 @@ public class InstantiationTest extends CompilerTestBase {
             """);
 
             assertTrue(((MyButton)root.getChildren().get(0)).defaultCtorCalled);
-            assertEquals(((MyButton)root.getChildren().get(0)).data.get(), "foo");
+            assertEquals("foo", ((MyButton)root.getChildren().get(0)).data.get());
         }
 
         @SuppressWarnings("unused")
@@ -259,19 +262,62 @@ public class InstantiationTest extends CompilerTestBase {
                     <VarArgsConstructorClass>
                         <nodes><GridPane/></nodes>
                     </VarArgsConstructorClass>
+                    <VarArgsConstructorClass>
+                        <nodes>
+                            <GridPane/>
+                            <GridPane/>
+                        </nodes>
+                    </VarArgsConstructorClass>
                 </GridPane>
             """);
 
             assertTrue(((VarArgsConstructorClass)root.getChildren().get(0)).varArgsConstructorCalled);
+            assertTrue(((VarArgsConstructorClass)root.getChildren().get(1)).varArgsConstructorCalled);
+        }
+
+        @Test
+        public void Object_Is_Instantiated_With_NamedArgs_And_Varargs() {
+            Rectangle root = compileAndRun("""
+                <?import javafx.scene.paint.*?>
+                <?import javafx.scene.shape.*?>
+                <Rectangle xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
+                    <fill>
+                        <RadialGradient focusAngle="0" focusDistance="0"
+                                        centerX="0.5" centerY="0.5"
+                                        radius="0.5" proportional="true"
+                                        cycleMethod="NO_CYCLE">
+                                <stops>
+                                    <Stop offset="0">
+                                        <color>
+                                            <Color fx:value="DODGERBLUE"/>
+                                        </color>
+                                    </Stop>
+                                    <Stop offset="1">
+                                        <color>
+                                            <Color fx:value="NAVY"/>
+                                        </color>
+                                    </Stop>
+                                </stops>
+                            </RadialGradient>
+                    </fill>
+                </Rectangle>
+            """);
+
+            assertEquals(
+                new RadialGradient(
+                    0, 0, 0.5, 0.5, 0.5, true, CycleMethod.NO_CYCLE,
+                    new Stop(0, Color.DODGERBLUE), new Stop(1, Color.NAVY)),
+                root.getFill());
         }
 
         @SuppressWarnings("unused")
         public static class ArrayConstructorClass extends Rectangle {
-            public ArrayConstructorClass(@NamedArg("nodes") Node[] nodes) {}
+            public final Node[] nodes;
+            public ArrayConstructorClass(@NamedArg("nodes") Node[] nodes) { this.nodes = nodes; }
         }
 
         @Test
-        public void Object_Instantiation_Fails_With_NonVarargs_Constructor() {
+        public void Object_Instantiation_With_Array_Constructor_Fails_For_Scalar_Value() {
             MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
                 <?import javafx.scene.layout.*?>
                 <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
@@ -283,6 +329,25 @@ public class InstantiationTest extends CompilerTestBase {
 
             assertEquals(ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT, ex.getDiagnostic().getCode());
             assertEquals(0, ex.getDiagnostic().getCauses().length);
+            assertCodeHighlight("<GridPane/>", ex);
+        }
+
+        @Test
+        public void Object_Instantiation_With_Array_Constructor_Fails_For_Multiple_Values() {
+            MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+                <?import javafx.scene.layout.*?>
+                <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
+                    <ArrayConstructorClass>
+                        <nodes>
+                            <GridPane/>
+                            <GridPane/>
+                        </nodes>
+                    </ArrayConstructorClass>
+                </GridPane>
+            """));
+
+            assertEquals(ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT, ex.getDiagnostic().getCode());
+            assertTrue(ex.getDiagnostic().getMessage().contains("cannot be assigned from multiple values"));
             assertCodeHighlight("<GridPane/>", ex);
         }
 
@@ -321,13 +386,13 @@ public class InstantiationTest extends CompilerTestBase {
             """);
 
             Spinner<?> spinner1 = (Spinner<?>)root.getChildren().get(0);
-            assertTrue(spinner1.getValue() instanceof Integer);
+            assertInstanceOf(Integer.class, spinner1.getValue());
 
             Spinner<?> spinner2 = (Spinner<?>)root.getChildren().get(1);
-            assertTrue(spinner2.getValue() instanceof Integer);
+            assertInstanceOf(Integer.class, spinner2.getValue());
 
             Spinner<?> spinner3 = (Spinner<?>)root.getChildren().get(2);
-            assertTrue(spinner3.getValue() instanceof Double);
+            assertInstanceOf(Double.class, spinner3.getValue());
         }
     }
 
@@ -366,7 +431,7 @@ public class InstantiationTest extends CompilerTestBase {
                 </GridPane>
             """);
 
-            assertEquals(((MyGenericButton<?>)root.getChildren().get(0)).data.value, "foo");
+            assertEquals("foo", ((MyGenericButton<?>)root.getChildren().get(0)).data.value);
         }
 
         @Test
@@ -380,7 +445,7 @@ public class InstantiationTest extends CompilerTestBase {
                 </GridPane>
             """);
 
-            assertEquals(((MyGenericButton<?>)root.getChildren().get(0)).data.value, "foo");
+            assertEquals("foo", ((MyGenericButton<?>)root.getChildren().get(0)).data.value);
         }
 
         @Test

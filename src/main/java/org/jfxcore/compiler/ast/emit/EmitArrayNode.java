@@ -5,6 +5,7 @@ package org.jfxcore.compiler.ast.emit;
 
 import org.jfxcore.compiler.ast.AbstractNode;
 import org.jfxcore.compiler.ast.ResolvedTypeNode;
+import org.jfxcore.compiler.ast.ValueNode;
 import org.jfxcore.compiler.ast.Visitor;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.type.TypeDeclaration;
@@ -19,10 +20,10 @@ import java.util.Objects;
 public class EmitArrayNode extends AbstractNode implements ValueEmitterNode {
 
     private final TypeDeclaration componentType;
-    private final List<? extends ValueEmitterNode> values;
+    private final List<? extends ValueNode> values;
     private ResolvedTypeNode type;
 
-    public EmitArrayNode(TypeInstance arrayType, Collection<? extends ValueEmitterNode> values) {
+    public EmitArrayNode(TypeInstance arrayType, Collection<? extends ValueNode> values) {
         super(SourceInfo.span(values));
         this.type = new ResolvedTypeNode(checkNotNull(arrayType), getSourceInfo());
         this.componentType = checkNotNull(arrayType.componentType()).declaration();
@@ -61,7 +62,7 @@ public class EmitArrayNode extends AbstractNode implements ValueEmitterNode {
     @Override
     public void acceptChildren(Visitor visitor) {
         type = (ResolvedTypeNode)type.accept(visitor);
-        acceptChildren(values, visitor, ValueEmitterNode.class);
+        acceptChildren(values, visitor, ValueNode.class);
     }
 
     @Override
