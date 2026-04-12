@@ -2,7 +2,6 @@
 layout: default
 title: fx:context
 parent: FXML 2.0 language reference
-nav_order: 5
 ---
 
 # fx:context attribute

@@ -2,7 +2,6 @@
 layout: default
 title: fx:classModifier
 parent: FXML 2.0 language reference
-nav_order: 2
 ---
 
 # fx:classModifier attribute

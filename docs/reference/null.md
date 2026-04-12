@@ -2,7 +2,6 @@
 layout: default
 title: fx:Null
 parent: FXML 2.0 language reference
-nav_order: 11
 ---
 
 # fx:Null markup extension

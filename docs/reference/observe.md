@@ -2,7 +2,6 @@
 layout: default
 title: fx:Observe, <span class="nav-inline-code">${x}</span>
 parent: FXML 2.0 language reference
-nav_order: 12
 ---
 
 # fx:Observe markup extension, ${x}

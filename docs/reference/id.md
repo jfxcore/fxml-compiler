@@ -2,7 +2,6 @@
 layout: default
 title: fx:id
 parent: FXML 2.0 language reference
-nav_order: 9
 ---
 
 # fx:id attribute

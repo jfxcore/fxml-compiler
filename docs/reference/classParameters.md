@@ -2,7 +2,6 @@
 layout: default
 title: fx:classParameters
 parent: FXML 2.0 language reference
-nav_order: 3
 ---
 
 # fx:classParameters attribute

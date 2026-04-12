@@ -2,7 +2,6 @@
 layout: default
 title: fx:define
 parent: FXML 2.0 language reference
-nav_order: 6
 ---
 
 # fx:define element
