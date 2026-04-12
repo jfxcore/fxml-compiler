@@ -4,9 +4,9 @@ title: fx:constant
 parent: FXML 2.0 language reference
 ---
 
-# fx:constant attribute
-The `fx:constant` attribute identifies a constant value. It is specified on an element that contains a static
-field with the specified name, and causes the element to resolve to the type of the referenced field.
+# fx:constant directive
+The `fx:constant` directive identifies a constant value. It is specified on an element that contains a static
+field with the given name, and causes the element to resolve to the type of the referenced field.
 
 ## Usage
 

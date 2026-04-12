@@ -4,11 +4,11 @@ title: fx:typeArguments
 parent: FXML 2.0 language reference
 ---
 
-# fx:typeArguments attribute
+# fx:typeArguments directive
 FXML 2.0 documents are strongly typed and support generic types. When a generic class is instantiated,
-the type arguments are specified with the `fx:typeArguments` attribute.
+the type arguments are specified with `fx:typeArguments`.
 
-If this attribute is omitted on a generic class, it is used as a raw type.
+If `fx:typeArguments` is omitted on a generic class, it is used as a raw type.
 Note that using raw types affects compile-time type safety and should be avoided.
 
 {: .note }
@@ -20,7 +20,7 @@ Generic type inference is not supported. Type arguments must always be specified
 <!-- Instantiates the generic type TableView<String> -->
 <TableView fx:typeArguments="String"/>
 
-<!-- Instantiates the generic type MyGeneicClass<Integer, Double> -->
+<!-- Instantiates the generic type MyGenericClass<Integer, Double> -->
 <MyGenericClass fx:typeArguments="Integer, Double"/>
 
 <!-- Instantiates the generic type MyGenericClass2<MyGenericClass<String, Number>> -->

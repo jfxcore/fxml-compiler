@@ -4,8 +4,8 @@ title: fx:subclass
 parent: FXML 2.0 language reference
 ---
 
-# fx:subclass attribute
-The `fx:subclass` attribute identifies the fully-qualified name of the code-behind class. The FXML compiler generates
+# fx:subclass directive
+The `fx:subclass` directive identifies the fully-qualified name of the code-behind class. The FXML compiler generates
 a base class which must be extended by the code-behind class. Embedded markup in a `@ComponentView` annotation uses
 the annotated class as its code-behind class automatically, so `fx:subclass` is neither required nor supported in
 this scenario.
@@ -14,10 +14,10 @@ The generated base class contains an `initializeComponent()` method, which must 
 the code-behind class to initialize the scene graph.
 
 {: .highlight }
-The `fx:subclass` attribute can only be set on the root element.
+`fx:subclass` can only be set on the root element.
 
 ## FXML files without code-behind class
-If the `fx:subclass` attribute is omitted in an FXML file, it is compiled down to a standalone class with the same name.
+If the `fx:subclass` directive is omitted in an FXML file, it is compiled down to a standalone class with the same name.
 For example, the document `com/sample/MyControl.fxml` will yield the class `com.sample.MyControl`.
 This is a supported scenario for FXML documents that don't require a code-behind class with custom code.
 

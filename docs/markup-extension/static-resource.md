@@ -41,16 +41,28 @@ The raw form is usually sufficient, as the target type is reified at runtime:
 String resources can be formatted with arguments:
 
 ```xml
-<!-- Literal arguments -->
-<Label text="{StaticResource greetingWithNameAndNumber; formatArguments=Jane, Doe, 1234.5}"/>
+<!-- String literal and expression arguments -->
+<Label text="{StaticResource greetingWithNameAndNumber; formatArguments=Jane Doe, $amount}"/>
 
-<!-- One-time expression argument -->
-<Label text="{StaticResource greetingWithNameAndNumber; formatArguments=Jane, Doe, $amount}"/>
+<!-- Note: 'formatArguments' is an Object[], so no target-type value coercion is performed.
+     In this example, all arguments are parsed as strings. -->
+<Label text="{StaticResource greetingWithNameAndNumber; formatArguments=Jane Doe, 1234.5}"/>
+
+<!-- Explicitly typed format arguments -->
+<Label>
+    <text>
+        <StaticResource key="greetingWithNameAndNumber">
+            <formatArguments>
+                Jane Doe
+                <Double>1234.5</Double>
+            </formatArguments>
+        </StaticResource>
+    </text>
+</Label>
 ```
 
-`$amount` is evaluated once before formatting. Observable expressions such as `${amount}`
-(see [fx:Observe](../reference/observe.html)) are not supported and will result in an exception
-when the markup extension is applied.
+`$amount` is evaluated once before formatting. Observable expressions such as [`${amount}`](../reference/observe.html)
+are not supported and will result in an exception when the markup extension is applied.
 
 Non-string resources are converted to the target type:
 
@@ -147,11 +159,12 @@ primitive, wrapper, character, and enum target types.
 For example, consider the following bundle entry and markup:
 
 ```properties
-welcomeMessage=Hello {0} {1}, total = {2,number,#,##0.0}
+welcomeMessage=Hello {0}, total = {1,number,#,##0.0}
 ```
 ```xml
-<Label text="{StaticResource welcomeMessage; formatArguments=Jane, Doe, 1234.5}"/>
+<Label text="{StaticResource welcomeMessage; formatArguments=Jane Doe, $amount}"/>
 ```
 
-Applying the markup extension produces the string `Hello Jane Doe, total = 1,234.5` when the bundle-backed
-`ResourceContext` uses a locale that formats numbers in that form.
+Assuming `$amount` can be resolved to the double value 1234.5, then applying the markup extension produces the
+string `Hello Jane Doe, total = 1,234.5` when the bundle-backed `ResourceContext` uses a locale that formats
+numbers in that form.

@@ -39,14 +39,27 @@ The raw form is usually sufficient, as the target type is reified at runtime:
 String resources can be formatted with literal arguments or expression arguments:
 
 ```xml
-<!-- Literal arguments -->
-<Label text="{DynamicResource greetingWithNameAndNumber; formatArguments=Jane, Doe, 1234.5}"/>
-
 <!-- One-time expression argument -->
-<Label text="{DynamicResource greetingWithNameAndMessage; formatArguments=Jane, Doe, $message}"/>
+<Label text="{DynamicResource greetingWithNameAndMessage; formatArguments=Jane Doe, $message}"/>
 
 <!-- Observable expression argument -->
-<Label text="{DynamicResource greetingWithNameAndMessage; formatArguments=Jane, Doe, ${message}}"/>
+<Label text="{DynamicResource greetingWithNameAndMessage; formatArguments=Jane Doe, ${message}}"/>
+
+<!-- Note: 'formatArguments' is an Object[], so no target-type value coercion is performed.
+     In this example, all arguments are parsed as strings. -->
+<Label text="{DynamicResource greetingWithNameAndNumber; formatArguments=Jane Doe, 1234.5}"/>
+
+<!-- Explicitly typed format arguments -->
+<Label>
+    <text>
+        <StaticResource key="greetingWithNameAndNumber">
+            <formatArguments>
+                Jane Doe
+                <Double>1234.5</Double>
+            </formatArguments>
+        </StaticResource>
+    </text>
+</Label>
 ```
 
 `$message` is evaluated once before formatting, while `${message}` remains observable and causes the formatted
@@ -129,11 +142,12 @@ primitive, wrapper, character, and enum target types.
 For example, consider the following bundle entry and markup:
 
 ```properties
-welcomeMessage=Hello {0} {1}, total = {2,number,#,##0.0}
+welcomeMessage=Hello {0}, total = {1,number,#,##0.0}
 ```
 ```xml
-<Label text="{DynamicResource welcomeMessage; formatArguments=Jane, Doe, ${amount}}"/>
+<Label text="{DynamicResource welcomeMessage; formatArguments=Jane Doe, ${amount}}"/>
 ```
 
-Applying the markup extension produces the string `Hello Jane Doe, total = 1,234.5` when the bundle-backed
-`ResourceContext` uses a locale that formats numbers in that form.
+Assuming `${amount}` can be resolved to the double value 1234.5, then applying the markup extension produces the
+string `Hello Jane Doe, total = 1,234.5` when the bundle-backed `ResourceContext` uses a locale that formats
+numbers in that form.

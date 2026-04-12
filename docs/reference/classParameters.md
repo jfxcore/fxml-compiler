@@ -4,12 +4,12 @@ title: fx:classParameters
 parent: FXML 2.0 language reference
 ---
 
-# fx:classParameters attribute
-The `fx:classParameters` attribute specifies the constructor parameters of the generated class.
+# fx:classParameters directive
+The `fx:classParameters` directive specifies the constructor parameters of the generated class.
 If omitted, the generated class has a parameterless constructor.
 
 {: .highlight }
-The `fx:classParameters` attribute can only be set on the root element.
+`fx:classParameters` can only be set on the root element.
 
 ## Usage
 

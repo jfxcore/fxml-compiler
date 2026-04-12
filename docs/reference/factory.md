@@ -4,8 +4,8 @@ title: fx:factory
 parent: FXML 2.0 language reference
 ---
 
-# fx:factory attribute
-The `fx:factory` attribute can be used to initialize an element with a factory method instead of a constructor.
+# fx:factory directive
+The `fx:factory` directive can be used to initialize an element with a factory method instead of a constructor.
 The factory method must be accessible and parameterless. Type witnesses may be provided after the method name.
 
 ## Usage

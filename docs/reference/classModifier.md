@@ -4,12 +4,12 @@ title: fx:classModifier
 parent: FXML 2.0 language reference
 ---
 
-# fx:classModifier attribute
-The `fx:classModifier` attribute specifies the access modifier of the generated class.
+# fx:classModifier directive
+The `fx:classModifier` directive specifies the access modifier of the generated class.
 When omitted, the generated class has a `public` access modifier.
 
 {: .highlight }
-The `fx:classModifier` attribute can only be set on the root element.
+`fx:classModifier` can only be set on the root element.
 
 ## Values
 

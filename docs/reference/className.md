@@ -4,13 +4,13 @@ title: fx:className
 parent: FXML 2.0 language reference
 ---
 
-# fx:className attribute
-The `fx:className` attribute controls the name of the generated class. If this attribute is not specified,
+# fx:className directive
+The `fx:className` directive controls the name of the generated class. If `fx:className` is not specified,
 the name of the generated class defaults to the standalone `.fxml` file name or the annotated Java class name,
 plus the `Base` suffix. For example, the default generated class name for `MyControl.fxml` will be `MyControlBase`.
 
 {: .highlight }
-In `.fxml` files, the `fx:className` attribute can only be used when the `fx:subclass` attribute is also specified.
+In `.fxml` files, `fx:className` can only be used when `fx:subclass` is also specified.
 
 ## Usage
 

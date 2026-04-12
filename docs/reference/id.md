@@ -4,13 +4,13 @@ title: fx:id
 parent: FXML 2.0 language reference
 ---
 
-# fx:id attribute
-The `fx:id` attribute is used to name elements in an FXML document. If the document has a
+# fx:id directive
+The `fx:id` directive is used to uniquely name elements in an FXML document. If the document has a
 [code-behind](../code-behind.html) class, the FXML compiler generates a protected field with
 the same name to make the named element accessible from Java code.
 
 {: .highlight }
-The `fx:id` attribute also sets the `Node.id` property to the same value.
+The `fx:id` directive also sets the `Node.id` property to the same value.
 
 ## Usage
 
