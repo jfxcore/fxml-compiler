@@ -25,7 +25,7 @@ Here's how a simple binding is specified in FXML 2.0, using different but equiva
 <div class="filename">com/sample/MyControl.fxml</div>
 ```xml
 <VBox xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-      fx:class="com.sample.MyControl">
+      fx:subclass="com.sample.MyControl">
     <!-- fx:Observe markup extension with source path -->
     <Button text="{fx:Observe path=caption}"/>
 

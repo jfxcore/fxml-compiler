@@ -1,42 +1,31 @@
 ---
 layout: default
-title: fx:class
+title: fx:Class
 parent: FXML 2.0 language reference
 ---
 
-# fx:class attribute
-The `fx:class` attribute identifies the fully-qualified name of the code-behind class. The FXML compiler generates
-a base class which must be extended by the code-behind class. Embedded markup in a `@ComponentView` annotation uses
-the annotated class as its code-behind class automatically, so `fx:class` is neither required nor supported in
-this scenario.
+# fx:Class markup extension
+The `fx:Class` markup extension resolves a name to a class literal.
 
-The generated base class contains an `initializeComponent()` method, which must be called in the constructor of
-the code-behind class to initialize the scene graph.
+## Properties
 
-{: .highlight }
-The `fx:class` attribute can only be set on the root element.
-
-## FXML files without code-behind class
-If the `fx:class` attribute is omitted in an FXML file, it is compiled down to a standalone class with the same name.
-For example, the document `com/sample/MyControl.fxml` will yield the class `com.sample.MyControl`.
-This is a supported scenario for FXML documents that don't require a code-behind class with custom code.
+| Property | Description |
+|:-|:-|
+| `name` | A string that specifies the class name. This is the [default property](../property-notation.html#default-property). |
 
 ## Usage
 
-<div class="filename">com/sample/MyControl.fxml</div>
 ```xml
-<BorderPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-            fx:class="com.sample.MyControl">
-</BorderPane>
-```
+<!-- Element notation -->
+<object>
+    <property>
+        <fx:Class name="MyClass"/>
+    </property>
+<object>
 
-<div class="filename">com/sample/MyControl.java</div>
-```java
-public class MyControl extends MyControlBase {
-    public MyControl() {
-        // Code before initialization
-        initializeComponent();
-        // Code after initialization
-    }
-}
+<!-- Attribute notation -->
+<object property="{fx:Class name=MyClass}"/>
+
+<!-- Attribute notation with omitted "name" -->
+<object property="{fx:Class MyClass}"/>
 ```

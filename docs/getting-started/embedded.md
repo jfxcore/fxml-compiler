@@ -41,7 +41,7 @@ public class MyControl extends MyControlBase {
 Embedded markup follows the same language rules as standalone FXML, but some information is provided by the
 surrounding Java or Kotlin source:
 
-- The annotated class is already known to be the [code-behind](../code-behind.html) class, so the `fx:class` attribute
+- The annotated class is already known to be the [code-behind](../code-behind.html) class, so the `fx:subclass` attribute
   is neither required nor supported.
 - Import declarations from the Java or Kotlin source file are also available to the embedded FXML document,
   they do not need to be redeclared as `<?import?>` processing instructions.
@@ -49,6 +49,7 @@ surrounding Java or Kotlin source:
   and do not need to be explicitly declared.
 
 The generated base class still follows the usual naming convention, so `MyControl` extends `MyControlBase`.
+This can be changed with the [`fx:className`](../reference/className.html) attribute.
 
 {: .note }
 In Kotlin projects, the embedded FXML document cannot reference type aliases.

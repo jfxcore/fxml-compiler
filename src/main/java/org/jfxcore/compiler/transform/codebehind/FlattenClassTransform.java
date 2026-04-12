@@ -45,7 +45,7 @@ public class FlattenClassTransform implements Transform {
             return node;
         }
 
-        PropertyNode codeBehindClass = root.findIntrinsicProperty(Intrinsics.CLASS);
+        PropertyNode codeBehindClass = root.findIntrinsicProperty(Intrinsics.SUBCLASS);
         String packageName, className, markupClassName;
         int classModifiers = Modifier.PUBLIC;
 
@@ -101,7 +101,7 @@ public class FlattenClassTransform implements Transform {
             className = className.substring(0, className.lastIndexOf('.'));
         }
 
-        PropertyNode markupClassNameNode = root.findIntrinsicProperty(Intrinsics.MARKUP_CLASS_NAME);
+        PropertyNode markupClassNameNode = root.findIntrinsicProperty(Intrinsics.CLASS_NAME);
         if (markupClassNameNode != null) {
             if (codeBehindClass == null) {
                 throw GeneralErrors.markupClassNameWithoutCodeBehind(

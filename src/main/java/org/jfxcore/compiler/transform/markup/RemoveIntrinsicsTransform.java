@@ -1,4 +1,4 @@
-// Copyright (c) 2022, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.transform.markup;
@@ -18,7 +18,7 @@ import java.util.List;
 public class RemoveIntrinsicsTransform implements Transform {
 
     private static final List<Intrinsic> REMOVED_INTRINSICS = List.of(
-        Intrinsics.CLASS, Intrinsics.CLASS_PARAMETERS, Intrinsics.CLASS_MODIFIER, Intrinsics.MARKUP_CLASS_NAME);
+        Intrinsics.SUBCLASS, Intrinsics.CLASS_PARAMETERS, Intrinsics.CLASS_MODIFIER, Intrinsics.CLASS_NAME);
 
     @Override
     public Node transform(TransformContext context, Node node) {
@@ -38,5 +38,4 @@ public class RemoveIntrinsicsTransform implements Transform {
 
         return node;
     }
-
 }

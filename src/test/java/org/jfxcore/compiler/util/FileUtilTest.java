@@ -1,4 +1,4 @@
-// Copyright (c) 2023, 2025, JFXcore. All rights reserved.
+// Copyright (c) 2023, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.util;
@@ -37,7 +37,7 @@ public class FileUtilTest {
             new ObjectNode(
                 new TypeNode("TestNode", SourceInfo.none()),
                 List.of(new PropertyNode(
-                    new String[] {"class"}, "fx:class",
+                    new String[] {"subclass"}, "fx:subclass",
                     TextNode.createRawUnresolved("foo.bar.MyCustomNode", SourceInfo.none()),
                     true, false, SourceInfo.none())),
                 List.of(), false, SourceInfo.none()));
@@ -52,7 +52,7 @@ public class FileUtilTest {
             new ObjectNode(
                 new TypeNode("TestNode", SourceInfo.none()),
                 List.of(new PropertyNode(
-                    new String[] {"class"}, "fx:class",
+                    new String[] {"subclass"}, "fx:subclass",
                     TextNode.createRawUnresolved("foo.bar.AnotherName", SourceInfo.none()),
                     true, false, SourceInfo.none())),
                 List.of(), false, SourceInfo.none()));
@@ -68,7 +68,7 @@ public class FileUtilTest {
             new ObjectNode(
                 new TypeNode("TestNode", SourceInfo.none()),
                 List.of(new PropertyNode(
-                    new String[] {"class"}, "fx:class",
+                    new String[] {"subclass"}, "fx:subclass",
                     TextNode.createRawUnresolved("MyCustomNode", SourceInfo.none()),
                     true, false, SourceInfo.none())),
                 List.of(), false, SourceInfo.none()));
@@ -84,7 +84,7 @@ public class FileUtilTest {
             new ObjectNode(
                 new TypeNode("TestNode", SourceInfo.none()),
                 List.of(new PropertyNode(
-                    new String[] {"markupClassName"}, "fx:markupClassName",
+                    new String[] {"className"}, "fx:className",
                     TextNode.createRawUnresolved("MyCustomFileName", SourceInfo.none()),
                     true, false, SourceInfo.none())),
                 List.of(), false, SourceInfo.none()));
@@ -99,7 +99,7 @@ public class FileUtilTest {
             new ObjectNode(
                 new TypeNode("TestNode", SourceInfo.none()),
                 List.of(new PropertyNode(
-                    new String[] {"markupClassName"}, "fx:markupClassName",
+                    new String[] {"className"}, "fx:className",
                     TextNode.createRawUnresolved("foo.bar.MyCustomFileName", SourceInfo.none()),
                     true, false, SourceInfo.none())),
                 List.of(), false, SourceInfo.none()));

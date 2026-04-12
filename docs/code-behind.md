@@ -15,8 +15,8 @@ In order to add a code-behind class to a FXML source file, create two files in t
 * `com/sample/MyControl.fxml`
 * `com/sample/MyControl.java`
 
-In `MyControl.fxml`, add the `fx:class` attribute to the root element, and specify the fully-qualified name
-of the code-behind class.
+In `MyControl.fxml`, add the [`fx:subclass`](reference/subclass.html) attribute to the root element,
+and specify the fully-qualified name of the code-behind class.
 <div class="filename">com/sample/MyControl.fxml</div>
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
@@ -24,7 +24,7 @@ of the code-behind class.
 <?import javafx.scene.control.Button?>
 
 <StackPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-           fx:class="com.sample.MyControl">
+           fx:subclass="com.sample.MyControl">
     <Button fx:id="myButton1"/>
 </StackPane>
 ```
@@ -75,7 +75,7 @@ public class MyControl extends MyControlBase {
 >
 > By default, the name of the generated markup class corresponds to the name of the FXML file or the name of the
 > class annotated with `@ComponentView`, including the `Base` suffix. This can be changed with the
-> [`fx:markupClassName`](reference/markupClassName.html) attribute.
+> [`fx:className`](reference/className.html) attribute.
 
 ## Initializing the scene graph with `initializeComponent`
 The scene graph specified in the FXML document is initialized by the compiler-generated `initializeComponent()` method.
@@ -86,9 +86,9 @@ that make up the scene graph will never be instantiated.
 > You should call `initializeComponent()` after you initialize all of the state which the FXML scene graph depends on,
 > but before you actually access the FXML scene graph.
 
-## What is the relationship between `fx:class`, `fx:controller`, and `fx:root`?
+## What is the relationship between `fx:subclass`, `fx:controller`, and `fx:root`?
 `fx:controller` and `fx:root` are both directives of the FXML 1.0 format, and are not available in the FXML 2.0 format.
-[`fx:class`](reference/class.html) is a new directive that allows combining markup and imperative code.
+[`fx:subclass`](reference/subclass.html) is a new directive that allows combining markup and imperative code.
 This is similar to the `fx:root` directive, but doesn't require using `FXMLLoader` to load the markup at runtime.
 
 FXML 2.0 always compiles down to scene graph nodes; it does not support the markup/controller model of FXML 1.0

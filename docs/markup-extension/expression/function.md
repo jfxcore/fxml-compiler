@@ -44,7 +44,7 @@ Method arguments can be any of the following:
 * Number literals: `1` (int), `1L` (long), `1F` (float), `1D`/`1.0` (double)
 * Boolean literals: `true`, `false`
 * Null literal: `null`
-* Class literal: `{fx:Type MyClass}`
+* Class literal: `{fx:Class MyClass}`
 * [Constants](../../reference/constant.html): `{Double fx:constant=POSITIVE_INFINITY}` or `Double.POSITIVE_INFINITY`
 * [Value-supplier markup extensions](../../markup-extension.html#where-markup-extensions-can-be-used)
 
