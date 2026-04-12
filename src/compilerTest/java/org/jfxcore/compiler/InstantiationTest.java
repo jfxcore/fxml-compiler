@@ -26,6 +26,8 @@ import org.jfxcore.compiler.diagnostic.MarkupException;
 import org.jfxcore.compiler.util.CompilerTestBase;
 import org.jfxcore.compiler.util.Reflection;
 import org.jfxcore.compiler.util.TestExtension;
+import org.jfxcore.markup.MarkupContext;
+import org.jfxcore.markup.MarkupExtension;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -314,6 +316,51 @@ public class InstantiationTest extends CompilerTestBase {
         public static class ArrayConstructorClass extends Rectangle {
             public final Node[] nodes;
             public ArrayConstructorClass(@NamedArg("nodes") Node[] nodes) { this.nodes = nodes; }
+        }
+
+        @SuppressWarnings("unused")
+        public static class ArrayConvExt<T> implements MarkupExtension.Supplier<T[]> {
+            private final T[] values;
+            @SafeVarargs public ArrayConvExt(@NamedArg("values") T... values) { this.values = values; }
+            @Override public T[] get(MarkupContext context) throws Exception { return values; }
+        }
+
+        @Test
+        public void Object_Is_Instantiated_With_Array_Constructor() {
+            GridPane root = compileAndRun("""
+                <?import javafx.scene.*?>
+                <?import javafx.scene.layout.*?>
+                <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
+                    <ArrayConstructorClass>
+                        <nodes>
+                            <ArrayConvExt fx:typeArguments="Node">
+                                <values>
+                                    <GridPane/>
+                                </values>
+                            </ArrayConvExt>
+                        </nodes>
+                    </ArrayConstructorClass>
+                    <ArrayConstructorClass>
+                        <nodes>
+                            <ArrayConvExt fx:typeArguments="Node">
+                                <values>
+                                    <GridPane/>
+                                    <GridPane/>
+                                </values>
+                            </ArrayConvExt>
+                        </nodes>
+                    </ArrayConstructorClass>
+                </GridPane>
+            """);
+
+            Node[] nodes1 = ((ArrayConstructorClass)root.getChildren().get(0)).nodes;
+            assertEquals(1, nodes1.length);
+            assertInstanceOf(GridPane.class, nodes1[0]);
+
+            Node[] nodes2 = ((ArrayConstructorClass)root.getChildren().get(1)).nodes;
+            assertEquals(2, nodes2.length);
+            assertInstanceOf(GridPane.class, nodes2[0]);
+            assertInstanceOf(GridPane.class, nodes2[1]);
         }
 
         @Test

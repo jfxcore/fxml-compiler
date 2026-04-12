@@ -508,19 +508,16 @@ public class ValueEmitterFactory {
 
         TypeInstance valueType = TypeHelper.getTypeInstance(value);
 
-        if (targetType.isAssignableFrom(valueType) ||
-                vararg && targetType.componentType().isAssignableFrom(valueType)) {
-            return new AcceptArgumentResult.Success<>(value);
-        }
-
-        return new AcceptArgumentResult.Error(argumentNode, valueType, ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT);
+        return targetType.isAssignableFrom(valueType)
+            ? new AcceptArgumentResult.Success<>(value)
+            : new AcceptArgumentResult.Error(argumentNode, valueType, ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT);
     }
 
     private static AcceptArgumentResult acceptArrayArgument(TransformContext context,
-                                                                                 Collection<? extends Node> argumentNodes,
-                                                                                 TypeInstance invokingType,
-                                                                                 TypeInstance arrayType,
-                                                                                 int parentsUnderInitializationCount) {
+                                                            Collection<? extends Node> argumentNodes,
+                                                            TypeInstance invokingType,
+                                                            TypeInstance arrayType,
+                                                            int parentsUnderInitializationCount) {
         List<ValueNode> values = new ArrayList<>();
 
         for (Node item : argumentNodes) {
