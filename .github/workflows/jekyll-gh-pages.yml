@@ -1,9 +1,11 @@
 name: Deploy documentation
 
 on:
-  # Runs on pushes targeting the default branch
-  push:
-    branches: ["master"]
+  # Run after the release publishing workflow completes.
+  # The build job below filters this down to successful runs only.
+  workflow_run:
+    workflows: ["CI publish"]
+    types: [completed]
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
@@ -21,12 +23,23 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  # Build job
   build:
+    # Allow manual runs, but only continue workflow_run executions when
+    # the triggering "CI publish" workflow finished successfully.
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      # The two checkout steps are mutually exclusive:
+      # - workflow_run builds the exact commit that "CI publish" ran for
+      # - workflow_dispatch falls back to a normal checkout of the selected ref
+      - name: Checkout published revision
+        if: ${{ github.event_name == 'workflow_run' }}
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+      - name: Checkout selected revision
+        if: ${{ github.event_name != 'workflow_run' }}
+        uses: actions/checkout@v6
       - name: Setup Pages
         uses: actions/configure-pages@v5
       - name: Build with Jekyll
@@ -35,11 +48,10 @@ jobs:
           source: ./docs
           destination: ./docs/_site
       - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v4
         with:
           path: ./docs/_site
 
-  # Deployment job
   deploy:
     environment:
       name: github-pages
