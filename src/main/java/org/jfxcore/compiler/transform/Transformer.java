@@ -24,7 +24,7 @@ import org.jfxcore.compiler.transform.markup.ConstantTransform;
 import org.jfxcore.compiler.transform.markup.DefineBlockTransform;
 import org.jfxcore.compiler.transform.markup.DocumentTransform;
 import org.jfxcore.compiler.transform.markup.IdPropertyTransform;
-import org.jfxcore.compiler.transform.markup.NullIntrinsicTransform;
+import org.jfxcore.compiler.transform.markup.LiteralIntrinsicsTransform;
 import org.jfxcore.compiler.transform.markup.ObjectToPropertyTransform;
 import org.jfxcore.compiler.transform.markup.ObjectTransform;
 import org.jfxcore.compiler.transform.markup.PropertyAssignmentTransform;
@@ -32,7 +32,6 @@ import org.jfxcore.compiler.transform.markup.RemoveIntrinsicsTransform;
 import org.jfxcore.compiler.transform.markup.StylesheetTransform;
 import org.jfxcore.compiler.transform.markup.TemplateContentTransform;
 import org.jfxcore.compiler.transform.markup.TopologyTransform;
-import org.jfxcore.compiler.transform.markup.TypeIntrinsicTransform;
 import org.jfxcore.compiler.transform.markup.ValidateTypeTransform;
 import org.jfxcore.compiler.type.TypeDeclaration;
 import java.util.Arrays;
@@ -91,8 +90,7 @@ public class Transformer {
             new BindingContextTransform(),
             new BindingTransform(true),
             new DefineBlockTransform(),
-            new NullIntrinsicTransform(),
-            new TypeIntrinsicTransform(),
+            new LiteralIntrinsicsTransform(),
             new ObjectTransform(),
             new PropertyAssignmentTransform(),
             new TopologyTransform());

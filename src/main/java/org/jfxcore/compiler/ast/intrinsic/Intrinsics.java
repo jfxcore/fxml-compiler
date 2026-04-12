@@ -48,7 +48,13 @@ public class Intrinsics {
         "define", Kind.PROPERTY, Placement.ANY, KnownSymbols::BottomTypeDecl);
 
     public static final Intrinsic NULL = new Intrinsic(
-        "Null", Kind.OBJECT, Placement.NOT_ROOT, KnownSymbols::NullTypeDecl);
+        "Null", Kind.OBJECT, Placement.ANY, KnownSymbols::NullTypeDecl);
+
+    public static final Intrinsic TRUE = new Intrinsic(
+        "True", Kind.OBJECT, Placement.ANY, KnownSymbols::booleanDecl);
+
+    public static final Intrinsic FALSE = new Intrinsic(
+        "False", Kind.OBJECT, Placement.ANY, KnownSymbols::booleanDecl);
 
     public static final Intrinsic TYPE = new Intrinsic(
         "Type", Kind.OBJECT, Placement.ANY, KnownSymbols::ClassDecl,
@@ -74,7 +80,7 @@ public class Intrinsics {
 
     private static final List<Intrinsic> NODES = List.of(
         CLASS, CLASS_MODIFIER, CLASS_PARAMETERS, MARKUP_CLASS_NAME, CONTEXT, ID, VALUE, CONSTANT, FACTORY,
-        TYPE_ARGUMENTS, ITEM_TYPE, DEFINE, NULL, TYPE, STYLESHEET, EVALUATE, OBSERVE, SYNCHRONIZE);
+        TYPE_ARGUMENTS, ITEM_TYPE, DEFINE, NULL, TRUE, FALSE, TYPE, STYLESHEET, EVALUATE, OBSERVE, SYNCHRONIZE);
 
     public static Intrinsic find(ObjectNode node) {
         if (node.getType().isIntrinsic()){

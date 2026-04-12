@@ -138,6 +138,48 @@ public class IntrinsicsTest extends CompilerTestBase {
     }
 
     @Nested
+    public class BooleanIntrinsicsTest extends CompilerTestBase {
+        @SuppressWarnings("unused")
+        public static class BooleanIntrinsicTestPane extends Pane {
+            private Boolean boolProp1;
+            public Boolean getBoolProp1() { return boolProp1; }
+            public void setBoolProp1(Boolean boolProp) { this.boolProp1 = boolProp; }
+
+            private Boolean boolProp2;
+            public Boolean getBoolProp2() { return boolProp2; }
+            public void setBoolProp2(Boolean boolProp) { this.boolProp2 = boolProp; }
+
+            private Boolean boolProp3;
+            public Boolean getBoolProp3() { return boolProp3; }
+            public void setBoolProp3(Boolean boolProp) { this.boolProp3 = boolProp; }
+        }
+
+        @Test
+        public void TrueAndFalse_Can_Be_Assigned_To_Property_With_PrimitiveType() {
+            Pane root = compileAndRun("""
+                <?import javafx.scene.layout.*?>
+                <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                      visible="{fx:True}" disable="{fx:False}"/>
+            """);
+
+            assertTrue(root.isVisible());
+            assertFalse(root.isDisable());
+        }
+
+        @Test
+        public void TrueAndFalse_Can_Be_Assigned_To_Property_With_ReferenceType() {
+            BooleanIntrinsicTestPane root = compileAndRun("""
+                <BooleanIntrinsicTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                                          boolProp1="{fx:True}" boolProp2="{fx:False}" boolProp3="{fx:Null}"/>
+            """);
+
+            assertSame(Boolean.TRUE, root.getBoolProp1());
+            assertSame(Boolean.FALSE, root.getBoolProp2());
+            assertNull(root.getBoolProp3());
+        }
+    }
+
+    @Nested
     public class TypeIntrinsicTest extends CompilerTestBase {
         @SuppressWarnings("unused")
         public static class TypeIntrinsicTestPane extends Pane {

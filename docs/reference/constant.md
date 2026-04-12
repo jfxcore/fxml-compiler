@@ -2,7 +2,6 @@
 layout: default
 title: fx:constant
 parent: FXML 2.0 language reference
-nav_order: 4
 ---
 
 # fx:constant attribute

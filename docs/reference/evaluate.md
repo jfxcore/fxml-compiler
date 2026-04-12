@@ -2,7 +2,6 @@
 layout: default
 title: fx:Evaluate, <span class="nav-inline-code">$x</span>
 parent: FXML 2.0 language reference
-nav_order: 7
 ---
 
 # fx:Evaluate markup extension, $x
