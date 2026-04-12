@@ -65,7 +65,7 @@ class MyBindingContext {
 <div class="filename">com/sample/MyControl.fxml</div>
 ```xml
 <StackPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-           fx:class="com.sample.MyControl"
+           fx:subclass="com.sample.MyControl"
            fx:context="$myContext">
     <!-- "user.name" will be evaluated against "myContext" -->
     <Label text="${user.name}"/>

@@ -47,7 +47,7 @@ In this case, the value of `fx:context` is a [path](../markup-extension/expressi
 <div class="filename">com/sample/MyControl.fxml</div>
 ```xml
 <StackPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-           fx:class="com.sample.MyControl"
+           fx:subclass="com.sample.MyControl"
            fx:context="$myContext">
     <!-- "user.name" will be resolved against "myContext" -->
     <Label text="${user.name}"/>

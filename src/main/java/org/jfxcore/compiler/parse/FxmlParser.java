@@ -53,7 +53,7 @@ public class FxmlParser {
     // Intrinsics that are not interpreted by the inline parser.
     private static final Intrinsic[] VERBATIM_INTRINSICS = new Intrinsic[] {
         Intrinsics.ID,
-        Intrinsics.TYPE,
+        Intrinsics.CLASS,
         Intrinsics.STYLESHEET
     };
 
@@ -149,13 +149,13 @@ public class FxmlParser {
         ObjectNode rootNode = parseElementNode(rootElement);
 
         if (embeddingContext != null) {
-            PropertyNode classProperty = rootNode.findIntrinsicProperty(Intrinsics.CLASS);
+            PropertyNode classProperty = rootNode.findIntrinsicProperty(Intrinsics.SUBCLASS);
             if (classProperty != null) {
                 throw GeneralErrors.unexpectedIntrinsic(classProperty.getSourceInfo(), classProperty.getMarkupName());
             }
 
             rootNode.getProperties().add(new PropertyNode(
-                new String[] { Intrinsics.CLASS.getName() }, Intrinsics.CLASS.getName(),
+                new String[] { Intrinsics.SUBCLASS.getName() }, Intrinsics.SUBCLASS.getName(),
                 List.of(new TextNode(embeddingContext.embeddingHost().fullName(), getSourceInfo(rootElement))),
                 true, false, getSourceInfo(rootElement)));
         }

@@ -22,14 +22,14 @@ import java.util.List;
 import static org.jfxcore.compiler.type.KnownSymbols.*;
 
 /**
- * Transforms the {@code fx:Null}, {@code fx:True}, {@code fx:False}, and {@code fx:Type} intrinsics into their values.
+ * Transforms the {@code fx:Null}, {@code fx:True}, {@code fx:False}, and {@code fx:Class} intrinsics into their values.
  */
 public class LiteralIntrinsicsTransform implements Transform {
 
     @Override
     public Node transform(TransformContext context, Node node) {
         if (!node.typeEquals(ObjectNode.class) || !((ObjectNode)node).isIntrinsic(
-                Intrinsics.NULL, Intrinsics.TRUE, Intrinsics.FALSE, Intrinsics.TYPE)){
+                Intrinsics.NULL, Intrinsics.TRUE, Intrinsics.FALSE, Intrinsics.CLASS)){
             return node;
         }
 
@@ -51,7 +51,7 @@ public class LiteralIntrinsicsTransform implements Transform {
             return new EmitLiteralNode(TypeInstance.booleanType(), false, node.getSourceInfo());
         }
 
-        if (objectNode.isIntrinsic(Intrinsics.TYPE)) {
+        if (objectNode.isIntrinsic(Intrinsics.CLASS)) {
             return transformTypeIntrinsic(context, objectNode);
         }
 

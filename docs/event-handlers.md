@@ -11,7 +11,7 @@ properties with an [`fx:Evaluate`](reference/evaluate.html) or [`fx:Observe`](re
 <div class="filename">com/sample/MyControl.fxml</div>
 ```xml
 <StackPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-           fx:class="com.sample.MyControl">
+           fx:subclass="com.sample.MyControl">
     <Button onAction="$myActionHandler"/>
 </StackPane>
 ```
@@ -40,7 +40,7 @@ Event handlers can also be implemented as methods on the code-behind class that 
 <div class="filename">com/sample/MyControl.fxml</div>
 ```xml
 <StackPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-           fx:class="com.sample.MyControl">
+           fx:subclass="com.sample.MyControl">
     <!-- Note that # identifies a method handler -->
     <Button onAction="#handleActionEvent"/>
 </StackPane>

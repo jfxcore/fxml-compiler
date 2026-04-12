@@ -1,4 +1,4 @@
-// Copyright (c) 2021, 2023, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.util;
@@ -171,7 +171,7 @@ public class FileUtil {
             throw new IllegalArgumentException("document");
         }
 
-        var markupClassNameProperty = root.findIntrinsicProperty(Intrinsics.MARKUP_CLASS_NAME);
+        var markupClassNameProperty = root.findIntrinsicProperty(Intrinsics.CLASS_NAME);
         if (markupClassNameProperty != null) {
             String className = getTextNotEmpty(root, markupClassNameProperty);
             if (!NameHelper.isJavaIdentifier(className)) {
@@ -184,7 +184,7 @@ public class FileUtil {
             return document.getSourceFile().getParent().resolve(className + ".java");
         }
 
-        var classNameProperty = root.findIntrinsicProperty(Intrinsics.CLASS);
+        var classNameProperty = root.findIntrinsicProperty(Intrinsics.SUBCLASS);
         if (classNameProperty != null) {
             String[] parts = getTextNotEmpty(root, classNameProperty).split("\\.");
             String packageName = Arrays.stream(parts).limit(parts.length - 1).collect(Collectors.joining("."));
@@ -238,5 +238,4 @@ public class FileUtil {
 
         return path;
     }
-
 }

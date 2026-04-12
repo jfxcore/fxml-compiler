@@ -11,17 +11,17 @@ import static org.jfxcore.compiler.ast.intrinsic.Intrinsic.*;
 
 public class Intrinsics {
 
-    public static final Intrinsic CLASS = new Intrinsic(
-        "class", Kind.PROPERTY, Placement.ROOT, KnownSymbols::StringDecl);
+    public static final Intrinsic SUBCLASS = new Intrinsic(
+        "subclass", Kind.PROPERTY, Placement.ROOT, KnownSymbols::StringDecl);
 
     public static final Intrinsic CLASS_MODIFIER = new Intrinsic(
         "classModifier", Kind.PROPERTY, Placement.ROOT, KnownSymbols::StringDecl);
 
+    public static final Intrinsic CLASS_NAME = new Intrinsic(
+        "className", Kind.PROPERTY, Placement.ROOT, KnownSymbols::StringDecl);
+
     public static final Intrinsic CLASS_PARAMETERS = new Intrinsic(
         "classParameters", Kind.PROPERTY, Placement.ROOT, KnownSymbols::StringDecl);
-
-    public static final Intrinsic MARKUP_CLASS_NAME = new Intrinsic(
-        "markupClassName", Kind.PROPERTY, Placement.ROOT, KnownSymbols::StringDecl);
 
     public static final Intrinsic CONTEXT = new Intrinsic(
         "context", Kind.PROPERTY, Placement.ROOT, KnownSymbols::ObjectDecl);
@@ -56,8 +56,8 @@ public class Intrinsics {
     public static final Intrinsic FALSE = new Intrinsic(
         "False", Kind.OBJECT, Placement.ANY, KnownSymbols::booleanDecl);
 
-    public static final Intrinsic TYPE = new Intrinsic(
-        "Type", Kind.OBJECT, Placement.ANY, KnownSymbols::ClassDecl,
+    public static final Intrinsic CLASS = new Intrinsic(
+        "Class", Kind.OBJECT, Placement.ANY, KnownSymbols::ClassDecl,
         new IntrinsicProperty("name", KnownSymbols::StringDecl, true));
 
     public static final Intrinsic STYLESHEET = new Intrinsic(
@@ -79,8 +79,8 @@ public class Intrinsics {
         new IntrinsicProperty("inverseMethod", KnownSymbols::StringDecl));
 
     private static final List<Intrinsic> NODES = List.of(
-        CLASS, CLASS_MODIFIER, CLASS_PARAMETERS, MARKUP_CLASS_NAME, CONTEXT, ID, VALUE, CONSTANT, FACTORY,
-        TYPE_ARGUMENTS, ITEM_TYPE, DEFINE, NULL, TRUE, FALSE, TYPE, STYLESHEET, EVALUATE, OBSERVE, SYNCHRONIZE);
+        SUBCLASS, CLASS_MODIFIER, CLASS_NAME, CLASS_PARAMETERS, CONTEXT, ID, VALUE, CONSTANT, FACTORY,
+        TYPE_ARGUMENTS, ITEM_TYPE, DEFINE, NULL, TRUE, FALSE, CLASS, STYLESHEET, EVALUATE, OBSERVE, SYNCHRONIZE);
 
     public static Intrinsic find(ObjectNode node) {
         if (node.getType().isIntrinsic()){

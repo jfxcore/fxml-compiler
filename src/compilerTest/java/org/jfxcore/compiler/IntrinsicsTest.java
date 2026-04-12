@@ -44,13 +44,13 @@ public class IntrinsicsTest extends CompilerTestBase {
         MarkupException ex = assertThrows(MarkupException.class, () -> compile("""
             <?import javafx.scene.layout.*?>
             <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
-                <GridPane fx:class="java.lang.String"/>
+                <GridPane fx:subclass="java.lang.String"/>
             </GridPane>
         """));
 
         assertEquals(ErrorCode.UNEXPECTED_INTRINSIC, ex.getDiagnostic().getCode());
         assertCodeHighlight("""
-            fx:class="java.lang.String"
+            fx:subclass="java.lang.String"
         """.trim(), ex);
     }
 
@@ -201,7 +201,7 @@ public class IntrinsicsTest extends CompilerTestBase {
             TypeIntrinsicTestPane root = compileAndRun("""
                 <?import javafx.scene.control.*?>
                 <TypeIntrinsicTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                       wildcardClass="{fx:Type TextField}"/>
+                       wildcardClass="{fx:Class TextField}"/>
             """);
 
             assertEquals(TextField.class, root.getWildcardClass());
@@ -212,7 +212,7 @@ public class IntrinsicsTest extends CompilerTestBase {
             TypeIntrinsicTestPane root = compileAndRun("""
                 <?import javafx.scene.control.*?>
                 <TypeIntrinsicTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                       wildcardClassUpperBound="{fx:Type TextField}"/>
+                       wildcardClassUpperBound="{fx:Class TextField}"/>
             """);
 
             assertEquals(TextField.class, root.getWildcardClassUpperBound());
@@ -223,11 +223,11 @@ public class IntrinsicsTest extends CompilerTestBase {
             MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
                 <?import javafx.scene.control.*?>
                 <TypeIntrinsicTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                       wildcardClassIncompatibleUpperBound="{fx:Type TextField}"/>
+                       wildcardClassIncompatibleUpperBound="{fx:Class TextField}"/>
             """));
 
             assertEquals(ErrorCode.INCOMPATIBLE_PROPERTY_TYPE, ex.getDiagnostic().getCode());
-            assertCodeHighlight("{fx:Type TextField}", ex);
+            assertCodeHighlight("{fx:Class TextField}", ex);
         }
     }
 
