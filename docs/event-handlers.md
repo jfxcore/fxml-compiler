@@ -35,14 +35,13 @@ Usually, event handlers don't change dynamically. It is therefore advisable to u
 
 ## Method event handlers
 Event handlers can also be implemented as methods on the code-behind class that have a signature compatible with the
-`javafx.event.EventHandler` interface. The method name must be prefixed with `#` in the FXML attribute:
+`javafx.event.EventHandler` interface. The event handler property is then set to the name of the method:
 
 <div class="filename">com/sample/MyControl.fxml</div>
 ```xml
 <StackPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
            fx:subclass="com.sample.MyControl">
-    <!-- Note that # identifies a method handler -->
-    <Button onAction="#handleActionEvent"/>
+    <Button onAction="handleActionEvent"/>
 </StackPane>
 ```
 

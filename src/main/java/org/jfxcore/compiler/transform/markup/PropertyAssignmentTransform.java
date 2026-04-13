@@ -458,15 +458,10 @@ public class PropertyAssignmentTransform implements Transform {
 
     private ValueEmitterNode createEventHandlerNode(TransformContext context, ValueNode node, TypeInstance targetType) {
         if (targetType.subtypeOf(EventHandlerDecl()) && node instanceof TextNode textNode) {
-            String text = textNode.getText().trim();
-            if (!text.startsWith("#")) {
-                return null;
-            }
-
             return new EmitEventHandlerNode(
                 context.getCodeBehindOrMarkupClass(),
                 targetType.arguments().get(0),
-                text.substring(1),
+                textNode.getText().trim(),
                 textNode.getSourceInfo().getTrimmed());
         }
 

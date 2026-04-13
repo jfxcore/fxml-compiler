@@ -26,7 +26,12 @@ to the type of its property. This process, called value coercion, is supported i
          the static field TableView.UNCONSTRAINED_RESIZE_POLICY -->
     <TableView columnResizePolicy="UNCONSTRAINED_RESIZE_POLICY"/>
     ```
-4. Color values, for example:
+4. Method [event handlers](event-handlers.html), for example:
+    ```xml
+    <Button onAction="handleActionEvent"/>
+    ```
+    In this case, `handleActionEvent` is resolved to a compatible method on the [code-behind](code-behind.html) class.
+5. Color values, for example:
     ```xml
     <Button textFill="RED"/>
     <Button textFill="#FF0000"/>

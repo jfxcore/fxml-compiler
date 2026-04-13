@@ -68,12 +68,12 @@ public class EventHandlerTest extends CompilerTestBase {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.scene.control.*?>
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
-                <Button onAction="#actionHandlerNotFound"/>
+                <Button onAction="actionHandlerNotFound"/>
             </TestPane>
         """));
 
         assertEquals(ErrorCode.MEMBER_NOT_FOUND, ex.getDiagnostic().getCode());
-        assertCodeHighlight("#actionHandlerNotFound", ex);
+        assertCodeHighlight("actionHandlerNotFound", ex);
     }
 
     @Test
@@ -81,12 +81,12 @@ public class EventHandlerTest extends CompilerTestBase {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.scene.control.*?>
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
-                <Button onAction="#mouseHandler"/>
+                <Button onAction="mouseHandler"/>
             </TestPane>
         """));
 
         assertEquals(ErrorCode.UNSUITABLE_EVENT_HANDLER, ex.getDiagnostic().getCode());
-        assertCodeHighlight("#mouseHandler", ex);
+        assertCodeHighlight("mouseHandler", ex);
     }
 
     @Test
@@ -94,7 +94,7 @@ public class EventHandlerTest extends CompilerTestBase {
         TestPane root = compileAndRun("""
             <?import javafx.scene.control.*?>
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
-                <Button onAction="#actionHandler"/>
+                <Button onAction="actionHandler"/>
             </TestPane>
         """);
 
@@ -108,7 +108,7 @@ public class EventHandlerTest extends CompilerTestBase {
         TestPane root = compileAndRun("""
             <?import javafx.scene.control.*?>
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
-                <Button onAction="#parameterlessHandler"/>
+                <Button onAction="parameterlessHandler"/>
             </TestPane>
         """);
 
@@ -150,7 +150,7 @@ public class EventHandlerTest extends CompilerTestBase {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.scene.control.*?>
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                      readOnlyActionHandlerProp="#actionHandler"/>
+                      readOnlyActionHandlerProp="actionHandler"/>
         """));
 
         assertEquals(ErrorCode.CANNOT_MODIFY_READONLY_PROPERTY, ex.getDiagnostic().getCode());
@@ -161,7 +161,7 @@ public class EventHandlerTest extends CompilerTestBase {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.scene.control.*?>
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
-                <Button onAction="#inaccessibleHandler"/>
+                <Button onAction="inaccessibleHandler"/>
             </TestPane>
         """));
 
@@ -173,12 +173,12 @@ public class EventHandlerTest extends CompilerTestBase {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.scene.control.*?>
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
-                <Button onAction="#packagePrivateHandler"/>
+                <Button onAction="packagePrivateHandler"/>
             </TestPane>
         """));
 
         assertEquals(ErrorCode.MEMBER_NOT_ACCESSIBLE, ex.getDiagnostic().getCode());
-        assertCodeHighlight("#packagePrivateHandler", ex);
+        assertCodeHighlight("packagePrivateHandler", ex);
     }
 
     @Test
@@ -186,11 +186,11 @@ public class EventHandlerTest extends CompilerTestBase {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.scene.control.*?>
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
-                <Button onAction="   #packagePrivateHandler   "/>
+                <Button onAction="   packagePrivateHandler   "/>
             </TestPane>
         """));
 
         assertEquals(ErrorCode.MEMBER_NOT_ACCESSIBLE, ex.getDiagnostic().getCode());
-        assertCodeHighlight("#packagePrivateHandler", ex);
+        assertCodeHighlight("packagePrivateHandler", ex);
     }
 }
