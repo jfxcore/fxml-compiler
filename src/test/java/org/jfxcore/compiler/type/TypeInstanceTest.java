@@ -649,8 +649,8 @@ public class TypeInstanceTest extends TestBase {
             resolver.resolveClass(Type5.class.getName()),
             List.of(TypeInstance.StringType(), TypeInstance.DoubleType()));
 
-        assertEquals("TypeInstanceTest$Type5<String,Double>", typeInstance.toString());
-        assertEquals("TypeInstanceTest$Type4<Double,String>", typeInstance.superTypes().get(0).toString());
+        assertEquals("TypeInstanceTest$Type5<String, Double>", typeInstance.toString());
+        assertEquals("TypeInstanceTest$Type4<Double, String>", typeInstance.superTypes().get(0).toString());
     }
 
     public static class Type13<T extends Type1<R>, R> {}
@@ -664,7 +664,7 @@ public class TypeInstanceTest extends TestBase {
         TypeInstance typeInstance = invoker.invokeType(
             resolver.resolveClass(Type13.class.getName()), List.of(arg0, arg1));
 
-        assertEquals("TypeInstanceTest$Type13<TypeInstanceTest$Type14,Boolean>", typeInstance.toString());
+        assertEquals("TypeInstanceTest$Type13<TypeInstanceTest$Type14, Boolean>", typeInstance.toString());
     }
 
     @Test

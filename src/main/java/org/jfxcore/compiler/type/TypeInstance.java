@@ -586,7 +586,7 @@ public class TypeInstance {
 
             for (int i = 0; i < arguments.size(); ++i) {
                 if (i > 0) {
-                    builder.append(',');
+                    builder.append(", ");
                 }
 
                 builder.append(arguments.get(i).toString(simpleNames, javaNames));

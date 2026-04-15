@@ -414,7 +414,7 @@ public class ResolverTest extends TestBase {
         names.add("list5");
 
         PropertyInfo propertyInfo = resolver.resolveProperty(buttonType, true, names.toArray(String[]::new));
-        assertEquals("ObservableList<Pair<? super Button,?>>", propertyInfo.getType().toString());
+        assertEquals("ObservableList<Pair<? super Button, ?>>", propertyInfo.getType().toString());
     }
 
     public static class PropertyInGenericClass<T> {
