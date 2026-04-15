@@ -5,6 +5,7 @@ package org.jfxcore.compiler.ast;
 
 import org.jfxcore.compiler.diagnostic.MarkupException;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
@@ -24,7 +25,7 @@ public final class UnresolvedTypeNode extends TypeNode {
                                Collection<? extends Node> arguments, MarkupException exception) {
         super(name, markupName, sourceInfo);
         this.exception = checkNotNull(exception);
-        this.arguments = List.copyOf(checkNotNull(arguments));
+        this.arguments = new ArrayList<>(checkNotNull(arguments));
     }
 
     public MarkupException getException() {
