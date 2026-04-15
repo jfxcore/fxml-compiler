@@ -7,7 +7,7 @@ import org.jfxcore.compiler.ast.Node;
 import org.jfxcore.compiler.ast.ObjectNode;
 import org.jfxcore.compiler.ast.PropertyNode;
 import org.jfxcore.compiler.ast.ResolvedTypeNode;
-import org.jfxcore.compiler.ast.TypeNode;
+import org.jfxcore.compiler.ast.UnresolvedTypeNode;
 import org.jfxcore.compiler.ast.intrinsic.Intrinsic;
 import org.jfxcore.compiler.ast.intrinsic.Intrinsics;
 import org.jfxcore.compiler.diagnostic.errors.SymbolResolutionErrors;
@@ -51,7 +51,7 @@ public class ObjectToPropertyTransform implements Transform {
     }
 
     private Node tryConvertObjectToProperty(TransformContext context, ObjectNode objectNode) {
-        if (!objectNode.getType().typeEquals(TypeNode.class) || objectNode.getProperties().size() > 0) {
+        if (!objectNode.getType().typeEquals(UnresolvedTypeNode.class) || !objectNode.getProperties().isEmpty()) {
             return objectNode;
         }
 

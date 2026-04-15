@@ -10,8 +10,10 @@ import org.jfxcore.compiler.ast.ObjectNode;
 import org.jfxcore.compiler.ast.PropertyNode;
 import org.jfxcore.compiler.ast.ResolvedTypeNode;
 import org.jfxcore.compiler.ast.TypeNode;
+import org.jfxcore.compiler.ast.UnresolvedTypeNode;
 import org.jfxcore.compiler.ast.intrinsic.Intrinsic;
 import org.jfxcore.compiler.ast.intrinsic.Intrinsics;
+import org.jfxcore.compiler.ast.text.ListNode;
 import org.jfxcore.compiler.ast.text.TextNode;
 import org.jfxcore.compiler.diagnostic.ErrorCode;
 import org.jfxcore.compiler.diagnostic.MarkupException;
@@ -34,15 +36,9 @@ import java.util.List;
 /**
  * Replaces {@link TypeNode} instances in the AST with {@link ResolvedTypeNode} by resolving
  * the names against the imported packages. When the name cannot be resolved, the {@code TypeNode}
- * instance is not replaced.
+ * instance is replaced with {@link UnresolvedTypeNode}.
  */
 public class ResolveTypeTransform implements Transform {
-
-    private final boolean allowUnresolvableTypeArguments;
-
-    public ResolveTypeTransform(boolean allowUnresolvableTypeArguments) {
-        this.allowUnresolvableTypeArguments = allowUnresolvableTypeArguments;
-    }
 
     @Override
     public Node transform(TransformContext context, Node node) {
@@ -68,9 +64,12 @@ public class ResolveTypeTransform implements Transform {
                 typeNode.getSourceInfo());
         }
 
-        TypeDeclaration objectTypeClass = resolver.tryResolveClassAgainstImports(typeNode.getName());
-        if (objectTypeClass == null) {
-            return typeNode;
+        TypeDeclaration objectTypeClass;
+
+        try {
+            objectTypeClass = resolver.resolveClassAgainstImports(typeNode.getName());
+        } catch (MarkupException ex) {
+            return new UnresolvedTypeNode(typeNode, List.of(), ex);
         }
 
         if (objectNode != null) {
@@ -116,17 +115,6 @@ public class ResolveTypeTransform implements Transform {
             }
 
             typeArgsNode.remove();
-            TypeInstance objectType;
-
-            try {
-                objectType = invoker.invokeType(objectTypeClass);
-            } catch (MarkupException ex) {
-                if (ex.getDiagnostic().getCode() != ErrorCode.CLASS_NOT_FOUND) {
-                    throw ex;
-                }
-
-                return typeNode;
-            }
 
             try {
                 switch (typeArgsNode.getValues().size()) {
@@ -154,11 +142,15 @@ public class ResolveTypeTransform implements Transform {
                 objectNode.setNodeData(NodeDataKey.TYPE_ARGUMENTS_SOURCE_INFO,
                     typeArgsNode.getValues().get(0).getSourceInfo());
             } catch (MarkupException ex) {
-                if (!allowUnresolvableTypeArguments || ex.getDiagnostic().getCode() != ErrorCode.CLASS_NOT_FOUND) {
+                if (ex.getDiagnostic().getCode() != ErrorCode.CLASS_NOT_FOUND) {
                     throw ex;
                 }
 
-                type = objectType;
+                List<? extends Node> typeArgs = typeArgsNode.getValues() instanceof ListNode listNode
+                    ? listNode.getValues()
+                    : List.of(typeArgsNode.getValues().get(0));
+
+                return new UnresolvedTypeNode(typeNode, typeArgs, ex);
             }
         } else {
             try {
@@ -168,7 +160,7 @@ public class ResolveTypeTransform implements Transform {
                     throw ex;
                 }
 
-                return typeNode;
+                return new UnresolvedTypeNode(typeNode, List.of(), ex);
             }
         }
 
