@@ -12,6 +12,7 @@ import org.jfxcore.compiler.ast.TypeNode;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.List;
 import java.util.Objects;
 
 public class ClassNode extends ObjectNode implements JavaEmitterNode {
@@ -83,15 +84,20 @@ public class ClassNode extends ObjectNode implements JavaEmitterNode {
         StringBuilder code = context.getOutput();
         String className = hasCodeBehind ? markupClassName : this.className;
         String superClassName = getType().getMarkupName();
+        List<PropertyNode> properties = getProperties();
 
         if (typeArguments != null) {
             superClassName += "<" + typeArguments + ">";
         }
 
-        code.append(String.format("%sclass %s extends %s {\r\n", modifiers, className, superClassName));
+        code.append(String.format("%sclass %s extends %s {\r\n\r\n", modifiers, className, superClassName));
 
-        for (PropertyNode propertyNode : getProperties()) {
-            context.emit(propertyNode);
+        if (!properties.isEmpty()) {
+            for (PropertyNode propertyNode : getProperties()) {
+                context.emit(propertyNode);
+            }
+
+            code.append("\r\n");
         }
 
         if (parameters.length > 0 || !hasCodeBehind) {
@@ -140,10 +146,10 @@ public class ClassNode extends ObjectNode implements JavaEmitterNode {
         }
 
         if (hasCodeBehind) {
-            code.append("\t/** Loads and initializes the scene graph of this component. */\r\n");
+            code.append("\r\n\t/** Loads and initializes the scene graph of this component. */\r\n");
             code.append("\tprotected final void initializeComponent() {}\r\n");
         } else {
-            code.append("\tprivate void initializeComponent() {}\r\n");
+            code.append("\r\n\tprivate void initializeComponent() {}\r\n");
         }
 
         code.append("}");
