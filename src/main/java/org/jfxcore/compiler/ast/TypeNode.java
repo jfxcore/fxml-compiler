@@ -6,9 +6,6 @@ package org.jfxcore.compiler.ast;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import java.util.Objects;
 
-/**
- * Represents an unresolved type.
- */
 public class TypeNode extends AbstractNode {
 
     public static final TypeNode NONE = new TypeNode("<none>", SourceInfo.none()) {

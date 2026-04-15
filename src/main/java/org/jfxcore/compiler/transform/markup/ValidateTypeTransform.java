@@ -4,10 +4,9 @@
 package org.jfxcore.compiler.transform.markup;
 
 import org.jfxcore.compiler.ast.Node;
-import org.jfxcore.compiler.ast.TypeNode;
+import org.jfxcore.compiler.ast.UnresolvedTypeNode;
 import org.jfxcore.compiler.transform.Transform;
 import org.jfxcore.compiler.transform.TransformContext;
-import org.jfxcore.compiler.type.Resolver;
 
 /**
  * Validates that there are no unresolved types in the AST.
@@ -16,10 +15,8 @@ public class ValidateTypeTransform implements Transform {
 
     @Override
     public Node transform(TransformContext context, Node node) {
-        if (node.typeEquals(TypeNode.class)) {
-            // The following line will produce a diagnostic, since we're resolving a type
-            // for which we already know that it is unresolvable.
-            new Resolver(node.getSourceInfo()).resolveClassAgainstImports(((TypeNode)node).getName());
+        if (node instanceof UnresolvedTypeNode unresolvedTypeNode) {
+            throw unresolvedTypeNode.getException();
         }
 
         return node;

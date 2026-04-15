@@ -3,12 +3,14 @@
 
 package org.jfxcore.compiler.transform.codebehind;
 
+import java.util.List;
 import javassist.Modifier;
 import org.jfxcore.compiler.ast.DocumentNode;
 import org.jfxcore.compiler.ast.Node;
 import org.jfxcore.compiler.ast.ObjectNode;
 import org.jfxcore.compiler.ast.PropertyNode;
 import org.jfxcore.compiler.ast.ResolvedTypeNode;
+import org.jfxcore.compiler.ast.UnresolvedTypeNode;
 import org.jfxcore.compiler.ast.Visitor;
 import org.jfxcore.compiler.ast.codebehind.AddCodeFieldNode;
 import org.jfxcore.compiler.ast.intrinsic.Intrinsics;
@@ -61,17 +63,20 @@ public class AddCodeFieldsTransform implements Transform {
 
         if (objectNode.getType() instanceof ResolvedTypeNode resolvedTypeNode) {
             valueNode = new TextNode(resolvedTypeNode.getTypeInstance().javaName(), idNode.getSourceInfo());
-        } else {
-            PropertyNode typeArgsNode = objectNode.findIntrinsicProperty(Intrinsics.TYPE_ARGUMENTS);
-            if (typeArgsNode != null) {
-                var typeArgs = typeArgsNode.getValues().stream().map(value -> ((TextNode)value).getText()).toList();
-                valueNode = new TextNode(
-                    objectNode.getType().getMarkupName() +
-                        "<" + String.join(", ", typeArgs) + ">",
-                    idNode.getSourceInfo());
-            } else {
+        } else if (objectNode.getType() instanceof UnresolvedTypeNode unresolvedTypeNode) {
+            if (unresolvedTypeNode.getArguments().isEmpty()) {
                 valueNode = new TextNode(objectNode.getType().getMarkupName(), idNode.getSourceInfo());
+            } else {
+                List<String> typeArgs = unresolvedTypeNode.getArguments().stream()
+                    .map(value -> ((TextNode)value).getText())
+                    .toList();
+
+                valueNode = new TextNode(
+                    objectNode.getType().getMarkupName() + "<" + String.join(", ", typeArgs) + ">",
+                    idNode.getSourceInfo());
             }
+        } else {
+            throw GeneralErrors.internalError("Unexpected node: " + objectNode.getType().getClass().getSimpleName());
         }
 
         root.getProperties().add(new AddCodeFieldNode(id, valueNode, Modifier.PROTECTED, idNode.getSourceInfo()));

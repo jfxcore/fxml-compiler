@@ -46,6 +46,13 @@ public class GenericsTest extends CompilerTestBase {
         }
     }
 
+    @SuppressWarnings("unused")
+    public static class GenericObject2<T, U> extends GenericObject<T> {
+        private U prop3;
+        public U getProp3() { return prop3; }
+        public void setProp3(U value) { prop3 = value; }
+    }
+
     @Test
     @SuppressWarnings("rawtypes")
     public void GenericObject_Without_TypeArguments_Is_Instantiated() {
@@ -72,6 +79,22 @@ public class GenericsTest extends CompilerTestBase {
 
         assertEquals("foo", ((GenericObject)Reflection.getFieldValue(root, "obj")).getProp());
         assertEquals("foo", ((GenericObject)Reflection.getFieldValue(root, "obj")).getProp2());
+    }
+
+    @Test
+    @SuppressWarnings("rawtypes")
+    public void GenericObject_With_Multiple_TypeArguments_Is_Instantiated() {
+        GridPane root = compileAndRun("""
+            <?import javafx.scene.layout.*?>
+            <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
+                <GenericObject2 fx:typeArguments="java.lang.String, Integer" fx:id="obj"
+                                prop="foo" prop2="foo" prop3="123"/>
+            </GridPane>
+        """);
+
+        assertEquals("foo", ((GenericObject)Reflection.getFieldValue(root, "obj")).getProp());
+        assertEquals("foo", ((GenericObject)Reflection.getFieldValue(root, "obj")).getProp2());
+        assertEquals(123, ((GenericObject2)Reflection.getFieldValue(root, "obj")).getProp3());
     }
 
     @Test
@@ -158,7 +181,7 @@ public class GenericsTest extends CompilerTestBase {
     }
 
     @Test
-    public void GenericObject_With_Invalid_TypeArguments_Throws_Exception() {
+    public void GenericObject_With_Unresolvable_TypeArguments_Throws_Exception() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.scene.layout.*?>
             <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
@@ -168,6 +191,20 @@ public class GenericsTest extends CompilerTestBase {
 
         assertEquals(ErrorCode.CLASS_NOT_FOUND, ex.getDiagnostic().getCode());
         assertCodeHighlight("foobar", ex);
+    }
+
+    @Test
+    public void GenericObject_With_Multiple_Unresolvable_TypeArguments_Throws_Exception() {
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <?import javafx.scene.layout.*?>
+            <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
+                <GenericObject fx:typeArguments="foo, bar" prop="foo"/>
+            </GridPane>
+        """));
+
+        assertEquals(ErrorCode.CLASS_NOT_FOUND, ex.getDiagnostic().getCode());
+        assertTrue(ex.getMessage().contains("'foo'"));
+        assertCodeHighlight("foo, bar", ex);
     }
 
     @Test

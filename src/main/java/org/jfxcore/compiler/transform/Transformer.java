@@ -65,7 +65,7 @@ public class Transformer {
             new DefaultPropertyTransform(true),
             new ContentExpressionTransform(),
             new IntrinsicsTransform(),
-            new ResolveTypeTransform(true),
+            new ResolveTypeTransform(),
             new AddCodeFieldsTransform(),
             new FlattenClassTransform());
     }
@@ -76,7 +76,7 @@ public class Transformer {
             new DefaultPropertyTransform(true),
             new ContentExpressionTransform(),
             new IntrinsicsTransform(),
-            new ResolveTypeTransform(false),
+            new ResolveTypeTransform(),
             new ObjectToPropertyTransform(),
             new ConstantTransform(),
             new ValidateTypeTransform(),
