@@ -122,7 +122,10 @@ public class PushListenerGenerator extends ClassGenerator {
             .invoke(getMethod)
             .invoke(setMethod)
             .aload(2)
+            .anew(WeakInvalidationListenerDecl())
+            .dup()
             .aload(0)
+            .invoke(WeakInvalidationListenerDecl().requireDeclaredConstructor(InvalidationListenerDecl()))
             .invoke(ObservableDecl().requireDeclaredMethod("addListener", InvalidationListenerDecl()))
             .vreturn());
 

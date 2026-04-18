@@ -152,6 +152,12 @@ public class ListReseatableSourceWrapperGenerator extends ClassGenerator {
         code.aload(newList)
             .ifnull(code::vreturn);
 
+        // if (newList == target) return
+        code.aload(newList)
+            .aload(0)
+            .getfield(targetField)
+            .if_acmpeq(code::vreturn);
+
         // if (newList instanceof ObservableList list) {
         //     list.setAll(target)
         // } else {

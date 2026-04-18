@@ -639,7 +639,24 @@ public class BindingPathTest extends CompilerTestBase {
     }
 
     @Test
-    public void Bind_Reverse_To_Observable_Properties() {
+    public void Bind_Reverse_To_Observable_Property() {
+        TestPane root = compileAndRun("""
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                      prefWidth="$>{simpleProp}"/>
+        """);
+
+        assertNewExpr(root, "DoublePushListener");
+
+        assertFalse(root.prefWidthProperty().isBound());
+        assertFalse(root.simpleProp.isBound());
+        assertEquals(-1.0, root.getPrefWidth(), 0.001);
+        assertEquals(-1.0, root.simpleProp.get(), 0.001);
+        root.setPrefWidth(456);
+        assertEquals(456.0, root.simpleProp.get(), 0.001);
+    }
+
+    @Test
+    public void Bind_Reverse_To_Observable_Indirect_Properties() {
         TestPane root = compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                       managed="$>{context.boolVal}" prefWidth="$>{context.doubleVal}"/>
@@ -688,6 +705,18 @@ public class BindingPathTest extends CompilerTestBase {
         assertEquals(ErrorCode.INVALID_REVERSE_BINDING_SOURCE, ex.getDiagnostic().getCode());
         assertMessageContains("required javafx.beans.property.Property", ex);
         assertCodeHighlight("observableDouble", ex);
+    }
+
+    @Test
+    public void Bind_Reverse_Fails_For_NonObservable_Source() {
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                      prefWidth="$>{simpleDoubleVal}"/>
+        """));
+
+        assertEquals(ErrorCode.INVALID_REVERSE_BINDING_SOURCE, ex.getDiagnostic().getCode());
+        assertMessageContains("required javafx.beans.property.Property", ex);
+        assertCodeHighlight("simpleDoubleVal", ex);
     }
 
     @Test

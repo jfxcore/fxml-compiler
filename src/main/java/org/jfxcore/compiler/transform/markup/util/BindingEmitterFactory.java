@@ -213,7 +213,8 @@ public class BindingEmitterFactory {
                     result.getSourceInfo(), result.getValueType().javaName(), targetType.javaName());
             }
 
-            if (!result.getObservableType().declaration().subtypeOf(PropertyDecl())) {
+            if (result.getObservableType() == null
+                    || !result.getObservableType().declaration().subtypeOf(PropertyDecl())) {
                 throw BindingSourceErrors.invalidReverseBindingSource(
                     result.getSourceInfo(), result.getSourceDeclaringType(),
                     result.getSourceName(), result.isFunction());
