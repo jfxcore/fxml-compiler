@@ -77,12 +77,13 @@ path segment. For example, `${::addresses.size}` is a valid expression if `addre
 When the path is prefixed with the content selection operator `..`, the expression does not operate on a single
 scalar value or property. Instead, it operates on the content of the collection identified by the source path.
 
-Content selection is available for all three expression types:
+Content selection is available for all expression types:
 
 | Intrinsic | Normal form | Content selection form |
 |:-|:-|:-|
 | [`fx:Evaluate`](../../reference/evaluate.html) | `$source` | `$..source` |
 | [`fx:Observe`](../../reference/observe.html) | `${source}` | `${..source}` |
+| [`fx:Push`](../../reference/push.html) | `$>{source}` | `$>{..source}` |
 | [`fx:Synchronize`](../../reference/synchronize.html) | `#{source}` | `#{..source}` |
 
 ### Content selection semantics
@@ -94,17 +95,24 @@ Content selection is available for all three expression types:
    <ListView items="$..source"/>
    ```
 
-2. `fx:Observe` establishes a content binding between the target collection property and the source collection:
+2. `fx:Observe` establishes a content binding between the target and source collections:
 
    ```xml
-   <!-- corresponds to itemsProperty().bindContent(source) -->
+   <!-- corresponds to Bindings.bindContent(items, source) -->
    <ListView items="${..source}"/>
    ```
 
-3. `fx:Synchronize` establishes a bidirectional content binding between the target collection property and the source collection:
+3. `fx:Push` establishes a reverse content binding between the source and target collections:
 
    ```xml
-   <!-- corresponds to itemsProperty().bindContentBidirectional(source) -->
+   <!-- corresponds to Bindings.bindContent(source, items) -->
+   <ListView items="$>{..source}"/>
+   ```
+
+4. `fx:Synchronize` establishes a bidirectional content binding between the target and source collections:
+
+   ```xml
+   <!-- corresponds to Bindings.bindContentBidirectional(items, source) -->
    <ListView items="#{..source}"/>
    ```
 

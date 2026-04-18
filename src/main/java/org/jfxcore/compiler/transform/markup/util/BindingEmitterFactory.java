@@ -22,11 +22,14 @@ import org.jfxcore.compiler.diagnostic.errors.BindingSourceErrors;
 import org.jfxcore.compiler.diagnostic.errors.PropertyAssignmentErrors;
 import org.jfxcore.compiler.transform.TransformContext;
 import org.jfxcore.compiler.type.Resolver;
+import org.jfxcore.compiler.type.TypeDeclaration;
 import org.jfxcore.compiler.type.TypeHelper;
 import org.jfxcore.compiler.type.TypeInstance;
 import org.jfxcore.compiler.type.TypeInvoker;
 import org.jfxcore.compiler.util.PropertyInfo;
 import java.util.List;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 
 import static org.jfxcore.compiler.type.KnownSymbols.*;
 
@@ -118,18 +121,41 @@ public class BindingEmitterFactory {
                     result.getValue(),
                     result.getValueType(),
                     result.getObservableType(),
+                    bindingMode.isReverse(),
                     bindingNode.getSourceInfo());
             } else {
+                if (bindingMode.isReverse()) {
+                    // Find the List/Set/Map instantiation of the current target type.
+                    targetType = targetType.superTypes().stream()
+                        .mapMulti(new BiConsumer<TypeInstance, Consumer<TypeInstance>>() {
+                            @Override
+                            public void accept(TypeInstance current, Consumer<TypeInstance> downstream) {
+                                downstream.accept(current);
+                                current.superTypes().forEach(st -> accept(st, downstream));
+                            }
+                        })
+                        .filter(t -> {
+                            TypeDeclaration d = t.declaration();
+                            return d.equals(ListDecl()) || d.equals(SetDecl()) || d.equals(MapDecl());
+                        })
+                        .findFirst()
+                        .orElse(targetType);
+                }
+
                 throw BindingSourceErrors.invalidContentBindingSource(
                     result.getSourceInfo(), result.getSourceDeclaringType(),
                     result.getSourceName(), targetType, bindingMode.isBidirectional(),
-                    isValidContentBindingSource(BindingMode.CONTENT, targetType, result.getValueType()));
+                    !bindingMode.isReverse() && isValidContentBindingSource(
+                        BindingMode.CONTENT, targetType, result.getValueType()));
             }
 
             TypeInstance sourceType = TypeHelper.getTypeInstance(value);
 
-            if (!targetType.isAssignableFrom(sourceType)) {
+            if (!bindingMode.isReverse() && !targetType.isAssignableFrom(sourceType)) {
                 throw BindingSourceErrors.cannotConvertSourceType(
+                    result.getSourceInfo(), result.getValueType().javaName(), targetType.javaName());
+            } else if (bindingMode.isReverse() && !sourceType.isAssignableFrom(targetType)) {
+                throw BindingSourceErrors.cannotConvertTargetType(
                     result.getSourceInfo(), result.getValueType().javaName(), targetType.javaName());
             }
         } else if (bindingMode.isBidirectional()) {
@@ -172,6 +198,25 @@ public class BindingEmitterFactory {
             if (!targetType.equals(result.getValueType()) && converter == null && format == null) {
                 throw BindingSourceErrors.sourceTypeMismatch(
                     result.getSourceInfo(), result.getValueType().javaName(), targetType.javaName());
+            }
+
+            value = result.getValue();
+        } else if (bindingMode.isReverse()) {
+            if (result.isFunction()) {
+                throw BindingSourceErrors.invalidReverseBindingSource(
+                    result.getSourceInfo(), result.getSourceDeclaringType(),
+                    result.getSourceName(), true);
+            }
+
+            if (!result.getValueType().isAssignableFrom(targetType)) {
+                throw BindingSourceErrors.cannotConvertTargetType(
+                    result.getSourceInfo(), result.getValueType().javaName(), targetType.javaName());
+            }
+
+            if (!result.getObservableType().declaration().subtypeOf(PropertyDecl())) {
+                throw BindingSourceErrors.invalidReverseBindingSource(
+                    result.getSourceInfo(), result.getSourceDeclaringType(),
+                    result.getSourceName(), result.isFunction());
             }
 
             value = result.getValue();
@@ -255,6 +300,19 @@ public class BindingEmitterFactory {
             || target.subtypeOf(MapDecl()) && source.subtypeOf(MapDecl());
     }
 
+    /**
+     * Returns whether the compiler may synthesize a collection wrapper for a binding source.
+     * <p>
+     * The wrapper is intentionally not a general-purpose coercion mechanism. Its job is limited to one case:
+     * preserving collection-binding semantics for a compiled path whose final value is reached through an
+     * observable intermediate. Typical examples are expressions such as {@code path.to.observableList}, where
+     * the binding must continue to follow the path when any of the path segments change, even though the final
+     * property being bound is the collection content rather than the path object itself.
+     * <p>
+     * By contrast, the wrapper is not used to blur distinct source categories that already have their own
+     * meaning. In particular, a direct source of type {@code ObservableValue<ObservableList<T>>} is still an
+     * {@code ObservableValue}, not a collection source.
+     */
     private static boolean isCollectionWrapperApplicable(
             BindingNode node, TypeInstance target, BindingEmitterInfo source) {
         if (!source.isCompiledPath()) {
@@ -262,34 +320,40 @@ public class BindingEmitterFactory {
         }
 
         TypeInstance sourceType = source.getValueType();
+        boolean observableValue;
 
-        switch (node.getMode()) {
-            case UNIDIRECTIONAL_CONTENT:
-                if (sourceType.subtypeOf(ObservableValueDecl())) {
-                    Resolver resolver = new Resolver(node.getSourceInfo());
-                    sourceType = resolver.findObservableArgument(sourceType);
+        if (sourceType.subtypeOf(ObservableValueDecl())) {
+            Resolver resolver = new Resolver(node.getSourceInfo());
+            sourceType = resolver.findObservableArgument(sourceType);
+            observableValue = true;
+        } else {
+            observableValue = false;
+        }
 
-                    return target.subtypeOf(ListDecl()) && sourceType.subtypeOf(ListDecl())
+        return switch (node.getMode()) {
+            case UNIDIRECTIONAL_CONTENT -> {
+                if (observableValue) {
+                    yield target.subtypeOf(ListDecl()) && sourceType.subtypeOf(ListDecl())
                         || target.subtypeOf(SetDecl()) && sourceType.subtypeOf(SetDecl())
                         || target.subtypeOf(MapDecl()) && sourceType.subtypeOf(MapDecl());
                 }
 
-                return target.subtypeOf(ListDecl()) && sourceType.subtypeOf(ObservableListDecl())
+                yield target.subtypeOf(ListDecl()) && sourceType.subtypeOf(ObservableListDecl())
                     || target.subtypeOf(SetDecl()) && sourceType.subtypeOf(ObservableSetDecl())
                     || target.subtypeOf(MapDecl()) && sourceType.subtypeOf(ObservableMapDecl());
+            }
 
-            case BIDIRECTIONAL_CONTENT:
-                if (sourceType.subtypeOf(ObservableValueDecl())) {
-                    Resolver resolver = new Resolver(node.getSourceInfo());
-                    sourceType = resolver.findObservableArgument(sourceType);
-                }
+            case REVERSE_CONTENT ->
+                target.subtypeOf(ObservableListDecl()) && sourceType.subtypeOf(ListDecl())
+                || target.subtypeOf(ObservableSetDecl()) && sourceType.subtypeOf(SetDecl())
+                || target.subtypeOf(ObservableMapDecl()) && sourceType.subtypeOf(MapDecl());
 
-                return target.subtypeOf(ObservableListDecl()) && sourceType.subtypeOf(ObservableListDecl())
-                    || target.subtypeOf(ObservableSetDecl()) && sourceType.subtypeOf(ObservableSetDecl())
-                    || target.subtypeOf(ObservableMapDecl()) && sourceType.subtypeOf(ObservableMapDecl());
+            case BIDIRECTIONAL_CONTENT ->
+                target.subtypeOf(ObservableListDecl()) && sourceType.subtypeOf(ObservableListDecl())
+                || target.subtypeOf(ObservableSetDecl()) && sourceType.subtypeOf(ObservableSetDecl())
+                || target.subtypeOf(ObservableMapDecl()) && sourceType.subtypeOf(ObservableMapDecl());
 
-            default:
-                return false;
-        }
+            default -> false;
+        };
     }
 }

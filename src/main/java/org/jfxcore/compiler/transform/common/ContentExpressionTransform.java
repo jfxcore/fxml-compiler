@@ -21,15 +21,15 @@ import java.util.List;
 import static org.jfxcore.compiler.ast.intrinsic.Intrinsics.*;
 
 /**
- * Detects the content literal form in {@code fx:Evaluate}, {@code fx:Observe}, and {@code fx:Synchronize}
- * intrinsics and adds {@link NodeDataKey#CONTENT_EXPRESSION} to the node.
+ * Detects the content literal form in {@code fx:Evaluate}, {@code fx:Observe}, {@code fx:Push},
+ * and {@code fx:Synchronize} intrinsics and adds {@link NodeDataKey#CONTENT_EXPRESSION} to the node.
  */
 public class ContentExpressionTransform implements Transform {
 
     @Override
     public Node transform(TransformContext context, Node node) {
         if (!(node instanceof ObjectNode objectNode)
-                || !objectNode.isIntrinsic(EVALUATE, OBSERVE, SYNCHRONIZE)) {
+                || !objectNode.isIntrinsic(EVALUATE, OBSERVE, PUSH, SYNCHRONIZE)) {
             return node;
         }
 
@@ -37,6 +37,8 @@ public class ContentExpressionTransform implements Transform {
             parseExpression(context, objectNode, EVALUATE);
         } else if (objectNode.isIntrinsic(OBSERVE)) {
             parseExpression(context, objectNode, OBSERVE);
+        } else if (objectNode.isIntrinsic(PUSH)) {
+            parseExpression(context, objectNode, PUSH);
         } else if (objectNode.isIntrinsic(SYNCHRONIZE)) {
             parseExpression(context, objectNode, SYNCHRONIZE);
         }

@@ -1,4 +1,4 @@
-// Copyright (c) 2021, 2024, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.util;
@@ -64,6 +64,13 @@ public class MoreAssertions {
 
         if (l1 != null && !Objects.equals(new ArrayList<>(l1), new ArrayList<>(l2))) {
             fail("Lists not equal.");
+        }
+    }
+
+    public static void assertMessageContains(String expected, MarkupException exception) {
+        if (!exception.getDiagnostic().getMessage().contains(expected)) {
+            fail("Expected substring: " + expected + "\r\n"
+                + "Exception message: " + exception.getDiagnostic().getMessage());
         }
     }
 

@@ -67,7 +67,9 @@ public class BindingTransform implements Transform {
         ValueNode inverseMethodNode = inverseMethod != null ?
             inverseMethod.getSingleValue(context).as(ValueNode.class) : null;
 
-        ExpressionNode pathExpression = tryParseExpression(context, pathNode, inverseMethodNode);
+        ExpressionNode pathExpression = tryParseExpression(
+            context, pathNode, !bindingMode.isReverse(), inverseMethodNode);
+
         if (pathExpression == null) {
             throw ParserErrors.invalidExpression(pathNode.getSourceInfo());
         }
@@ -91,6 +93,8 @@ public class BindingTransform implements Transform {
             return getBindingMode(node, BindingMode.ONCE, BindingMode.CONTENT);
         } else if (node.isIntrinsic(Intrinsics.OBSERVE)) {
             return getBindingMode(node, BindingMode.UNIDIRECTIONAL, BindingMode.UNIDIRECTIONAL_CONTENT);
+        } else if (node.isIntrinsic(Intrinsics.PUSH)) {
+            return getBindingMode(node, BindingMode.REVERSE, BindingMode.REVERSE_CONTENT);
         } else if (node.isIntrinsic(Intrinsics.SYNCHRONIZE)) {
             return getBindingMode(node, BindingMode.BIDIRECTIONAL, BindingMode.BIDIRECTIONAL_CONTENT);
         }
@@ -105,9 +109,10 @@ public class BindingTransform implements Transform {
     private ExpressionNode tryParseExpression(
             TransformContext context,
             ValueNode value,
+            boolean allowOperator,
             @Nullable ValueNode inverseMethodNode) {
         if (value instanceof CompositeNode compositeNode) {
-            return parseCompositeNode(context, compositeNode);
+            return parseCompositeNode(context, compositeNode, allowOperator);
         }
 
         if (value instanceof PathNode pathNode) {
@@ -134,7 +139,7 @@ public class BindingTransform implements Transform {
             Operator operator,
             FunctionNode functionNode,
             @Nullable ValueNode inverseMethodNode) {
-        ExpressionNode expression = tryParseExpression(context, inverseMethodNode, null);
+        ExpressionNode expression = tryParseExpression(context, inverseMethodNode, true, null);
         if (expression != null && !(expression instanceof PathExpressionNode)) {
             throw GeneralErrors.expressionNotApplicable(expression.getSourceInfo(), false);
         }
@@ -152,7 +157,7 @@ public class BindingTransform implements Transform {
             return value;
         }
 
-        ExpressionNode expression = tryParseExpression(context, value, null);
+        ExpressionNode expression = tryParseExpression(context, value, true, null);
         if (expression != null) {
             return expression;
         }
@@ -164,11 +169,15 @@ public class BindingTransform implements Transform {
         throw ParserErrors.unexpectedExpression(value.getSourceInfo());
     }
 
-    private ExpressionNode parseCompositeNode(TransformContext context, CompositeNode node) {
+    private ExpressionNode parseCompositeNode(TransformContext context, CompositeNode node, boolean allowOperator) {
         List<ValueNode> values = node.getValues();
         Operator operator;
 
         if (values.get(0) instanceof TextNode textNode) {
+            if (!allowOperator) {
+                throw ParserErrors.unexpectedToken(textNode.getSourceInfo());
+            }
+
             operator = switch (textNode.getText()) {
                 case "!" -> Operator.NOT;
                 case "!!" -> Operator.BOOLIFY;

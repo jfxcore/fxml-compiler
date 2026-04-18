@@ -25,6 +25,11 @@ public class BindingSourceErrors {
             ErrorCode.CANNOT_CONVERT_SOURCE_TYPE, sourceType, targetType));
     }
 
+    public static MarkupException cannotConvertTargetType(SourceInfo sourceInfo, String sourceType, String targetType) {
+        return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
+            ErrorCode.CANNOT_CONVERT_TARGET_TYPE, targetType, sourceType));
+    }
+
     public static MarkupException invalidContentAssignmentSource(
             SourceInfo sourceInfo, TypeDeclaration declaringType, String propertyName) {
         return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
@@ -54,6 +59,15 @@ public class BindingSourceErrors {
             ? Diagnostic.newDiagnosticVariant(ErrorCode.INVALID_UNIDIRECTIONAL_BINDING_SOURCE,
                                               "function", formatPropertyName(declaringType, propertyName))
             : Diagnostic.newDiagnostic(ErrorCode.INVALID_UNIDIRECTIONAL_BINDING_SOURCE,
+                                       formatPropertyName(declaringType, propertyName)));
+    }
+
+    public static MarkupException invalidReverseBindingSource(SourceInfo sourceInfo, TypeDeclaration declaringType,
+                                                              String propertyName, boolean function) {
+        return new MarkupException(sourceInfo, function
+            ? Diagnostic.newDiagnosticVariant(ErrorCode.INVALID_REVERSE_BINDING_SOURCE,
+                                              "function", formatPropertyName(declaringType, propertyName))
+            : Diagnostic.newDiagnostic(ErrorCode.INVALID_REVERSE_BINDING_SOURCE,
                                        formatPropertyName(declaringType, propertyName)));
     }
 

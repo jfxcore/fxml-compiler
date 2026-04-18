@@ -198,6 +198,7 @@ public class PropertyInfo {
                     || (observableType == null || observableType.subtypeOf(MapDecl())) && typeInstance.subtypeOf(MapDecl());
 
             case BIDIRECTIONAL_CONTENT:
+            case REVERSE_CONTENT:
                 return (observableType == null || observableType.subtypeOf(ObservableListDecl())) && typeInstance.subtypeOf(ObservableListDecl())
                     || (observableType == null || observableType.subtypeOf(ObservableSetDecl())) && typeInstance.subtypeOf(ObservableSetDecl())
                     || (observableType == null || observableType.subtypeOf(ObservableMapDecl())) && typeInstance.subtypeOf(ObservableMapDecl());

@@ -60,6 +60,7 @@ public class FunctionExpressionNode extends AbstractNode implements ExpressionNo
                                         TypeInstance invokingType,
                                         @Nullable TypeInstance targetType) {
         boolean bidirectional = bindingMode == BindingMode.BIDIRECTIONAL;
+        targetType = bindingMode == BindingMode.REVERSE ? null : targetType;
 
         BindingEmitterInfo emitterInfo = bindingMode.isObservable() ?
             new ObservableFunctionEmitterFactory(this, invokingType, targetType).newInstance(bidirectional) :

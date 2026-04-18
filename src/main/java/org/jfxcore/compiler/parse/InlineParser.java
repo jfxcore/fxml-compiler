@@ -34,6 +34,7 @@ public class InlineParser {
 
     public static final String EVALUATE_EXPR_PREFIX = "$";
     public static final String OBSERVE_EXPR_PREFIX = "${";
+    public static final String PUSH_EXPR_PREFIX = "$>{";
     public static final String SYNCHRONIZE_EXPR_PREFIX = "#{";
 
     private record SyntaxMapping(String compact, String name, boolean intrinsic, boolean closingCurly) {}
@@ -41,6 +42,7 @@ public class InlineParser {
     private static final SyntaxMapping[] SYNTAX_MAPPING = new SyntaxMapping[] {
         new SyntaxMapping(SYNCHRONIZE_EXPR_PREFIX, Intrinsics.SYNCHRONIZE.getName(), true, true),
         new SyntaxMapping(OBSERVE_EXPR_PREFIX, Intrinsics.OBSERVE.getName(), true, true),
+        new SyntaxMapping(PUSH_EXPR_PREFIX, Intrinsics.PUSH.getName(), true, true),
         new SyntaxMapping(EVALUATE_EXPR_PREFIX, Intrinsics.EVALUATE.getName(), true, false),
     };
 
