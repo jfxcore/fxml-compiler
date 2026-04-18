@@ -593,11 +593,11 @@ public class ListBindingTest extends CompilerTestBase {
     public void Reverse_ContentBinding_Fails_For_ObjectProperty() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <ListTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                          targetObjProp="$>{..list}"/>
+                          targetObjProp=">{..list}"/>
         """));
 
         assertEquals(ErrorCode.INVALID_CONTENT_BINDING_TARGET, ex.getDiagnostic().getCode());
-        assertCodeHighlight("targetObjProp=\"$>{..list}\"", ex);
+        assertCodeHighlight("targetObjProp=\">{..list}\"", ex);
     }
 
     /*
@@ -608,7 +608,7 @@ public class ListBindingTest extends CompilerTestBase {
     public void Reverse_ContentBinding_To_Vanilla_List() {
         ListTestPane root = compileAndRun("""
             <ListTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                          targetListProp="$>{..list}"/>
+                          targetListProp=">{..list}"/>
         """);
 
         assertNotNewExpr(root, OBSERVABLE_VALUE_WRAPPER);
@@ -630,7 +630,7 @@ public class ListBindingTest extends CompilerTestBase {
     public void Reverse_ContentBinding_To_Vanilla_List_Indirect() {
         ListTestPane root = compileAndRun("""
             <ListTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                          targetListProp="$>{..indirect.list}"/>
+                          targetListProp=">{..indirect.list}"/>
         """);
 
         assertNewExpr(root, RESEATABLE_SOURCE_WRAPPER);
@@ -663,7 +663,7 @@ public class ListBindingTest extends CompilerTestBase {
     public void Reverse_ContentBinding_To_ObservableList() {
         ListTestPane root = compileAndRun("""
             <ListTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                          targetListProp="$>{..obsList}"/>
+                          targetListProp=">{..obsList}"/>
         """);
 
         assertNotNewExpr(root, OBSERVABLE_VALUE_WRAPPER);
@@ -685,7 +685,7 @@ public class ListBindingTest extends CompilerTestBase {
     public void Reverse_ContentBinding_To_ObservableList_Indirect() {
         ListTestPane root = compileAndRun("""
             <ListTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                          targetListProp="$>{..indirect.obsList}"/>
+                          targetListProp=">{..indirect.obsList}"/>
         """);
 
         assertNewExpr(root, RESEATABLE_SOURCE_WRAPPER);
@@ -718,7 +718,7 @@ public class ListBindingTest extends CompilerTestBase {
     public void Reverse_Binding_To_ObservableValue_Of_Vanilla_List() {
         ListTestPane root = compileAndRun("""
             <ListTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                          targetListProp="$>{propOfList}"/>
+                          targetListProp=">{propOfList}"/>
         """);
 
         assertNewExpr(root, PUSH_LISTENER);
@@ -739,7 +739,7 @@ public class ListBindingTest extends CompilerTestBase {
     public void Reverse_ContentBinding_To_ObservableValue_Of_Vanilla_List() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <ListTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                          targetListProp="$>{..propOfList}"/>
+                          targetListProp=">{..propOfList}"/>
         """));
 
         assertEquals(ErrorCode.INVALID_CONTENT_BINDING_SOURCE, ex.getDiagnostic().getCode());
@@ -755,7 +755,7 @@ public class ListBindingTest extends CompilerTestBase {
     public void Reverse_ContentBinding_To_ObservableValue_Of_ObservableList() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <ListTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                          targetListProp="$>{..propOfObsList}"/>
+                          targetListProp=">{..propOfObsList}"/>
         """));
 
         assertEquals(ErrorCode.INVALID_CONTENT_BINDING_SOURCE, ex.getDiagnostic().getCode());

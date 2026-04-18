@@ -950,7 +950,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     public void Bind_Reverse_To_Method_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                      id="$>{formatMethod('foo-%s', prefWidth, true, null)}"/>
+                      id=">{formatMethod('foo-%s', prefWidth, true, null)}"/>
         """));
 
         assertEquals(ErrorCode.INVALID_REVERSE_BINDING_SOURCE, ex.getDiagnostic().getCode());
@@ -962,7 +962,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     public void Bind_Reverse_To_Method_Returning_Property_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                      id="$>{methodReturningProperty('asdf')}">
+                      id=">{methodReturningProperty('asdf')}">
             </TestPane>
         """));
 

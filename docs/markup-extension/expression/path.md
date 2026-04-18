@@ -83,7 +83,7 @@ Content selection is available for all expression types:
 |:-|:-|:-|
 | [`fx:Evaluate`](../../reference/evaluate.html) | `$source` | `$..source` |
 | [`fx:Observe`](../../reference/observe.html) | `${source}` | `${..source}` |
-| [`fx:Push`](../../reference/push.html) | `$>{source}` | `$>{..source}` |
+| [`fx:Push`](../../reference/push.html) | `>{source}` | `>{..source}` |
 | [`fx:Synchronize`](../../reference/synchronize.html) | `#{source}` | `#{..source}` |
 
 ### Content selection semantics
@@ -106,7 +106,7 @@ Content selection is available for all expression types:
 
    ```xml
    <!-- corresponds to Bindings.bindContent(source, items) -->
-   <ListView items="$>{..source}"/>
+   <ListView items=">{..source}"/>
    ```
 
 4. `fx:Synchronize` establishes a bidirectional content binding between the target and source collections:

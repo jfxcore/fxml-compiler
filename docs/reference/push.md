@@ -1,10 +1,10 @@
 ---
 layout: default
-title: fx:Push, <span class="nav-inline-code">$>{x}</span>
+title: fx:Push, <span class="nav-inline-code">>{x}</span>
 parent: FXML 2.0 language reference
 ---
 
-# fx:Push markup extension, $>{x}
+# fx:Push markup extension, >{x}
 The `fx:Push` markup extension establishes a reverse binding that pushes values from the binding target to the source.
 It is only valid in [property-consumer](../markup-extension.html#where-markup-extensions-can-be-used) position and cannot
 be used where a value or [`ObservableValue`](https://openjfx.io/javadoc/17/javafx.base/javafx/beans/value/ObservableValue.html)
@@ -14,7 +14,7 @@ A leading `..` in the source path selects the [content](../markup-extension/expr
 of the target and source collection. In that form, `fx:Push` establishes a reverse content binding between
 the source and target collections.
 
-Its prefix notation is `$>{x}`, where <span class="inline-code">x</span> is the [source path](../markup-extension/expression/path.html).
+Its prefix notation is `>{x}`, where <span class="inline-code">x</span> is the [source path](../markup-extension/expression/path.html).
 
 ## Properties
 
@@ -39,8 +39,8 @@ Its prefix notation is `$>{x}`, where <span class="inline-code">x</span> is the 
 <object property="{fx:Push mySourcePath}"/>
 
 <!-- Prefix notation -->
-<object property="$>{mySourcePath}"/>
+<object property=">{mySourcePath}"/>
 
 <!-- Reverse content binding -->
-<object property="$>{..mySourcePath}"/>
+<object property=">{..mySourcePath}"/>
 ```
