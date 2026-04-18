@@ -1,11 +1,13 @@
-// Copyright (c) 2023, 2025, JFXcore. All rights reserved.
+// Copyright (c) 2023, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.bindings;
 
 import org.jfxcore.compiler.diagnostic.ErrorCode;
 import org.jfxcore.compiler.diagnostic.MarkupException;
+import org.jfxcore.compiler.generate.PushListenerGenerator;
 import org.jfxcore.compiler.generate.collections.SetObservableValueWrapperGenerator;
+import org.jfxcore.compiler.generate.collections.SetReseatableSourceWrapperGenerator;
 import org.jfxcore.compiler.util.CompilerTestBase;
 import org.jfxcore.compiler.util.NameHelper;
 import org.jfxcore.compiler.util.TestExtension;
@@ -71,13 +73,17 @@ public class SetBindingTest extends CompilerTestBase {
         public ObservableSet<String> getTargetObservableSet() { return targetObservableSet; }
     }
 
+    private static String PUSH_LISTENER;
     private static String OBSERVABLE_VALUE_WRAPPER;
+    private static String RESEATABLE_SOURCE_WRAPPER;
     private static String ADD_REFERENCE_METHOD;
     private static String CLEAR_STALE_REFERENCES_METHOD;
 
     @BeforeAll
     public static void beforeAll() {
+        PUSH_LISTENER = PushListenerGenerator.CLASS_NAME;
         OBSERVABLE_VALUE_WRAPPER = SetObservableValueWrapperGenerator.CLASS_NAME;
+        RESEATABLE_SOURCE_WRAPPER = SetReseatableSourceWrapperGenerator.CLASS_NAME;
         ADD_REFERENCE_METHOD = NameHelper.getMangledMethodName("addReference");
         CLEAR_STALE_REFERENCES_METHOD = NameHelper.getMangledMethodName("clearStaleReferences");
     }
@@ -400,6 +406,7 @@ public class SetBindingTest extends CompilerTestBase {
         """));
 
         assertEquals(ErrorCode.INVALID_CONTENT_BINDING_SOURCE, ex.getDiagnostic().getCode());
+        assertMessageContains("required javafx.collections.ObservableSet<java.lang.String>", ex);
         assertCodeHighlight("set", ex);
     }
 
@@ -513,6 +520,7 @@ public class SetBindingTest extends CompilerTestBase {
         """));
 
         assertEquals(ErrorCode.INVALID_CONTENT_BINDING_SOURCE, ex.getDiagnostic().getCode());
+        assertMessageContains("required javafx.collections.ObservableSet<java.lang.String>", ex);
         assertCodeHighlight("propOfSet", ex);
     }
 
@@ -564,6 +572,184 @@ public class SetBindingTest extends CompilerTestBase {
         """));
 
         assertEquals(ErrorCode.INVALID_CONTENT_BINDING_SOURCE, ex.getDiagnostic().getCode());
+        assertCodeHighlight("propOfObsSet", ex);
+    }
+
+    /*
+     *  source:   Set
+     *  expected: error
+     */
+    @Test
+    public void Reverse_ContentBinding_Fails_For_ObjectProperty() {
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <SetTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                         targetObjProp="$>{..set}"/>
+        """));
+
+        assertEquals(ErrorCode.INVALID_CONTENT_BINDING_TARGET, ex.getDiagnostic().getCode());
+        assertCodeHighlight("targetObjProp=\"$>{..set}\"", ex);
+    }
+
+    /*
+     *  source:   Set
+     *  expected: source.bindContent(target)
+     */
+    @Test
+    public void Reverse_ContentBinding_To_Vanilla_Set() {
+        SetTestPane root = compileAndRun("""
+            <SetTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                         targetSetProp="$>{..set}"/>
+        """);
+
+        assertNotNewExpr(root, OBSERVABLE_VALUE_WRAPPER);
+        assertNotMethodCall(root, ADD_REFERENCE_METHOD);
+        assertNotMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
+
+        assertEquals(0, root.targetSetProp.size());
+        root.targetSetProp.addAll(Set.of("foo", "bar", "baz"));
+        assertEquals(Set.of("foo", "bar", "baz"), root.set);
+        root.targetSetProp.clear();
+        assertEquals(Set.of(), root.set);
+    }
+
+    /*
+     *  source:   Set
+     *  expected: bindContent(new SetReseatableSourceWrapper(target, source), target)
+     */
+    @Test
+    public void Reverse_ContentBinding_To_Vanilla_Set_Indirect() {
+        SetTestPane root = compileAndRun("""
+            <SetTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                         targetSetProp="$>{..indirect.set}"/>
+        """);
+
+        assertNewExpr(root, RESEATABLE_SOURCE_WRAPPER);
+        assertMethodCall(root, ADD_REFERENCE_METHOD);
+        assertMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
+
+        Set<String> mySet = Set.of("myA", "myB", "myC");
+        assertEquals(0, root.targetSetProp.size());
+        root.targetSetProp.addAll(mySet);
+        assertEquals(mySet, root.indirect.get().set);
+        IndirectContext oldContext = root.indirect.get();
+        root.indirect.set(new IndirectContext());
+        assertEquals(mySet, root.indirect.get().set);
+        assertEquals(mySet, root.targetSetProp);
+        root.indirect.set(null);
+        assertEquals(mySet, root.targetSetProp);
+        root.indirect.set(new IndirectContext());
+        assertEquals(mySet, root.indirect.get().set);
+        assertEquals(mySet, root.targetSetProp);
+        root.targetSetProp.clear();
+        assertEquals(mySet, oldContext.set);
+        assertEquals(Set.of(), root.indirect.get().set);
+    }
+
+    /*
+     *  source:   ObservableSet
+     *  expected: source.bindContent(target)
+     */
+    @Test
+    public void Reverse_ContentBinding_To_ObservableSet() {
+        SetTestPane root = compileAndRun("""
+            <SetTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                         targetSetProp="$>{..obsSet}"/>
+        """);
+
+        assertNotNewExpr(root, OBSERVABLE_VALUE_WRAPPER);
+        assertNotMethodCall(root, ADD_REFERENCE_METHOD);
+        assertNotMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
+
+        assertEquals(0, root.targetSetProp.size());
+        root.targetSetProp.addAll(Set.of("foo", "bar", "baz"));
+        assertEquals(Set.of("foo", "bar", "baz"), root.obsSet);
+        root.targetSetProp.clear();
+        assertEquals(Set.of(), root.obsSet);
+    }
+
+    /*
+     *  source:   ObservableSet
+     *  expected: bindContent(new SetReseatableSourceWrapper(target, source), target)
+     */
+    @Test
+    public void Reverse_ContentBinding_To_ObservableSet_Indirect() {
+        SetTestPane root = compileAndRun("""
+            <SetTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                         targetSetProp="$>{..indirect.obsSet}"/>
+        """);
+
+        assertNewExpr(root, RESEATABLE_SOURCE_WRAPPER);
+        assertMethodCall(root, ADD_REFERENCE_METHOD);
+        assertMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
+
+        Set<String> mySet = Set.of("myA", "myB", "myC");
+        assertEquals(0, root.targetSetProp.size());
+        root.targetSetProp.addAll(mySet);
+        assertEquals(mySet, root.indirect.get().obsSet);
+        IndirectContext oldContext = root.indirect.get();
+        root.indirect.set(new IndirectContext());
+        assertEquals(mySet, root.indirect.get().obsSet);
+        assertEquals(mySet, root.targetSetProp);
+        root.indirect.set(null);
+        assertEquals(mySet, root.targetSetProp);
+        root.indirect.set(new IndirectContext());
+        assertEquals(mySet, root.indirect.get().obsSet);
+        assertEquals(mySet, root.targetSetProp);
+        root.targetSetProp.clear();
+        assertEquals(mySet, oldContext.obsSet);
+        assertEquals(Set.of(), root.indirect.get().obsSet);
+    }
+
+    /*
+     *  source:   ObservableValue<Set>
+     *  expected: target.addListener(new PushListener(target, source))
+     */
+    @Test
+    public void Reverse_Binding_To_ObservableValue_Of_Vanilla_Set() {
+        SetTestPane root = compileAndRun("""
+            <SetTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                         targetSetProp="$>{propOfSet}"/>
+        """);
+
+        assertNewExpr(root, PUSH_LISTENER);
+        assertNotNewExpr(root, OBSERVABLE_VALUE_WRAPPER);
+        assertNotMethodCall(root, ADD_REFERENCE_METHOD);
+        assertNotMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
+
+        assertSame(root.targetSetProp.get(), root.propOfSet.get());
+        root.targetSetProp.setValue(FXCollections.observableSet(Set.of("foo", "bar", "baz")));
+        assertSame(root.targetSetProp.get(), root.propOfSet.get());
+    }
+
+    /*
+     *  source:   ObservableValue<Set>
+     *  expected: error
+     */
+    @Test
+    public void Reverse_ContentBinding_To_ObservableValue_Of_Vanilla_Set() {
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <SetTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                         targetSetProp="$>{..propOfSet}"/>
+        """));
+
+        assertEquals(ErrorCode.INVALID_CONTENT_BINDING_SOURCE, ex.getDiagnostic().getCode());
+        assertMessageContains("required java.util.Set<java.lang.String>", ex);
+        assertCodeHighlight("propOfSet", ex);
+    }
+
+    /*
+     *  source:   ObservableValue<ObservableSet>
+     *  expected: error
+     */
+    @Test
+    public void Reverse_ContentBinding_To_ObservableValue_Of_ObservableSet() {
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <SetTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                         targetSetProp="$>{..propOfObsSet}"/>
+        """));
+
+        assertEquals(ErrorCode.INVALID_CONTENT_BINDING_SOURCE, ex.getDiagnostic().getCode());
+        assertMessageContains("required java.util.Set<java.lang.String>", ex);
         assertCodeHighlight("propOfObsSet", ex);
     }
 

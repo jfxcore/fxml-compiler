@@ -71,6 +71,10 @@ public class Intrinsics {
         "Observe", Kind.OBJECT, Placement.ANY, KnownSymbols::BottomTypeDecl,
         new IntrinsicProperty("path", KnownSymbols::StringDecl, true));
 
+    public static final Intrinsic PUSH = new Intrinsic(
+        "Push", Kind.OBJECT, Placement.ANY, KnownSymbols::BottomTypeDecl,
+        new IntrinsicProperty("path", KnownSymbols::StringDecl, true));
+
     public static final Intrinsic SYNCHRONIZE = new Intrinsic(
         "Synchronize", Kind.OBJECT, Placement.ANY, KnownSymbols::BottomTypeDecl,
         new IntrinsicProperty("path", KnownSymbols::StringDecl, true),
@@ -80,7 +84,8 @@ public class Intrinsics {
 
     private static final List<Intrinsic> NODES = List.of(
         SUBCLASS, CLASS_MODIFIER, CLASS_NAME, CLASS_PARAMETERS, CONTEXT, ID, VALUE, CONSTANT, FACTORY,
-        TYPE_ARGUMENTS, ITEM_TYPE, DEFINE, NULL, TRUE, FALSE, CLASS, STYLESHEET, EVALUATE, OBSERVE, SYNCHRONIZE);
+        TYPE_ARGUMENTS, ITEM_TYPE, DEFINE, NULL, TRUE, FALSE, CLASS, STYLESHEET, EVALUATE, OBSERVE,
+        PUSH, SYNCHRONIZE);
 
     public static Intrinsic find(ObjectNode node) {
         if (node.getType().isIntrinsic()){

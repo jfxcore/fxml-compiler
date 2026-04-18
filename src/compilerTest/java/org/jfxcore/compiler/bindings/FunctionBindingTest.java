@@ -100,6 +100,11 @@ public class FunctionBindingTest extends CompilerTestBase {
         public record Container2(DecimalFormat fmt) {}
 
         public final DecimalFormat fmt = new DecimalFormat("000");
+
+        public StringProperty methodReturningProperty(String value) {
+            stringProp.set(value);
+            return stringProp;
+        }
     }
 
     @SuppressWarnings("unused")
@@ -939,6 +944,31 @@ public class FunctionBindingTest extends CompilerTestBase {
 
         assertEquals(ErrorCode.EXPRESSION_NOT_APPLICABLE, ex.getDiagnostic().getCode());
         assertCodeHighlight("$doubleProp", ex);
+    }
+
+    @Test
+    public void Bind_Reverse_To_Method_Fails() {
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                      id="$>{formatMethod('foo-%s', prefWidth, true, null)}"/>
+        """));
+
+        assertEquals(ErrorCode.INVALID_REVERSE_BINDING_SOURCE, ex.getDiagnostic().getCode());
+        assertMessageContains("formatMethod is not a valid reverse binding source", ex);
+        assertCodeHighlight("formatMethod('foo-%s', prefWidth, true, null)", ex);
+    }
+
+    @Test
+    public void Bind_Reverse_To_Method_Returning_Property_Fails() {
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                      id="$>{methodReturningProperty('asdf')}">
+            </TestPane>
+        """));
+
+        assertEquals(ErrorCode.INVALID_REVERSE_BINDING_SOURCE, ex.getDiagnostic().getCode());
+        assertMessageContains("methodReturningProperty is not a valid reverse binding source", ex);
+        assertCodeHighlight("methodReturningProperty('asdf')", ex);
     }
 
     @SuppressWarnings("unused")

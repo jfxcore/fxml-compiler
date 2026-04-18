@@ -103,6 +103,9 @@ public final class KnownSymbols {
     public static TypeDeclaration FormatDecl() { return get("java.text.Format"); }
 
     // java.util
+    public static TypeDeclaration AbstractListDecl() { return get("java.util.AbstractList"); }
+    public static TypeDeclaration AbstractSetDecl() { return get("java.util.AbstractSet"); }
+    public static TypeDeclaration AbstractMapDecl() { return get("java.util.AbstractMap"); }
     public static TypeDeclaration CollectionDecl() { return get("java.util.Collection"); }
     public static TypeDeclaration CollectionsDecl() { return get("java.util.Collections"); }
     public static TypeDeclaration IteratorDecl() { return get("java.util.Iterator"); }

@@ -333,6 +333,28 @@ public class OperatorTest extends CompilerTestBase {
     }
 
     @Test
+    public void Bind_Reverse_With_NotOperator_Fails() {
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                      visible="$>{!booleanProp}"/>
+        """));
+
+        assertEquals(ErrorCode.UNEXPECTED_TOKEN, ex.getDiagnostic().getCode());
+        assertCodeHighlight("!", ex);
+    }
+
+    @Test
+    public void Bind_Reverse_With_BoolifyOperator_Fails() {
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                      visible="$>{!!booleanProp}"/>
+        """));
+
+        assertEquals(ErrorCode.UNEXPECTED_TOKEN, ex.getDiagnostic().getCode());
+        assertCodeHighlight("!!", ex);
+    }
+
+    @Test
     public void Bind_Bidirectional_With_NotOperator_Fails_For_DoubleProperty() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"

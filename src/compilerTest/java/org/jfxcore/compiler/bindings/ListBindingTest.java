@@ -1,4 +1,4 @@
-// Copyright (c) 2021, 2025, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.bindings;
@@ -16,7 +16,9 @@ import javafx.collections.ObservableList;
 import javafx.scene.layout.Pane;
 import org.jfxcore.compiler.diagnostic.ErrorCode;
 import org.jfxcore.compiler.diagnostic.MarkupException;
+import org.jfxcore.compiler.generate.PushListenerGenerator;
 import org.jfxcore.compiler.generate.collections.ListObservableValueWrapperGenerator;
+import org.jfxcore.compiler.generate.collections.ListReseatableSourceWrapperGenerator;
 import org.jfxcore.compiler.util.CompilerTestBase;
 import org.jfxcore.compiler.util.NameHelper;
 import org.jfxcore.compiler.util.TestExtension;
@@ -73,13 +75,17 @@ public class ListBindingTest extends CompilerTestBase {
         public ObservableList<String> getTargetObservableList() { return targetObservableList; }
     }
 
+    private static String PUSH_LISTENER;
     private static String OBSERVABLE_VALUE_WRAPPER;
+    private static String RESEATABLE_SOURCE_WRAPPER;
     private static String ADD_REFERENCE_METHOD;
     private static String CLEAR_STALE_REFERENCES_METHOD;
 
     @BeforeAll
     public static void beforeAll() {
+        PUSH_LISTENER = PushListenerGenerator.CLASS_NAME;
         OBSERVABLE_VALUE_WRAPPER = ListObservableValueWrapperGenerator.CLASS_NAME;
+        RESEATABLE_SOURCE_WRAPPER = ListReseatableSourceWrapperGenerator.CLASS_NAME;
         ADD_REFERENCE_METHOD = NameHelper.getMangledMethodName("addReference");
         CLEAR_STALE_REFERENCES_METHOD = NameHelper.getMangledMethodName("clearStaleReferences");
     }
@@ -414,6 +420,7 @@ public class ListBindingTest extends CompilerTestBase {
         """));
 
         assertEquals(ErrorCode.INVALID_CONTENT_BINDING_SOURCE, ex.getDiagnostic().getCode());
+        assertMessageContains("required javafx.collections.ObservableList<java.lang.String>", ex);
         assertCodeHighlight("list", ex);
     }
 
@@ -522,6 +529,7 @@ public class ListBindingTest extends CompilerTestBase {
         """));
 
         assertEquals(ErrorCode.INVALID_CONTENT_BINDING_SOURCE, ex.getDiagnostic().getCode());
+        assertMessageContains("required javafx.collections.ObservableList<java.lang.String>", ex);
         assertCodeHighlight("propOfList", ex);
     }
 
@@ -574,6 +582,184 @@ public class ListBindingTest extends CompilerTestBase {
         """));
 
         assertEquals(ErrorCode.INVALID_CONTENT_BINDING_SOURCE, ex.getDiagnostic().getCode());
+        assertCodeHighlight("propOfObsList", ex);
+    }
+
+    /*
+     *  source:   List
+     *  expected: error
+     */
+    @Test
+    public void Reverse_ContentBinding_Fails_For_ObjectProperty() {
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <ListTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                          targetObjProp="$>{..list}"/>
+        """));
+
+        assertEquals(ErrorCode.INVALID_CONTENT_BINDING_TARGET, ex.getDiagnostic().getCode());
+        assertCodeHighlight("targetObjProp=\"$>{..list}\"", ex);
+    }
+
+    /*
+     *  source:   List
+     *  expected: source.bindContent(target)
+     */
+    @Test
+    public void Reverse_ContentBinding_To_Vanilla_List() {
+        ListTestPane root = compileAndRun("""
+            <ListTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                          targetListProp="$>{..list}"/>
+        """);
+
+        assertNotNewExpr(root, OBSERVABLE_VALUE_WRAPPER);
+        assertNotMethodCall(root, ADD_REFERENCE_METHOD);
+        assertNotMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
+
+        assertEquals(0, root.targetListProp.size());
+        root.targetListProp.addAll(List.of("myA", "myB", "myC"));
+        assertEquals(List.of("myA", "myB", "myC"), root.list);
+        root.targetListProp.clear();
+        assertEquals(List.of(), root.list);
+    }
+
+    /*
+     *  source:   List
+     *  expected: bindContent(new ListReseatableSourceWrapper(target, source), target)
+     */
+    @Test
+    public void Reverse_ContentBinding_To_Vanilla_List_Indirect() {
+        ListTestPane root = compileAndRun("""
+            <ListTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                          targetListProp="$>{..indirect.list}"/>
+        """);
+
+        assertNewExpr(root, RESEATABLE_SOURCE_WRAPPER);
+        assertMethodCall(root, ADD_REFERENCE_METHOD);
+        assertMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
+
+        List<String> myList = List.of("myA", "myB", "myC");
+        assertEquals(0, root.targetListProp.size());
+        root.targetListProp.addAll(myList);
+        assertEquals(myList, root.indirect.get().list);
+        IndirectContext oldContext = root.indirect.get();
+        root.indirect.set(new IndirectContext());
+        assertEquals(myList, root.indirect.get().list);
+        assertEquals(myList, root.targetListProp);
+        root.indirect.set(null);
+        assertEquals(myList, root.targetListProp);
+        root.indirect.set(new IndirectContext());
+        assertEquals(myList, root.indirect.get().list);
+        assertEquals(myList, root.targetListProp);
+        root.targetListProp.clear();
+        assertEquals(myList, oldContext.list);
+        assertEquals(List.of(), root.indirect.get().list);
+    }
+
+    /*
+     *  source:   ObservableList
+     *  expected: source.bindContent(target)
+     */
+    @Test
+    public void Reverse_ContentBinding_To_ObservableList() {
+        ListTestPane root = compileAndRun("""
+            <ListTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                          targetListProp="$>{..obsList}"/>
+        """);
+
+        assertNotNewExpr(root, OBSERVABLE_VALUE_WRAPPER);
+        assertNotMethodCall(root, ADD_REFERENCE_METHOD);
+        assertNotMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
+
+        assertEquals(0, root.targetListProp.size());
+        root.targetListProp.addAll(List.of("myA", "myB", "myC"));
+        assertEquals(List.of("myA", "myB", "myC"), root.obsList);
+        root.targetListProp.clear();
+        assertEquals(List.of(), root.obsList);
+    }
+
+    /*
+     *  source:   ObservableList
+     *  expected: bindContent(new ListReseatableSourceWrapper(target, source), target)
+     */
+    @Test
+    public void Reverse_ContentBinding_To_ObservableList_Indirect() {
+        ListTestPane root = compileAndRun("""
+            <ListTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                          targetListProp="$>{..indirect.obsList}"/>
+        """);
+
+        assertNewExpr(root, RESEATABLE_SOURCE_WRAPPER);
+        assertMethodCall(root, ADD_REFERENCE_METHOD);
+        assertMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
+
+        List<String> myList = List.of("myA", "myB", "myC");
+        assertEquals(0, root.targetListProp.size());
+        root.targetListProp.addAll(myList);
+        assertEquals(myList, root.indirect.get().obsList);
+        IndirectContext oldContext = root.indirect.get();
+        root.indirect.set(new IndirectContext());
+        assertEquals(myList, root.indirect.get().obsList);
+        assertEquals(myList, root.targetListProp);
+        root.indirect.set(null);
+        assertEquals(myList, root.targetListProp);
+        root.indirect.set(new IndirectContext());
+        assertEquals(myList, root.indirect.get().obsList);
+        assertEquals(myList, root.targetListProp);
+        root.targetListProp.clear();
+        assertEquals(myList, oldContext.obsList);
+        assertEquals(List.of(), root.indirect.get().obsList);
+    }
+
+    /*
+     *  source:   ObservableValue<List>
+     *  expected: target.addListener(new PushListener(target, source))
+     */
+    @Test
+    public void Reverse_Binding_To_ObservableValue_Of_Vanilla_List() {
+        ListTestPane root = compileAndRun("""
+            <ListTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                          targetListProp="$>{propOfList}"/>
+        """);
+
+        assertNewExpr(root, PUSH_LISTENER);
+        assertNotNewExpr(root, OBSERVABLE_VALUE_WRAPPER);
+        assertNotMethodCall(root, ADD_REFERENCE_METHOD);
+        assertNotMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
+
+        assertSame(root.targetListProp.get(), root.propOfList.get());
+        root.targetListProp.setValue(FXCollections.observableArrayList("myA", "myB", "myC"));
+        assertSame(root.targetListProp.get(), root.propOfList.get());
+    }
+
+    /*
+     *  source:   ObservableValue<List>
+     *  expected: error
+     */
+    @Test
+    public void Reverse_ContentBinding_To_ObservableValue_Of_Vanilla_List() {
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <ListTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                          targetListProp="$>{..propOfList}"/>
+        """));
+
+        assertEquals(ErrorCode.INVALID_CONTENT_BINDING_SOURCE, ex.getDiagnostic().getCode());
+        assertMessageContains("required java.util.List<java.lang.String>", ex);
+        assertCodeHighlight("propOfList", ex);
+    }
+
+    /*
+     *  source:   ObservableValue<ObservableList>
+     *  expected: error
+     */
+    @Test
+    public void Reverse_ContentBinding_To_ObservableValue_Of_ObservableList() {
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <ListTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                          targetListProp="$>{..propOfObsList}"/>
+        """));
+
+        assertEquals(ErrorCode.INVALID_CONTENT_BINDING_SOURCE, ex.getDiagnostic().getCode());
+        assertMessageContains("required java.util.List<java.lang.String>", ex);
         assertCodeHighlight("propOfObsList", ex);
     }
 

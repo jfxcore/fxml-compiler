@@ -12,13 +12,17 @@ import org.jfxcore.compiler.ast.Visitor;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.generate.Generator;
 import org.jfxcore.compiler.generate.InvertBooleanBindingGenerator;
+import org.jfxcore.compiler.generate.ClassGenerator;
+import org.jfxcore.compiler.generate.PushListenerGenerator;
 import org.jfxcore.compiler.generate.ReferenceTrackerGenerator;
+import org.jfxcore.compiler.type.BehaviorDeclaration;
+import org.jfxcore.compiler.type.Resolver;
 import org.jfxcore.compiler.type.TypeDeclaration;
-import org.jfxcore.compiler.type.TypeInstance;
 import org.jfxcore.compiler.util.Bytecode;
 import org.jfxcore.compiler.util.CompilationContext;
 import org.jfxcore.compiler.util.Local;
 import org.jfxcore.compiler.util.PropertyInfo;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
@@ -32,6 +36,7 @@ public class EmitPropertyBindingNode extends AbstractNode implements EmitterNode
 
     private final PropertyInfo propertyInfo;
     private final BindingMode bindingMode;
+    private final ClassGenerator pushListenerGenerator;
     private ValueEmitterNode child;
     private ValueEmitterNode converter;
     private ValueEmitterNode format;
@@ -57,6 +62,10 @@ public class EmitPropertyBindingNode extends AbstractNode implements EmitterNode
         if (converter != null && format != null) {
             throw new IllegalArgumentException();
         }
+
+        pushListenerGenerator = bindingMode == BindingMode.REVERSE
+            ? new PushListenerGenerator(propertyInfo.getType().declaration())
+            : null;
     }
 
     public boolean isBidirectional() {
@@ -65,64 +74,84 @@ public class EmitPropertyBindingNode extends AbstractNode implements EmitterNode
 
     @Override
     public List<? extends Generator> emitGenerators(BytecodeEmitContext context) {
-        return child.getNodeData(NodeDataKey.BIND_BIDIRECTIONAL_INVERT_BOOLEAN) == Boolean.TRUE
-            ? CompilationContext.getCurrent().useSharedImplementation()
-                ? List.of()
-                : List.of(new InvertBooleanBindingGenerator())
-            : child instanceof EmitCollectionWrapperNode && bindingMode.isContent()
-                ? List.of(new ReferenceTrackerGenerator())
-                : List.of();
+        List<Generator> generators = new ArrayList<>(3);
+
+        if (pushListenerGenerator != null) {
+            generators.add(pushListenerGenerator);
+        }
+
+        if (child instanceof EmitCollectionWrapperNode && bindingMode.isContent()) {
+            generators.add(new ReferenceTrackerGenerator());
+        }
+
+        if (child.getNodeData(NodeDataKey.BIND_BIDIRECTIONAL_INVERT_BOOLEAN) == Boolean.TRUE
+                && !CompilationContext.getCurrent().useSharedImplementation()) {
+            generators.add(new InvertBooleanBindingGenerator());
+        }
+
+        return generators;
     }
 
     @Override
     public void emit(BytecodeEmitContext context) {
         Bytecode code = context.getOutput();
 
-        context.emit(child);
-
-        Local local = code.acquireLocal(false);
-        code.astore(local);
-
-        if (NullableInfo.isNullable(child, true)) {
-            code.aload(local)
-                .ifnonnull(() -> emitBinding(context, local));
+        if (child instanceof EmitCollectionWrapperNode && bindingMode.isContent()) {
+            emitBindContentWrapper(context);
         } else {
-            emitBinding(context, local);
-        }
+            context.emit(child);
 
-        code.releaseLocal(local);
-    }
+            Local source = code.acquireLocal(false);
+            code.astore(source);
 
-    private void emitBinding(BytecodeEmitContext context, Local local) {
-        if (bindingMode.isBidirectional()) {
-            Local param2 = null;
-
-            if (converter != null) {
-                param2 = context.getOutput().acquireLocal(false);
-                converter.emit(context);
-                context.getOutput().astore(param2);
-            } else if (format != null) {
-                param2 = context.getOutput().acquireLocal(false);
-                format.emit(context);
-                context.getOutput().astore(param2);
+            if (NullableInfo.isNullable(child, true)) {
+                code.aload(source)
+                    .ifnonnull(() -> emitBinding(context, source));
+            } else {
+                emitBinding(context, source);
             }
 
-            emitBindBidirectional(context, local, param2);
-
-            if (param2 != null) {
-                context.getOutput().releaseLocal(param2);
-            }
-        } else if (bindingMode.isUnidirectional()) {
-            emitBindUnidirectional(context, local);
+            code.releaseLocal(source);
         }
     }
 
-    private void emitBindBidirectional(BytecodeEmitContext context, Local param1, @Nullable Local param2) {
+    private void emitBinding(BytecodeEmitContext context, Local source) {
+        switch (bindingMode) {
+            case UNIDIRECTIONAL -> emitBindUnidirectional(context, source);
+            case BIDIRECTIONAL -> emitBindBidirectional(context, source);
+            case REVERSE -> emitBindReverse(context, source);
+            case UNIDIRECTIONAL_CONTENT,
+                 BIDIRECTIONAL_CONTENT,
+                 REVERSE_CONTENT -> emitBindContent(context, source);
+            default -> throw new IllegalArgumentException(bindingMode.name());
+        }
+    }
+
+    private void emitBindUnidirectional(BytecodeEmitContext context, Local source) {
+        context.getOutput()
+            .dup()
+            .invoke(checkNotNull(propertyInfo.getPropertyGetter()))
+            .aload(source)
+            .invoke(PropertyDecl().requireDeclaredMethod("bind", ObservableValueDecl()));
+    }
+
+    private void emitBindBidirectional(BytecodeEmitContext context, Local source) {
         Bytecode code = context.getOutput();
+        Local param2 = null;
+
+        if (converter != null) {
+            param2 = code.acquireLocal(false);
+            converter.emit(context);
+            code.astore(param2);
+        } else if (format != null) {
+            param2 = code.acquireLocal(false);
+            format.emit(context);
+            code.astore(param2);
+        }
 
         code.dup()
             .invoke(checkNotNull(propertyInfo.getPropertyGetter()))
-            .aload(param1);
+            .aload(source);
 
         if (param2 != null) {
             code.aload(param2);
@@ -137,98 +166,120 @@ public class EmitPropertyBindingNode extends AbstractNode implements EmitterNode
                                    .find(InvertBooleanBindingGenerator.CLASS_NAME)
                                    .requireDeclaredMethod("bindBidirectional", PropertyDecl(), PropertyDecl()));
             }
-        } else if (bindingMode.isContent()) {
-            emitBindContent(context, true);
+        } else if (converter != null) {
+            code.invoke(StringPropertyDecl().requireDeclaredMethod("bindBidirectional", PropertyDecl(), StringConverterDecl()));
+        } else if (format != null) {
+            code.invoke(StringPropertyDecl().requireDeclaredMethod("bindBidirectional", PropertyDecl(), FormatDecl()));
         } else {
-            if (converter != null) {
-                code.invoke(StringPropertyDecl().requireDeclaredMethod("bindBidirectional", PropertyDecl(), StringConverterDecl()));
-            } else if (format != null) {
-                code.invoke(StringPropertyDecl().requireDeclaredMethod("bindBidirectional", PropertyDecl(), FormatDecl()));
-            } else {
-                code.invoke(PropertyDecl().requireDeclaredMethod("bindBidirectional", PropertyDecl()));
-            }
+            code.invoke(PropertyDecl().requireDeclaredMethod("bindBidirectional", PropertyDecl()));
+        }
+
+        if (param2 != null) {
+            code.releaseLocal(param2);
         }
     }
 
-    private void emitBindUnidirectional(BytecodeEmitContext context, Local local) {
+    private void emitBindReverse(BytecodeEmitContext context, Local source) {
         Bytecode code = context.getOutput();
+        TypeDeclaration pushListenerDecl = pushListenerGenerator.getGeneratedClass();
+        Local target = code.acquireLocal(false);
+        Resolver resolver = new Resolver(getSourceInfo());
+        TypeDeclaration observableTypeDecl = propertyInfo.getObservableType().declaration();
+        TypeDeclaration targetDecl = resolver.getObservableClass(observableTypeDecl, false);
+        TypeDeclaration sourceDecl = resolver.getObservableClass(observableTypeDecl, true);
 
-        if (bindingMode.isContent()) {
-            code.acquireLocal(false);
+        code.dup()
+            .invoke(checkNotNull(propertyInfo.getPropertyGetter()))
+            .astore(target)
+            .aload(target)
+            .anew(pushListenerDecl)
+            .dup()
+            .aload(target)
+            .aload(source)
+            .invoke(pushListenerDecl.requireDeclaredConstructor(targetDecl, sourceDecl))
+            .invoke(ObservableDecl().requireDeclaredMethod("addListener", InvalidationListenerDecl()))
+            .releaseLocal(target);
+    }
 
-            code.dup()
-                .invoke(checkNotNull(propertyInfo.getPropertyGetterOrGetter()))
-                .aload(local);
+    private void emitBindContent(BytecodeEmitContext context, Local source) {
+        Bytecode code = context.getOutput();
+        Local target = code.acquireLocal(false);
 
-            emitBindContent(context, false);
+        code.dup()
+            .invoke(propertyInfo.getPropertyGetterOrGetter())
+            .astore(target);
+
+        if (bindingMode.isReverse()) {
+            code.aload(source)
+                .aload(target);
         } else {
-            code.dup()
-                .invoke(checkNotNull(propertyInfo.getPropertyGetter()))
-                .aload(local)
-                .invoke(PropertyDecl().requireDeclaredMethod("bind", ObservableValueDecl()));
-        }
-    }
-
-    private void emitBindContent(BytecodeEmitContext context, boolean bidirectional) {
-        if (!tryEmitBindContentImpl(context, ListDecl(), ObservableListDecl(), ReadOnlyListPropertyDecl(), bidirectional) &&
-                !tryEmitBindContentImpl(context, SetDecl(), ObservableSetDecl(), ReadOnlySetPropertyDecl(), bidirectional) &&
-                !tryEmitBindContentImpl(context, MapDecl(), ObservableMapDecl(), ReadOnlyMapPropertyDecl(), bidirectional)) {
-            throw new IllegalArgumentException(propertyInfo.getType().toString());
-        }
-    }
-
-    @SuppressWarnings("BooleanMethodIsAlwaysInverted")
-    private boolean tryEmitBindContentImpl(
-            BytecodeEmitContext context,
-            TypeDeclaration collectionType,
-            TypeDeclaration observableCollectionType,
-            TypeDeclaration collectionPropertyType,
-            boolean bidirectional) {
-        if (propertyInfo.getType().subtypeOf(collectionType)) {
-            TypeInstance observableType = propertyInfo.getObservableType();
-            Bytecode code = context.getOutput();
-
-            Local targetLocal = code.acquireLocal(false);
-            Local sourceLocal = code.acquireLocal(false);
-
-            code.astore(sourceLocal)
-                .astore(targetLocal)
-                .aload(targetLocal)
-                .aload(sourceLocal);
-
-            if (observableType != null && observableType.subtypeOf(collectionPropertyType)) {
-                String methodName = bidirectional ? "bindContentBidirectional" : "bindContent";
-                code.invoke(collectionPropertyType.requireDeclaredMethod(methodName, observableCollectionType));
-            } else if (bidirectional) {
-                code.invoke(BindingsDecl().requireDeclaredMethod("bindContentBidirectional",
-                                                                 observableCollectionType,
-                                                                 observableCollectionType));
-            } else {
-                code.invoke(BindingsDecl().requireDeclaredMethod("bindContent",
-                                                                 collectionType,
-                                                                 observableCollectionType));
-            }
-
-            if (child instanceof EmitCollectionWrapperNode) {
-                emitAddChildToReferenceTracker(context, targetLocal, sourceLocal);
-            }
-
-            code.releaseLocal(targetLocal);
-            code.releaseLocal(sourceLocal);
-
-            return true;
+            code.aload(target)
+                .aload(source);
         }
 
-        return false;
+        code.invoke(bindContentMethod())
+            .releaseLocal(target);
     }
 
-    private void emitAddChildToReferenceTracker(BytecodeEmitContext context, Local targetLocal, Local sourceLocal) {
-        context.getOutput()
+    private void emitBindContentWrapper(BytecodeEmitContext context) {
+        Bytecode code = context.getOutput();
+        Local source = code.acquireLocal(false);
+        Local target = code.acquireLocal(false);
+
+        code.dup()
+            .invoke(propertyInfo.getPropertyGetterOrGetter())
+            .astore(target)
+            .aload(target);
+
+        child.emit(context);
+
+        code.astore(source);
+
+        if (bindingMode.isReverse()) {
+            code.aload(source)
+                .aload(target);
+        } else {
+            code.aload(target)
+                .aload(source);
+        }
+
+        code.invoke(bindContentMethod())
             .aload(0)
-            .aload(targetLocal)
-            .aload(sourceLocal)
+            .aload(target)
+            .aload(source)
             .invoke(context.getMarkupClass()
-                                  .requireDeclaredMethod(ReferenceTrackerGenerator.ADD_REFERENCE_METHOD, ObjectDecl(), ObjectDecl()));
+                           .requireDeclaredMethod(ReferenceTrackerGenerator.ADD_REFERENCE_METHOD,
+                                                  ObjectDecl(), ObjectDecl()));
+
+        code.releaseLocal(target);
+        code.releaseLocal(source);
+    }
+
+    private BehaviorDeclaration bindContentMethod() {
+        String methodName = switch (bindingMode) {
+            case UNIDIRECTIONAL_CONTENT, REVERSE_CONTENT -> "bindContent";
+            case BIDIRECTIONAL_CONTENT -> "bindContentBidirectional";
+            default -> throw new IllegalArgumentException(bindingMode.name());
+        };
+
+        boolean bidirectional = bindingMode.isBidirectional();
+
+        if (propertyInfo.getType().subtypeOf(ListDecl())) {
+            return BindingsDecl().requireDeclaredMethod(
+                methodName, bidirectional ? ObservableListDecl() : ListDecl(), ObservableListDecl());
+        }
+
+        if (propertyInfo.getType().subtypeOf(SetDecl())) {
+            return BindingsDecl().requireDeclaredMethod(
+                methodName, bidirectional ? ObservableSetDecl() : SetDecl(), ObservableSetDecl());
+        }
+
+        if (propertyInfo.getType().subtypeOf(MapDecl())) {
+            return BindingsDecl().requireDeclaredMethod(
+                methodName, bidirectional ? ObservableMapDecl() : MapDecl(), ObservableMapDecl());
+        }
+
+        throw new IllegalArgumentException(propertyInfo.getType().toString());
     }
 
     @Override

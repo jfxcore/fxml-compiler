@@ -1,11 +1,13 @@
-// Copyright (c) 2023, 2025, JFXcore. All rights reserved.
+// Copyright (c) 2023, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.bindings;
 
 import org.jfxcore.compiler.diagnostic.ErrorCode;
 import org.jfxcore.compiler.diagnostic.MarkupException;
+import org.jfxcore.compiler.generate.PushListenerGenerator;
 import org.jfxcore.compiler.generate.collections.MapObservableValueWrapperGenerator;
+import org.jfxcore.compiler.generate.collections.MapReseatableSourceWrapperGenerator;
 import org.jfxcore.compiler.util.CompilerTestBase;
 import org.jfxcore.compiler.util.NameHelper;
 import org.jfxcore.compiler.util.TestExtension;
@@ -68,13 +70,17 @@ public class MapBindingTest extends CompilerTestBase {
         public ObservableMap<Integer, String> getTargetObservableMap() { return targetObservableMap; }
     }
 
+    private static String PUSH_LISTENER;
     private static String OBSERVABLE_VALUE_WRAPPER;
+    private static String RESEATABLE_SOURCE_WRAPPER;
     private static String ADD_REFERENCE_METHOD;
     private static String CLEAR_STALE_REFERENCES_METHOD;
 
     @BeforeAll
     public static void beforeAll() {
+        PUSH_LISTENER = PushListenerGenerator.CLASS_NAME;
         OBSERVABLE_VALUE_WRAPPER = MapObservableValueWrapperGenerator.CLASS_NAME;
+        RESEATABLE_SOURCE_WRAPPER = MapReseatableSourceWrapperGenerator.CLASS_NAME;
         ADD_REFERENCE_METHOD = NameHelper.getMangledMethodName("addReference");
         CLEAR_STALE_REFERENCES_METHOD = NameHelper.getMangledMethodName("clearStaleReferences");
     }
@@ -399,6 +405,7 @@ public class MapBindingTest extends CompilerTestBase {
         """));
 
         assertEquals(ErrorCode.INVALID_CONTENT_BINDING_SOURCE, ex.getDiagnostic().getCode());
+        assertMessageContains("required javafx.collections.ObservableMap<java.lang.Integer, java.lang.String>", ex);
         assertCodeHighlight("map", ex);
     }
 
@@ -512,6 +519,7 @@ public class MapBindingTest extends CompilerTestBase {
         """));
 
         assertEquals(ErrorCode.INVALID_CONTENT_BINDING_SOURCE, ex.getDiagnostic().getCode());
+        assertMessageContains("required javafx.collections.ObservableMap<java.lang.Integer, java.lang.String>", ex);
         assertCodeHighlight("propOfMap", ex);
     }
 
@@ -564,6 +572,186 @@ public class MapBindingTest extends CompilerTestBase {
         """));
 
         assertEquals(ErrorCode.INVALID_CONTENT_BINDING_SOURCE, ex.getDiagnostic().getCode());
+        assertCodeHighlight("propOfObsMap", ex);
+    }
+
+    /*
+     *  source:   Map
+     *  expected: error
+     */
+    @Test
+    public void Reverse_ContentBinding_Fails_For_ObjectProperty() {
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <MapTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                         targetObjProp="$>{..map}"/>
+        """));
+
+        assertEquals(ErrorCode.INVALID_CONTENT_BINDING_TARGET, ex.getDiagnostic().getCode());
+        assertCodeHighlight("targetObjProp=\"$>{..map}\"", ex);
+    }
+
+    /*
+     *  source:   Map
+     *  expected: source.bindContent(target)
+     */
+    @Test
+    public void Reverse_ContentBinding_To_Vanilla_Map() {
+        MapTestPane root = compileAndRun("""
+            <MapTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                         targetMapProp="$>{..map}"/>
+        """);
+
+        assertNotNewExpr(root, OBSERVABLE_VALUE_WRAPPER);
+        assertNotMethodCall(root, ADD_REFERENCE_METHOD);
+        assertNotMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
+
+        Map<Integer, String> myMap = Map.of(5, "myA", 6, "myB", 7, "myC");
+        assertEquals(0, root.targetMapProp.size());
+        root.targetMapProp.putAll(myMap);
+        assertEquals(myMap, root.map);
+        root.targetMapProp.clear();
+        assertEquals(Map.of(), root.map);
+    }
+
+    /*
+     *  source:   Map
+     *  expected: bindContent(new MapReseatableSourceWrapper(target, source), target)
+     */
+    @Test
+    public void Reverse_ContentBinding_To_Vanilla_Map_Indirect() {
+        MapTestPane root = compileAndRun("""
+            <MapTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                         targetMapProp="$>{..indirect.map}"/>
+        """);
+
+        assertNewExpr(root, RESEATABLE_SOURCE_WRAPPER);
+        assertMethodCall(root, ADD_REFERENCE_METHOD);
+        assertMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
+
+        Map<Integer, String> myMap = Map.of(5, "myA", 6, "myB", 7, "myC");
+        assertEquals(0, root.targetMapProp.size());
+        root.targetMapProp.putAll(myMap);
+        assertEquals(myMap, root.indirect.get().map);
+        IndirectContext oldContext = root.indirect.get();
+        root.indirect.set(new IndirectContext());
+        assertEquals(myMap, root.indirect.get().map);
+        assertEquals(myMap, root.targetMapProp);
+        root.indirect.set(null);
+        assertEquals(myMap, root.targetMapProp);
+        root.indirect.set(new IndirectContext());
+        assertEquals(myMap, root.indirect.get().map);
+        assertEquals(myMap, root.targetMapProp);
+        root.targetMapProp.clear();
+        assertEquals(myMap, oldContext.map);
+        assertEquals(Map.of(), root.indirect.get().map);
+    }
+
+    /*
+     *  source:   ObservableMap
+     *  expected: source.bindContent(target)
+     */
+    @Test
+    public void Reverse_ContentBinding_To_ObservableMap() {
+        MapTestPane root = compileAndRun("""
+            <MapTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                         targetMapProp="$>{..obsMap}"/>
+        """);
+
+        assertNotNewExpr(root, OBSERVABLE_VALUE_WRAPPER);
+        assertNotMethodCall(root, ADD_REFERENCE_METHOD);
+        assertNotMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
+
+        Map<Integer, String> myMap = Map.of(5, "myA", 6, "myB", 7, "myC");
+        assertEquals(0, root.targetMapProp.size());
+        root.targetMapProp.putAll(myMap);
+        assertEquals(myMap, root.obsMap);
+        root.targetMapProp.clear();
+        assertEquals(Map.of(), root.obsMap);
+    }
+
+    /*
+     *  source:   ObservableMap
+     *  expected: bindContent(new MapReseatableSourceWrapper(target, source), target)
+     */
+    @Test
+    public void Reverse_ContentBinding_To_ObservableMap_Indirect() {
+        MapTestPane root = compileAndRun("""
+            <MapTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                         targetMapProp="$>{..indirect.obsMap}"/>
+        """);
+
+        assertNewExpr(root, RESEATABLE_SOURCE_WRAPPER);
+        assertMethodCall(root, ADD_REFERENCE_METHOD);
+        assertMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
+
+        Map<Integer, String> myMap = Map.of(5, "myA", 6, "myB", 7, "myC");
+        assertEquals(0, root.targetMapProp.size());
+        root.targetMapProp.putAll(myMap);
+        assertEquals(myMap, root.indirect.get().obsMap);
+        IndirectContext oldContext = root.indirect.get();
+        root.indirect.set(new IndirectContext());
+        assertEquals(myMap, root.indirect.get().obsMap);
+        assertEquals(myMap, root.targetMapProp);
+        root.indirect.set(null);
+        assertEquals(myMap, root.targetMapProp);
+        root.indirect.set(new IndirectContext());
+        assertEquals(myMap, root.indirect.get().obsMap);
+        assertEquals(myMap, root.targetMapProp);
+        root.targetMapProp.clear();
+        assertEquals(myMap, oldContext.obsMap);
+        assertEquals(Map.of(), root.indirect.get().obsMap);
+    }
+
+    /*
+     *  source:   ObservableValue<Map>
+     *  expected: target.addListener(new PushListener(target, source))
+     */
+    @Test
+    public void Reverse_Binding_To_ObservableValue_Of_Vanilla_Map() {
+        MapTestPane root = compileAndRun("""
+            <MapTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                         targetMapProp="$>{propOfMap}"/>
+        """);
+
+        assertNewExpr(root, PUSH_LISTENER);
+        assertNotNewExpr(root, OBSERVABLE_VALUE_WRAPPER);
+        assertNotMethodCall(root, ADD_REFERENCE_METHOD);
+        assertNotMethodExists(root, ADD_REFERENCE_METHOD, CLEAR_STALE_REFERENCES_METHOD);
+
+        assertSame(root.targetMapProp.get(), root.propOfMap.get());
+        root.targetMapProp.setValue(FXCollections.observableMap(Map.of(1, "foo", 2, "bar", 3, "baz")));
+        assertSame(root.targetMapProp.get(), root.propOfMap.get());
+    }
+
+    /*
+     *  source:   ObservableValue<Map>
+     *  expected: error
+     */
+    @Test
+    public void Reverse_ContentBinding_To_ObservableValue_Of_Vanilla_Map() {
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <MapTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                         targetMapProp="$>{..propOfMap}"/>
+        """));
+
+        assertEquals(ErrorCode.INVALID_CONTENT_BINDING_SOURCE, ex.getDiagnostic().getCode());
+        assertMessageContains("required java.util.Map<java.lang.Integer, java.lang.String>", ex);
+        assertCodeHighlight("propOfMap", ex);
+    }
+
+    /*
+     *  source:   ObservableValue<ObservableMap>
+     *  expected: error
+     */
+    @Test
+    public void Reverse_ContentBinding_To_ObservableValue_Of_ObservableMap() {
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <MapTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                         targetMapProp="$>{..propOfObsMap}"/>
+        """));
+
+        assertEquals(ErrorCode.INVALID_CONTENT_BINDING_SOURCE, ex.getDiagnostic().getCode());
+        assertMessageContains("required java.util.Map<java.lang.Integer, java.lang.String>", ex);
         assertCodeHighlight("propOfObsMap", ex);
     }
 

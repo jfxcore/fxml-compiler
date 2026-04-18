@@ -17,6 +17,16 @@ If the method or constructor is used in a [`{fx:Observe}`](../../reference/obser
 [`{fx:Synchronize}`](../../reference/synchronize.html) expression, and it has observable arguments,
 then the method will be re-evaluated whenever an observable argument changes.
 
+## Applicability
+Methods and constructors in binding expressions can be used with the following markup extensions:
+
+| Markup extension | Applicable |
+|:-|:-|
+| [`fx:Evaluate`](../reference/evaluate.html) | yes |
+| [`fx:Observe`](../reference/observe.html) | yes |
+| [`fx:Push`](../reference/push.html) | no |
+| [`fx:Synchronize`](../reference/synchronize.html) | yes |
+
 ## Method path
 The method path is resolved against the [evaluation context](context.html) like other expressions, optionally including
 a context selector separated with a forward slash. Both static and instance methods can be selected.

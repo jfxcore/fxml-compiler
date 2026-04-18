@@ -6,7 +6,7 @@ nav_order: 5
 ---
 
 # Boolean operators
-An expression can be prefixed with a boolean operator, which causes the expression to evaluate to a boolean value.
+A path expression can be prefixed with a boolean operator, which causes the expression to evaluate to a boolean value.
 
 | Operator | Description |
 |:-|:-|
@@ -24,11 +24,12 @@ In the following example, the controls are disabled or hidden when the bound lis
 ```
 
 ## Applicability
-A boolean operator is applicable to any expression type, not just boolean expressions.
-However, restrictions apply depending on which expression type is used.
+A boolean operator is applicable to any path expression, not just expressions of boolean type.
+However, restrictions apply depending on which markup extension is used.
 
 | Markup extension | Applicable |
 |:-|:-|
 | [`fx:Evaluate`](../../reference/evaluate.html) | all non-content expressions |
 | [`fx:Observe`](../../reference/observe.html) | all non-content expressions |
+| [`fx:Push`](../../reference/push.html) | not applicable |
 | [`fx:Synchronize`](../../reference/synchronize.html) | only if the binding source implements `WritableValue<Boolean>` |

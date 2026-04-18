@@ -47,6 +47,7 @@ public class FxmlParser {
     private static final IntrinsicProperty[] PATH_INTRINSICS = new IntrinsicProperty[] {
         Intrinsics.EVALUATE.findProperty("path"),
         Intrinsics.OBSERVE.findProperty("path"),
+        Intrinsics.PUSH.findProperty("path"),
         Intrinsics.SYNCHRONIZE.findProperty("path")
     };
 
@@ -61,6 +62,7 @@ public class FxmlParser {
         "{",
         InlineParser.SYNCHRONIZE_EXPR_PREFIX,
         InlineParser.OBSERVE_EXPR_PREFIX,
+        InlineParser.PUSH_EXPR_PREFIX,
         InlineParser.EVALUATE_EXPR_PREFIX
     };
 

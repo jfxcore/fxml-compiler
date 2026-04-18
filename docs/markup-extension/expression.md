@@ -14,10 +14,12 @@ These expressions are implemented as intrinsic markup extensions and compiled to
 |:-|:-|:-|
 | [`fx:Evaluate`](../reference/evaluate.html) | `$source` | value supplier, property consumer |
 | [`fx:Observe`](../reference/observe.html) | `${source}` | value supplier, property consumer |
+| [`fx:Push`](../reference/push.html) | `$>{source}` | property consumer |
 | [`fx:Synchronize`](../reference/synchronize.html) | `#{source}` | property consumer |
 
 `{fx:Evaluate}` has the lowest runtime overhead, since no listener maintenance is required after the initial assignment.
-`{fx:Observe}` and `{fx:Synchronize}` may require listeners or additional generated code to keep the target synchronized with the source.
+`{fx:Observe}`, `{fx:Push}`, and `{fx:Synchronize}` may require listeners or additional generated code to update the
+target and/or the source.
 
 ## Setting up a binding
 Here's how a simple binding is specified in FXML 2.0, using different but equivalent notations:
@@ -61,10 +63,12 @@ the following operations are performed on the target property:
 |:-|:-|:-|
 | `{fx:Evaluate source}` | `$source` | assign the resolved value once |
 | `{fx:Observe source}` | `${source}` | `Property.bind(source)` |
+| `{fx:Push source}` | `$>{source}` | add a target listener that pushes updates to `source` |
 | `{fx:Synchronize source}` | `#{source}` | `Property.bindBidirectional(source)` |
 | `{fx:Evaluate ..source}` | `$..source` | `Collection.addAll(source)`<br>`Map.putAll(source)` |
-| `{fx:Observe ..source}` | `${..source}` | `ListProperty.bindContent(source)`<br>`SetProperty.bindContent(source)`<br>`MapProperty.bindContent(source)` |
-| `{fx:Synchronize ..source}` | `#{..source}` | `ListProperty.bindContentBidirectional(source)`<br>`SetProperty.bindContentBidirectional(source)`<br>`MapProperty.bindContentBidirectional(source)` |
+| `{fx:Observe ..source}` | `${..source}` | `Bindings.bindContent(target, source)` |
+| `{fx:Push ..source}` | `$>{..source}` | `Bindings.bindContent(source, target)` |
+| `{fx:Synchronize ..source}` | `#{..source}` | `Bindings.bindContentBidirectional(target, source)` |
 
 {: .note }
 Since `path` is the [default property](../property-notation.html#default-property) of all intrinsic expression extensions, `{fx:Observe path=source}` and `{fx:Observe source}` are equivalent.

@@ -66,6 +66,7 @@ public class BindingPathTest extends CompilerTestBase {
     public static class TestContext {
         private final BooleanProperty boolVal = new SimpleBooleanProperty(true);
         private final DoubleProperty doubleVal = new SimpleDoubleProperty(123);
+        private final ObjectProperty<String> stringVal = new SimpleObjectProperty<>("initial");
 
         public BooleanProperty boolValProperty() {
             return boolVal;
@@ -73,6 +74,10 @@ public class BindingPathTest extends CompilerTestBase {
 
         public DoubleProperty doubleValProperty() {
             return doubleVal;
+        }
+
+        public ObjectProperty<String> stringValProperty() {
+            return stringVal;
         }
 
         public boolean invariantBoolVal = true;
@@ -162,6 +167,43 @@ public class BindingPathTest extends CompilerTestBase {
 
         assertFalse(root.prefHeightProperty().isBound());
         assertEquals(123.0, root.getPrefHeight(), 0.001);
+    }
+
+    @Test
+    public void Reverse_Bindings_With_Explicit_Intrinsic_Syntax() {
+        TestPane root = compileAndRun("""
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                      prefWidth="{fx:Push context.doubleVal}"/>
+        """);
+
+        assertNewExpr(root, "DoublePushListener");
+
+        assertFalse(root.prefWidthProperty().isBound());
+        assertFalse(root.contextProperty().get().doubleValProperty().isBound());
+        assertEquals(-1.0, root.getPrefWidth(), 0.001);
+        assertEquals(-1.0, root.contextProperty().get().doubleValProperty().get(), 0.001);
+
+        root.setPrefWidth(456);
+        assertEquals(456.0, root.contextProperty().get().doubleValProperty().get(), 0.001);
+    }
+
+    @Test
+    public void Reverse_Bindings_With_Element_Syntax() {
+        TestPane root = compileAndRun("""
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
+                <prefWidth><fx:Push path="context.doubleVal"/></prefWidth>
+            </TestPane>
+        """);
+
+        assertNewExpr(root, "DoublePushListener");
+
+        assertFalse(root.prefWidthProperty().isBound());
+        assertFalse(root.contextProperty().get().doubleValProperty().isBound());
+        assertEquals(-1.0, root.getPrefWidth(), 0.001);
+        assertEquals(-1.0, root.contextProperty().get().doubleValProperty().get(), 0.001);
+
+        root.setPrefWidth(456);
+        assertEquals(456.0, root.contextProperty().get().doubleValProperty().get(), 0.001);
     }
 
     @Test
@@ -444,6 +486,7 @@ public class BindingPathTest extends CompilerTestBase {
         """));
 
         assertEquals(ErrorCode.INVALID_UNIDIRECTIONAL_BINDING_SOURCE, ex.getDiagnostic().getCode());
+        assertMessageContains("required javafx.beans.value.ObservableValue", ex);
         assertCodeHighlight("simpleDoubleVal", ex);
     }
 
@@ -455,6 +498,7 @@ public class BindingPathTest extends CompilerTestBase {
         """));
 
         assertEquals(ErrorCode.INVALID_UNIDIRECTIONAL_BINDING_SOURCE, ex.getDiagnostic().getCode());
+        assertMessageContains("required javafx.beans.value.ObservableValue", ex);
         assertCodeHighlight("invariantContext.invariantBoolVal", ex);
     }
 
@@ -590,7 +634,149 @@ public class BindingPathTest extends CompilerTestBase {
         """));
 
         assertEquals(ErrorCode.INVALID_UNIDIRECTIONAL_BINDING_SOURCE, ex.getDiagnostic().getCode());
+        assertMessageContains("required javafx.beans.value.ObservableValue", ex);
         assertCodeHighlight("TestPane.NestedClass.INSTANCE.value", ex);
+    }
+
+    @Test
+    public void Bind_Reverse_To_Observable_Property() {
+        TestPane root = compileAndRun("""
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                      prefWidth="$>{simpleProp}"/>
+        """);
+
+        assertNewExpr(root, "DoublePushListener");
+
+        assertFalse(root.prefWidthProperty().isBound());
+        assertFalse(root.simpleProp.isBound());
+        assertEquals(-1.0, root.getPrefWidth(), 0.001);
+        assertEquals(-1.0, root.simpleProp.get(), 0.001);
+        root.setPrefWidth(456);
+        assertEquals(456.0, root.simpleProp.get(), 0.001);
+    }
+
+    @Test
+    public void Bind_Reverse_To_Observable_Indirect_Properties() {
+        TestPane root = compileAndRun("""
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                      managed="$>{context.boolVal}" prefWidth="$>{context.doubleVal}"/>
+        """);
+
+        assertNewExpr(root, "BooleanPushListener");
+        assertNewExpr(root, "DoublePushListener");
+
+        assertFalse(root.managedProperty().isBound());
+        assertFalse(root.contextProperty().get().boolValProperty().isBound());
+        assertTrue(root.isManaged());
+        assertTrue(root.contextProperty().get().boolValProperty().get());
+        root.setManaged(false);
+        assertFalse(root.contextProperty().get().boolValProperty().get());
+
+        assertFalse(root.prefWidthProperty().isBound());
+        assertFalse(root.contextProperty().get().doubleValProperty().isBound());
+        assertEquals(-1.0, root.getPrefWidth(), 0.001);
+        assertEquals(-1.0, root.contextProperty().get().doubleValProperty().get());
+        root.setPrefWidth(456);
+        assertEquals(456.0, root.contextProperty().get().doubleValProperty().get());
+    }
+
+    @Test
+    public void Bind_Reverse_Updates_When_Path_Is_Changed() {
+        TestPane root = compileAndRun("""
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                      prefWidth="$>{context.doubleVal}"/>
+        """);
+
+        assertNewExpr(root, "DoublePushListener");
+
+        assertEquals(-1.0, root.getPrefWidth(), 0.001);
+        assertEquals(-1.0, root.contextProperty().get().doubleValProperty().get());
+        root.contextProperty().set(new TestContext());
+        assertEquals(-1.0, root.contextProperty().get().doubleValProperty().get());
+    }
+
+    @Test
+    public void Bind_Reverse_Fails_For_NonWritable_Observable() {
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                      prefWidth="$>{observableDouble}"/>
+        """));
+
+        assertEquals(ErrorCode.INVALID_REVERSE_BINDING_SOURCE, ex.getDiagnostic().getCode());
+        assertMessageContains("required javafx.beans.property.Property", ex);
+        assertCodeHighlight("observableDouble", ex);
+    }
+
+    @Test
+    public void Bind_Reverse_Fails_For_NonObservable_Source() {
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                      prefWidth="$>{simpleDoubleVal}"/>
+        """));
+
+        assertEquals(ErrorCode.INVALID_REVERSE_BINDING_SOURCE, ex.getDiagnostic().getCode());
+        assertMessageContains("required javafx.beans.property.Property", ex);
+        assertCodeHighlight("simpleDoubleVal", ex);
+    }
+
+    @Test
+    public void Bind_Reverse_Fails_For_Incompatible_Source_Type() {
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                      prefWidth="$>{context.boolVal}"/>
+        """));
+
+        assertEquals(ErrorCode.CANNOT_CONVERT_TARGET_TYPE, ex.getDiagnostic().getCode());
+        assertCodeHighlight("context.boolVal", ex);
+    }
+
+    @Test
+    public void Bind_Reverse_To_Object_Source_Uses_Generic_PushListener() {
+        TestPane root = compileAndRun("""
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                      id="$>{context.stringVal}"/>
+        """);
+
+        assertNewExpr(root, "PushListener");
+
+        assertNull(root.getId());
+        assertNull(root.contextProperty().get().stringValProperty().get());
+
+        root.setId("updated");
+        assertEquals("updated", root.contextProperty().get().stringValProperty().get());
+    }
+
+    @Test
+    public void Bind_Reverse_Detaches_Previous_Source_When_Path_Changes() {
+        TestPane root = compileAndRun("""
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                      prefWidth="$>{context.doubleVal}"/>
+        """);
+
+        TestContext oldContext = root.contextProperty().get();
+        TestContext newContext = new TestContext();
+
+        root.contextProperty().set(newContext);
+        root.setPrefWidth(789);
+
+        assertEquals(-1.0, oldContext.doubleValProperty().get(), 0.001);
+        assertEquals(789.0, newContext.doubleValProperty().get(), 0.001);
+    }
+
+    @Test
+    public void Bind_Reverse_Pushes_Current_Target_When_Path_Becomes_NonNull() {
+        TestPane root = compileAndRun("""
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                      prefWidth="$>{context.doubleVal}"/>
+        """);
+
+        root.contextProperty().set(null);
+        root.setPrefWidth(222);
+
+        TestContext newContext = new TestContext();
+        root.contextProperty().set(newContext);
+
+        assertEquals(222.0, newContext.doubleValProperty().get(), 0.001);
     }
 
     @Test

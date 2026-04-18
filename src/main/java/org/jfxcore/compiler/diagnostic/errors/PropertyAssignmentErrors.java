@@ -163,7 +163,7 @@ public class PropertyAssignmentErrors {
             SourceInfo sourceInfo, PropertyInfo propertyInfo, BindingMode mode) {
         ErrorCode code = switch (mode) {
             case CONTENT -> ErrorCode.INVALID_CONTENT_ASSIGNMENT_TARGET;
-            case UNIDIRECTIONAL_CONTENT -> ErrorCode.INVALID_CONTENT_BINDING_TARGET;
+            case UNIDIRECTIONAL_CONTENT, REVERSE_CONTENT -> ErrorCode.INVALID_CONTENT_BINDING_TARGET;
             case BIDIRECTIONAL_CONTENT -> ErrorCode.INVALID_BIDIRECTIONAL_CONTENT_BINDING_TARGET;
             default -> throw new IllegalArgumentException("mode");
         };
