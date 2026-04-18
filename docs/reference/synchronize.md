@@ -34,24 +34,24 @@ Its prefix notation is `#{x}`, where <span class="inline-code">x</span> is the [
 <!-- Element notation -->
 <object>
     <property>
-        <fx:Synchronize source="myPath"/>
+        <fx:Synchronize source="mySourcePath"/>
     </property>
 </object>
 
 <!-- Attribute notation -->
-<object property="{fx:Synchronize source=myPath}"/>
+<object property="{fx:Synchronize source=mySourcePath}"/>
 
-<!-- Attribute notation with omitted "source" -->
-<object property="{fx:Synchronize myPath}"/>
+<!-- Attribute notation with omitted "source=" -->
+<object property="{fx:Synchronize mySourcePath}"/>
 
 <!-- Prefix notation -->
-<object property="#{myPath}"/>
+<object property="#{mySourcePath}"/>
 
 <!-- Bidirectional binding with javafx.util.StringConverter -->
-<object property="#{myPath; converter=myConverterPath}"/>
+<object property="#{mySourcePath; converter=myConverterPath}"/>
 
 <!-- Bidirectional binding with java.text.Format -->
-<object property="#{myPath; format=myFormatPath}"/>
+<object property="#{mySourcePath; format=myFormatPath}"/>
 ```
 
 ## Inverse method in a bidirectional method binding

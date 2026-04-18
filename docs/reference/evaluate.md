@@ -28,15 +28,15 @@ Its prefix notation is `$x`, where <span class="inline-code">x</span> is the sou
 <!-- Element notation -->
 <object>
     <property>
-        <fx:Evaluate source="myPath"/>
+        <fx:Evaluate source="mySourcePath"/>
     </property>
 </object>
 
 <!-- Attribute notation -->
-<object property="{fx:Evaluate source=myPath}"/>
+<object property="{fx:Evaluate source=mySourcePath}"/>
 
-<!-- Attribute notation with omitted "source" -->
-<object property="{fx:Evaluate myPath}"/>
+<!-- Attribute notation with omitted "source=" -->
+<object property="{fx:Evaluate mySourcePath}"/>
 
 <!-- Prefix notation -->
 <object property="$myPath"/>

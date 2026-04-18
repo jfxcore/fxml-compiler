@@ -71,7 +71,8 @@ the following operations are performed on the target property:
 | `{fx:Synchronize ..source}` | `#{..source}` | `Bindings.bindContentBidirectional(target, source)` |
 
 {: .note }
-Since `source` is the [default property](../property-notation.html#default-property) of all intrinsic expression extensions, `{fx:Observe source=source}` and `{fx:Observe source}` are equivalent.
+Since `source` is the [default property](../property-notation.html#default-property) of all intrinsic expression extensions,
+`{fx:Observe source=mySource}` and `{fx:Observe mySource}` are equivalent.
 
 {: .note }
 This documentation will use the prefix notation in most code samples.

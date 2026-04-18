@@ -28,19 +28,19 @@ Its prefix notation is `$>{x}`, where <span class="inline-code">x</span> is the 
 <!-- Element notation -->
 <object>
     <property>
-        <fx:Push source="myPath"/>
+        <fx:Push source="mySourcePath"/>
     </property>
 </object>
 
 <!-- Attribute notation -->
-<object property="{fx:Push source=myPath}"/>
+<object property="{fx:Push source=mySourcePath}"/>
 
-<!-- Attribute notation with omitted "source" -->
-<object property="{fx:Push myPath}"/>
+<!-- Attribute notation with omitted "source=" -->
+<object property="{fx:Push mySourcePath}"/>
 
 <!-- Prefix notation -->
-<object property="$>{myPath}"/>
+<object property="$>{mySourcePath}"/>
 
 <!-- Reverse content binding -->
-<object property="$>{..myPath}"/>
+<object property="$>{..mySourcePath}"/>
 ```
