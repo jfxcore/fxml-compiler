@@ -6,7 +6,7 @@ nav_order: 1
 ---
 
 # Source path
-The source path in an expression like `{fx:Observe path=myModel.userName}` or its short form `${myModel.userName}`
+The source path in an expression like `{fx:Observe source=myModel.userName}` or its short form `${myModel.userName}`
 may refer to any of the following elements on `myModel`:
 * a plain field or method with the name `userName`, returning a `String`
 * a Java Beans-style method with the name `getUserName`, returning a `String`

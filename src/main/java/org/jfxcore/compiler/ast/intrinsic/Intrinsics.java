@@ -65,19 +65,19 @@ public class Intrinsics {
 
     public static final Intrinsic EVALUATE = new Intrinsic(
         "Evaluate", Kind.OBJECT, Placement.ANY, KnownSymbols::BottomTypeDecl,
-        new IntrinsicProperty("path", KnownSymbols::StringDecl, true));
+        new IntrinsicProperty("source", KnownSymbols::StringDecl, true));
 
     public static final Intrinsic OBSERVE = new Intrinsic(
         "Observe", Kind.OBJECT, Placement.ANY, KnownSymbols::BottomTypeDecl,
-        new IntrinsicProperty("path", KnownSymbols::StringDecl, true));
+        new IntrinsicProperty("source", KnownSymbols::StringDecl, true));
 
     public static final Intrinsic PUSH = new Intrinsic(
         "Push", Kind.OBJECT, Placement.ANY, KnownSymbols::BottomTypeDecl,
-        new IntrinsicProperty("path", KnownSymbols::StringDecl, true));
+        new IntrinsicProperty("source", KnownSymbols::StringDecl, true));
 
     public static final Intrinsic SYNCHRONIZE = new Intrinsic(
         "Synchronize", Kind.OBJECT, Placement.ANY, KnownSymbols::BottomTypeDecl,
-        new IntrinsicProperty("path", KnownSymbols::StringDecl, true),
+        new IntrinsicProperty("source", KnownSymbols::StringDecl, true),
         new IntrinsicProperty("format", KnownSymbols::FormatDecl),
         new IntrinsicProperty("converter", KnownSymbols::StringConverterDecl),
         new IntrinsicProperty("inverseMethod", KnownSymbols::StringDecl));

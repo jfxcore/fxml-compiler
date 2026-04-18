@@ -20,7 +20,7 @@ Its prefix notation is `$>{x}`, where <span class="inline-code">x</span> is the 
 
 | Property | Description |
 |:-|:-|
-| `path` | A string that specifies the [source path](../markup-extension/expression/path.html). This is the [default property](../property-notation.html#default-property). |
+| `source` | A string that specifies the [source path](../markup-extension/expression/path.html). This is the [default property](../property-notation.html#default-property). |
 
 ## Usage
 
@@ -28,14 +28,14 @@ Its prefix notation is `$>{x}`, where <span class="inline-code">x</span> is the 
 <!-- Element notation -->
 <object>
     <property>
-        <fx:Push path="myPath"/>
+        <fx:Push source="myPath"/>
     </property>
 </object>
 
 <!-- Attribute notation -->
-<object property="{fx:Push path=myPath}"/>
+<object property="{fx:Push source=myPath}"/>
 
-<!-- Attribute notation with omitted "path" -->
+<!-- Attribute notation with omitted "source" -->
 <object property="{fx:Push myPath}"/>
 
 <!-- Prefix notation -->

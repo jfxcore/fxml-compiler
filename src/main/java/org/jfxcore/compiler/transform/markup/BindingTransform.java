@@ -62,16 +62,16 @@ public class BindingTransform implements Transform {
             return node;
         }
 
-        ValueNode pathNode = (ValueNode)objectNode.getProperty("path").getSingleValue(context);
+        ValueNode sourceNode = (ValueNode)objectNode.getProperty("source").getSingleValue(context);
         PropertyNode inverseMethod = objectNode.findProperty("inverseMethod");
         ValueNode inverseMethodNode = inverseMethod != null ?
             inverseMethod.getSingleValue(context).as(ValueNode.class) : null;
 
         ExpressionNode pathExpression = tryParseExpression(
-            context, pathNode, !bindingMode.isReverse(), inverseMethodNode);
+            context, sourceNode, !bindingMode.isReverse(), inverseMethodNode);
 
         if (pathExpression == null) {
-            throw ParserErrors.invalidExpression(pathNode.getSourceInfo());
+            throw ParserErrors.invalidExpression(sourceNode.getSourceInfo());
         }
 
         PropertyNode converter = objectNode.findProperty("converter");
