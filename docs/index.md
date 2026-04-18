@@ -111,6 +111,17 @@ NumberDialog.fxml:8: 'textFiel' in NumberDialog cannot be resolved
                                                        ^^^^^^^^
 ```
 
+## Custom markup extensions
+FXML 2.0 can be extended with [markup extensions](markup-extension.html) for advanced markup processing scenarios.
+A markup extension is a user-definable function that computes a value or modifies a JavaFX property.
+
+For example, an application could define an `I18n` extension to look up a localized string in a user-definable way,
+and apply that string to a JavaFX property:
+
+```xml
+<Label text="{I18n settings.title}"/>
+```
+
 ## Bring your own pattern
 FXML 2.0 does not use the markup/controller pattern as featured in FXML 1.0 with `FXMLLoader`.
 Instead, FXML 2.0 markup compiles down to scene graph nodes, optionally including a [code-behind](code-behind.html)
