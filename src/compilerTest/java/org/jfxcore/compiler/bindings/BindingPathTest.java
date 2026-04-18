@@ -642,7 +642,7 @@ public class BindingPathTest extends CompilerTestBase {
     public void Bind_Reverse_To_Observable_Property() {
         TestPane root = compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                      prefWidth="$>{simpleProp}"/>
+                      prefWidth=">{simpleProp}"/>
         """);
 
         assertNewExpr(root, "DoublePushListener");
@@ -659,7 +659,7 @@ public class BindingPathTest extends CompilerTestBase {
     public void Bind_Reverse_To_Observable_Indirect_Properties() {
         TestPane root = compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                      managed="$>{context.boolVal}" prefWidth="$>{context.doubleVal}"/>
+                      managed=">{context.boolVal}" prefWidth=">{context.doubleVal}"/>
         """);
 
         assertNewExpr(root, "BooleanPushListener");
@@ -684,7 +684,7 @@ public class BindingPathTest extends CompilerTestBase {
     public void Bind_Reverse_Updates_When_Path_Is_Changed() {
         TestPane root = compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                      prefWidth="$>{context.doubleVal}"/>
+                      prefWidth=">{context.doubleVal}"/>
         """);
 
         assertNewExpr(root, "DoublePushListener");
@@ -699,7 +699,7 @@ public class BindingPathTest extends CompilerTestBase {
     public void Bind_Reverse_Fails_For_NonWritable_Observable() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                      prefWidth="$>{observableDouble}"/>
+                      prefWidth=">{observableDouble}"/>
         """));
 
         assertEquals(ErrorCode.INVALID_REVERSE_BINDING_SOURCE, ex.getDiagnostic().getCode());
@@ -711,7 +711,7 @@ public class BindingPathTest extends CompilerTestBase {
     public void Bind_Reverse_Fails_For_NonObservable_Source() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                      prefWidth="$>{simpleDoubleVal}"/>
+                      prefWidth=">{simpleDoubleVal}"/>
         """));
 
         assertEquals(ErrorCode.INVALID_REVERSE_BINDING_SOURCE, ex.getDiagnostic().getCode());
@@ -723,7 +723,7 @@ public class BindingPathTest extends CompilerTestBase {
     public void Bind_Reverse_Fails_For_Incompatible_Source_Type() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                      prefWidth="$>{context.boolVal}"/>
+                      prefWidth=">{context.boolVal}"/>
         """));
 
         assertEquals(ErrorCode.CANNOT_CONVERT_TARGET_TYPE, ex.getDiagnostic().getCode());
@@ -734,7 +734,7 @@ public class BindingPathTest extends CompilerTestBase {
     public void Bind_Reverse_To_Object_Source_Uses_Generic_PushListener() {
         TestPane root = compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                      id="$>{context.stringVal}"/>
+                      id=">{context.stringVal}"/>
         """);
 
         assertNewExpr(root, "PushListener");
@@ -750,7 +750,7 @@ public class BindingPathTest extends CompilerTestBase {
     public void Bind_Reverse_Detaches_Previous_Source_When_Path_Changes() {
         TestPane root = compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                      prefWidth="$>{context.doubleVal}"/>
+                      prefWidth=">{context.doubleVal}"/>
         """);
 
         TestContext oldContext = root.contextProperty().get();
@@ -767,7 +767,7 @@ public class BindingPathTest extends CompilerTestBase {
     public void Bind_Reverse_Pushes_Current_Target_When_Path_Becomes_NonNull() {
         TestPane root = compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                      prefWidth="$>{context.doubleVal}"/>
+                      prefWidth=">{context.doubleVal}"/>
         """);
 
         root.contextProperty().set(null);

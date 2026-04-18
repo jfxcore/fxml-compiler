@@ -583,11 +583,11 @@ public class SetBindingTest extends CompilerTestBase {
     public void Reverse_ContentBinding_Fails_For_ObjectProperty() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <SetTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                         targetObjProp="$>{..set}"/>
+                         targetObjProp=">{..set}"/>
         """));
 
         assertEquals(ErrorCode.INVALID_CONTENT_BINDING_TARGET, ex.getDiagnostic().getCode());
-        assertCodeHighlight("targetObjProp=\"$>{..set}\"", ex);
+        assertCodeHighlight("targetObjProp=\">{..set}\"", ex);
     }
 
     /*
@@ -598,7 +598,7 @@ public class SetBindingTest extends CompilerTestBase {
     public void Reverse_ContentBinding_To_Vanilla_Set() {
         SetTestPane root = compileAndRun("""
             <SetTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                         targetSetProp="$>{..set}"/>
+                         targetSetProp=">{..set}"/>
         """);
 
         assertNotNewExpr(root, OBSERVABLE_VALUE_WRAPPER);
@@ -620,7 +620,7 @@ public class SetBindingTest extends CompilerTestBase {
     public void Reverse_ContentBinding_To_Vanilla_Set_Indirect() {
         SetTestPane root = compileAndRun("""
             <SetTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                         targetSetProp="$>{..indirect.set}"/>
+                         targetSetProp=">{..indirect.set}"/>
         """);
 
         assertNewExpr(root, RESEATABLE_SOURCE_WRAPPER);
@@ -653,7 +653,7 @@ public class SetBindingTest extends CompilerTestBase {
     public void Reverse_ContentBinding_To_ObservableSet() {
         SetTestPane root = compileAndRun("""
             <SetTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                         targetSetProp="$>{..obsSet}"/>
+                         targetSetProp=">{..obsSet}"/>
         """);
 
         assertNotNewExpr(root, OBSERVABLE_VALUE_WRAPPER);
@@ -675,7 +675,7 @@ public class SetBindingTest extends CompilerTestBase {
     public void Reverse_ContentBinding_To_ObservableSet_Indirect() {
         SetTestPane root = compileAndRun("""
             <SetTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                         targetSetProp="$>{..indirect.obsSet}"/>
+                         targetSetProp=">{..indirect.obsSet}"/>
         """);
 
         assertNewExpr(root, RESEATABLE_SOURCE_WRAPPER);
@@ -708,7 +708,7 @@ public class SetBindingTest extends CompilerTestBase {
     public void Reverse_Binding_To_ObservableValue_Of_Vanilla_Set() {
         SetTestPane root = compileAndRun("""
             <SetTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                         targetSetProp="$>{propOfSet}"/>
+                         targetSetProp=">{propOfSet}"/>
         """);
 
         assertNewExpr(root, PUSH_LISTENER);
@@ -729,7 +729,7 @@ public class SetBindingTest extends CompilerTestBase {
     public void Reverse_ContentBinding_To_ObservableValue_Of_Vanilla_Set() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <SetTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                         targetSetProp="$>{..propOfSet}"/>
+                         targetSetProp=">{..propOfSet}"/>
         """));
 
         assertEquals(ErrorCode.INVALID_CONTENT_BINDING_SOURCE, ex.getDiagnostic().getCode());
@@ -745,7 +745,7 @@ public class SetBindingTest extends CompilerTestBase {
     public void Reverse_ContentBinding_To_ObservableValue_Of_ObservableSet() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <SetTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                         targetSetProp="$>{..propOfObsSet}"/>
+                         targetSetProp=">{..propOfObsSet}"/>
         """));
 
         assertEquals(ErrorCode.INVALID_CONTENT_BINDING_SOURCE, ex.getDiagnostic().getCode());

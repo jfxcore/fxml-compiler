@@ -583,11 +583,11 @@ public class MapBindingTest extends CompilerTestBase {
     public void Reverse_ContentBinding_Fails_For_ObjectProperty() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <MapTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                         targetObjProp="$>{..map}"/>
+                         targetObjProp=">{..map}"/>
         """));
 
         assertEquals(ErrorCode.INVALID_CONTENT_BINDING_TARGET, ex.getDiagnostic().getCode());
-        assertCodeHighlight("targetObjProp=\"$>{..map}\"", ex);
+        assertCodeHighlight("targetObjProp=\">{..map}\"", ex);
     }
 
     /*
@@ -598,7 +598,7 @@ public class MapBindingTest extends CompilerTestBase {
     public void Reverse_ContentBinding_To_Vanilla_Map() {
         MapTestPane root = compileAndRun("""
             <MapTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                         targetMapProp="$>{..map}"/>
+                         targetMapProp=">{..map}"/>
         """);
 
         assertNotNewExpr(root, OBSERVABLE_VALUE_WRAPPER);
@@ -621,7 +621,7 @@ public class MapBindingTest extends CompilerTestBase {
     public void Reverse_ContentBinding_To_Vanilla_Map_Indirect() {
         MapTestPane root = compileAndRun("""
             <MapTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                         targetMapProp="$>{..indirect.map}"/>
+                         targetMapProp=">{..indirect.map}"/>
         """);
 
         assertNewExpr(root, RESEATABLE_SOURCE_WRAPPER);
@@ -654,7 +654,7 @@ public class MapBindingTest extends CompilerTestBase {
     public void Reverse_ContentBinding_To_ObservableMap() {
         MapTestPane root = compileAndRun("""
             <MapTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                         targetMapProp="$>{..obsMap}"/>
+                         targetMapProp=">{..obsMap}"/>
         """);
 
         assertNotNewExpr(root, OBSERVABLE_VALUE_WRAPPER);
@@ -677,7 +677,7 @@ public class MapBindingTest extends CompilerTestBase {
     public void Reverse_ContentBinding_To_ObservableMap_Indirect() {
         MapTestPane root = compileAndRun("""
             <MapTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                         targetMapProp="$>{..indirect.obsMap}"/>
+                         targetMapProp=">{..indirect.obsMap}"/>
         """);
 
         assertNewExpr(root, RESEATABLE_SOURCE_WRAPPER);
@@ -710,7 +710,7 @@ public class MapBindingTest extends CompilerTestBase {
     public void Reverse_Binding_To_ObservableValue_Of_Vanilla_Map() {
         MapTestPane root = compileAndRun("""
             <MapTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                         targetMapProp="$>{propOfMap}"/>
+                         targetMapProp=">{propOfMap}"/>
         """);
 
         assertNewExpr(root, PUSH_LISTENER);
@@ -731,7 +731,7 @@ public class MapBindingTest extends CompilerTestBase {
     public void Reverse_ContentBinding_To_ObservableValue_Of_Vanilla_Map() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <MapTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                         targetMapProp="$>{..propOfMap}"/>
+                         targetMapProp=">{..propOfMap}"/>
         """));
 
         assertEquals(ErrorCode.INVALID_CONTENT_BINDING_SOURCE, ex.getDiagnostic().getCode());
@@ -747,7 +747,7 @@ public class MapBindingTest extends CompilerTestBase {
     public void Reverse_ContentBinding_To_ObservableValue_Of_ObservableMap() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <MapTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                         targetMapProp="$>{..propOfObsMap}"/>
+                         targetMapProp=">{..propOfObsMap}"/>
         """));
 
         assertEquals(ErrorCode.INVALID_CONTENT_BINDING_SOURCE, ex.getDiagnostic().getCode());

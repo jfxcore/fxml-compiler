@@ -336,7 +336,7 @@ public class OperatorTest extends CompilerTestBase {
     public void Bind_Reverse_With_NotOperator_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                      visible="$>{!booleanProp}"/>
+                      visible=">{!booleanProp}"/>
         """));
 
         assertEquals(ErrorCode.UNEXPECTED_TOKEN, ex.getDiagnostic().getCode());
@@ -347,7 +347,7 @@ public class OperatorTest extends CompilerTestBase {
     public void Bind_Reverse_With_BoolifyOperator_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                      visible="$>{!!booleanProp}"/>
+                      visible=">{!!booleanProp}"/>
         """));
 
         assertEquals(ErrorCode.UNEXPECTED_TOKEN, ex.getDiagnostic().getCode());

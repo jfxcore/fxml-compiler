@@ -14,7 +14,7 @@ These expressions are implemented as intrinsic markup extensions and compiled to
 |:-|:-|:-|
 | [`fx:Evaluate`](../reference/evaluate.html) | `$source` | value supplier, property consumer |
 | [`fx:Observe`](../reference/observe.html) | `${source}` | value supplier, property consumer |
-| [`fx:Push`](../reference/push.html) | `$>{source}` | property consumer |
+| [`fx:Push`](../reference/push.html) | `>{source}` | property consumer |
 | [`fx:Synchronize`](../reference/synchronize.html) | `#{source}` | property consumer |
 
 `{fx:Evaluate}` has the lowest runtime overhead, since no listener maintenance is required after the initial assignment.
@@ -63,11 +63,11 @@ the following operations are performed on the target property:
 |:-|:-|:-|
 | `{fx:Evaluate source}` | `$source` | assign the resolved value once |
 | `{fx:Observe source}` | `${source}` | `Property.bind(source)` |
-| `{fx:Push source}` | `$>{source}` | add a target listener that pushes updates to `source` |
+| `{fx:Push source}` | `>{source}` | add a target listener that pushes updates to `source` |
 | `{fx:Synchronize source}` | `#{source}` | `Property.bindBidirectional(source)` |
 | `{fx:Evaluate ..source}` | `$..source` | `Collection.addAll(source)`<br>`Map.putAll(source)` |
 | `{fx:Observe ..source}` | `${..source}` | `Bindings.bindContent(target, source)` |
-| `{fx:Push ..source}` | `$>{..source}` | `Bindings.bindContent(source, target)` |
+| `{fx:Push ..source}` | `>{..source}` | `Bindings.bindContent(source, target)` |
 | `{fx:Synchronize ..source}` | `#{..source}` | `Bindings.bindContentBidirectional(target, source)` |
 
 {: .note }

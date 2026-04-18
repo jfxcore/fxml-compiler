@@ -34,7 +34,7 @@ public class InlineParser {
 
     public static final String EVALUATE_EXPR_PREFIX = "$";
     public static final String OBSERVE_EXPR_PREFIX = "${";
-    public static final String PUSH_EXPR_PREFIX = "$>{";
+    public static final String PUSH_EXPR_PREFIX = ">{";
     public static final String SYNCHRONIZE_EXPR_PREFIX = "#{";
 
     private record SyntaxMapping(String compact, String name, boolean intrinsic, boolean closingCurly) {}
