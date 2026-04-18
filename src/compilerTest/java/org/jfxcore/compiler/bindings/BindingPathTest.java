@@ -153,9 +153,9 @@ public class BindingPathTest extends CompilerTestBase {
     public void Bindings_With_Element_Syntax() {
         TestPane root = compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
-                <managed><fx:Evaluate path="context.boolVal"/></managed>
-                <prefWidth><fx:Observe path="context.doubleVal"/></prefWidth>
-                <prefHeight><fx:Synchronize path="context.doubleVal"/></prefHeight>
+                <managed><fx:Evaluate source="context.boolVal"/></managed>
+                <prefWidth><fx:Observe source="context.doubleVal"/></prefWidth>
+                <prefHeight><fx:Synchronize source="context.doubleVal"/></prefHeight>
             </TestPane>
         """);
 
@@ -191,7 +191,7 @@ public class BindingPathTest extends CompilerTestBase {
     public void Reverse_Bindings_With_Element_Syntax() {
         TestPane root = compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
-                <prefWidth><fx:Push path="context.doubleVal"/></prefWidth>
+                <prefWidth><fx:Push source="context.doubleVal"/></prefWidth>
             </TestPane>
         """);
 
@@ -226,7 +226,7 @@ public class BindingPathTest extends CompilerTestBase {
             <?import javafx.scene.control.*?>
             <?import javafx.scene.layout.*?>
             <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0" id="foo">
-                <Label text="${path=id}"/>
+                <Label text="${source=id}"/>
             </Pane>
         """);
 
@@ -240,7 +240,7 @@ public class BindingPathTest extends CompilerTestBase {
             <?import javafx.scene.control.*?>
             <?import javafx.scene.layout.*?>
             <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
-                <Label text="${path=style; foo=bar}"/>
+                <Label text="${source=style; foo=bar}"/>
             </Pane>
         """));
 

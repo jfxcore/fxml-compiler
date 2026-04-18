@@ -23,7 +23,7 @@ Its prefix notation is `#{x}`, where <span class="inline-code">x</span> is the [
 
 | Property | Description |
 |:-|:-|
-| `path` | A string that specifies the [source path](../markup-extension/expression/path.html). This is the [default property](../property-notation.html#default-property). |
+| `source` | A string that specifies the [source path](../markup-extension/expression/path.html). This is the [default property](../property-notation.html#default-property). |
 | `format` | The path to a `java.text.Format` instance passed to `StringProperty.bindBidirectional(Property<?>, Format)`. The `format` path is evaluated once when the synchronization is set up. This property is only applicable to `StringProperty` targets. |
 | `converter` | The path to a `javafx.util.StringConverter` instance passed to `StringProperty.bindBidirectional(Property<T>, StringConverter<T>)`. The `converter` path is evaluated once when the synchronization is set up. This property is only applicable to `StringProperty` targets. |
 | `inverseMethod` | The path to an inverse method for the method referenced in `path`. This can also be the name of a constructor. |
@@ -34,24 +34,24 @@ Its prefix notation is `#{x}`, where <span class="inline-code">x</span> is the [
 <!-- Element notation -->
 <object>
     <property>
-        <fx:Synchronize path="myPath"/>
+        <fx:Synchronize source="mySourcePath"/>
     </property>
 </object>
 
 <!-- Attribute notation -->
-<object property="{fx:Synchronize path=myPath}"/>
+<object property="{fx:Synchronize source=mySourcePath}"/>
 
-<!-- Attribute notation with omitted "path" -->
-<object property="{fx:Synchronize myPath}"/>
+<!-- Attribute notation with omitted "source=" -->
+<object property="{fx:Synchronize mySourcePath}"/>
 
 <!-- Prefix notation -->
-<object property="#{myPath}"/>
+<object property="#{mySourcePath}"/>
 
 <!-- Bidirectional binding with javafx.util.StringConverter -->
-<object property="#{myPath; converter=myConverterPath}"/>
+<object property="#{mySourcePath; converter=myConverterPath}"/>
 
 <!-- Bidirectional binding with java.text.Format -->
-<object property="#{myPath; format=myFormatPath}"/>
+<object property="#{mySourcePath; format=myFormatPath}"/>
 ```
 
 ## Inverse method in a bidirectional method binding

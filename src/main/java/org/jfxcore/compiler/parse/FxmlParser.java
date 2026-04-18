@@ -45,10 +45,10 @@ public class FxmlParser {
 
     // Intrinsic properties that are always interpreted as paths.
     private static final IntrinsicProperty[] PATH_INTRINSICS = new IntrinsicProperty[] {
-        Intrinsics.EVALUATE.findProperty("path"),
-        Intrinsics.OBSERVE.findProperty("path"),
-        Intrinsics.PUSH.findProperty("path"),
-        Intrinsics.SYNCHRONIZE.findProperty("path")
+        Intrinsics.EVALUATE.findProperty("source"),
+        Intrinsics.OBSERVE.findProperty("source"),
+        Intrinsics.PUSH.findProperty("source"),
+        Intrinsics.SYNCHRONIZE.findProperty("source")
     };
 
     // Intrinsics that are not interpreted by the inline parser.

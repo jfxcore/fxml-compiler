@@ -29,9 +29,9 @@ Here's how a simple binding is specified in FXML 2.0, using different but equiva
 <VBox xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
       fx:subclass="com.sample.MyControl">
     <!-- fx:Observe markup extension with source path -->
-    <Button text="{fx:Observe path=caption}"/>
+    <Button text="{fx:Observe source=caption}"/>
 
-    <!-- 'path' is the default property of the fx:Observe markup extension, so it can be omitted -->
+    <!-- 'source' is the default property of the fx:Observe markup extension, so it can be omitted -->
     <Button text="{fx:Observe caption}"/>
 
     <!-- Prefix notation, similar to FXML 1.0 -->
@@ -71,7 +71,8 @@ the following operations are performed on the target property:
 | `{fx:Synchronize ..source}` | `#{..source}` | `Bindings.bindContentBidirectional(target, source)` |
 
 {: .note }
-Since `path` is the [default property](../property-notation.html#default-property) of all intrinsic expression extensions, `{fx:Observe path=source}` and `{fx:Observe source}` are equivalent.
+Since `source` is the [default property](../property-notation.html#default-property) of all intrinsic expression extensions,
+`{fx:Observe source=mySource}` and `{fx:Observe mySource}` are equivalent.
 
 {: .note }
 This documentation will use the prefix notation in most code samples.

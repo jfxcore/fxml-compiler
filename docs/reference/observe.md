@@ -23,7 +23,7 @@ Its prefix notation is `${x}`, where <span class="inline-code">x</span> is the s
 
 | Property | Description |
 |:-|:-|
-| `path` | A string that specifies the [source path](../markup-extension/expression/path.html). This is the [default property](../property-notation.html#default-property). |
+| `source` | A string that specifies the [source path](../markup-extension/expression/path.html). This is the [default property](../property-notation.html#default-property). |
 
 ## Usage
 
@@ -31,18 +31,18 @@ Its prefix notation is `${x}`, where <span class="inline-code">x</span> is the s
 <!-- Element notation -->
 <object>
     <property>
-        <fx:Observe path="myPath"/>
+        <fx:Observe source="mySourcePath"/>
     </property>
 </object>
 
 <!-- Attribute notation -->
-<object property="{fx:Observe path=myPath}"/>
+<object property="{fx:Observe source=mySourcePath}"/>
 
-<!-- Attribute notation with omitted "path" -->
-<object property="{fx:Observe myPath}"/>
+<!-- Attribute notation with omitted "source=" -->
+<object property="{fx:Observe mySourcePath}"/>
 
 <!-- Prefix notation -->
-<object property="${myPath}"/>
+<object property="${mySourcePath}"/>
 ```
 
 ### Usage as a value supplier

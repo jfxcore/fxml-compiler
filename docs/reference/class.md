@@ -26,6 +26,6 @@ The `fx:Class` markup extension resolves a name to a class literal.
 <!-- Attribute notation -->
 <object property="{fx:Class name=MyClass}"/>
 
-<!-- Attribute notation with omitted "name" -->
+<!-- Attribute notation with omitted "name=" -->
 <object property="{fx:Class MyClass}"/>
 ```
