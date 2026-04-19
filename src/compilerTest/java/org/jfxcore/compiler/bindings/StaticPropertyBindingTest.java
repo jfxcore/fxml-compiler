@@ -192,7 +192,7 @@ public class StaticPropertyBindingTest extends CompilerTestBase {
     }
 
     @Test
-    public void BindBidirectional_Observable_StaticProperty_To_StringProperty() {
+    public void Bind_Bidirectional_Between_Observable_StaticProperty_And_StringProperty() {
         Pane root = compileAndRun("""
             <?import javafx.scene.layout.*?>
             <?import javafx.scene.control.*?>

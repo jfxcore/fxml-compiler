@@ -528,7 +528,7 @@ public class MapBindingTest extends CompilerTestBase {
      *  expected: target.bind(source)
      */
     @Test
-    public void Unidirectional_Binding_To_ObservableValue_Of_ObservableList() {
+    public void Unidirectional_Binding_To_ObservableValue_Of_ObservableMap() {
         MapTestPane root = compileAndRun("""
             <MapTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                          targetMapProp="${propOfObsMap}" targetObjProp="${propOfObsMap}"/>

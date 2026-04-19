@@ -1,4 +1,4 @@
-// Copyright (c) 2022, 2025, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler;
@@ -267,7 +267,7 @@ public class CollectionsTest {
         }
 
         @Test
-        public void Object_Are_Added_To_StringKey_MapProperty() {
+        public void Objects_Are_Added_To_StringKey_MapProperty() {
             StringKeyMapTestPane root = compileAndRun("""
                 <?import javafx.scene.layout.*?>
                 <StringKeyMapTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
