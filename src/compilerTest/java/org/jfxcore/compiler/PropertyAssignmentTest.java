@@ -329,7 +329,7 @@ public class PropertyAssignmentTest {
         }
 
         @Test
-        public void UnqualifiedPropertyName_Is_Not_Interpreted_As_StaticProperty_When_Name_Is_Ambiguous() {
+        public void Unqualified_Property_Name_Is_Not_Interpreted_As_Static_Property_When_Name_Is_Ambiguous() {
             StaticPropertyButton root = compileAndRun("""
                 <StaticPropertyButton xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                     <text>foo</text>
@@ -341,7 +341,7 @@ public class PropertyAssignmentTest {
         }
 
         @Test
-        public void QualifiedPropertyName_Is_Interpreted_As_StaticProperty_When_Name_Is_Ambiguous() {
+        public void Qualified_Property_Name_Is_Interpreted_As_Static_Property_When_Name_Is_Ambiguous() {
             StaticPropertyButton root = compileAndRun("""
                 <StaticPropertyButton xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                     <StaticPropertyButton.text>foo</StaticPropertyButton.text>
@@ -535,7 +535,7 @@ public class PropertyAssignmentTest {
         }
 
         @Test
-        public void AttributeValue_Is_Not_Coerced_To_Boolean_In_ObjectContext() {
+        public void AttributeValue_Is_Not_Coerced_To_Boolean_In_Object_Context() {
             NullCoercionPane root = compileAndRun("""
                 <NullCoercionPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                                   objectProp="true"/>
@@ -565,7 +565,7 @@ public class PropertyAssignmentTest {
         }
 
         @Test
-        public void AttributeValue_Null_Cannot_Be_Coerced_To_PrimitiveType() {
+        public void AttributeValue_Null_Cannot_Be_Coerced_To_Primitive_Type() {
             MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
                 <NullCoercionPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                                   doubleProp="null"/>
@@ -576,7 +576,7 @@ public class PropertyAssignmentTest {
         }
 
         @Test
-        public void AttributeValue_Null_Cannot_Be_Coerced_To_ReferenceType() {
+        public void AttributeValue_Null_Cannot_Be_Coerced_To_Reference_Type() {
             MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
                 <?import javafx.scene.control.*?>
                 <Button xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
@@ -692,7 +692,7 @@ public class PropertyAssignmentTest {
         }
 
         @Test
-        public void AttributeValue_Unmatchable_Coercion_Throws_Exception() {
+        public void AttributeValue_With_Unmatchable_Coercion_Fails() {
             MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
                 <?import javafx.scene.layout.*?>
                 <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0" padding="1,2"/>
@@ -715,7 +715,7 @@ public class PropertyAssignmentTest {
         }
 
         @Test
-        public void ElementValue_Is_Coerced_To_String_And_Removes_Insinificant_Whitespace() {
+        public void ElementValue_Is_Coerced_To_String_And_Removes_Insignificant_Whitespace() {
             Button root = compileAndRun("""
                 <?import javafx.scene.control.*?>
                 <Button xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
@@ -1011,7 +1011,7 @@ public class PropertyAssignmentTest {
         }
 
         @Test
-        public void StaticProperty_PropertyText_Cannot_Be_Coerced_To_Insets() {
+        public void StaticProperty_AttributeValue_Cannot_Be_Coerced_To_Insets() {
             MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
                 <?import javafx.scene.layout.*?>
                 <VBox xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">

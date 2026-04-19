@@ -872,7 +872,7 @@ public class BindingPathTest extends CompilerTestBase {
     }
 
     @Test
-    public void Bind_Bidirectional_To_Invariant_Null_Context() {
+    public void Bind_Bidirectional_To_Invariant_Null_Context_Throws_NPE() {
         NullPointerException ex = assertThrows(NullPointerException.class, () -> compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                       managed="#{nullContext.boolVal}"/>

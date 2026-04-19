@@ -1,4 +1,4 @@
-// Copyright (c) 2023, 2025, JFXcore. All rights reserved.
+// Copyright (c) 2023, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.collections;
@@ -83,7 +83,7 @@ public class MapObservableValueWrapperTest extends CompilerTestBase {
     }
 
     @Test
-    public void Modifications_Of_Wrapped_Set_Do_Not_Fire_Notifications() {
+    public void Modifications_Of_Wrapped_Map_Do_Not_Fire_Notifications() {
         Map<Integer, String> wrappedMap = new HashMap<>();
         ObservableValue<Map<Integer, String>> wrappedProperty = new SimpleObjectProperty<>(wrappedMap);
         ObservableMapValue<Integer, String> wrapper = newInstance(wrappedProperty);
@@ -93,7 +93,7 @@ public class MapObservableValueWrapperTest extends CompilerTestBase {
     }
 
     @Test
-    public void Modifications_Of_Wrapped_ObservableSet_Fire_Notifications() {
+    public void Modifications_Of_Wrapped_ObservableMap_Fire_Notifications() {
         ObservableMap<Integer, String> wrappedMap = FXCollections.observableMap(new HashMap<>());
         ObservableValue<Map<Integer, String>> wrappedProperty = new SimpleObjectProperty<>(wrappedMap);
         ObservableMapValue<Integer, String> wrapper = newInstance(wrappedProperty);
@@ -120,7 +120,7 @@ public class MapObservableValueWrapperTest extends CompilerTestBase {
     }
 
     @Test
-    public void Replacing_Wrapped_ObservableSet_Fires_Notifications() {
+    public void Replacing_Wrapped_ObservableMap_Fires_Notifications() {
         var wrappedProperty = new SimpleObjectProperty<>(FXCollections.observableMap(Map.of(0, "foo", 1, "bar")));
         ObservableMapValue<Integer, String> wrapper = newInstance(wrappedProperty);
         List<String> trace = new MapTrace(wrapper);
