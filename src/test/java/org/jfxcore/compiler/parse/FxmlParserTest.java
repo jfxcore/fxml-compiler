@@ -209,7 +209,7 @@ public class FxmlParserTest extends TestBase {
         DocumentNode document = new FxmlParser("""
                 <?xml version="1.0" encoding="UTF-8"?>
                 <Label xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                       text="{}% greeting"/>
+                       text="\\% greeting"/>
             """).parseDocument();
 
         assertEquals("% greeting", getPropertyText(document, "text"));
@@ -299,16 +299,21 @@ public class FxmlParserTest extends TestBase {
     }
 
     @Test
-    public void Escaped_OpenCurly_Is_Not_Processed() {
+    public void Escaped_Markup_Extension() {
         DocumentNode document = new FxmlParser("""
                 <?xml version="1.0" encoding="UTF-8"?>
                 <Label xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                       text1="{}foo"
-                       text2="  {} bar "/>
+                       text1="\\{foo}  "
+                       text2="  \\{foo}  "
+                       text3="  \\ bar "/>
             """).parseDocument();
 
-        assertEquals("foo", getPropertyText(document, "text1"));
-        assertEquals(" bar ", getPropertyText(document, "text2"));
+        assertEquals("{foo}  ", getPropertyText(document, "text1"));
+        assertEquals("  {foo}  ", getPropertyText(document, "text2"));
+        assertEquals("  \\ bar ", getPropertyText(document, "text3"));
+        assertSourceInfo(2, 19, 2, 26, getPropertyValue(document, "text1").getSourceInfo());
+        assertSourceInfo(3, 19, 3, 28, getPropertyValue(document, "text2").getSourceInfo());
+        assertSourceInfo(4, 18, 4, 26, getPropertyValue(document, "text3").getSourceInfo());
     }
 
     @Test
@@ -452,15 +457,18 @@ public class FxmlParserTest extends TestBase {
             .getText();
     }
 
-    private String getPropertyText(DocumentNode document, String propertyName) {
-        //noinspection OptionalGetWithoutIsPresent
+    private TextNode getPropertyValue(DocumentNode document, String propertyName) {
         return document
             .getRoot().as(ObjectNode.class)
             .getProperties().stream()
             .filter(p -> p.getName().equals(propertyName))
-            .findFirst().get()
-            .getValues().get(0).as(TextNode.class)
-            .getText();
+            .findFirst()
+            .orElseThrow()
+            .getValues().get(0).as(TextNode.class);
+    }
+
+    private String getPropertyText(DocumentNode document, String propertyName) {
+        return getPropertyValue(document, propertyName).getText();
     }
 
     public static void assertSourceInfo(
