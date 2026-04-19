@@ -245,11 +245,19 @@ public class FxmlParser {
             }
 
             String trimmed = text.trim();
-            if (isInlineExpression(trimmed)) {
-                if (trimmed.startsWith("{}")) {
-                    return createTextNode(text.substring(text.indexOf("{}") + 2), sourceInfo, true);
-                }
+            if (trimmed.startsWith("\\") && isInlineExpression(trimmed.substring(1))) {
+                int start = text.indexOf('\\');
+                return createTextNode(
+                    text.substring(0, start) + text.substring(start + 1),
+                    new SourceInfo(
+                        sourceInfo.getStart().getLine(),
+                        sourceInfo.getStart().getColumn() + 1,
+                        sourceInfo.getEnd().getLine(),
+                        sourceInfo.getEnd().getColumn()),
+                    true);
+            }
 
+            if (isInlineExpression(trimmed)) {
                 return new InlineParser(text, getFxmlNamespacePrefix(node), sourceInfo.getStart(), prefixMappings).parseObject();
             }
         }

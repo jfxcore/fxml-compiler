@@ -17,8 +17,7 @@ special syntax where the name of the markup extension is surrounded by curly bra
 <Label text="{MyExtension}"/>
 ```
 
-In order to have `{MyExtension}` be interpreted as a literal string instead, it must be prefixed with the
-following escape sequence: `{}{MyExtension}`
+In order to have `{MyExtension}` be interpreted as a literal string instead, it must be escaped: `\{MyExtension}`
 
 In element notation, the markup extension looks like a regular XML element:
 
@@ -152,10 +151,10 @@ In practice, punctuation characters such as `%` and `@` are good choices.
 ### Escaping declared prefixes
 
 Prefix shorthand uses the same escape mechanism as other attribute-form markup extensions.
-To treat a prefixed value as a literal string, prefix it with `{}`:
+To treat a prefixed value as a literal string, prefix it with `\`:
 
 ```xml
-<Label text="{}%greeting"/>
+<Label text="\%greeting"/>
 ```
 
 The value assigned to `text` in this example is the literal string `%greeting`, and not a markup extension.
