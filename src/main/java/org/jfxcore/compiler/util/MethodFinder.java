@@ -26,12 +26,16 @@ import static org.jfxcore.compiler.type.KnownSymbols.*;
 
 public class MethodFinder {
 
-    private final TypeInstance invokingType;
+    private final List<TypeInstance> invocationContext;
     private final TypeDeclaration declaringType;
     private final Map<BehaviorDeclaration, TypeInstance[]> parameterCache = new HashMap<>();
 
     public MethodFinder(TypeInstance invokingType, TypeDeclaration declaringType) {
-        this.invokingType = invokingType;
+        this(List.of(invokingType), declaringType);
+    }
+
+    public MethodFinder(List<TypeInstance> invocationContext, TypeDeclaration declaringType) {
+        this.invocationContext = List.copyOf(invocationContext);
         this.declaringType = declaringType;
     }
 
@@ -118,8 +122,7 @@ public class MethodFinder {
             SourceInfo sourceInfo) {
         try {
             TypeInvoker invoker = new TypeInvoker(sourceInfo);
-            TypeInstance[] paramTypes = invoker.invokeParameterTypes(
-                method, List.of(invokingType), context.typeWitnesses());
+            TypeInstance[] paramTypes = invoker.invokeParameterTypes(method, invocationContext, context.typeWitnesses());
 
             if (!method.isStatic() && context.staticInvocation()) {
                 if (diagnostics != null) {
@@ -204,7 +207,7 @@ public class MethodFinder {
             }
 
             if (context.returnType() != null) {
-                TypeInstance returnType = invoker.invokeReturnType(method, List.of(invokingType), context.typeWitnesses());
+                TypeInstance returnType = invoker.invokeReturnType(method, invocationContext, context.typeWitnesses());
                 if (!context.returnType().isAssignableFrom(returnType)) {
                     if (diagnostics != null) {
                         diagnostics.add(new DiagnosticInfo(
@@ -286,12 +289,12 @@ public class MethodFinder {
 
         TypeInstance[] params1 = parameterCache.get(m1);
         if (params1 == null) {
-            parameterCache.put(m1, params1 = invoker.invokeParameterTypes(m1, List.of(invokingType)));
+            parameterCache.put(m1, params1 = invoker.invokeParameterTypes(m1, invocationContext));
         }
 
         TypeInstance[] params2 = parameterCache.get(m2);
         if (params2 == null) {
-            parameterCache.put(m2, params2 = invoker.invokeParameterTypes(m2, List.of(invokingType)));
+            parameterCache.put(m2, params2 = invoker.invokeParameterTypes(m2, invocationContext));
         }
 
         if (params1.length != params2.length) {

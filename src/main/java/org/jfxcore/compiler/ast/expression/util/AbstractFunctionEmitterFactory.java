@@ -49,7 +49,6 @@ import org.jfxcore.compiler.util.NumberUtil;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -71,7 +70,15 @@ abstract class AbstractFunctionEmitterFactory {
 
     protected InvocationInfo createInvocation(
             FunctionExpressionNode functionExpression, boolean bidirectional, boolean preferObservable) {
-        var key = new InvocationInfoKey(functionExpression, bidirectional, preferObservable);
+        return createInvocation(functionExpression, bidirectional, preferObservable, targetType);
+    }
+
+    private InvocationInfo createInvocation(
+            FunctionExpressionNode functionExpression,
+            boolean bidirectional,
+            boolean preferObservable,
+            @Nullable TypeInstance targetType) {
+        var key = new InvocationInfoKey(functionExpression, bidirectional, preferObservable, targetType);
         var cachedInvocationInfo = invocationCache.get(key);
         if (cachedInvocationInfo != null) {
             return cachedInvocationInfo;
@@ -91,8 +98,8 @@ abstract class AbstractFunctionEmitterFactory {
 
         boolean isVarArgs = function.getBehavior().isVarArgs();
         TypeInvoker invoker = new TypeInvoker(functionExpression.getSourceInfo());
-        TypeInstance[] paramTypes = invoker.invokeParameterTypes(function.getBehavior(), List.of(invokingType), witnesses);
-        TypeInstance returnType = invoker.invokeReturnType(function.getBehavior(), List.of(invokingType), witnesses);
+        TypeInstance[] paramTypes = invoker.invokeParameterTypes(function.getBehavior(), function.getInvocationContext(), witnesses);
+        TypeInstance returnType = invoker.invokeReturnType(function.getBehavior(), function.getInvocationContext(), witnesses);
         List<EmitMethodArgumentNode> argumentValues = new ArrayList<>();
         boolean observableFunction = false;
 
@@ -239,7 +246,7 @@ abstract class AbstractFunctionEmitterFactory {
             EmitterFactory factory;
 
             if (argument instanceof FunctionExpressionNode funcExpressionArg) {
-                InvocationInfo invocationInfo = createInvocation(funcExpressionArg, false, preferObservable);
+                InvocationInfo invocationInfo = createInvocation(funcExpressionArg, false, preferObservable, paramType);
                 if (invocationInfo.observable()) {
                     factory = new ObservableFunctionEmitterFactory(funcExpressionArg, invokingType, paramType);
                 } else {
@@ -317,6 +324,7 @@ abstract class AbstractFunctionEmitterFactory {
         String methodName;
         TypeDeclaration declaringClass;
         ResolvedPath resolvedPath = null;
+        List<TypeInstance> invocationContext = List.of(invokingType);
         boolean isConstructor = false;
 
         if (pathExpression.getSegments().size() > 1) {
@@ -330,6 +338,7 @@ abstract class AbstractFunctionEmitterFactory {
                 if (maybeInstanceMethod) {
                     resolvedPath = pathExpression.resolvePath(false, limit);
                     className = resolvedPath.getValueTypeInstance().javaName();
+                    invocationContext = List.of(resolvedPath.getValueTypeInstance());
                 }
             } catch (MarkupException ignored) {
                 maybeInstanceMethod = false;
@@ -368,6 +377,7 @@ abstract class AbstractFunctionEmitterFactory {
         } else {
             methodName = pathExpression.getSimplePath();
             declaringClass = pathExpression.getBindingContext().getType().getTypeDeclaration();
+            invocationContext = List.of(pathExpression.getBindingContext().getType().getTypeInstance());
         }
 
         List<TypeInstance> argumentTypes = arguments.stream()
@@ -382,7 +392,7 @@ abstract class AbstractFunctionEmitterFactory {
         // First we try to match the identifier against methods.
         // If applicable methods are found, we choose the most specific method.
         if (!isConstructor) {
-            var methodFinder = new MethodFinder(invokingType, declaringClass);
+            var methodFinder = new MethodFinder(invocationContext, declaringClass);
             MethodDeclaration method = methodFinder.findMethod(
                 methodName, false, returnType, typeWitnesses, argumentTypes,
                 argumentsSourceInfo, diagnostics, pathExpression.getSourceInfo());
@@ -402,7 +412,7 @@ abstract class AbstractFunctionEmitterFactory {
                 }
 
                 return new Callable(
-                    getMethodReceiverEmitters(pathExpression, resolvedPath, method),
+                    invocationContext, getMethodReceiverEmitters(pathExpression, resolvedPath, method),
                     method, pathExpression.getSourceInfo());
             }
         }
@@ -416,7 +426,7 @@ abstract class AbstractFunctionEmitterFactory {
         }
 
         if (ctorClass != null) {
-            ConstructorDeclaration constructor = new MethodFinder(invokingType, ctorClass).findConstructor(
+            ConstructorDeclaration constructor = new MethodFinder(List.of(invokingType), ctorClass).findConstructor(
                 typeWitnesses,
                 argumentTypes,
                 argumentsSourceInfo,
@@ -430,13 +440,13 @@ abstract class AbstractFunctionEmitterFactory {
                         pathExpression.getSourceInfo(), constructor, returnType);
                 }
 
-                return new Callable(Collections.emptyList(), constructor, pathExpression.getSourceInfo());
+                return new Callable(List.of(invokingType), List.of(), constructor, pathExpression.getSourceInfo());
             }
         }
 
         // At this point, we've tried to find a method that is applicable for the arguments and failed.
         // If we were looking for an instance method, we try again, but only look for static methods.
-        if (maybeInstanceMethod) {
+        if (maybeInstanceMethod && resolvedPath == null) {
             return findFunction(pathExpression, returnType, typeWitnesses, arguments, preferObservable, false);
         }
 
@@ -455,7 +465,7 @@ abstract class AbstractFunctionEmitterFactory {
 
     private TypeInstance getArgumentType(Node argument, boolean preferObservable) {
         if (argument instanceof FunctionExpressionNode funcExpressionArg) {
-            return createInvocation(funcExpressionArg, false, true).type();
+            return createInvocation(funcExpressionArg, false, preferObservable, null).type();
         } else if (argument instanceof PathExpressionNode pathExpressionArg) {
             Operator operator = pathExpressionArg.getOperator();
             if (operator == Operator.NOT || operator == Operator.BOOLIFY) {
@@ -504,7 +514,7 @@ abstract class AbstractFunctionEmitterFactory {
             return result;
         }
 
-        return Collections.emptyList();
+        return List.of();
     }
 
     private Callable findInverseFunctionViaAnnotation(
@@ -526,7 +536,7 @@ abstract class AbstractFunctionEmitterFactory {
         List<DiagnosticInfo> diagnostics = new ArrayList<>();
 
         // TODO: Do we need a way to specify type witnesses for inverse methods?
-        MethodDeclaration foundMethod = new MethodFinder(invokingType, declaringClass).findMethod(
+        MethodDeclaration foundMethod = new MethodFinder(method.getInvocationContext(), declaringClass).findMethod(
             methodName, false, argumentType, List.of(), List.of(returnType), List.of(sourceInfo), diagnostics, sourceInfo);
 
         if (!diagnostics.isEmpty()) {
@@ -535,7 +545,7 @@ abstract class AbstractFunctionEmitterFactory {
                 diagnostics.stream().map(DiagnosticInfo::getDiagnostic).toArray(Diagnostic[]::new));
         }
 
-        return new Callable(method.getReceiver(), foundMethod, sourceInfo);
+        return new Callable(method.getInvocationContext(), method.getReceiver(), foundMethod, sourceInfo);
     }
 
     private enum Keyword {
@@ -580,7 +590,10 @@ abstract class AbstractFunctionEmitterFactory {
     }
 
     private record InvocationInfoKey(
-        FunctionExpressionNode functionExpression, boolean bidirectional, boolean preferObservable) {}
+        FunctionExpressionNode functionExpression,
+        boolean bidirectional,
+        boolean preferObservable,
+        @Nullable TypeInstance targetType) {}
 
     protected record InvocationInfo(
         boolean observable,

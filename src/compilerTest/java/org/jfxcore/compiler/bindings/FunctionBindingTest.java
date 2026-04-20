@@ -5,16 +5,19 @@ package org.jfxcore.compiler.bindings;
 
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
+import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.ListProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleDoubleProperty;
+import javafx.beans.property.SimpleIntegerProperty;
 import javafx.beans.property.SimpleListProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 import javafx.beans.value.ObservableBooleanValue;
 import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.scene.control.Label;
 import javafx.scene.layout.Pane;
 import org.jfxcore.compiler.diagnostic.ErrorCode;
@@ -55,6 +58,7 @@ public class FunctionBindingTest extends CompilerTestBase {
         public final ObjectProperty<TestContext> context = new SimpleObjectProperty<>(new TestContext());
 
         public DoubleProperty doubleProp = new SimpleDoubleProperty(1);
+        public IntegerProperty selectedIndex = new SimpleIntegerProperty(0);
         public StringProperty stringProp = new SimpleStringProperty("bar");
         public double invariantDoubleVal = 1;
         public String invariantStringVal = "bar";
@@ -87,6 +91,10 @@ public class FunctionBindingTest extends CompilerTestBase {
             return String.format(format, params);
         }
 
+        public <T> T identity(T value) {
+            return value;
+        }
+
         private final ObjectProperty<Stringifier> objProp = new SimpleObjectProperty<>();
         public ObjectProperty<Stringifier> objPropProperty() {
             return objProp;
@@ -104,6 +112,22 @@ public class FunctionBindingTest extends CompilerTestBase {
         public StringProperty methodReturningProperty(String value) {
             stringProp.set(value);
             return stringProp;
+        }
+
+        private final ObservableList<String> items = FXCollections.observableArrayList("foo", "bar", "baz");
+        private final ObservableList<Integer> indexes = FXCollections.observableArrayList(1, 2);
+        private final ObservableList<Long> longIndexes = FXCollections.observableArrayList(1L, 2L);
+
+        public ObservableList<String> getItems() {
+            return items;
+        }
+
+        public ObservableList<Integer> getIndexes() {
+            return indexes;
+        }
+
+        public ObservableList<Long> getLongIndexes() {
+            return longIndexes;
         }
     }
 
@@ -531,6 +555,48 @@ public class FunctionBindingTest extends CompilerTestBase {
     }
 
     @Test
+    public void Bind_Once_To_List_Get() {
+        TestPane root = compileAndRun("""
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                      id="$items.get(0)"/>
+        """);
+
+        assertEquals("foo", root.getId());
+    }
+
+    @Test
+    public void Bind_Once_To_List_Get_With_Nested_Generic_Method_TypeWitness() {
+        TestPane root = compileAndRun("""
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                      id="$items.get(identity<Integer>(1))"/>
+        """);
+
+        assertEquals("bar", root.getId());
+    }
+
+    @Test
+    public void Bind_Once_To_List_Get_With_Nested_Receiver_Generic_Return_Type() {
+        TestPane root = compileAndRun("""
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                      id="$items.get(indexes.get(0))"/>
+        """);
+
+        assertEquals("bar", root.getId());
+    }
+
+    @Test
+    public void Bind_Once_To_List_Get_With_Nested_Receiver_Generic_Return_Type_Mismatch_Fails() {
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                      id="$items.get(longIndexes.get(0))"/>
+        """));
+
+        assertEquals(ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT, ex.getDiagnostic().getCode());
+        assertMessageContains("java.util.List.get(int): argument #1 cannot be assigned from java.lang.Long", ex);
+        assertCodeHighlight("longIndexes.get(0)", ex);
+    }
+
+    @Test
     public void Bind_Unidirectional_With_Boolean_And_Null_Literals() {
         TestPane root = compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
@@ -944,6 +1010,75 @@ public class FunctionBindingTest extends CompilerTestBase {
 
         assertEquals(ErrorCode.EXPRESSION_NOT_APPLICABLE, ex.getDiagnostic().getCode());
         assertCodeHighlight("$doubleProp", ex);
+    }
+
+    @Test
+    public void Bind_Unidirectional_To_List_Get_With_Nested_Method_Call_With_Wrong_ReturnType_Fails() {
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                      id="${items.get(Math.round(prefWidth))}"/>
+        """));
+
+        assertEquals(ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT, ex.getDiagnostic().getCode());
+        assertMessageContains("java.util.List.get(int): argument #1 cannot be assigned from long", ex);
+        assertCodeHighlight("Math.round(prefWidth)", ex);
+    }
+
+    @Test
+    public void Bind_Unidirectional_To_List_Get_With_Nested_Receiver_Generic_Return_Type() {
+        TestPane root = compileAndRun("""
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                      id="${items.get(indexes.get(selectedIndex))}"/>
+        """);
+
+        assertNewFunctionExpr(root, 1);
+        assertTrue(root.idProperty().isBound());
+        assertEquals("bar", root.getId());
+
+        root.selectedIndex.set(1);
+        assertEquals("baz", root.getId());
+    }
+
+    @Test
+    public void Bind_Unidirectional_To_List_Get_With_Nested_Generic_Method_TypeWitness() {
+        TestPane root = compileAndRun("""
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                      id="${items.get(identity<Integer>(selectedIndex))}"/>
+        """);
+
+        assertNewFunctionExpr(root, 1);
+        assertTrue(root.idProperty().isBound());
+        assertEquals("foo", root.getId());
+
+        root.selectedIndex.set(2);
+        assertEquals("baz", root.getId());
+    }
+
+    @Test
+    public void Bind_Unidirectional_To_Nested_Generic_Method_With_Object_Return_Updates_Correctly() {
+        TestPane root = compileAndRun("""
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                      id="${String.format('foo-%s', identity<String>(stringProp))}"/>
+        """);
+
+        assertNewFunctionExpr(root, 1);
+        assertTrue(root.idProperty().isBound());
+        assertEquals("foo-bar", root.getId());
+
+        root.stringProp.set("baz");
+        assertEquals("foo-baz", root.getId());
+    }
+
+    @Test
+    public void Bind_Unidirectional_To_List_Get_With_Nested_Receiver_Generic_Return_Type_Mismatch_Fails() {
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                      id="${items.get(longIndexes.get(selectedIndex))}"/>
+        """));
+
+        assertEquals(ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT, ex.getDiagnostic().getCode());
+        assertMessageContains("java.util.List.get(int): argument #1 cannot be assigned from java.lang.Long", ex);
+        assertCodeHighlight("longIndexes.get(selectedIndex)", ex);
     }
 
     @Test

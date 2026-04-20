@@ -7,6 +7,7 @@ import org.jfxcore.compiler.ast.Node;
 import org.jfxcore.compiler.ast.emit.ValueEmitterNode;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.type.BehaviorDeclaration;
+import org.jfxcore.compiler.type.TypeInstance;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -19,11 +20,21 @@ public class Callable {
     private final List<ValueEmitterNode> receiver;
     private final BehaviorDeclaration behavior;
     private final SourceInfo sourceInfo;
+    private final List<TypeInstance> invocationContext;
 
-    public Callable(List<ValueEmitterNode> receiver, BehaviorDeclaration behavior, SourceInfo sourceInfo) {
-        this.receiver = receiver;
+    public Callable(
+            List<TypeInstance> invocationContext,
+            List<ValueEmitterNode> receiver,
+            BehaviorDeclaration behavior,
+            SourceInfo sourceInfo) {
+        this.invocationContext = List.copyOf(invocationContext);
+        this.receiver = new ArrayList<>(receiver);
         this.behavior = behavior;
         this.sourceInfo = sourceInfo;
+    }
+
+    public List<TypeInstance> getInvocationContext() {
+        return invocationContext;
     }
 
     public List<ValueEmitterNode> getReceiver() {
@@ -43,15 +54,17 @@ public class Callable {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         Callable that = (Callable) o;
-        return Objects.equals(receiver, that.receiver) && behavior.equals(that.behavior);
+        return Objects.equals(receiver, that.receiver)
+            && behavior.equals(that.behavior)
+            && invocationContext.equals(that.invocationContext);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(receiver, behavior);
+        return Objects.hash(receiver, behavior, invocationContext);
     }
 
     public Callable deepClone() {
-        return new Callable(new ArrayList<>(Node.deepClone(receiver)), behavior, sourceInfo);
+        return new Callable(invocationContext, new ArrayList<>(Node.deepClone(receiver)), behavior, sourceInfo);
     }
 }

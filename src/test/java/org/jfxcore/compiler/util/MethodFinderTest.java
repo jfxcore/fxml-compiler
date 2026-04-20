@@ -111,6 +111,11 @@ public class MethodFinderTest extends TestBase {
 
     public static <T> T Generic_Method_With_Witness(T x) { return x; }
 
+    public static class GenericReceiver<T> {
+        public T get(int index) { return null; }
+        public void set(T value) {}
+    }
+
     public static class ConstructorTarget {
         public ConstructorTarget(Object x) {}
         public ConstructorTarget(String... x) {}
@@ -409,6 +414,40 @@ public class MethodFinderTest extends TestBase {
         assertNotNull(method);
         assertInvokedParameterTypes(method, List.of(TypeInstance.StringType()), String.class.getName());
         assertInvokedReturnType(method, List.of(TypeInstance.StringType()), String.class.getName());
+    }
+
+    @Test
+    public void Generic_Instance_Method_Uses_Invocation_Context_For_Return_Type() {
+        var resolver = new Resolver(SourceInfo.none());
+        var invoker = new TypeInvoker(SourceInfo.none());
+        var declaringClass = resolver.resolveClass(GenericReceiver.class.getName());
+        var receiverType = invoker.invokeType(declaringClass, List.of(TypeInstance.StringType()));
+
+        MethodDeclaration method = new MethodFinder(receiverType, declaringClass).findMethod(
+            "get", false, TypeInstance.StringType(), List.of(), List.of(TypeInstance.intType()),
+            List.of(SourceInfo.none()), null, SourceInfo.none());
+
+        assertNotNull(method);
+        assertEquals(
+            String.class.getName(),
+            invoker.invokeReturnType(method, List.of(receiverType)).javaName());
+    }
+
+    @Test
+    public void Generic_Instance_Method_Uses_Invocation_Context_For_Parameter_Type() {
+        var resolver = new Resolver(SourceInfo.none());
+        var invoker = new TypeInvoker(SourceInfo.none());
+        var declaringClass = resolver.resolveClass(GenericReceiver.class.getName());
+        var receiverType = invoker.invokeType(declaringClass, List.of(TypeInstance.StringType()));
+
+        MethodDeclaration method = new MethodFinder(receiverType, declaringClass).findMethod(
+            "set", false, null, List.of(), List.of(TypeInstance.StringType()),
+            List.of(SourceInfo.none()), null, SourceInfo.none());
+
+        assertNotNull(method);
+        assertEquals(
+            String.class.getName(),
+            invoker.invokeParameterTypes(method, List.of(receiverType))[0].javaName());
     }
 
     @Test
