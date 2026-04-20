@@ -16,6 +16,8 @@ import org.jfxcore.compiler.diagnostic.MarkupException;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.util.QualifiedName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import java.nio.file.Path;
 import java.util.List;
 
@@ -223,6 +225,23 @@ public class FxmlParserTest extends TestBase {
                 <Label xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                        text="%greeting"/>
             """).parseDocument();
+
+        var property = ((ObjectNode)document.getRoot()).findProperty("text");
+        assertNotNull(property);
+        var objectNode = assertInstanceOf(ObjectNode.class, property.getValues().get(0));
+        assertEquals("com.example.CustomResource", objectNode.getType().getName());
+        assertTrue(objectNode.getChildren().get(0) instanceof TextNode textNode && textNode.getText().equals("greeting"));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"@", "%", "&", "^", "°", "§", "?", "~"})
+    public void All_Custom_Prefix_Mappings_Are_Parsed_Correctly(String prefix) {
+        DocumentNode document = new FxmlParser(String.format("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <?prefix %s = com.example.CustomResource?>
+                <Label xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                       text="%sgreeting"/>
+            """, prefix, prefix)).parseDocument();
 
         var property = ((ObjectNode)document.getRoot()).findProperty("text");
         assertNotNull(property);
