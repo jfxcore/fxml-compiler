@@ -1,4 +1,4 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.parse;
@@ -17,14 +17,14 @@ public abstract class CurlyTokenizer<TToken extends CurlyToken> extends Abstract
 
     private static final Pattern TOKENIZER_PATTERN = Pattern.compile(
         "\"[^\"\\\\]*(\\\\(.|\\n)[^\"\\\\]*)*\"|'[^'\\\\]*(\\\\(.|\\n)[^'\\\\]*)*'|" + // quoted strings
-            "/\\*[^*]*\\*+(?:[^/*][^*]*\\*+)*/|" + // block comments
-            "(?:[+-]?\\d*\\.?\\d+(?!\\.))?(?:-?[^\\W\\d][\\w-]*)|" + // number+identifier
-            "[+-]?\\d*\\.?\\d+(?!\\.)|" + // numbers
-            "@|;|,|\\.|:|\\*|%|=|\\$|#|\\R|//|/|->|" + // other tokens
-            "\\p{javaJavaIdentifierStart}\\p{javaJavaIdentifierPart}*|" + // Java identifiers
-            "\\{|}|\\(|\\)|<|>|\\[|]|" + // braces/brackets/parens
-            "==|!=|" + // ==/!= operator
-            "!!|!", // not/boolify operator
+        "/\\*[^*]*\\*+(?:[^/*][^*]*\\*+)*/|" + // block comments
+        "(?:[+-]?\\d*\\.?\\d+(?!\\.))?(?:-?[^\\W\\d][\\w-]*)|" + // number+identifier
+        "[+-]?\\d*\\.?\\d+(?!\\.)|" + // numbers
+        "\\^|°|§|%|@|\\?|&|~|;|,|\\.|:|\\*|=|\\$|#|\\R|//|/|->|" + // other tokens
+        "\\p{javaJavaIdentifierStart}\\p{javaJavaIdentifierPart}*|" + // Java identifiers
+        "\\{|}|\\(|\\)|<|>|\\[|]|" + // braces/brackets/parens
+        "==|!=|" + // ==/!= operator
+        "!!|!", // not/boolify operator
         Pattern.DOTALL
     );
 
@@ -227,5 +227,4 @@ public abstract class CurlyTokenizer<TToken extends CurlyToken> extends Abstract
             || type == CurlyTokenType.COMMA
             || type == CurlyTokenType.EQUALS;
     }
-
 }

@@ -121,6 +121,8 @@ If type arguments are required, use the regular markup extension syntax instead;
 
 ### Prefix declarations
 Additional prefixes can be declared explicitly with a `<?prefix?>` processing instruction before the root element.
+A declared prefix can be any of the following characters: `@ % & ^ ° § ? ~`
+
 Explicit declarations can also override the built-in defaults for `%` and `@`:
 
 ```xml
@@ -134,14 +136,6 @@ Explicit declarations can also override the built-in defaults for `%` and `@`:
        text="%greeting"
        graphic="@icons/app.png"/>
 ```
-
-A declared prefix must satisfy the following rules:
-
-- It must be exactly one character.
-- It must not be a letter or digit.
-- It must not be one of the following reserved characters: `{ } ( ) [ ] < > , ; : = * / . # & " ' ? _`
-
-In practice, punctuation characters such as `%` and `@` are good choices.
 
 {: .note }
 > - The `%` and `@` prefixes are implicitly defined to expand to `StaticResource` and `ClassPathResource`.

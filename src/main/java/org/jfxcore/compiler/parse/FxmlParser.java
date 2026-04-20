@@ -71,7 +71,7 @@ public class FxmlParser {
         '@', "org.jfxcore.markup.resource.ClassPathResource"
     );
 
-    private static final String RESERVED_PREFIX_CHARACTERS = "{}()[]<>,;:=*/.#&\"'?";
+    private static final String RESERVED_PREFIX_CHARACTERS = "{}()[]<>,;:=*/.#\"'";
 
     private final String sourceText;
     private final Path documentFile;
