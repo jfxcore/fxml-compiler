@@ -94,7 +94,8 @@ public class ObservableFunctionGenerator extends ClassGenerator {
     public ObservableFunctionGenerator(
             Callable function,
             @Nullable Callable inverseFunction,
-            Collection<? extends EmitMethodArgumentNode> arguments) {
+            Collection<? extends EmitMethodArgumentNode> arguments,
+            TypeInstance observableType) {
         this.bidirectional = inverseFunction != null;
         this.function = function;
         this.inverseFunction = inverseFunction;
@@ -106,9 +107,9 @@ public class ObservableFunctionGenerator extends ClassGenerator {
         this.paramTypes = new ArrayList<>();
 
         TypeInvoker invoker = new TypeInvoker(SourceInfo.none());
-        TypeDeclaration returnType = function.getBehavior() instanceof ConstructorDeclaration
-            ? function.getBehavior().declaringType()
-            : ((MethodDeclaration)function.getBehavior()).returnType();
+        Resolver resolver = new Resolver(SourceInfo.none());
+        TypeInstance resolvedReturnType = resolver.findObservableArgument(observableType);
+        TypeDeclaration returnType = resolvedReturnType.declaration();
 
         if (returnType.equals(booleanDecl()) || returnType.equals(BooleanDecl())) {
             this.superType = invoker.invokeType(bidirectional ? BooleanPropertyDecl() : ObservableBooleanValueDecl());
@@ -126,10 +127,10 @@ public class ObservableFunctionGenerator extends ClassGenerator {
         } else {
             this.superType = invoker.invokeType(
                 bidirectional ? PropertyDecl() : ObservableValueDecl(),
-                List.of(invoker.invokeType(returnType)));
+                List.of(resolvedReturnType));
         }
 
-        this.returnType = new Resolver(SourceInfo.none()).findObservableArgument(superType).declaration();
+        this.returnType = resolver.findObservableArgument(superType).declaration();
         this.isNumeric = returnType.isNumeric();
     }
 
@@ -561,7 +562,7 @@ public class ObservableFunctionGenerator extends ClassGenerator {
             throw new InternalError();
         }
 
-        code.autoconv(methodReturnType, returnType)
+        code.castconv(methodReturnType, returnType)
             .store(returnType, valueLocal);
 
         if (returnType.isPrimitive()) {
@@ -658,7 +659,7 @@ public class ObservableFunctionGenerator extends ClassGenerator {
         code.aload(0)
             .getfield(currentValueField)
             .invoke(inverseFunction.getBehavior())
-            .autoconv(methodReturnType, sourceValueType)
+            .castconv(methodReturnType, sourceValueType)
             .store(sourceValueType, convertedValueLocal);
 
         Local sourceObservableLocal = code.acquireLocal(false);

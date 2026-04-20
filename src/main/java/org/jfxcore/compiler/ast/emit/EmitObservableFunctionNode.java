@@ -96,7 +96,7 @@ public class EmitObservableFunctionNode
         }
 
         var generator = new ObservableFunctionGenerator(
-            ensureAccessible(function), ensureAccessible(inverseFunction), arguments);
+            ensureAccessible(function), ensureAccessible(inverseFunction), arguments, type.getTypeInstance());
 
         compiledClassName = generator.getClassName();
         getClassCache().put(this, compiledClassName);
@@ -142,7 +142,7 @@ public class EmitObservableFunctionNode
 
         if (!AccessVerifier.isNestedAccessible(behavior, invocationContext)) {
             if (receiver.size() == 1 && equalsInvocationContext(receiver.get(0))) {
-                function = new Callable(receiver, emitBridgeMethod(behavior), sourceInfo);
+                function = new Callable(function.getInvocationContext(), receiver, emitBridgeMethod(behavior), sourceInfo);
             } else {
                 AccessVerifier.verifyNestedAccessible(behavior, invocationContext, sourceInfo);
             }
