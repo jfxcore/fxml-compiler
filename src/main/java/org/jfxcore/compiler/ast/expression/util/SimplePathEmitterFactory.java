@@ -4,6 +4,7 @@
 package org.jfxcore.compiler.ast.expression.util;
 
 import org.jfxcore.compiler.ast.BindingMode;
+import org.jfxcore.compiler.ast.ValueSourceKind;
 import org.jfxcore.compiler.ast.emit.EmitInvariantPathNode;
 import org.jfxcore.compiler.ast.emit.ValueEmitterNode;
 import org.jfxcore.compiler.ast.expression.BindingEmitterInfo;
@@ -35,6 +36,8 @@ public class SimplePathEmitterFactory implements EmitterFactory {
             value,
             TypeHelper.getTypeInstance(value),
             null,
+            ValueSourceKind.NONE,
+            path.getObservableDependencyKind(),
             lastSegment.getDeclaringType(),
             lastSegment.getDisplayName(),
             false,

@@ -6,8 +6,13 @@ package org.jfxcore.compiler.ast.expression.path;
 import javafx.beans.property.ListProperty;
 import javafx.beans.property.Property;
 import javafx.beans.property.StringProperty;
+import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.collections.ObservableMap;
+import javafx.collections.ObservableSet;
 import org.jfxcore.compiler.TestBase;
+import org.jfxcore.compiler.ast.ObservableDependencyKind;
+import org.jfxcore.compiler.ast.ValueSourceKind;
 import org.jfxcore.compiler.ast.text.PathNode;
 import org.jfxcore.compiler.ast.text.PathSegmentNode;
 import org.jfxcore.compiler.ast.text.TextNode;
@@ -19,8 +24,8 @@ import org.jfxcore.compiler.type.Resolver;
 import org.jfxcore.compiler.type.TypeInstance;
 import org.jfxcore.compiler.type.TypeInvoker;
 import org.junit.jupiter.api.Test;
-
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -374,6 +379,21 @@ public class PathTest extends TestBase {
     public static class StaticTestB { static StaticTestC c = new StaticTestC(); }
     public static class StaticTestC { public final String d = "foo"; }
 
+    public static class ObservableCollectionsTestClass {
+        public ObservableList<String> obsList = FXCollections.observableArrayList();
+        public ObservableSet<String> obsSet = FXCollections.observableSet();
+        public ObservableMap<Integer, String> obsMap = FXCollections.observableMap(new HashMap<>());
+    }
+
+    public static class CollectionContext {
+        public ObservableList<String> obsList = FXCollections.observableArrayList();
+    }
+
+    public static class IndirectObservableCollectionsTestClass {
+        private final Property<CollectionContext> context = new javafx.beans.property.SimpleObjectProperty<>(new CollectionContext());
+        public Property<CollectionContext> contextProperty() { return context; }
+    }
+
     @Test
     public void Path_Before_Static_Segment_Is_Eliminated() {
         Resolver resolver = new Resolver(SourceInfo.none());
@@ -384,5 +404,53 @@ public class PathTest extends TestBase {
         assertEquals(2, path.size());
         assertEquals("c", path.get(0).getName());
         assertEquals("d", path.get(1).getName());
+    }
+
+    @Test
+    public void Observable_Collections_Are_Classified_As_Content_Dependencies() {
+        Resolver resolver = new Resolver(SourceInfo.none());
+        Segment firstSegment = new ParentSegment(TypeInstance.of(resolver.resolveClass(ObservableCollectionsTestClass.class.getName())), -1);
+
+        ResolvedPath listPath = ResolvedPath.parse(firstSegment, segments("obsList"), true, SourceInfo.none());
+        ResolvedPath setPath = ResolvedPath.parse(firstSegment, segments("obsSet"), true, SourceInfo.none());
+        ResolvedPath mapPath = ResolvedPath.parse(firstSegment, segments("obsMap"), true, SourceInfo.none());
+
+        assertEquals(ValueSourceKind.NONE, listPath.getValueSourceKind());
+        assertEquals(ObservableDependencyKind.CONTENT, listPath.getObservableDependencyKind());
+        assertTrue(listPath.isObservable());
+
+        assertEquals(ValueSourceKind.NONE, setPath.getValueSourceKind());
+        assertEquals(ObservableDependencyKind.CONTENT, setPath.getObservableDependencyKind());
+        assertTrue(setPath.isObservable());
+
+        assertEquals(ValueSourceKind.NONE, mapPath.getValueSourceKind());
+        assertEquals(ObservableDependencyKind.CONTENT, mapPath.getObservableDependencyKind());
+        assertTrue(mapPath.isObservable());
+    }
+
+    @Test
+    public void Content_Dependent_Path_Is_Not_Invariant() {
+        Resolver resolver = new Resolver(SourceInfo.none());
+        Segment firstSegment = new ParentSegment(TypeInstance.of(resolver.resolveClass(ObservableCollectionsTestClass.class.getName())), -1);
+        ResolvedPath path = ResolvedPath.parse(firstSegment, segments("obsList", "size"), true, SourceInfo.none());
+
+        assertFalse(path.isInvariant());
+        assertTrue(path.isObservable());
+        assertEquals(ObservableDependencyKind.NONE, path.get(path.size() - 1).getObservableDependencyKind());
+        assertEquals(ObservableDependencyKind.CONTENT, path.get(1).getObservableDependencyKind());
+    }
+
+    @Test
+    public void Folded_Path_Splits_Value_And_Content_Dependencies() {
+        Resolver resolver = new Resolver(SourceInfo.none());
+        Segment firstSegment = new ParentSegment(TypeInstance.of(resolver.resolveClass(IndirectObservableCollectionsTestClass.class.getName())), -1);
+        ResolvedPath path = ResolvedPath.parse(firstSegment, segments("context", "obsList", "size"), true, SourceInfo.none());
+        FoldedGroup[] groups = path.fold().getGroups();
+
+        assertEquals(2, groups.length);
+        assertEquals(ObservableDependencyKind.VALUE, groups[0].getObservableDependencyKind());
+        assertEquals(ObservableDependencyKind.CONTENT, groups[1].getObservableDependencyKind());
+        assertEquals("contextProperty", groups[0].getFirstPathSegment().getName());
+        assertEquals("obsList", groups[1].getFirstPathSegment().getName());
     }
 }

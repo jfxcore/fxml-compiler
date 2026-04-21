@@ -7,6 +7,7 @@ import javafx.beans.value.ObservableValue;
 import org.jetbrains.annotations.Nullable;
 import org.jfxcore.compiler.ast.AbstractNode;
 import org.jfxcore.compiler.ast.GeneratorEmitterNode;
+import org.jfxcore.compiler.ast.ObservableDependencyKind;
 import org.jfxcore.compiler.ast.ResolvedTypeNode;
 import org.jfxcore.compiler.ast.Visitor;
 import org.jfxcore.compiler.ast.expression.path.ResolvedPath;
@@ -16,7 +17,6 @@ import org.jfxcore.compiler.type.TypeDeclaration;
 import org.jfxcore.compiler.type.TypeInstance;
 import org.jfxcore.compiler.util.Bytecode;
 import org.jfxcore.compiler.util.Local;
-import org.jfxcore.compiler.util.ObservableKind;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
@@ -59,9 +59,11 @@ public class EmitObservablePathNode
 
         this.path = checkNotNull(path);
         this.leadingInvariantSegments = getLeadingInvariantSegments(path);
+
         int trailingSegments = path.size() - leadingInvariantSegments;
-        this.useCompiledPath = trailingSegments > 0 &&
-            (trailingSegments > 1 || path.get(leadingInvariantSegments).getObservableKind() == ObservableKind.NONE);
+        this.useCompiledPath = trailingSegments > 0 && (trailingSegments > 1 ||
+                path.get(leadingInvariantSegments).getObservableDependencyKind() != ObservableDependencyKind.VALUE);
+
         this.invariantPath = invariantPath;
         this.bidirectional = bidirectional;
 
@@ -128,6 +130,7 @@ public class EmitObservablePathNode
     @Override
     public void emit(BytecodeEmitContext context) {
         Bytecode code = context.getOutput();
+        boolean requireNonNullLeadingSegment = useCompiledPath && !path.get(leadingInvariantSegments).hasValueSource();
         boolean mayReturnNull;
         Local constructorArgLocal;
         String compiledClassName;
@@ -154,7 +157,8 @@ public class EmitObservablePathNode
                 .ifnonnull(
                     () -> {
                         code.aload(local);
-                        context.emit(path.get(leadingInvariantSegments).toEmitter(false, getSourceInfo()));
+                        context.emit(path.get(leadingInvariantSegments)
+                                         .toEmitter(requireNonNullLeadingSegment, getSourceInfo()));
                     },
                     () -> {
                         if (mayReturnNull || useCompiledPath) {
@@ -167,7 +171,8 @@ public class EmitObservablePathNode
 
             code.releaseLocal(local);
         } else {
-            context.emit(path.get(leadingInvariantSegments).toEmitter(false, getSourceInfo()));
+            context.emit(path.get(leadingInvariantSegments)
+                             .toEmitter(requireNonNullLeadingSegment, getSourceInfo()));
         }
 
         if (useCompiledPath) {
@@ -198,7 +203,7 @@ public class EmitObservablePathNode
 
     private int getLeadingInvariantSegments(ResolvedPath path) {
         for (int i = 0; i < path.size(); ++i) {
-            if (path.get(i).getObservableKind() != ObservableKind.NONE) {
+            if (path.get(i).hasObservableDependency()) {
                 return i;
             }
         }

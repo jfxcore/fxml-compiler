@@ -3,6 +3,8 @@
 
 package org.jfxcore.compiler.ast.expression.path;
 
+import org.jfxcore.compiler.ast.ObservableDependencyKind;
+import org.jfxcore.compiler.ast.ValueSourceKind;
 import org.jfxcore.compiler.ast.emit.EmitInvokeGetterNode;
 import org.jfxcore.compiler.ast.emit.ValueEmitterNode;
 import org.jfxcore.compiler.ast.expression.util.KotlinDelegateHelper;
@@ -10,7 +12,6 @@ import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.type.FieldDeclaration;
 import org.jfxcore.compiler.type.TypeDeclaration;
 import org.jfxcore.compiler.type.TypeInstance;
-import org.jfxcore.compiler.util.ObservableKind;
 import java.util.Objects;
 
 public class KotlinDelegateSegment extends Segment {
@@ -23,8 +24,9 @@ public class KotlinDelegateSegment extends Segment {
             TypeInstance type,
             TypeInstance valueType,
             FieldDeclaration delegateField,
-            ObservableKind observableKind) {
-        super(name, displayName, type, valueType, observableKind);
+            ValueSourceKind valueSourceKind,
+            ObservableDependencyKind dependencyKind) {
+        super(name, displayName, type, valueType, valueSourceKind, dependencyKind);
         this.delegateField = Objects.requireNonNull(delegateField);
     }
 
@@ -42,7 +44,7 @@ public class KotlinDelegateSegment extends Segment {
         return new EmitInvokeGetterNode(
             KotlinDelegateHelper.getKotlinDelegateGetter(delegateField),
             getTypeInstance(),
-            getObservableKind(),
+            getValueSourceKind(),
             true,
             sourceInfo);
     }

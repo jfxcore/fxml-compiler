@@ -3,19 +3,19 @@
 
 package org.jfxcore.compiler.ast.expression.path;
 
+import org.jfxcore.compiler.ast.ObservableDependencyKind;
+import org.jfxcore.compiler.ast.ValueSourceKind;
 import org.jfxcore.compiler.ast.emit.EmitGetFieldNode;
 import org.jfxcore.compiler.ast.emit.ValueEmitterNode;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.type.FieldDeclaration;
 import org.jfxcore.compiler.type.TypeDeclaration;
 import org.jfxcore.compiler.type.TypeInstance;
-import org.jfxcore.compiler.util.ObservableKind;
 import java.util.Objects;
 
 public class FieldSegment extends Segment {
 
     private final FieldDeclaration field;
-    private final ObservableKind observableKind;
 
     public FieldSegment(
             String name,
@@ -23,10 +23,10 @@ public class FieldSegment extends Segment {
             TypeInstance type,
             TypeInstance valueType,
             FieldDeclaration field,
-            ObservableKind observableKind) {
-        super(name, displayName, type, valueType, observableKind);
+            ValueSourceKind valueSourceKind,
+            ObservableDependencyKind dependencyKind) {
+        super(name, displayName, type, valueType, valueSourceKind, dependencyKind);
         this.field = Objects.requireNonNull(field);
-        this.observableKind = observableKind;
     }
 
     public FieldDeclaration getField() {
@@ -40,13 +40,13 @@ public class FieldSegment extends Segment {
 
     @Override
     public boolean isNullable() {
-        return !observableKind.isNonNull();
+        return !getValueSourceKind().isNonNull();
     }
 
     @Override
     public ValueEmitterNode toEmitter(boolean requireNonNull, SourceInfo sourceInfo) {
         return new EmitGetFieldNode(
-            field, getTypeInstance(), observableKind.isNonNull() || requireNonNull, false, sourceInfo);
+            field, getTypeInstance(), getValueSourceKind().isNonNull() || requireNonNull, false, sourceInfo);
     }
 
     @Override
@@ -55,11 +55,11 @@ public class FieldSegment extends Segment {
         if (o == null || getClass() != o.getClass()) return false;
         if (!super.equals(o)) return false;
         FieldSegment that = (FieldSegment)o;
-        return field.equals(that.field) && observableKind == that.observableKind;
+        return field.equals(that.field);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(super.hashCode(), field, observableKind);
+        return Objects.hash(super.hashCode(), field);
     }
 }

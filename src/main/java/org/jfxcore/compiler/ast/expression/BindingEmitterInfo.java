@@ -4,6 +4,8 @@
 package org.jfxcore.compiler.ast.expression;
 
 import org.jetbrains.annotations.Nullable;
+import org.jfxcore.compiler.ast.ObservableDependencyKind;
+import org.jfxcore.compiler.ast.ValueSourceKind;
 import org.jfxcore.compiler.ast.emit.ValueEmitterNode;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.type.TypeDeclaration;
@@ -13,7 +15,9 @@ public class BindingEmitterInfo {
 
     private final ValueEmitterNode value;
     private final TypeInstance valueType;
-    private final TypeInstance observableType;
+    private final TypeInstance valueSourceType;
+    private final ValueSourceKind valueSourceKind;
+    private final ObservableDependencyKind dependencyKind;
     private final TypeDeclaration sourceDeclaringType;
     private final String sourceName;
     private final boolean function;
@@ -23,7 +27,9 @@ public class BindingEmitterInfo {
     public BindingEmitterInfo(
             ValueEmitterNode value,
             TypeInstance valueType,
-            TypeInstance observableType,
+            TypeInstance valueSourceType,
+            ValueSourceKind valueSourceKind,
+            ObservableDependencyKind dependencyKind,
             @Nullable TypeDeclaration sourceDeclaringType,
             String sourceName,
             boolean function,
@@ -31,7 +37,9 @@ public class BindingEmitterInfo {
             SourceInfo sourceInfo) {
         this.value = value;
         this.valueType = valueType;
-        this.observableType = observableType;
+        this.valueSourceType = valueSourceType;
+        this.valueSourceKind = valueSourceKind;
+        this.dependencyKind = dependencyKind;
         this.sourceDeclaringType = sourceDeclaringType;
         this.sourceName = sourceName;
         this.function = function;
@@ -44,19 +52,27 @@ public class BindingEmitterInfo {
     }
 
     public TypeInstance getType() {
-        return observableType != null ? observableType : valueType;
+        return valueSourceType != null ? valueSourceType : valueType;
     }
 
     public TypeInstance getValueType() {
         return valueType;
     }
 
-    public TypeInstance getObservableType() {
-        return observableType;
+    public @Nullable TypeInstance getValueSourceType() {
+        return valueSourceType;
     }
 
     public @Nullable TypeDeclaration getSourceDeclaringType() {
         return sourceDeclaringType;
+    }
+
+    public ValueSourceKind getValueSourceKind() {
+        return valueSourceKind;
+    }
+
+    public ObservableDependencyKind getObservableDependencyKind() {
+        return dependencyKind;
     }
 
     public String getSourceName() {

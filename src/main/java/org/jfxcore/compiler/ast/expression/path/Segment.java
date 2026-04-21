@@ -4,12 +4,13 @@
 package org.jfxcore.compiler.ast.expression.path;
 
 import org.jetbrains.annotations.Nullable;
+import org.jfxcore.compiler.ast.ObservableDependencyKind;
+import org.jfxcore.compiler.ast.ValueSourceKind;
 import org.jfxcore.compiler.ast.emit.EmitUnwrapObservableNode;
 import org.jfxcore.compiler.ast.emit.ValueEmitterNode;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.type.TypeDeclaration;
 import org.jfxcore.compiler.type.TypeInstance;
-import org.jfxcore.compiler.util.ObservableKind;
 
 public abstract class Segment {
 
@@ -17,19 +18,22 @@ public abstract class Segment {
     private final String displayName;
     private final TypeInstance type;
     private final TypeInstance valueType;
-    private final ObservableKind observableKind;
+    private final ValueSourceKind valueSourceKind;
+    private final ObservableDependencyKind dependencyKind;
 
     protected Segment(
             String name,
             String displayName,
             TypeInstance type,
             TypeInstance valueType,
-            ObservableKind observableKind) {
+            ValueSourceKind valueSourceKind,
+            ObservableDependencyKind dependencyKind) {
         this.name = name;
         this.displayName = displayName;
         this.type = type;
         this.valueType = valueType;
-        this.observableKind = observableKind;
+        this.valueSourceKind = valueSourceKind;
+        this.dependencyKind = dependencyKind;
     }
 
     public String getName() {
@@ -48,8 +52,20 @@ public abstract class Segment {
         return valueType;
     }
 
-    public ObservableKind getObservableKind() {
-        return observableKind;
+    public ValueSourceKind getValueSourceKind() {
+        return valueSourceKind;
+    }
+
+    public ObservableDependencyKind getObservableDependencyKind() {
+        return dependencyKind;
+    }
+
+    public boolean hasObservableDependency() {
+        return dependencyKind != ObservableDependencyKind.NONE;
+    }
+
+    public boolean hasValueSource() {
+        return valueSourceKind != ValueSourceKind.NONE;
     }
 
     public @Nullable TypeDeclaration getDeclaringType() {
@@ -67,7 +83,7 @@ public abstract class Segment {
     public final ValueEmitterNode toValueEmitter(boolean requireNonNull, SourceInfo sourceInfo) {
         ValueEmitterNode emitter = toEmitter(requireNonNull, sourceInfo);
 
-        if (observableKind != ObservableKind.NONE) {
+        if (hasValueSource()) {
             return new EmitUnwrapObservableNode(emitter);
         }
 

@@ -239,7 +239,7 @@ public class ObjectTransform implements Transform {
             }
 
             BindingEmitterInfo emitterInfo = bindingNode.toPathEmitter(nodeType, null);
-            argumentValue = emitterInfo.getObservableType() != null
+            argumentValue = emitterInfo.getValueSourceType() != null
                 ? new EmitUnwrapObservableNode(emitterInfo.getValue())
                 : emitterInfo.getValue();
         } else if (propertyValue instanceof ValueEmitterNode valueEmitterNode) {

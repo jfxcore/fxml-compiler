@@ -3,19 +3,19 @@
 
 package org.jfxcore.compiler.ast.expression.path;
 
+import org.jfxcore.compiler.ast.ObservableDependencyKind;
+import org.jfxcore.compiler.ast.ValueSourceKind;
 import org.jfxcore.compiler.ast.emit.EmitInvokeGetterNode;
 import org.jfxcore.compiler.ast.emit.ValueEmitterNode;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.type.MethodDeclaration;
 import org.jfxcore.compiler.type.TypeDeclaration;
 import org.jfxcore.compiler.type.TypeInstance;
-import org.jfxcore.compiler.util.ObservableKind;
 import java.util.Objects;
 
 public class GetterSegment extends Segment {
 
     private final MethodDeclaration getter;
-    private final ObservableKind observableKind;
     private final boolean staticPropertyGetter;
 
     public GetterSegment(
@@ -25,10 +25,10 @@ public class GetterSegment extends Segment {
             TypeInstance valueType,
             MethodDeclaration getter,
             boolean staticPropertyGetter,
-            ObservableKind observableKind) {
-        super(name, displayName, type, valueType, observableKind);
+            ValueSourceKind valueSourceKind,
+            ObservableDependencyKind dependencyKind) {
+        super(name, displayName, type, valueType, valueSourceKind, dependencyKind);
         this.getter = Objects.requireNonNull(getter);
-        this.observableKind = observableKind;
         this.staticPropertyGetter = staticPropertyGetter;
     }
 
@@ -47,13 +47,15 @@ public class GetterSegment extends Segment {
 
     @Override
     public boolean isNullable() {
-        return !observableKind.isNonNull();
+        return !getValueSourceKind().isNonNull();
     }
 
     @Override
     public ValueEmitterNode toEmitter(boolean requireNonNull, SourceInfo sourceInfo) {
         return new EmitInvokeGetterNode(
-            getter, getTypeInstance(), observableKind, observableKind.isNonNull() || requireNonNull, sourceInfo);
+            getter, getTypeInstance(), getValueSourceKind(),
+            getValueSourceKind().isNonNull() || requireNonNull,
+            sourceInfo);
     }
 
     @Override
@@ -63,12 +65,11 @@ public class GetterSegment extends Segment {
         if (!super.equals(o)) return false;
         GetterSegment that = (GetterSegment)o;
         return getter.equals(that.getter)
-            && observableKind == that.observableKind
             && staticPropertyGetter == that.staticPropertyGetter;
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(super.hashCode(), getter, observableKind, staticPropertyGetter);
+        return Objects.hash(super.hashCode(), getter, staticPropertyGetter);
     }
 }

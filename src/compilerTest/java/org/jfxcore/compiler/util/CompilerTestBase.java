@@ -73,6 +73,14 @@ public class CompilerTestBase {
         }
     }
 
+    public void assertGarbageCollected(WeakReference<?> ref) {
+        for (int i = 0; i < 25 && ref.get() != null; ++i) {
+            gc();
+        }
+
+        assertNull(ref.get(), "Expected object to be garbage-collected.");
+    }
+
     private void createGarbage() {
         LinkedList<Integer> list = new LinkedList<>();
         int counter = 0;

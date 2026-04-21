@@ -3,6 +3,7 @@
 
 package org.jfxcore.compiler.generate;
 
+import org.jfxcore.compiler.ast.ObservableDependencyKind;
 import org.jfxcore.compiler.ast.emit.BytecodeEmitContext;
 import org.jfxcore.compiler.ast.expression.path.FoldedGroup;
 import org.jfxcore.compiler.ast.expression.path.Segment;
@@ -24,6 +25,7 @@ import static org.jfxcore.compiler.type.KnownSymbols.*;
 public class IntermediateSegmentGenerator extends SegmentGeneratorBase {
 
     public static final String OBSERVABLE_FIELD = "observable";
+    private static final String WEAK_LISTENER_FIELD = "weakListener";
 
     private final TypeInvoker invoker;
 
@@ -31,6 +33,7 @@ public class IntermediateSegmentGenerator extends SegmentGeneratorBase {
     private ConstructorDeclaration constructor;
     private MethodDeclaration updateMethod;
     private MethodDeclaration changedMethod;
+    private MethodDeclaration invalidatedMethod;
 
     public IntermediateSegmentGenerator(SourceInfo sourceInfo, FoldedGroup[] path, int segment) {
         super(sourceInfo, path, segment);
@@ -51,6 +54,7 @@ public class IntermediateSegmentGenerator extends SegmentGeneratorBase {
     public TypeDeclaration emitClass(BytecodeEmitContext context) {
         TypeDeclaration generatedClass = super.emitClass(context)
             .addInterface(ChangeListenerDecl())
+            .addInterface(InvalidationListenerDecl())
             .setModifiers(Modifier.PRIVATE | Modifier.FINAL);
 
         groups[segment].setCompiledClass(generatedClass);
@@ -59,9 +63,15 @@ public class IntermediateSegmentGenerator extends SegmentGeneratorBase {
 
     @Override
     public void emitFields(BytecodeEmitContext context) {
-        observableType = groups[segment].getFirstPathSegment().getTypeInstance().declaration();
+        observableType = groups[segment].getObservableDependencyType();
         createField(NEXT_FIELD, groups[segment + 1].getCompiledClass()).setModifiers(Modifier.FINAL);
         createField(OBSERVABLE_FIELD, observableType).setModifiers(Modifier.PRIVATE);
+        createField(
+            WEAK_LISTENER_FIELD,
+            groups[segment].getObservableDependencyKind() == ObservableDependencyKind.VALUE
+                ? WeakChangeListenerDecl()
+                : WeakInvalidationListenerDecl())
+            .setModifiers(Modifier.PRIVATE | Modifier.FINAL);
     }
 
     @Override
@@ -76,6 +86,9 @@ public class IntermediateSegmentGenerator extends SegmentGeneratorBase {
         changedMethod = createMethod(
             "changed", voidDecl(), ObservableValueDecl(), ObjectDecl(), ObjectDecl())
             .setModifiers(Modifier.PUBLIC | Modifier.FINAL);
+
+        invalidatedMethod = createMethod("invalidated", voidDecl(), ObservableDecl())
+            .setModifiers(Modifier.PUBLIC | Modifier.FINAL);
     }
 
     @Override
@@ -83,6 +96,7 @@ public class IntermediateSegmentGenerator extends SegmentGeneratorBase {
         emitConstructor(constructor);
         emitUpdateMethod(updateMethod);
         emitChangedMethod(changedMethod);
+        emitInvalidatedMethod(invalidatedMethod);
     }
 
     private void emitConstructor(ConstructorDeclaration constructor) {
@@ -91,6 +105,15 @@ public class IntermediateSegmentGenerator extends SegmentGeneratorBase {
 
         code.aload(0)
             .invoke(requireSuperClass().requireDeclaredConstructor())
+            .aload(0)
+            .anew(requireDeclaredField(WEAK_LISTENER_FIELD).type())
+            .dup()
+            .aload(0)
+            .invoke(requireDeclaredField(WEAK_LISTENER_FIELD).type().requireConstructor(
+                groups[segment].getObservableDependencyKind() == ObservableDependencyKind.VALUE
+                    ? ChangeListenerDecl()
+                    : InvalidationListenerDecl()))
+            .putfield(requireDeclaredField(WEAK_LISTENER_FIELD))
             .aload(0)
             .anew(nextClass)
             .dup()
@@ -103,6 +126,7 @@ public class IntermediateSegmentGenerator extends SegmentGeneratorBase {
 
     private void emitUpdateMethod(MethodDeclaration method) {
         Bytecode code = new Bytecode(method);
+        ObservableDependencyKind dependencyKind = groups[segment].getObservableDependencyKind();
         FieldDeclaration observableField = requireDeclaredField(OBSERVABLE_FIELD);
         Local newValueLocal = code.acquireLocal(false);
         Label L0, L1, L2;
@@ -117,7 +141,10 @@ public class IntermediateSegmentGenerator extends SegmentGeneratorBase {
         code.aload(0)
             .getfield(observableField)
             .aload(0)
-            .invoke(ObservableValueDecl().requireDeclaredMethod("removeListener", ChangeListenerDecl()));
+            .getfield(requireDeclaredField(WEAK_LISTENER_FIELD))
+            .invoke(dependencyKind == ObservableDependencyKind.VALUE
+                ? ObservableValueDecl().requireDeclaredMethod("removeListener", ChangeListenerDecl())
+                : ObservableDecl().requireDeclaredMethod("removeListener", InvalidationListenerDecl()));
 
         // this.observable = $1
         L0.resume()
@@ -125,37 +152,83 @@ public class IntermediateSegmentGenerator extends SegmentGeneratorBase {
             .aload(1)
             .putfield(observableField);
 
-        // if ($1 != null)
-        L1 = code
-            .aload(1)
-            .ifnull();
+        if (dependencyKind == ObservableDependencyKind.VALUE) {
+            // if ($1 != null)
+            L1 = code
+                .aload(1)
+                .ifnull();
 
-        // $1.addListener(this);
-        // newValue = $1.getValue();
-        L2 = code
-            .aload(1)
-            .aload(0)
-            .invoke(ObservableValueDecl().requireDeclaredMethod("addListener", ChangeListenerDecl()))
-            .aload(1)
-            .invoke(ObservableValueDecl().requireDeclaredMethod("getValue"))
-            .astore(newValueLocal)
-            .goto_label();
+            // $1.addListener(this);
+            // newValue = $1.getValue();
+            L2 = code
+                .aload(1)
+                .aload(0)
+                .getfield(requireDeclaredField(WEAK_LISTENER_FIELD))
+                .invoke(ObservableValueDecl().requireDeclaredMethod("addListener", ChangeListenerDecl()))
+                .aload(1)
+                .invoke(ObservableValueDecl().requireDeclaredMethod("getValue"))
+                .astore(newValueLocal)
+                .goto_label();
 
-        // else newValue = null;
-        L1.resume()
-            .aconst_null()
-            .astore(newValueLocal);
+            // else newValue = null;
+            L1.resume()
+                .aconst_null()
+                .astore(newValueLocal);
 
-        // this.changed(null, oldValue, newValue);
-        L2.resume()
-            .aload(0)
-            .aconst_null()
-            .aconst_null()
-            .aload(newValueLocal)
-            .invoke(requireDeclaredMethod("changed", ObservableValueDecl(), ObjectDecl(), ObjectDecl()))
-            .vreturn();
+            // this.changed(null, oldValue, newValue);
+            L2.resume()
+                .aload(0)
+                .aconst_null()
+                .aconst_null()
+                .aload(newValueLocal)
+                .invoke(requireDeclaredMethod("changed", ObservableValueDecl(), ObjectDecl(), ObjectDecl()))
+                .vreturn();
+        } else {
+            // if ($1 != null) $1.addListener(this);
+            code.aload(1)
+                .ifnonnull(() -> code
+                    .aload(1)
+                    .aload(0)
+                    .getfield(requireDeclaredField(WEAK_LISTENER_FIELD))
+                    .invoke(ObservableDecl().requireDeclaredMethod("addListener", InvalidationListenerDecl())));
+
+            // this.invalidated(null);
+            code.aload(0)
+                .aconst_null()
+                .invoke(requireDeclaredMethod("invalidated", ObservableDecl()))
+                .vreturn();
+        }
 
         code.releaseLocal(newValueLocal);
+
+        method.setCode(code);
+    }
+
+    private void emitInvalidatedMethod(MethodDeclaration method) {
+        Bytecode code = new Bytecode(method);
+        TypeDeclaration nextClass = groups[segment + 1].getCompiledClass();
+        TypeDeclaration nextObservableType = groups[segment + 1].getObservableDependencyType();
+        TypeDeclaration firstValueType = groups[segment].getFirstPathSegment().getValueTypeInstance().declaration();
+        Segment[] path = this.groups[segment].getPath();
+
+        code.aload(0)
+            .getfield(requireDeclaredField(OBSERVABLE_FIELD))
+            .dup()
+            .ifnull(
+                () -> code.pop().aconst_null(),
+                () -> {
+                    if (path.length > 1) {
+                        code.checkcast(firstValueType);
+                        emitInvariants(firstValueType, path, code);
+                    }
+                })
+            .checkcast(nextObservableType)
+            .store(nextObservableType, 1)
+            .aload(0)
+            .getfield(requireDeclaredField(NEXT_FIELD))
+            .aload(1)
+            .invoke(nextClass.requireDeclaredMethod(UPDATE_METHOD, nextObservableType))
+            .vreturn();
 
         method.setCode(code);
     }

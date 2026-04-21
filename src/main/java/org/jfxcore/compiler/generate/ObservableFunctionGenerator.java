@@ -4,12 +4,11 @@
 package org.jfxcore.compiler.generate;
 
 import org.jetbrains.annotations.Nullable;
+import org.jfxcore.compiler.ast.ObservableDependencyKind;
 import org.jfxcore.compiler.ast.ValueNode;
 import org.jfxcore.compiler.ast.emit.BytecodeEmitContext;
 import org.jfxcore.compiler.ast.emit.EmitLiteralNode;
 import org.jfxcore.compiler.ast.emit.EmitMethodArgumentNode;
-import org.jfxcore.compiler.ast.emit.EmitObservableFunctionNode;
-import org.jfxcore.compiler.ast.emit.EmitObservablePathNode;
 import org.jfxcore.compiler.ast.emit.ValueEmitterNode;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.type.ConstructorDeclaration;
@@ -50,6 +49,11 @@ public class ObservableFunctionGenerator extends ClassGenerator {
     private static final String DISCONNECT_METHOD = "disconnect";
     private static final String RECEIVER_FIELD = "receiver";
     private static final String INVERSE_RECEIVER_FIELD = "inverseReceiver";
+    private static final String RECEIVER_CONTENT_FIELD = "receiverContent";
+    private static final String WEAK_INVALIDATION_LISTENER_FIELD = "weakInvalidationListener";
+    private static final String WEAK_LIST_CHANGE_LISTENER_FIELD = "weakListChangeListener";
+    private static final String WEAK_SET_CHANGE_LISTENER_FIELD = "weakSetChangeListener";
+    private static final String WEAK_MAP_CHANGE_LISTENER_FIELD = "weakMapChangeListener";
 
     private final boolean bidirectional;
     private final Callable function;
@@ -58,6 +62,7 @@ public class ObservableFunctionGenerator extends ClassGenerator {
     private final boolean storeInverseReceiver;
     private final List<EmitMethodArgumentNode> arguments;
     private final List<FieldDeclaration> paramFields;
+    private final List<@Nullable FieldDeclaration> paramContentFields;
     private final List<TypeDeclaration> paramTypes;
 
     private final TypeInstance superType;
@@ -77,6 +82,9 @@ public class ObservableFunctionGenerator extends ClassGenerator {
     private MethodDeclaration addChangeListenerMethod;
     private MethodDeclaration removeChangeListenerMethod;
     private MethodDeclaration invalidatedMethod;
+    private MethodDeclaration listChangedMethod;
+    private MethodDeclaration setChangedMethod;
+    private MethodDeclaration mapChangedMethod;
     private MethodDeclaration validateMethod;
     private MethodDeclaration connectMethod;
     private MethodDeclaration disconnectMethod;
@@ -91,6 +99,8 @@ public class ObservableFunctionGenerator extends ClassGenerator {
     private MethodDeclaration bindBidirectionalMethod;
     private MethodDeclaration unbindBidirectionalMethod;
 
+    private FieldDeclaration receiverContentField;
+
     public ObservableFunctionGenerator(
             Callable function,
             @Nullable Callable inverseFunction,
@@ -104,6 +114,7 @@ public class ObservableFunctionGenerator extends ClassGenerator {
             !inverseFunction.getBehavior().isStatic() && inverseFunction.getBehavior() instanceof MethodDeclaration;
         this.arguments = new ArrayList<>(arguments);
         this.paramFields = new ArrayList<>();
+        this.paramContentFields = new ArrayList<>();
         this.paramTypes = new ArrayList<>();
 
         TypeInvoker invoker = new TypeInvoker(SourceInfo.none());
@@ -155,6 +166,19 @@ public class ObservableFunctionGenerator extends ClassGenerator {
         }
 
         generatedClass.addInterface(InvalidationListenerDecl());
+
+        if (hasListContentDependencies()) {
+            generatedClass.addInterface(ListChangeListenerDecl());
+        }
+
+        if (hasSetContentDependencies()) {
+            generatedClass.addInterface(SetChangeListenerDecl());
+        }
+
+        if (hasMapContentDependencies()) {
+            generatedClass.addInterface(MapChangeListenerDecl());
+        }
+
         generatedClass.setModifiers(Modifier.PRIVATE | Modifier.FINAL);
 
         return generatedClass;
@@ -166,35 +190,63 @@ public class ObservableFunctionGenerator extends ClassGenerator {
         int fieldNum = 1;
 
         if (storeReceiver) {
-            createField(RECEIVER_FIELD, function.getBehavior().declaringType())
+            createField(
+                RECEIVER_FIELD,
+                function.getReceiverDependencyKind() != ObservableDependencyKind.NONE
+                    ? TypeHelper.getTypeDeclaration(function.getReceiver().get(0))
+                    : function.getBehavior().declaringType())
                 .setModifiers(Modifier.FINAL | Modifier.PRIVATE);
+
+            if (function.getReceiverDependencyKind() != ObservableDependencyKind.NONE) {
+                numObservables++;
+
+                TypeDeclaration receiverValueType = getDependencyValueType(
+                    function.getReceiver().get(0), function.getReceiverDependencyKind());
+
+                if (needsRebindableContentListener(receiverValueType, function.getReceiverDependencyKind())) {
+                    receiverContentField = createField(RECEIVER_CONTENT_FIELD, receiverValueType)
+                        .setModifiers(Modifier.PRIVATE);
+                }
+            }
         }
 
         if (storeInverseReceiver) {
-            createField(INVERSE_RECEIVER_FIELD, inverseFunction.getBehavior().declaringType())
+            createField(
+                INVERSE_RECEIVER_FIELD,
+                inverseFunction.getReceiverDependencyKind() != ObservableDependencyKind.NONE
+                    ? TypeHelper.getTypeDeclaration(inverseFunction.getReceiver().get(0))
+                    : inverseFunction.getBehavior().declaringType())
                 .setModifiers(Modifier.FINAL | Modifier.PRIVATE);
         }
 
         for (EmitMethodArgumentNode argument : arguments) {
-            for (ValueNode child : argument.getChildren()) {
+            for (int childIndex = 0; childIndex < argument.getChildren().size(); ++childIndex) {
+                ValueNode child = argument.getChildren().get(childIndex);
                 if (child instanceof EmitLiteralNode) {
                     continue;
                 }
 
-                TypeDeclaration fieldType = isObservableArgument(child) && !bidirectional ?
+                ObservableDependencyKind dependencyKind = argument.getObservableDependencyKind(childIndex);
+                TypeDeclaration dependencyValueType = dependencyKind != ObservableDependencyKind.NONE
+                    ? getDependencyValueType(child, dependencyKind)
+                    : TypeHelper.getTypeDeclaration(child);
+                TypeDeclaration fieldType = dependencyKind != ObservableDependencyKind.NONE && !bidirectional ?
                     resolver.getObservableClass(TypeHelper.getTypeDeclaration(child), false) :
                     TypeHelper.getTypeDeclaration(child);
 
-                if (isObservableArgument(child)) {
-                    paramTypes.add(resolver.findObservableArgument(TypeHelper.getTypeInstance(child)).declaration());
+                if (dependencyKind != ObservableDependencyKind.NONE) {
+                    paramTypes.add(dependencyValueType);
                 } else {
                     paramTypes.add(TypeHelper.getTypeDeclaration(child));
                 }
 
                 FieldDeclaration paramField = createField("param" + fieldNum, fieldType).setModifiers(Modifier.PRIVATE);
                 paramFields.add(paramField);
+                paramContentFields.add(needsRebindableContentListener(dependencyValueType, dependencyKind)
+                    ? createField("param" + fieldNum + "Content", dependencyValueType).setModifiers(Modifier.PRIVATE)
+                    : null);
 
-                if (isObservableArgument(child)) {
+                if (dependencyKind != ObservableDependencyKind.NONE) {
                     numObservables++;
                 }
 
@@ -205,6 +257,23 @@ public class ObservableFunctionGenerator extends ClassGenerator {
         if (numObservables > 0) {
             createField(INVALIDATION_LISTENER_FIELD, InvalidationListenerDecl()).setModifiers(Modifier.PRIVATE);
             createField(CHANGE_LISTENER_FIELD, ChangeListenerDecl()).setModifiers(Modifier.PRIVATE);
+            createField(WEAK_INVALIDATION_LISTENER_FIELD, WeakInvalidationListenerDecl())
+                .setModifiers(Modifier.PRIVATE | Modifier.FINAL);
+
+            if (hasListContentDependencies()) {
+                createField(WEAK_LIST_CHANGE_LISTENER_FIELD, WeakListChangeListenerDecl())
+                    .setModifiers(Modifier.PRIVATE | Modifier.FINAL);
+            }
+
+            if (hasSetContentDependencies()) {
+                createField(WEAK_SET_CHANGE_LISTENER_FIELD, WeakSetChangeListenerDecl())
+                    .setModifiers(Modifier.PRIVATE | Modifier.FINAL);
+            }
+
+            if (hasMapContentDependencies()) {
+                createField(WEAK_MAP_CHANGE_LISTENER_FIELD, WeakMapChangeListenerDecl())
+                    .setModifiers(Modifier.PRIVATE | Modifier.FINAL);
+            }
         }
 
         createField(FLAGS_FIELD, intDecl()).setModifiers(Modifier.PRIVATE);
@@ -235,6 +304,21 @@ public class ObservableFunctionGenerator extends ClassGenerator {
 
         invalidatedMethod = createMethod("invalidated", voidDecl(), ObservableDecl())
             .setModifiers(Modifier.PUBLIC | Modifier.FINAL);
+
+        if (hasListContentDependencies()) {
+            listChangedMethod = createMethod("onChanged", voidDecl(), ListChangeListenerChangeDecl())
+                .setModifiers(Modifier.PUBLIC | Modifier.FINAL);
+        }
+
+        if (hasSetContentDependencies()) {
+            setChangedMethod = createMethod("onChanged", voidDecl(), SetChangeListenerChangeDecl())
+                .setModifiers(Modifier.PUBLIC | Modifier.FINAL);
+        }
+
+        if (hasMapContentDependencies()) {
+            mapChangedMethod = createMethod("onChanged", voidDecl(), MapChangeListenerChangeDecl())
+                .setModifiers(Modifier.PUBLIC | Modifier.FINAL);
+        }
 
         getValueMethod = createMethod("getValue", ObjectDecl())
             .setModifiers(Modifier.PUBLIC | Modifier.FINAL);
@@ -315,6 +399,19 @@ public class ObservableFunctionGenerator extends ClassGenerator {
         emitRemoveListenerMethod(removeInvalidationListenerMethod, false);
         emitRemoveListenerMethod(removeChangeListenerMethod, true);
         emitInvalidatedMethod(invalidatedMethod);
+
+        if (listChangedMethod != null) {
+            emitCollectionChangedMethod(listChangedMethod);
+        }
+
+        if (setChangedMethod != null) {
+            emitCollectionChangedMethod(setChangedMethod);
+        }
+
+        if (mapChangedMethod != null) {
+            emitCollectionChangedMethod(mapChangedMethod);
+        }
+
         emitValidateMethod(validateMethod, context);
         emitGetValueMethod(getValueMethod);
 
@@ -362,6 +459,42 @@ public class ObservableFunctionGenerator extends ClassGenerator {
 
         code.aload(0)
             .invoke(requireSuperClass().requireDeclaredConstructor());
+
+        if (numObservables > 0) {
+            code.aload(0)
+                .anew(WeakInvalidationListenerDecl())
+                .dup()
+                .aload(0)
+                .invoke(WeakInvalidationListenerDecl().requireConstructor(InvalidationListenerDecl()))
+                .putfield(requireDeclaredField(WEAK_INVALIDATION_LISTENER_FIELD));
+
+            if (listChangedMethod != null) {
+                code.aload(0)
+                    .anew(WeakListChangeListenerDecl())
+                    .dup()
+                    .aload(0)
+                    .invoke(WeakListChangeListenerDecl().requireConstructor(ListChangeListenerDecl()))
+                    .putfield(requireDeclaredField(WEAK_LIST_CHANGE_LISTENER_FIELD));
+            }
+
+            if (setChangedMethod != null) {
+                code.aload(0)
+                    .anew(WeakSetChangeListenerDecl())
+                    .dup()
+                    .aload(0)
+                    .invoke(WeakSetChangeListenerDecl().requireConstructor(SetChangeListenerDecl()))
+                    .putfield(requireDeclaredField(WEAK_SET_CHANGE_LISTENER_FIELD));
+            }
+
+            if (mapChangedMethod != null) {
+                code.aload(0)
+                    .anew(WeakMapChangeListenerDecl())
+                    .dup()
+                    .aload(0)
+                    .invoke(WeakMapChangeListenerDecl().requireConstructor(MapChangeListenerDecl()))
+                    .putfield(requireDeclaredField(WEAK_MAP_CHANGE_LISTENER_FIELD));
+            }
+        }
 
         if (storeReceiver) {
             code.aload(0);
@@ -472,8 +605,17 @@ public class ObservableFunctionGenerator extends ClassGenerator {
             code.anew(function.getBehavior().declaringType())
                 .dup();
         } else if (!function.getBehavior().isStatic()) {
+            FieldDeclaration receiverField = requireDeclaredField(RECEIVER_FIELD);
             code.aload(0)
-                .getfield(requireDeclaredField(RECEIVER_FIELD));
+                .getfield(receiverField);
+
+            if (function.getReceiverDependencyKind() != ObservableDependencyKind.NONE) {
+                emitLoadDependencyValue(
+                    code,
+                    receiverField.type(),
+                    function.getBehavior().declaringType(),
+                    function.getReceiverDependencyKind());
+            }
         }
 
         int fieldIdx = 0;
@@ -495,7 +637,8 @@ public class ObservableFunctionGenerator extends ClassGenerator {
 
             int childIdx = 0;
 
-            for (ValueNode child : argument.getChildren()) {
+            for (int argumentChildIndex = 0; argumentChildIndex < argument.getChildren().size(); ++argumentChildIndex) {
+                ValueNode child = argument.getChildren().get(argumentChildIndex);
                 if (argument.isVarargs()) {
                     code.aload(varargsLocal)
                         .iconst(childIdx++);
@@ -508,12 +651,13 @@ public class ObservableFunctionGenerator extends ClassGenerator {
                     FieldDeclaration field = paramFields.get(fieldIdx);
                     TypeDeclaration fieldType = field.type();
                     TypeDeclaration paramType = paramTypes.get(fieldIdx);
+                    ObservableDependencyKind dependencyKind = argument.getObservableDependencyKind(argumentChildIndex);
                     fieldIdx++;
 
                     code.aload(0)
                         .getfield(field);
 
-                    if (isObservableArgument(child)) {
+                    if (dependencyKind != ObservableDependencyKind.NONE) {
                         if (bidirectional) {
                             Local local = code.acquireLocal(fieldType);
 
@@ -651,8 +795,17 @@ public class ObservableFunctionGenerator extends ClassGenerator {
             methodReturnType = ((MethodDeclaration)inverseFunction.getBehavior()).returnType();
 
             if (!inverseFunction.getBehavior().isStatic()) {
+                FieldDeclaration receiverField = requireDeclaredField(INVERSE_RECEIVER_FIELD);
                 code.aload(0)
-                    .getfield(requireDeclaredField(INVERSE_RECEIVER_FIELD));
+                    .getfield(receiverField);
+
+                if (inverseFunction.getReceiverDependencyKind() != ObservableDependencyKind.NONE) {
+                    emitLoadDependencyValue(
+                        code,
+                        receiverField.type(),
+                        inverseFunction.getBehavior().declaringType(),
+                        inverseFunction.getReceiverDependencyKind());
+                }
             }
         }
 
@@ -789,6 +942,10 @@ public class ObservableFunctionGenerator extends ClassGenerator {
         Local oldValue = code.acquireLocal(false);
         Local newValue = code.acquireLocal(false);
 
+        if (hasRebindableContentDependencies()) {
+            emitReconnectContentListeners(code);
+        }
+
         code.aload(0)
             .getfield(requireDeclaredField(FLAGS_FIELD))
             .ifne(() -> code
@@ -842,41 +999,48 @@ public class ObservableFunctionGenerator extends ClassGenerator {
         method.setCode(code);
     }
 
+    private void emitCollectionChangedMethod(MethodDeclaration method) {
+        Bytecode code = new Bytecode(method);
+
+        code.aload(0)
+            .aconst_null()
+            .invoke(requireDeclaredMethod("invalidated", ObservableDecl()))
+            .vreturn();
+
+        method.setCode(code);
+    }
+
     private void emitConnectDisconnectMethod(MethodDeclaration method, boolean connectIsTrue) {
         Bytecode code = new Bytecode(method);
         int fieldIdx = 0;
 
-        MethodDeclaration listenerMethod = ObservableDecl().requireDeclaredMethod(
-            connectIsTrue ? "addListener" : "removeListener", InvalidationListenerDecl());
+        if (storeReceiver && function.getReceiverDependencyKind() != ObservableDependencyKind.NONE) {
+            emitDependencyListener(
+                code,
+                requireDeclaredField(RECEIVER_FIELD),
+                receiverContentField,
+                getDependencyValueType(function.getReceiver().get(0), function.getReceiverDependencyKind()),
+                function.getReceiverDependencyKind(),
+                connectIsTrue);
+        }
 
         for (EmitMethodArgumentNode argument : arguments) {
-            for (ValueNode child : argument.getChildren()) {
+            for (int argumentChildIndex = 0; argumentChildIndex < argument.getChildren().size(); ++argumentChildIndex) {
+                ValueNode child = argument.getChildren().get(argumentChildIndex);
                 if (child instanceof EmitLiteralNode) {
                     continue;
                 }
 
-                if (isObservableArgument(child)) {
-                    FieldDeclaration field = paramFields.get(fieldIdx);
-                    TypeDeclaration fieldType = field.type();
+                ObservableDependencyKind dependencyKind = argument.getObservableDependencyKind(argumentChildIndex);
 
-                    code.aload(0)
-                        .getfield(field);
-
-                    if (bidirectional) {
-                        Local local = code.acquireLocal(fieldType);
-
-                        code.store(fieldType, local)
-                            .load(fieldType, local)
-                            .ifnonnull(() -> code
-                                .load(fieldType, local)
-                                .aload(0)
-                                .invoke(listenerMethod));
-
-                        code.releaseLocal(local);
-                    } else {
-                        code.aload(0)
-                            .invoke(listenerMethod);
-                    }
+                if (dependencyKind != ObservableDependencyKind.NONE) {
+                    emitDependencyListener(
+                        code,
+                        paramFields.get(fieldIdx),
+                        paramContentFields.get(fieldIdx),
+                        paramTypes.get(fieldIdx),
+                        dependencyKind,
+                        connectIsTrue);
                 }
 
                 fieldIdx++;
@@ -945,7 +1109,285 @@ public class ObservableFunctionGenerator extends ClassGenerator {
         method.setCode(code);
     }
 
-    boolean isObservableArgument(ValueNode node) {
-        return node instanceof EmitObservablePathNode || node instanceof EmitObservableFunctionNode;
+    private boolean hasListContentDependencies() {
+        return hasContentDependencies(ObservableListDecl());
+    }
+
+    private boolean hasSetContentDependencies() {
+        return hasContentDependencies(ObservableSetDecl());
+    }
+
+    private boolean hasMapContentDependencies() {
+        return hasContentDependencies(ObservableMapDecl());
+    }
+
+    private boolean hasContentDependencies(TypeDeclaration collectionType) {
+        if (storeReceiver) {
+            TypeDeclaration valueType = getDependencyValueType(
+                function.getReceiver().get(0), function.getReceiverDependencyKind());
+
+            if (needsContentListener(valueType, function.getReceiverDependencyKind())
+                    && valueType.subtypeOf(collectionType)) {
+                return true;
+            }
+        }
+
+        for (EmitMethodArgumentNode argument : arguments) {
+            for (int i = 0; i < argument.getChildren().size(); ++i) {
+                TypeDeclaration valueType = getDependencyValueType(
+                    argument.getChildren().get(i), argument.getObservableDependencyKind(i));
+
+                if (needsContentListener(valueType, argument.getObservableDependencyKind(i))
+                        && valueType.subtypeOf(collectionType)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    private boolean hasRebindableContentDependencies() {
+        if (receiverContentField != null) {
+            return true;
+        }
+
+        for (FieldDeclaration field : paramContentFields) {
+            if (field != null) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private boolean needsContentListener(TypeDeclaration valueType, ObservableDependencyKind dependencyKind) {
+        return dependencyKind == ObservableDependencyKind.CONTENT
+            || needsRebindableContentListener(valueType, dependencyKind);
+    }
+
+    private boolean needsRebindableContentListener(TypeDeclaration valueType, ObservableDependencyKind dependencyKind) {
+        return dependencyKind == ObservableDependencyKind.VALUE
+            && isObservableCollectionType(valueType);
+    }
+
+    private boolean isObservableCollectionType(TypeDeclaration valueType) {
+        return valueType.subtypeOf(ObservableListDecl())
+            || valueType.subtypeOf(ObservableSetDecl())
+            || valueType.subtypeOf(ObservableMapDecl());
+    }
+
+    private TypeDeclaration getDependencyValueType(ValueNode node, ObservableDependencyKind dependencyKind) {
+        TypeDeclaration nodeType = TypeHelper.getTypeDeclaration(node);
+
+        if (dependencyKind == ObservableDependencyKind.NONE || !nodeType.subtypeOf(ObservableValueDecl())) {
+            return nodeType;
+        }
+
+        return new Resolver(SourceInfo.none()).findObservableArgument(TypeHelper.getTypeInstance(node)).declaration();
+    }
+
+    private void emitDependencyListener(Bytecode code,
+                                        FieldDeclaration field,
+                                        @Nullable FieldDeclaration contentField,
+                                        TypeDeclaration valueType,
+                                        ObservableDependencyKind dependencyKind,
+                                        boolean connectIsTrue) {
+        TypeDeclaration fieldType = field.type();
+        Local fieldLocal = code.acquireLocal(fieldType);
+
+        code.aload(0)
+            .getfield(field)
+            .store(fieldType, fieldLocal)
+            .load(fieldType, fieldLocal)
+            .ifnonnull(() -> {
+                if (dependencyKind == ObservableDependencyKind.VALUE) {
+                    code.load(fieldType, fieldLocal)
+                        .aload(0)
+                        .getfield(requireDeclaredField(WEAK_INVALIDATION_LISTENER_FIELD))
+                        .invoke(ObservableDecl().requireDeclaredMethod(
+                            connectIsTrue ? "addListener" : "removeListener",
+                            InvalidationListenerDecl()));
+                }
+
+                if (needsContentListener(valueType, dependencyKind)) {
+                    if (contentField != null) {
+                        if (connectIsTrue) {
+                            emitConnectStoredContentListener(code, fieldLocal, fieldType, contentField, valueType, dependencyKind);
+                        } else {
+                            emitDisconnectStoredContentListener(code, contentField, valueType);
+                        }
+                    } else {
+                        MethodDeclaration listenerMethod = getContentListenerMethod(valueType, connectIsTrue);
+                        Local valueLocal = code.acquireLocal(valueType);
+
+                        code.load(fieldType, fieldLocal);
+                        emitLoadDependencyValue(code, fieldType, valueType, dependencyKind);
+                        code.store(valueType, valueLocal)
+                            .load(valueType, valueLocal)
+                            .ifnonnull(() -> code
+                                .load(valueType, valueLocal)
+                                .aload(0)
+                                .getfield(getContentWeakListenerField(valueType))
+                                .invoke(listenerMethod));
+
+                        code.releaseLocal(valueLocal);
+                    }
+                }
+            });
+
+        code.releaseLocal(fieldLocal);
+    }
+
+    private void emitReconnectContentListeners(Bytecode code) {
+        if (receiverContentField != null) {
+            emitReconnectContentListener(
+                code,
+                requireDeclaredField(RECEIVER_FIELD),
+                receiverContentField,
+                getDependencyValueType(function.getReceiver().get(0), function.getReceiverDependencyKind()));
+        }
+
+        int fieldIdx = 0;
+
+        for (EmitMethodArgumentNode argument : arguments) {
+            for (int argumentChildIndex = 0; argumentChildIndex < argument.getChildren().size(); ++argumentChildIndex) {
+                ValueNode child = argument.getChildren().get(argumentChildIndex);
+                if (child instanceof EmitLiteralNode) {
+                    continue;
+                }
+
+                FieldDeclaration contentField = paramContentFields.get(fieldIdx);
+                if (contentField != null) {
+                    emitReconnectContentListener(code, paramFields.get(fieldIdx), contentField, paramTypes.get(fieldIdx));
+                }
+
+                fieldIdx++;
+            }
+        }
+    }
+
+    private void emitReconnectContentListener(Bytecode code,
+                                              FieldDeclaration sourceField,
+                                              FieldDeclaration contentField,
+                                              TypeDeclaration valueType) {
+        TypeDeclaration sourceType = sourceField.type();
+        Local sourceLocal = code.acquireLocal(sourceType);
+
+        code.aload(1)
+            .aload(0)
+            .getfield(sourceField)
+            .if_acmpeq(() -> {
+                emitDisconnectStoredContentListener(code, contentField, valueType);
+
+                code.aload(0)
+                    .getfield(sourceField)
+                    .store(sourceType, sourceLocal)
+                    .load(sourceType, sourceLocal)
+                    .ifnonnull(() -> emitConnectStoredContentListener(
+                        code,
+                        sourceLocal,
+                        sourceType,
+                        contentField,
+                        valueType,
+                        ObservableDependencyKind.VALUE));
+            });
+
+        code.releaseLocal(sourceLocal);
+    }
+
+    private void emitConnectStoredContentListener(Bytecode code,
+                                                  Local sourceLocal,
+                                                  TypeDeclaration sourceType,
+                                                  FieldDeclaration contentField,
+                                                  TypeDeclaration valueType,
+                                                  ObservableDependencyKind dependencyKind) {
+        MethodDeclaration listenerMethod = getContentListenerMethod(valueType, true);
+        Local valueLocal = code.acquireLocal(valueType);
+
+        code.load(sourceType, sourceLocal);
+
+        emitLoadDependencyValue(code, sourceType, valueType, dependencyKind);
+
+        code.store(valueType, valueLocal)
+            .aload(0)
+            .load(valueType, valueLocal)
+            .putfield(contentField)
+            .load(valueType, valueLocal)
+            .ifnonnull(() -> code
+                .load(valueType, valueLocal)
+                .aload(0)
+                .getfield(getContentWeakListenerField(valueType))
+                .invoke(listenerMethod));
+
+        code.releaseLocal(valueLocal);
+    }
+
+    private void emitDisconnectStoredContentListener(Bytecode code,
+                                                     FieldDeclaration contentField,
+                                                     TypeDeclaration valueType) {
+        MethodDeclaration listenerMethod = getContentListenerMethod(valueType, false);
+        Local valueLocal = code.acquireLocal(valueType);
+
+        code.aload(0)
+            .getfield(contentField)
+            .store(valueType, valueLocal)
+            .aload(0)
+            .aconst_null()
+            .putfield(contentField)
+            .load(valueType, valueLocal)
+            .ifnonnull(() -> code
+                .load(valueType, valueLocal)
+                .aload(0)
+                .getfield(getContentWeakListenerField(valueType))
+                .invoke(listenerMethod));
+
+        code.releaseLocal(valueLocal);
+    }
+
+    private FieldDeclaration getContentWeakListenerField(TypeDeclaration valueType) {
+        if (valueType.subtypeOf(ObservableListDecl())) {
+            return requireDeclaredField(WEAK_LIST_CHANGE_LISTENER_FIELD);
+        }
+
+        if (valueType.subtypeOf(ObservableSetDecl())) {
+            return requireDeclaredField(WEAK_SET_CHANGE_LISTENER_FIELD);
+        }
+
+        if (valueType.subtypeOf(ObservableMapDecl())) {
+            return requireDeclaredField(WEAK_MAP_CHANGE_LISTENER_FIELD);
+        }
+
+        throw new InternalError();
+    }
+
+    private MethodDeclaration getContentListenerMethod(TypeDeclaration valueType, boolean connectIsTrue) {
+        String methodName = connectIsTrue ? "addListener" : "removeListener";
+
+        if (valueType.subtypeOf(ObservableListDecl())) {
+            return ObservableListDecl().requireDeclaredMethod(methodName, ListChangeListenerDecl());
+        }
+
+        if (valueType.subtypeOf(ObservableSetDecl())) {
+            return ObservableSetDecl().requireDeclaredMethod(methodName, SetChangeListenerDecl());
+        }
+
+        if (valueType.subtypeOf(ObservableMapDecl())) {
+            return ObservableMapDecl().requireDeclaredMethod(methodName, MapChangeListenerDecl());
+        }
+
+        throw new InternalError();
+    }
+
+    private void emitLoadDependencyValue(Bytecode code,
+                                         TypeDeclaration dependencySourceType,
+                                         TypeDeclaration requestedType,
+                                         ObservableDependencyKind dependencyKind) {
+        if (dependencyKind != ObservableDependencyKind.NONE
+                && dependencySourceType.subtypeOf(ObservableValueDecl())) {
+            code.unboxObservable(dependencySourceType, requestedType);
+        } else if (!dependencySourceType.equals(requestedType)) {
+            code.castconv(dependencySourceType, requestedType);
+        }
     }
 }

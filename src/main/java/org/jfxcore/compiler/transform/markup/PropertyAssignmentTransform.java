@@ -9,6 +9,7 @@ import org.jfxcore.compiler.ast.Node;
 import org.jfxcore.compiler.ast.PropertyNode;
 import org.jfxcore.compiler.ast.TemplateContentNode;
 import org.jfxcore.compiler.ast.ValueNode;
+import org.jfxcore.compiler.ast.ValueSourceKind;
 import org.jfxcore.compiler.ast.emit.EmitApplyMarkupExtensionNode;
 import org.jfxcore.compiler.ast.emit.EmitClassConstantNode;
 import org.jfxcore.compiler.ast.emit.EmitEventHandlerNode;
@@ -44,9 +45,7 @@ import org.jfxcore.compiler.type.TypeDeclaration;
 import org.jfxcore.compiler.type.TypeHelper;
 import org.jfxcore.compiler.type.TypeInstance;
 import org.jfxcore.compiler.type.TypeInvoker;
-import org.jfxcore.compiler.type.KnownSymbols;
 import org.jfxcore.compiler.util.NameHelper;
-import org.jfxcore.compiler.util.ObservableKind;
 import org.jfxcore.compiler.util.PropertyInfo;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -113,7 +112,7 @@ public class PropertyAssignmentTransform implements Transform {
                 ValueEmitterNode emitter = new EmitInvokeGetterNode(
                     targetProperty.getGetterOrPropertyGetter(),
                     hasGetter ? targetProperty.getType() : targetProperty.getObservableType(),
-                    hasGetter ? ObservableKind.NONE : ObservableKind.FX_OBSERVABLE,
+                    hasGetter ? ValueSourceKind.NONE : ValueSourceKind.READONLY,
                     true,
                     sourceInfo);
 
@@ -413,7 +412,7 @@ public class PropertyAssignmentTransform implements Transform {
         return EmitObjectNode
             .constructor(
                 TypeInstance.ObjectType(),
-                KnownSymbols.ObjectDecl().requireDeclaredConstructor(),
+                ObjectDecl().requireDeclaredConstructor(),
                 Collections.emptyList(),
                 node.getSourceInfo())
             .create();

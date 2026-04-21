@@ -4,6 +4,7 @@
 package org.jfxcore.compiler.util;
 
 import org.jfxcore.compiler.ast.Node;
+import org.jfxcore.compiler.ast.ObservableDependencyKind;
 import org.jfxcore.compiler.ast.emit.ValueEmitterNode;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.type.BehaviorDeclaration;
@@ -18,6 +19,7 @@ import java.util.Objects;
 public class Callable {
 
     private final List<ValueEmitterNode> receiver;
+    private final ObservableDependencyKind receiverDependencyKind;
     private final BehaviorDeclaration behavior;
     private final SourceInfo sourceInfo;
     private final List<TypeInstance> invocationContext;
@@ -25,10 +27,12 @@ public class Callable {
     public Callable(
             List<TypeInstance> invocationContext,
             List<ValueEmitterNode> receiver,
+            ObservableDependencyKind receiverDependencyKind,
             BehaviorDeclaration behavior,
             SourceInfo sourceInfo) {
         this.invocationContext = List.copyOf(invocationContext);
         this.receiver = new ArrayList<>(receiver);
+        this.receiverDependencyKind = receiverDependencyKind;
         this.behavior = behavior;
         this.sourceInfo = sourceInfo;
     }
@@ -39,6 +43,10 @@ public class Callable {
 
     public List<ValueEmitterNode> getReceiver() {
         return receiver;
+    }
+
+    public ObservableDependencyKind getReceiverDependencyKind() {
+        return receiverDependencyKind;
     }
 
     public BehaviorDeclaration getBehavior() {
@@ -55,16 +63,22 @@ public class Callable {
         if (o == null || getClass() != o.getClass()) return false;
         Callable that = (Callable) o;
         return Objects.equals(receiver, that.receiver)
+            && receiverDependencyKind == that.receiverDependencyKind
             && behavior.equals(that.behavior)
             && invocationContext.equals(that.invocationContext);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(receiver, behavior, invocationContext);
+        return Objects.hash(receiver, receiverDependencyKind, behavior, invocationContext);
     }
 
     public Callable deepClone() {
-        return new Callable(invocationContext, new ArrayList<>(Node.deepClone(receiver)), behavior, sourceInfo);
+        return new Callable(
+            invocationContext,
+            new ArrayList<>(Node.deepClone(receiver)),
+                receiverDependencyKind,
+            behavior,
+            sourceInfo);
     }
 }

@@ -5,6 +5,8 @@ package org.jfxcore.compiler.ast.expression.util;
 
 import org.jetbrains.annotations.Nullable;
 import org.jfxcore.compiler.ast.BindingMode;
+import org.jfxcore.compiler.ast.ObservableDependencyKind;
+import org.jfxcore.compiler.ast.ValueSourceKind;
 import org.jfxcore.compiler.ast.emit.EmitMethodCallNode;
 import org.jfxcore.compiler.ast.emit.EmitObjectNode;
 import org.jfxcore.compiler.ast.emit.ValueEmitterNode;
@@ -60,6 +62,8 @@ public class SimpleFunctionEmitterFactory extends AbstractFunctionEmitterFactory
             value,
             TypeHelper.getTypeInstance(value),
             null,
+            ValueSourceKind.NONE,
+            ObservableDependencyKind.get(TypeHelper.getTypeDeclaration(value)),
             invocationInfo.function().getBehavior().declaringType(),
             invocationInfo.function().getBehavior().name(),
             true,

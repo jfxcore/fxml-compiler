@@ -3,17 +3,6 @@
 
 package org.jfxcore.compiler.bindings;
 
-import org.jfxcore.compiler.diagnostic.ErrorCode;
-import org.jfxcore.compiler.diagnostic.MarkupException;
-import org.jfxcore.compiler.generate.PushListenerGenerator;
-import org.jfxcore.compiler.generate.collections.MapObservableValueWrapperGenerator;
-import org.jfxcore.compiler.generate.collections.MapReseatableSourceWrapperGenerator;
-import org.jfxcore.compiler.util.CompilerTestBase;
-import org.jfxcore.compiler.util.NameHelper;
-import org.jfxcore.compiler.util.TestExtension;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 import javafx.beans.property.MapProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.Property;
@@ -25,6 +14,17 @@ import javafx.collections.FXCollections;
 import javafx.collections.MapChangeListener;
 import javafx.collections.ObservableMap;
 import javafx.scene.layout.Pane;
+import org.jfxcore.compiler.diagnostic.ErrorCode;
+import org.jfxcore.compiler.diagnostic.MarkupException;
+import org.jfxcore.compiler.generate.PushListenerGenerator;
+import org.jfxcore.compiler.generate.collections.MapObservableValueWrapperGenerator;
+import org.jfxcore.compiler.generate.collections.MapReseatableSourceWrapperGenerator;
+import org.jfxcore.compiler.util.CompilerTestBase;
+import org.jfxcore.compiler.util.NameHelper;
+import org.jfxcore.compiler.util.TestExtension;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -68,6 +68,13 @@ public class MapBindingTest extends CompilerTestBase {
         private final ObservableMap<Integer, String> targetObservableMap = FXCollections.observableMap(new HashMap<>());
         public Map<Integer, String> getTargetMap() { return targetObservableMap; }
         public ObservableMap<Integer, String> getTargetObservableMap() { return targetObservableMap; }
+    }
+
+    @SuppressWarnings("unused")
+    public static class NullObservableMapTestPane extends MapTestPane {
+        public NullObservableMapTestPane() {
+            obsMap = null;
+        }
     }
 
     private static String PUSH_LISTENER;
@@ -437,6 +444,34 @@ public class MapBindingTest extends CompilerTestBase {
 
         assertEquals(ErrorCode.INVALID_UNIDIRECTIONAL_BINDING_SOURCE, ex.getDiagnostic().getCode());
         assertCodeHighlight("obsMap", ex);
+    }
+
+    @Test
+    public void Unidirectional_Binding_To_ObservableMap_Size_Reevaluates_On_Content_Change() {
+        MapTestPane root = compileAndRun("""
+            <MapTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                         prefWidth="${obsMap.size}"/>
+        """);
+
+        assertMethodCall(root, "requireNonNull");
+        assertEquals(3, root.getPrefWidth(), 0.001);
+
+        root.obsMap.clear();
+        assertEquals(0, root.getPrefWidth(), 0.001);
+
+        root.obsMap.put(0, "foo");
+        root.obsMap.put(1, "bar");
+        assertEquals(2, root.getPrefWidth(), 0.001);
+    }
+
+    @Test
+    public void Unidirectional_Binding_To_Null_ObservableMap_Size_Throws_NPE() {
+        NullPointerException ex = assertThrows(NullPointerException.class, () -> compileAndRun("""
+            <NullObservableMapTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                                       prefWidth="${obsMap.size}"/>
+        """));
+
+        assertEquals("obsMap", ex.getMessage());
     }
 
     /*
