@@ -46,7 +46,8 @@ public class EmitObservablePathNode
 
         if (leadingInvariantSegments > 0) {
             this.invariantPath = new EmitInvariantPathNode(
-                path.subPath(0, leadingInvariantSegments).toValueEmitters(true, sourceInfo), sourceInfo);
+                path.subPath(0, leadingInvariantSegments).toValueEmitters(sourceInfo),
+                sourceInfo);
         }
     }
 
@@ -119,7 +120,10 @@ public class EmitObservablePathNode
 
     @Override
     public boolean isNullable() {
-        return !useCompiledPath && invariantPath.isNullable();
+        return !useCompiledPath
+            && invariantPath != null
+            && invariantPath.isNullable()
+            && leadingValueWrapper == null;
     }
 
     @Override

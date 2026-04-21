@@ -8,9 +8,11 @@ import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ReadOnlyBooleanProperty;
+import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.property.StringProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
@@ -138,6 +140,20 @@ public class BindingPathTest extends CompilerTestBase {
         public static void reset() {
             context = new TestContext();
         }
+    }
+
+    @SuppressWarnings("unused")
+    public static class NullWrapperContext {
+        public StringProperty textProperty() {
+            return null;
+        }
+
+        public StringProperty fieldText = new SimpleStringProperty("field");
+    }
+
+    @SuppressWarnings("unused")
+    public static class NullWrapperPane extends Pane {
+        public final NullWrapperContext nullWrapperContext = new NullWrapperContext();
     }
 
     private WeakReference<Pane> createUnidirectionalGcTarget() {
@@ -434,13 +450,24 @@ public class BindingPathTest extends CompilerTestBase {
     }
 
     @Test
-    public void Bind_Once_To_Invariant_Null_Context_Throws_NPE() {
-        NullPointerException ex = assertThrows(NullPointerException.class, () -> compileAndRun("""
+    public void Bind_Once_To_Invariant_Null_Context_Returns_Default_Value() {
+        TestPane root = compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                       managed="$nullContext.boolVal"/>
+        """);
+
+        assertFalse(root.managedProperty().isBound());
+        assertFalse(root.isManaged());
+    }
+
+    @Test
+    public void Bind_Once_To_Null_Observable_Wrapper_Throws_NPE() {
+        NullPointerException ex = assertThrows(NullPointerException.class, () -> compileAndRun("""
+            <NullWrapperPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                             id="$nullWrapperContext.text"/>
         """));
 
-        assertEquals("nullContext", ex.getMessage());
+        assertEquals("textProperty", ex.getMessage());
     }
 
     @Test
@@ -656,13 +683,24 @@ public class BindingPathTest extends CompilerTestBase {
     }
 
     @Test
-    public void Bind_Unidirectional_To_Invariant_Null_Context_Throws_NPE() {
-        NullPointerException ex = assertThrows(NullPointerException.class, () -> compileAndRun("""
+    public void Bind_Unidirectional_To_Invariant_Null_Context_Returns_Default_Value() {
+        TestPane root = compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                       managed="${nullContext.boolVal}"/>
+        """);
+
+        assertTrue(root.managedProperty().isBound());
+        assertFalse(root.isManaged());
+    }
+
+    @Test
+    public void Bind_Unidirectional_To_Null_Observable_Wrapper_Throws_NPE() {
+        NullPointerException ex = assertThrows(NullPointerException.class, () -> compileAndRun("""
+            <NullWrapperPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                             id="${nullWrapperContext.text}"/>
         """));
 
-        assertEquals("nullContext", ex.getMessage());
+        assertEquals("textProperty", ex.getMessage());
     }
 
     @Test
@@ -998,13 +1036,14 @@ public class BindingPathTest extends CompilerTestBase {
     }
 
     @Test
-    public void Bind_Bidirectional_To_Invariant_Null_Context_Throws_NPE() {
-        NullPointerException ex = assertThrows(NullPointerException.class, () -> compileAndRun("""
+    public void Bind_Bidirectional_To_Invariant_Null_Context_Does_Not_Throw() {
+        TestPane root = compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                       managed="#{nullContext.boolVal}"/>
-        """));
+        """);
 
-        assertEquals("nullContext", ex.getMessage());
+        assertFalse(root.managedProperty().isBound());
+        assertTrue(root.isManaged());
     }
 
     @Test
