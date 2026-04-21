@@ -14,8 +14,8 @@ different type. In the following example, the `String.format` method is used to 
 ```
 
 If the method or constructor is used in a [`{fx:Observe}`](../../reference/observe.html) or
-[`{fx:Synchronize}`](../../reference/synchronize.html) expression, and it has observable arguments,
-then the method will be re-evaluated whenever an observable argument changes.
+[`{fx:Synchronize}`](../../reference/synchronize.html) expression, and it has an observable receiver
+or observable arguments, then the method will be re-evaluated whenever an observable argument changes.
 
 ## Applicability
 Methods and constructors in binding expressions can be used with the following markup extensions:
@@ -23,9 +23,9 @@ Methods and constructors in binding expressions can be used with the following m
 | Markup extension | Applicable |
 |:-|:-|
 | [`fx:Evaluate`](../reference/evaluate.html) | yes |
-| [`fx:Observe`](../reference/observe.html) | yes |
+| [`fx:Observe`](../reference/observe.html) | yes, if the function expression depends on at least one observable receiver or argument |
 | [`fx:Push`](../reference/push.html) | no |
-| [`fx:Synchronize`](../reference/synchronize.html) | yes |
+| [`fx:Synchronize`](../reference/synchronize.html) | yes, if the function expression is invertible |
 
 ## Method path
 The method path is resolved against the [evaluation context](context.html) like other expressions, optionally including
