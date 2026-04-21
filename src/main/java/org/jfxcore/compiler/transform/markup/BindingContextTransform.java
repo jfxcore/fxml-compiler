@@ -47,7 +47,7 @@ public class BindingContextTransform implements Transform {
                 createField.apply(emitter.getType()),
                 emitter.getType(),
                 emitter.getValueType(),
-                emitter.getObservableType(),
+                emitter.getValueSourceType(),
                 emitter.getValue(),
                 bindingNode.getSourceInfo());
 

@@ -142,7 +142,10 @@ public class EmitObservableFunctionNode
 
         if (!AccessVerifier.isNestedAccessible(behavior, invocationContext)) {
             if (receiver.size() == 1 && equalsInvocationContext(receiver.get(0))) {
-                function = new Callable(function.getInvocationContext(), receiver, emitBridgeMethod(behavior), sourceInfo);
+                function = new Callable(
+                    function.getInvocationContext(), receiver,
+                    function.getReceiverDependencyKind(),
+                    emitBridgeMethod(behavior), sourceInfo);
             } else {
                 AccessVerifier.verifyNestedAccessible(behavior, invocationContext, sourceInfo);
             }

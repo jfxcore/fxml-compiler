@@ -75,6 +75,13 @@ public class ListBindingTest extends CompilerTestBase {
         public ObservableList<String> getTargetObservableList() { return targetObservableList; }
     }
 
+    @SuppressWarnings("unused")
+    public static class NullObservableListTestPane extends ListTestPane {
+        public NullObservableListTestPane() {
+            obsList = null;
+        }
+    }
+
     private static String PUSH_LISTENER;
     private static String OBSERVABLE_VALUE_WRAPPER;
     private static String RESEATABLE_SOURCE_WRAPPER;
@@ -452,6 +459,33 @@ public class ListBindingTest extends CompilerTestBase {
 
         assertEquals(ErrorCode.INVALID_UNIDIRECTIONAL_BINDING_SOURCE, ex.getDiagnostic().getCode());
         assertCodeHighlight("obsList", ex);
+    }
+
+    @Test
+    public void Unidirectional_Binding_To_ObservableList_Size_Reevaluates_On_Content_Change() {
+        ListTestPane root = compileAndRun("""
+            <ListTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                          prefWidth="${obsList.size}"/>
+        """);
+
+        assertMethodCall(root, "requireNonNull");
+        assertEquals(3, root.getPrefWidth(), 0.001);
+
+        root.obsList.clear();
+        assertEquals(0, root.getPrefWidth(), 0.001);
+
+        root.obsList.addAll("foo", "bar");
+        assertEquals(2, root.getPrefWidth(), 0.001);
+    }
+
+    @Test
+    public void Unidirectional_Binding_To_Null_ObservableList_Size_Throws_NPE() {
+        NullPointerException ex = assertThrows(NullPointerException.class, () -> compileAndRun("""
+            <NullObservableListTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                                        prefWidth="${obsList.size}"/>
+        """));
+
+        assertEquals("obsList", ex.getMessage());
     }
 
     /*

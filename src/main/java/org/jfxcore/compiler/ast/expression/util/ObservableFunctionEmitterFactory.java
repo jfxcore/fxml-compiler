@@ -5,6 +5,8 @@ package org.jfxcore.compiler.ast.expression.util;
 
 import org.jetbrains.annotations.Nullable;
 import org.jfxcore.compiler.ast.BindingMode;
+import org.jfxcore.compiler.ast.ObservableDependencyKind;
+import org.jfxcore.compiler.ast.ValueSourceKind;
 import org.jfxcore.compiler.ast.emit.EmitObservableFunctionNode;
 import org.jfxcore.compiler.ast.emit.ValueEmitterNode;
 import org.jfxcore.compiler.ast.expression.BindingEmitterInfo;
@@ -63,6 +65,8 @@ public class ObservableFunctionEmitterFactory
             value,
             valueType,
             TypeHelper.getTypeInstance(value),
+            ValueSourceKind.get(TypeHelper.getTypeDeclaration(value)),
+            ObservableDependencyKind.get(TypeHelper.getTypeDeclaration(value)),
             invocationInfo.function().getBehavior().declaringType(),
             invocationInfo.function().getBehavior().name(),
             true,

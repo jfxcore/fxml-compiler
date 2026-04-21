@@ -3,16 +3,17 @@
 
 package org.jfxcore.compiler.ast.expression.path;
 
+import org.jfxcore.compiler.ast.ObservableDependencyKind;
+import org.jfxcore.compiler.ast.ValueSourceKind;
 import org.jfxcore.compiler.ast.emit.EmitLoadLocalNode;
 import org.jfxcore.compiler.ast.emit.ValueEmitterNode;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.type.TypeInstance;
-import org.jfxcore.compiler.util.ObservableKind;
 
 public class ParamSegment extends Segment {
 
     public ParamSegment(TypeInstance valueType) {
-        super("<param>", "<param>", valueType, valueType, ObservableKind.NONE);
+        super("<param>", "<param>", valueType, valueType, ValueSourceKind.NONE, ObservableDependencyKind.NONE);
     }
 
 

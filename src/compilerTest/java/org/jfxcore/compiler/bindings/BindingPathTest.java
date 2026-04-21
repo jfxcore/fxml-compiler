@@ -25,6 +25,7 @@ import org.jfxcore.compiler.util.CompilerTestBase;
 import org.jfxcore.compiler.util.TestExtension;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -128,6 +129,41 @@ public class BindingPathTest extends CompilerTestBase {
         public record NestedClass(String value) {
             public static final NestedClass INSTANCE = new NestedClass("testValue");
         }
+    }
+
+    @SuppressWarnings("unused")
+    public static class GcSourceHolder {
+        public static TestContext context = new TestContext();
+
+        public static void reset() {
+            context = new TestContext();
+        }
+    }
+
+    private WeakReference<Pane> createUnidirectionalGcTarget() {
+        Pane root = compileAndRun("""
+            <?import javafx.scene.layout.*?>
+            <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                  prefWidth="${GcSourceHolder.context.doubleVal}"/>
+        """);
+
+        assertTrue(root.prefWidthProperty().isBound());
+        assertEquals(123.0, root.getPrefWidth(), 0.001);
+        return new WeakReference<>(root);
+    }
+
+    private WeakReference<Pane> createBidirectionalGcTarget(TestContext source) {
+        Pane root = compileAndRun("""
+            <?import javafx.scene.layout.*?>
+            <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                  prefWidth="#{GcSourceHolder.context.doubleVal}"/>
+        """);
+
+        assertFalse(root.prefWidthProperty().isBound());
+        assertEquals(123.0, root.getPrefWidth(), 0.001);
+        source.doubleValProperty().set(234);
+        assertEquals(234.0, root.getPrefWidth(), 0.001);
+        return new WeakReference<>(root);
     }
 
     @Test
@@ -521,6 +557,48 @@ public class BindingPathTest extends CompilerTestBase {
     }
 
     @Test
+    public void Bind_Unidirectional_To_Observable_Properties_Survives_GC_And_Context_Reseat() {
+        TestPane root = compileAndRun("""
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                      prefWidth="${context.doubleVal}"/>
+        """);
+
+        assertTrue(root.prefWidthProperty().isBound());
+        assertEquals(123.0, root.getPrefWidth(), 0.001);
+
+        for (int i = 0; i < 5; ++i) {
+            gc();
+        }
+
+        root.contextProperty().get().doubleValProperty().set(0);
+        assertEquals(0.0, root.getPrefWidth(), 0.001);
+
+        TestContext newCtx = new TestContext();
+        newCtx.doubleValProperty().set(5);
+        root.contextProperty().set(newCtx);
+        assertEquals(5.0, root.getPrefWidth(), 0.001);
+
+        for (int i = 0; i < 5; ++i) {
+            gc();
+        }
+
+        newCtx.doubleValProperty().set(6);
+        assertEquals(6.0, root.getPrefWidth(), 0.001);
+    }
+
+    @Test
+    public void Bind_Unidirectional_To_Observable_Properties_Does_Not_Keep_Target_Alive() {
+        GcSourceHolder.reset();
+        TestContext source = GcSourceHolder.context;
+        WeakReference<Pane> ref = createUnidirectionalGcTarget();
+
+        assertGarbageCollected(ref);
+
+        source.doubleValProperty().set(456);
+        assertNull(ref.get());
+    }
+
+    @Test
     public void Bind_Unidirectional_To_Observable_And_Invariant_Properties() {
         TestPane root = compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
@@ -839,6 +917,54 @@ public class BindingPathTest extends CompilerTestBase {
         assertFalse(root.isManaged());
         root.setManaged(true);
         assertTrue(ctx.boolVal.get());
+    }
+
+    @Test
+    public void Bind_Bidirectional_To_Observable_Properties_Survives_GC_And_Path_Changes() {
+        TestPane root = compileAndRun("""
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                      prefWidth="#{context.doubleVal}"/>
+        """);
+
+        assertFalse(root.prefWidthProperty().isBound());
+        assertEquals(123.0, root.getPrefWidth(), 0.001);
+
+        for (int i = 0; i < 5; ++i) {
+            gc();
+        }
+
+        root.contextProperty().get().doubleValProperty().set(2);
+        assertEquals(2.0, root.getPrefWidth(), 0.001);
+
+        root.setPrefWidth(3);
+        assertEquals(3.0, root.contextProperty().get().doubleValProperty().get(), 0.001);
+
+        TestContext newContext = new TestContext();
+        newContext.doubleValProperty().set(4);
+        root.contextProperty().set(newContext);
+        assertEquals(4.0, root.getPrefWidth(), 0.001);
+
+        for (int i = 0; i < 5; ++i) {
+            gc();
+        }
+
+        root.setPrefWidth(5);
+        assertEquals(5.0, newContext.doubleValProperty().get(), 0.001);
+
+        newContext.doubleValProperty().set(6);
+        assertEquals(6.0, root.getPrefWidth(), 0.001);
+    }
+
+    @Test
+    public void Bind_Bidirectional_To_Observable_Properties_Does_Not_Keep_Target_Alive() {
+        GcSourceHolder.reset();
+        TestContext source = GcSourceHolder.context;
+        WeakReference<Pane> ref = createBidirectionalGcTarget(source);
+
+        assertGarbageCollected(ref);
+
+        source.doubleValProperty().set(456);
+        assertNull(ref.get());
     }
 
     @Test

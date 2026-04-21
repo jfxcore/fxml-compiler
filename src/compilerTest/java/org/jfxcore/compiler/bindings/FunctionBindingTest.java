@@ -28,6 +28,7 @@ import org.jfxcore.compiler.util.TestExtension;
 import org.jfxcore.markup.InverseMethod;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import java.lang.ref.WeakReference;
 import java.text.DecimalFormat;
 import java.util.Locale;
 
@@ -95,6 +96,10 @@ public class FunctionBindingTest extends CompilerTestBase {
             return value;
         }
 
+        public int listSize(ObservableList<?> value) {
+            return value.size();
+        }
+
         private final ObjectProperty<Stringifier> objProp = new SimpleObjectProperty<>();
         public ObjectProperty<Stringifier> objPropProperty() {
             return objProp;
@@ -102,6 +107,12 @@ public class FunctionBindingTest extends CompilerTestBase {
 
         public final ListProperty<String> listProp = new SimpleListProperty<>(
             FXCollections.observableArrayList("foo", "bar", "baz"));
+
+        public final ObjectProperty<ObservableList<String>> itemsProp =
+            new SimpleObjectProperty<>(FXCollections.observableArrayList("foo", "bar", "baz"));
+
+        public final ObjectProperty<ObservableList<Integer>> indexesProp =
+            new SimpleObjectProperty<>(FXCollections.observableArrayList(1, 2));
 
         public final Container1 c1 = new Container1(new Container2(new DecimalFormat("000")));
         public record Container1(Container2 c2) {}
@@ -139,6 +150,53 @@ public class FunctionBindingTest extends CompilerTestBase {
         }
 
         public double invariantDoubleVal = 234;
+    }
+
+    @SuppressWarnings("unused")
+    public static class GcSourceHolder {
+        public static DoubleProperty doubleProp = new SimpleDoubleProperty(1);
+        public static ObjectProperty<BidirectionalIndirect> observableIndirect =
+            new SimpleObjectProperty<>(new BidirectionalIndirect());
+
+        @InverseMethod("stringToDouble")
+        public static String doubleToString(double value) {
+            return Double.toString(value);
+        }
+
+        public static double stringToDouble(String value) {
+            return value != null ? Double.parseDouble(value) : 0;
+        }
+
+        public static void reset() {
+            doubleProp = new SimpleDoubleProperty(1);
+            observableIndirect = new SimpleObjectProperty<>(new BidirectionalIndirect());
+        }
+    }
+
+    private WeakReference<Pane> createUnidirectionalGcTarget() {
+        Pane root = compileAndRun("""
+            <?import javafx.scene.layout.*?>
+            <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                  id="${String.format('foo-%s', GcSourceHolder.doubleProp)}"/>
+        """);
+
+        assertTrue(root.idProperty().isBound());
+        assertEquals("foo-1.0", root.getId());
+        return new WeakReference<>(root);
+    }
+
+    private WeakReference<Pane> createBidirectionalGcTarget(ObjectProperty<BidirectionalIndirect> source) {
+        Pane root = compileAndRun("""
+            <?import javafx.scene.layout.*?>
+            <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                  id="#{GcSourceHolder.doubleToString(GcSourceHolder.observableIndirect.doubleProp)}"/>
+        """);
+
+        assertFalse(root.idProperty().isBound());
+        assertEquals("1.0", root.getId());
+        source.get().doubleProp.set(2);
+        assertEquals("2.0", root.getId());
+        return new WeakReference<>(root);
     }
 
     @SuppressWarnings("unused")
@@ -662,6 +720,44 @@ public class FunctionBindingTest extends CompilerTestBase {
     }
 
     @Test
+    public void Bind_Unidirectional_To_Static_Method_With_Observable_Param_Survives_GC() {
+        TestPane root = compileAndRun( """
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                      id="${String.format('foo-%s', doubleProp)}"/>
+        """);
+
+        assertNewFunctionExpr(root, 1);
+        assertTrue(root.idProperty().isBound());
+        assertEquals("foo-1.0", root.getId());
+
+        for (int i = 0; i < 5; ++i) {
+            gc();
+        }
+
+        root.doubleProp.set(2);
+        assertEquals("foo-2.0", root.getId());
+
+        for (int i = 0; i < 5; ++i) {
+            gc();
+        }
+
+        root.doubleProp.set(3);
+        assertEquals("foo-3.0", root.getId());
+    }
+
+    @Test
+    public void Bind_Unidirectional_To_Static_Method_With_Observable_Param_Does_Not_Keep_Target_Alive() {
+        GcSourceHolder.reset();
+        DoubleProperty source = GcSourceHolder.doubleProp;
+        WeakReference<Pane> ref = createUnidirectionalGcTarget();
+
+        assertGarbageCollected(ref);
+
+        source.set(2);
+        assertNull(ref.get());
+    }
+
+    @Test
     public void Bind_Unidirectional_To_Static_Method_With_Multiple_Observable_Params() {
         TestPane root = compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
@@ -1037,6 +1133,53 @@ public class FunctionBindingTest extends CompilerTestBase {
 
         root.selectedIndex.set(1);
         assertEquals("baz", root.getId());
+
+        root.selectedIndex.set(0);
+        root.getIndexes().set(0, 2);
+        assertEquals("baz", root.getId());
+
+        root.getItems().set(2, "qux");
+        assertEquals("qux", root.getId());
+    }
+
+    @Test
+    public void Bind_Unidirectional_To_Method_With_List_Argument_Reevaluates_On_Content_Change() {
+        TestPane root = compileAndRun("""
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                      prefWidth="${listSize(items)}"/>
+        """);
+
+        assertNewFunctionExpr(root, 1);
+        assertTrue(root.prefWidthProperty().isBound());
+        assertEquals(3, root.getPrefWidth());
+
+        root.getItems().add("qux");
+        assertEquals(4, root.getPrefWidth());
+
+        root.getItems().remove(0);
+        assertEquals(3, root.getPrefWidth());
+    }
+
+    @Test
+    public void Bind_Unidirectional_To_Method_With_Observable_List_Argument_Reevaluates_On_Content_Change_And_Replacement() {
+        TestPane root = compileAndRun("""
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                      prefWidth="${listSize(itemsProp)}"/>
+        """);
+
+        assertNewFunctionExpr(root, 1);
+        assertTrue(root.prefWidthProperty().isBound());
+        assertEquals(3, root.getPrefWidth());
+
+        root.itemsProp.get().add("qux");
+        assertEquals(4, root.getPrefWidth());
+
+        ObservableList<String> newItems = FXCollections.observableArrayList("one", "two");
+        root.itemsProp.set(newItems);
+        assertEquals(2, root.getPrefWidth());
+
+        newItems.remove(0);
+        assertEquals(1, root.getPrefWidth());
     }
 
     @Test
@@ -1052,6 +1195,64 @@ public class FunctionBindingTest extends CompilerTestBase {
 
         root.selectedIndex.set(2);
         assertEquals("baz", root.getId());
+    }
+
+    @Test
+    public void Bind_Unidirectional_To_List_Get_With_Observable_List_Receiver_Reevaluates_On_Content_Change_And_Replacement() {
+        TestPane root = compileAndRun("""
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                      id="${itemsProp.get(selectedIndex)}"/>
+        """);
+
+        assertNewFunctionExpr(root, 1);
+        assertTrue(root.idProperty().isBound());
+        assertEquals("foo", root.getId());
+
+        root.itemsProp.get().set(0, "qux");
+        assertEquals("qux", root.getId());
+
+        root.selectedIndex.set(1);
+        assertEquals("bar", root.getId());
+
+        ObservableList<String> newItems = FXCollections.observableArrayList("one", "two");
+        root.itemsProp.set(newItems);
+        assertEquals("two", root.getId());
+
+        newItems.set(1, "deux");
+        assertEquals("deux", root.getId());
+    }
+
+    @Test
+    public void Bind_Unidirectional_To_List_Get_With_Observable_List_Receiver_Survives_GC() {
+        TestPane root = compileAndRun("""
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                      id="${itemsProp.get(selectedIndex)}"/>
+        """);
+
+        assertNewFunctionExpr(root, 1);
+        assertTrue(root.idProperty().isBound());
+        assertEquals("foo", root.getId());
+
+        for (int i = 0; i < 5; ++i) {
+            gc();
+        }
+
+        root.itemsProp.get().set(0, "qux");
+        assertEquals("qux", root.getId());
+
+        ObservableList<String> newItems = FXCollections.observableArrayList("one", "two");
+        root.itemsProp.set(newItems);
+        assertEquals("one", root.getId());
+
+        for (int i = 0; i < 5; ++i) {
+            gc();
+        }
+
+        root.selectedIndex.set(1);
+        assertEquals("two", root.getId());
+
+        newItems.set(1, "deux");
+        assertEquals("deux", root.getId());
     }
 
     @Test
@@ -1286,6 +1487,53 @@ public class FunctionBindingTest extends CompilerTestBase {
         newIndirect.doubleProp.set(2);
         root.observableIndirect.set(newIndirect);
         assertEquals("2.0", root.getId());
+    }
+
+    @Test
+    public void Bind_Bidirectional_To_ObservableIndirect_DoubleProperty_Survives_GC() {
+        BidirectionalTestPane root = compileAndRun("""
+            <BidirectionalTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                                   id="#{doubleToString(observableIndirect.doubleProp)}"/>
+        """);
+
+        assertNewFunctionExpr(root, 1);
+        assertEquals("1.0", root.getId());
+
+        for (int i = 0; i < 5; ++i) {
+            gc();
+        }
+
+        root.observableIndirect.get().doubleProp.set(2);
+        assertEquals("2.0", root.getId());
+
+        var newIndirect = new BidirectionalIndirect();
+        newIndirect.doubleProp.set(3);
+        root.observableIndirect.set(newIndirect);
+        assertEquals("3.0", root.getId());
+
+        for (int i = 0; i < 5; ++i) {
+            gc();
+        }
+
+        root.setId("4.0");
+        assertEquals(4.0, newIndirect.doubleProp.get(), 0.001);
+    }
+
+    @Test
+    public void Bind_Bidirectional_To_ObservableIndirect_DoubleProperty_Does_Not_Keep_Target_Alive() {
+        GcSourceHolder.reset();
+        ObjectProperty<BidirectionalIndirect> source = GcSourceHolder.observableIndirect;
+        WeakReference<Pane> ref = createBidirectionalGcTarget(source);
+
+        assertGarbageCollected(ref);
+
+        source.get().doubleProp.set(3);
+        assertNull(ref.get());
+
+        BidirectionalIndirect newIndirect = new BidirectionalIndirect();
+        newIndirect.doubleProp.set(4);
+        source.set(newIndirect);
+        assertNull(ref.get());
     }
 
     @Test

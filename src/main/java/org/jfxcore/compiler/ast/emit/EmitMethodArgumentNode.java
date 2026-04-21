@@ -4,6 +4,7 @@
 package org.jfxcore.compiler.ast.emit;
 
 import org.jfxcore.compiler.ast.AbstractNode;
+import org.jfxcore.compiler.ast.ObservableDependencyKind;
 import org.jfxcore.compiler.ast.ResolvedTypeNode;
 import org.jfxcore.compiler.ast.Visitor;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
@@ -25,16 +26,17 @@ public class EmitMethodArgumentNode extends AbstractNode implements ValueEmitter
 
     private final ResolvedTypeNode type;
     private final List<ValueEmitterNode> children;
+    private final List<ObservableDependencyKind> dependencies;
     private final boolean varargs;
     private final boolean observable;
 
     public static EmitMethodArgumentNode newScalar(
             TypeInstance type,
             ValueEmitterNode node,
-            boolean observable,
+            ObservableDependencyKind dependencyKind,
             SourceInfo sourceInfo) {
         return new EmitMethodArgumentNode(
-            new ResolvedTypeNode(type, sourceInfo), List.of(node), false, observable, sourceInfo);
+            new ResolvedTypeNode(type, sourceInfo), List.of(node), List.of(dependencyKind), false, sourceInfo);
     }
 
     public static EmitMethodArgumentNode newVariadic(
@@ -46,22 +48,25 @@ public class EmitMethodArgumentNode extends AbstractNode implements ValueEmitter
             children.stream()
                 .flatMap(n -> n.children.stream())
                 .collect(Collectors.toCollection(ArrayList::new)),
+            children.stream()
+                .flatMap(n -> n.dependencies.stream())
+                .collect(Collectors.toCollection(ArrayList::new)),
             true,
-            children.stream().anyMatch(EmitMethodArgumentNode::isObservable),
             sourceInfo);
     }
 
     private EmitMethodArgumentNode(
             ResolvedTypeNode type,
             Collection<? extends ValueEmitterNode> children,
+            Collection<ObservableDependencyKind> dependencies,
             boolean varargs,
-            boolean observable,
             SourceInfo sourceInfo) {
         super(sourceInfo);
         this.type = type;
         this.children = new ArrayList<>(children);
+        this.dependencies = new ArrayList<>(dependencies);
         this.varargs = varargs;
-        this.observable = observable;
+        this.observable = this.dependencies.stream().anyMatch(kind -> kind != ObservableDependencyKind.NONE);
     }
 
     @Override
@@ -79,6 +84,10 @@ public class EmitMethodArgumentNode extends AbstractNode implements ValueEmitter
 
     public boolean isObservable() {
         return observable;
+    }
+
+    public ObservableDependencyKind getObservableDependencyKind(int childIndex) {
+        return dependencies.get(childIndex);
     }
 
     @Override
@@ -113,7 +122,7 @@ public class EmitMethodArgumentNode extends AbstractNode implements ValueEmitter
     @Override
     public EmitMethodArgumentNode deepClone() {
         return new EmitMethodArgumentNode(
-            type.deepClone(), deepClone(children), varargs, observable, getSourceInfo()).copy(this);
+            type.deepClone(), deepClone(children), dependencies, varargs, getSourceInfo()).copy(this);
     }
 
     @Override
@@ -124,11 +133,12 @@ public class EmitMethodArgumentNode extends AbstractNode implements ValueEmitter
         return varargs == that.varargs &&
             observable == that.observable &&
             type.equals(that.type) &&
+            dependencies.equals(that.dependencies) &&
             children.equals(that.children);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(type, children, varargs, observable);
+        return Objects.hash(type, children, dependencies, varargs, observable);
     }
 }

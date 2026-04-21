@@ -5,7 +5,9 @@ package org.jfxcore.compiler.ast.expression;
 
 import org.jetbrains.annotations.Nullable;
 import org.jfxcore.compiler.ast.AbstractNode;
+import org.jfxcore.compiler.ast.ObservableDependencyKind;
 import org.jfxcore.compiler.ast.ResolvedTypeNode;
+import org.jfxcore.compiler.ast.ValueSourceKind;
 import org.jfxcore.compiler.ast.Visitor;
 import org.jfxcore.compiler.ast.expression.path.NopSegment;
 import org.jfxcore.compiler.ast.expression.path.ParamSegment;
@@ -17,16 +19,14 @@ import org.jfxcore.compiler.type.FieldDeclaration;
 import org.jfxcore.compiler.type.TypeInstance;
 import java.util.Objects;
 
-import static org.jfxcore.compiler.util.ObservableKind.*;
-
 public class BindingContextNode extends AbstractNode {
 
     private final BindingContextSelector selector;
-    private final int bindingDistance;
     private final FieldDeclaration contextField;
     private final TypeInstance type;
     private final TypeInstance valueType;
     private final TypeInstance observableType;
+    private final int bindingDistance;
     private ResolvedTypeNode typeNode;
 
     public BindingContextNode(
@@ -77,11 +77,15 @@ public class BindingContextNode extends AbstractNode {
     public Segment toSegment() {
         return switch (selector) {
             case STATIC -> new NopSegment(type);
-            case CONTEXT -> new RootSegment(type, valueType, observableType != null ? FX_OBSERVABLE : NONE, contextField);
-            case ROOT -> new RootSegment(type, type, NONE, null);
+            case ROOT -> new RootSegment(type, type, ValueSourceKind.NONE, ObservableDependencyKind.NONE, null);
             case SELF -> new ParentSegment(type, 0);
             case PARENT -> new ParentSegment(type, bindingDistance);
             case TEMPLATED_ITEM -> new ParamSegment(type);
+            case CONTEXT -> new RootSegment(
+                type, valueType,
+                observableType != null ? ValueSourceKind.READONLY : ValueSourceKind.NONE,
+                observableType != null ? ObservableDependencyKind.VALUE : ObservableDependencyKind.NONE,
+                contextField);
         };
     }
 
@@ -112,8 +116,6 @@ public class BindingContextNode extends AbstractNode {
 
     @Override
     public int hashCode() {
-        return Objects.hash(
-            selector, bindingDistance, contextField, type, valueType, observableType);
+        return Objects.hash(selector, bindingDistance, contextField, type, valueType, observableType);
     }
-
 }

@@ -3,18 +3,19 @@
 
 package org.jfxcore.compiler.ast.expression.path;
 
+import org.jfxcore.compiler.ast.ObservableDependencyKind;
+import org.jfxcore.compiler.ast.ValueSourceKind;
 import org.jfxcore.compiler.ast.emit.EmitGetParentNode;
 import org.jfxcore.compiler.ast.emit.ValueEmitterNode;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.type.TypeInstance;
-import org.jfxcore.compiler.util.ObservableKind;
 
 public class ParentSegment extends Segment {
 
     private final int parentIndex;
 
     public ParentSegment(TypeInstance type, int parentIndex) {
-        super("<parent>", "<parent>", type, type, ObservableKind.NONE);
+        super("<parent>", "<parent>", type, type, ValueSourceKind.NONE, ObservableDependencyKind.NONE);
         this.parentIndex = parentIndex;
     }
 

@@ -3,16 +3,18 @@
 
 package org.jfxcore.compiler.generate;
 
+import org.jfxcore.compiler.ast.ObservableDependencyKind;
+import org.jfxcore.compiler.ast.ValueSourceKind;
 import org.jfxcore.compiler.ast.emit.BytecodeEmitContext;
 import org.jfxcore.compiler.ast.expression.path.FoldedGroup;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.type.ConstructorDeclaration;
+import org.jfxcore.compiler.type.FieldDeclaration;
 import org.jfxcore.compiler.type.MethodDeclaration;
 import org.jfxcore.compiler.type.TypeDeclaration;
 import org.jfxcore.compiler.util.Bytecode;
 import org.jfxcore.compiler.util.Label;
 import org.jfxcore.compiler.util.Local;
-import org.jfxcore.compiler.util.ObservableKind;
 import java.lang.reflect.Modifier;
 
 import static org.jfxcore.compiler.type.KnownSymbols.*;
@@ -28,6 +30,8 @@ public class TailSegmentGenerator extends PropertySegmentGeneratorBase {
     private static final String CANNOT_SET_READONLY_PROPERTY =
         "Cannot change the value of a read-only property.";
 
+    private static final String SOURCE_WEAK_INVALIDATION_LISTENER_FIELD = "sourceWeakInvalidationListener";
+    private static final String SOURCE_WEAK_CHANGE_LISTENER_FIELD = "sourceWeakChangeListener";
     private static final String INVALIDATION_LISTENER_FIELD = "invalidationListener";
     private static final String CHANGE_LISTENER_FIELD = "changeListener";
     private static final String OBSERVABLE_FIELD = "observable";
@@ -43,7 +47,9 @@ public class TailSegmentGenerator extends PropertySegmentGeneratorBase {
     private MethodDeclaration validateMethod;
     private TypeDeclaration observableClass;
     private TypeDeclaration boxedValueClass;
+    private ObservableDependencyKind dependencyKind;
     private boolean hasInvariants;
+    private boolean rootSourceIsNonNull;
 
     public TailSegmentGenerator(SourceInfo sourceInfo, FoldedGroup[] groups) {
         super(sourceInfo, groups, groups.length - 1);
@@ -51,8 +57,10 @@ public class TailSegmentGenerator extends PropertySegmentGeneratorBase {
 
     @Override
     public TypeDeclaration emitClass(BytecodeEmitContext context) {
-        observableClass = groups[segment].getFirstPathSegment().getTypeInstance().declaration();
+        observableClass = groups[segment].getObservableDependencyType();
         boxedValueClass = groups[segment].getLastPathSegment().getValueTypeInstance().declaration().boxed();
+        dependencyKind = groups[segment].getObservableDependencyKind();
+        rootSourceIsNonNull = groups.length == 1 && !groups[segment].getFirstPathSegment().hasValueSource();
 
         return super.emitClass(context)
             .addInterface(InvalidationListenerDecl())
@@ -64,8 +72,15 @@ public class TailSegmentGenerator extends PropertySegmentGeneratorBase {
         createField(INVALIDATION_LISTENER_FIELD, InvalidationListenerDecl()).setModifiers(Modifier.PRIVATE);
         createField(CHANGE_LISTENER_FIELD, ChangeListenerDecl()).setModifiers(Modifier.PRIVATE);
         createField(OBSERVABLE_FIELD, observableClass).setModifiers(Modifier.PRIVATE);
+        createField(SOURCE_WEAK_INVALIDATION_LISTENER_FIELD, WeakInvalidationListenerDecl())
+            .setModifiers(Modifier.PRIVATE);
 
-        hasInvariants = groups[segment].getPath().length > 1;
+        if (dependencyKind != ObservableDependencyKind.CONTENT) {
+            createField(SOURCE_WEAK_CHANGE_LISTENER_FIELD, WeakChangeListenerDecl())
+                .setModifiers(Modifier.PRIVATE);
+        }
+
+        hasInvariants = groups[segment].getPath().length > 1 || dependencyKind == ObservableDependencyKind.CONTENT;
 
         if (hasInvariants) {
             createField(FLAGS_FIELD, intDecl()).setModifiers(Modifier.PRIVATE);
@@ -150,22 +165,18 @@ public class TailSegmentGenerator extends PropertySegmentGeneratorBase {
                 .aload(0)
                 .aload(1)
                 .putfield(requireDeclaredField(OBSERVABLE_FIELD));
-        } else {
-            // $1.addListener(this);
-            code.aload(0)
-                .invoke(requireSuperClass().requireDeclaredConstructor())
-                .aload(1)
-                .aload(0)
-                .invoke(ObservableValueDecl().requireDeclaredMethod("addListener", ChangeListenerDecl()));
         }
 
-        // this.value = getValue();
-        code.aload(0)
-            .aload(0)
-            .invoke(ObservableValueDecl().requireDeclaredMethod("getValue"))
-            .checkcast(boxedValueClass)
-            .putfield(requireDeclaredField(VALUE_FIELD))
-            .vreturn();
+        if (hasInvariants) {
+            // this.value = getValue();
+            code.aload(0)
+                .aload(0)
+                .invoke(ObservableValueDecl().requireDeclaredMethod("getValue"))
+                .checkcast(boxedValueClass)
+                .putfield(requireDeclaredField(VALUE_FIELD));
+        }
+
+        code.vreturn();
 
         constructor.setCode(code);
     }
@@ -230,7 +241,7 @@ public class TailSegmentGenerator extends PropertySegmentGeneratorBase {
     private void emitSetValueMethod(MethodDeclaration method) {
         Bytecode code = new Bytecode(method);
 
-        if (groups[segment].getLastPathSegment().getObservableKind() == ObservableKind.NONE
+        if (groups[segment].getLastPathSegment().getValueSourceKind() == ValueSourceKind.NONE
                 || !observableClass.subtypeOf(WritableValueDecl())) {
             code.anew(RuntimeExceptionDecl())
                 .dup()
@@ -296,7 +307,7 @@ public class TailSegmentGenerator extends PropertySegmentGeneratorBase {
     private void emitSetMethod(MethodDeclaration method) {
         Bytecode code = new Bytecode(method);
 
-        if (groups[segment].getLastPathSegment().getObservableKind() == ObservableKind.NONE
+        if (groups[segment].getLastPathSegment().getValueSourceKind() == ValueSourceKind.NONE
                 || !observableClass.subtypeOf(WritableValueDecl())) {
             code.anew(RuntimeExceptionDecl())
                 .dup()
@@ -338,7 +349,49 @@ public class TailSegmentGenerator extends PropertySegmentGeneratorBase {
     private void emitInvalidatedMethod(MethodDeclaration method) {
         Bytecode code = new Bytecode(method);
 
-        if (hasInvariants) {
+        if (dependencyKind == ObservableDependencyKind.CONTENT) {
+            Local oldValue = code.acquireLocal(false);
+
+            code.aload(0)
+                .getfield(requireDeclaredField(VALUE_FIELD))
+                .store(boxedValueClass, oldValue)
+                .aload(0)
+                .iconst(0)
+                .putfield(requireDeclaredField(FLAGS_FIELD));
+
+            code.aload(0)
+                .getfield(requireDeclaredField(CHANGE_LISTENER_FIELD))
+                .ifnonnull(() -> {
+                    if (valueClass.isPrimitive()) {
+                        code.aload(0)
+                            .iconst(1)
+                            .invoke(requireDeclaredMethod(VALIDATE_METHOD, booleanDecl()));
+                    } else {
+                        code.aload(0)
+                            .invoke(requireDeclaredMethod(VALIDATE_METHOD));
+                    }
+
+                    code.aload(0)
+                        .getfield(requireDeclaredField(CHANGE_LISTENER_FIELD))
+                        .aload(0)
+                        .aload(oldValue)
+                        .aload(0)
+                        .getfield(requireDeclaredField(VALUE_FIELD))
+                        .invoke(ChangeListenerDecl().requireDeclaredMethod(
+                                    "changed",ObservableValueDecl(), ObjectDecl(), ObjectDecl()));
+                });
+
+            code.aload(0)
+                .getfield(requireDeclaredField(INVALIDATION_LISTENER_FIELD))
+                .ifnonnull(() -> code
+                    .aload(0)
+                    .getfield(requireDeclaredField(INVALIDATION_LISTENER_FIELD))
+                    .aload(0)
+                    .invoke(InvalidationListenerDecl().requireDeclaredMethod("invalidated", ObservableDecl())))
+                .vreturn();
+
+            code.releaseLocal(oldValue);
+        } else if (hasInvariants) {
             code.aload(0)
                 .iconst(0)
                 .putfield(requireDeclaredField(FLAGS_FIELD));
@@ -356,9 +409,13 @@ public class TailSegmentGenerator extends PropertySegmentGeneratorBase {
     private void emitAddListenerMethod(MethodDeclaration method, boolean changeListenerIsTrue) {
         Bytecode code = new Bytecode(method);
         String fieldName = changeListenerIsTrue ? CHANGE_LISTENER_FIELD : INVALIDATION_LISTENER_FIELD;
-        MethodDeclaration listenerMethod = changeListenerIsTrue
-            ? ObservableValueDecl().requireDeclaredMethod("addListener", ChangeListenerDecl())
-            : ObservableDecl().requireDeclaredMethod("addListener", InvalidationListenerDecl());
+        MethodDeclaration listenerMethod = dependencyKind == ObservableDependencyKind.CONTENT
+            ? ObservableDecl().requireDeclaredMethod("addListener", InvalidationListenerDecl())
+            : changeListenerIsTrue
+                ? ObservableValueDecl().requireDeclaredMethod("addListener", ChangeListenerDecl())
+                : ObservableDecl().requireDeclaredMethod("addListener", InvalidationListenerDecl());
+
+        emitInitSourceListenerField(code, changeListenerIsTrue);
 
         // if (this.listener != null)
         code.aload(0)
@@ -372,21 +429,33 @@ public class TailSegmentGenerator extends PropertySegmentGeneratorBase {
                         .invoke(RuntimeExceptionDecl().requireDeclaredConstructor(StringDecl()))
                         .athrow(),
                 () -> {
-                    // if (this.observable != null)
-                    code.aload(0)
-                        .getfield(requireDeclaredField(OBSERVABLE_FIELD))
-                        .dup()
-                        .ifnonnull(() -> code
-                            // observable.addListener($1)
-                            .dup()
+                    if (rootSourceIsNonNull) {
+                        code.aload(0)
+                            .getfield(requireDeclaredField(OBSERVABLE_FIELD))
                             .aload(0)
-                            .invoke(listenerMethod))
+                            .getfield(getSourceListenerField(changeListenerIsTrue))
+                            .invoke(listenerMethod)
+                            .aload(0)
+                            .aload(1)
+                            .putfield(requireDeclaredField(fieldName));
+                    } else {
+                        // if (this.observable != null)
+                        code.aload(0)
+                            .getfield(requireDeclaredField(OBSERVABLE_FIELD))
+                            .dup()
+                            .ifnonnull(() -> code
+                                // observable.addListener(this.sourceWeak...Listener)
+                                .dup()
+                                .aload(0)
+                                .getfield(getSourceListenerField(changeListenerIsTrue))
+                                .invoke(listenerMethod))
 
-                        // this.listener = $1
-                        .pop()
-                        .aload(0)
-                        .aload(1)
-                        .putfield(requireDeclaredField(fieldName));
+                            // this.listener = $1
+                            .pop()
+                            .aload(0)
+                            .aload(1)
+                            .putfield(requireDeclaredField(fieldName));
+                    }
 
                     if (hasInvariants && changeListenerIsTrue) {
                         if (valueClass.isPrimitive()) {
@@ -410,9 +479,11 @@ public class TailSegmentGenerator extends PropertySegmentGeneratorBase {
     private void emitRemoveListenerMethod(MethodDeclaration method, boolean changeListenerIsTrue) {
         Bytecode code = new Bytecode(method);
         String fieldName = changeListenerIsTrue ? CHANGE_LISTENER_FIELD : INVALIDATION_LISTENER_FIELD;
-        MethodDeclaration listenerMethod = changeListenerIsTrue
-            ? ObservableValueDecl().requireDeclaredMethod("removeListener", ChangeListenerDecl())
-            : ObservableDecl().requireDeclaredMethod("removeListener", InvalidationListenerDecl());
+        MethodDeclaration listenerMethod = dependencyKind == ObservableDependencyKind.CONTENT
+            ? ObservableDecl().requireDeclaredMethod("removeListener", InvalidationListenerDecl())
+            : changeListenerIsTrue
+                ? ObservableValueDecl().requireDeclaredMethod("removeListener", ChangeListenerDecl())
+                : ObservableDecl().requireDeclaredMethod("removeListener", InvalidationListenerDecl());
 
         // if (listener != null...
         code.aload(0)
@@ -424,15 +495,26 @@ public class TailSegmentGenerator extends PropertySegmentGeneratorBase {
                 .aload(1)
                 .invoke(ObjectDecl().requireDeclaredMethod("equals", ObjectDecl()))
                 .ifne(() -> code
-                    // if (observable != null)
                     .aload(0)
-                    .getfield(requireDeclaredField(OBSERVABLE_FIELD))
-                    .ifnonnull(() -> code
-                        // observable.removeListener(this)
-                        .aload(0)
-                        .getfield(requireDeclaredField(OBSERVABLE_FIELD))
-                        .aload(0)
-                        .invoke(listenerMethod))
+                    .getfield(getSourceListenerField(changeListenerIsTrue))
+                    .ifnonnull(() -> {
+                        if (rootSourceIsNonNull) {
+                            code.aload(0)
+                                .getfield(requireDeclaredField(OBSERVABLE_FIELD))
+                                .aload(0)
+                                .getfield(getSourceListenerField(changeListenerIsTrue))
+                                .invoke(listenerMethod);
+                        } else {
+                            code.aload(0)
+                                .getfield(requireDeclaredField(OBSERVABLE_FIELD))
+                                .ifnonnull(() -> code
+                                    .aload(0)
+                                    .getfield(requireDeclaredField(OBSERVABLE_FIELD))
+                                    .aload(0)
+                                    .getfield(getSourceListenerField(changeListenerIsTrue))
+                                    .invoke(listenerMethod));
+                        }
+                    })
 
                     // listener = $1
                     .aload(0)
@@ -447,50 +529,97 @@ public class TailSegmentGenerator extends PropertySegmentGeneratorBase {
     private void emitUpdateMethod(MethodDeclaration method) {
         Bytecode code = new Bytecode(method);
 
-        // if (this.observable != null)
-        code.aload(0)
-            .getfield(requireDeclaredField(OBSERVABLE_FIELD))
-            .ifnonnull(() -> code
-                // if (this.invalidationListener != null)
-                .aload(0)
-                .getfield(requireDeclaredField(INVALIDATION_LISTENER_FIELD))
+        if (dependencyKind == ObservableDependencyKind.CONTENT) {
+            code.aload(0)
+                .getfield(requireDeclaredField(OBSERVABLE_FIELD))
                 .ifnonnull(() -> code
-                    // this.observable.removeListener((InvalidationListener)this)
                     .aload(0)
-                    .getfield(requireDeclaredField(OBSERVABLE_FIELD))
+                    .getfield(requireDeclaredField(INVALIDATION_LISTENER_FIELD))
+                    .ifnonnull(() -> code
+                        .aload(0)
+                        .getfield(requireDeclaredField(OBSERVABLE_FIELD))
+                        .aload(0)
+                        .getfield(requireDeclaredField(SOURCE_WEAK_INVALIDATION_LISTENER_FIELD))
+                        .invoke(ObservableDecl().requireDeclaredMethod("removeListener", InvalidationListenerDecl())))
                     .aload(0)
-                    .invoke(ObservableDecl().requireDeclaredMethod("removeListener", InvalidationListenerDecl())))
+                    .getfield(requireDeclaredField(CHANGE_LISTENER_FIELD))
+                    .ifnonnull(() -> code
+                        .aload(0)
+                        .getfield(requireDeclaredField(INVALIDATION_LISTENER_FIELD))
+                        .ifnull(() -> code
+                            .aload(0)
+                            .getfield(requireDeclaredField(OBSERVABLE_FIELD))
+                            .aload(0)
+                            .getfield(requireDeclaredField(SOURCE_WEAK_INVALIDATION_LISTENER_FIELD))
+                            .invoke(ObservableDecl().requireDeclaredMethod("removeListener", InvalidationListenerDecl())))));
 
-                // if (this.changeListener != null)
-                .aload(0)
-                .getfield(requireDeclaredField(CHANGE_LISTENER_FIELD))
+            code.aload(1)
                 .ifnonnull(() -> code
-                    // this.observable.removeListener((ChangeListener)this)
                     .aload(0)
-                    .getfield(requireDeclaredField(OBSERVABLE_FIELD))
+                    .getfield(requireDeclaredField(INVALIDATION_LISTENER_FIELD))
+                    .ifnonnull(() -> code
+                        .aload(1)
+                        .aload(0)
+                        .getfield(requireDeclaredField(SOURCE_WEAK_INVALIDATION_LISTENER_FIELD))
+                        .invoke(ObservableDecl().requireDeclaredMethod("addListener", InvalidationListenerDecl())))
                     .aload(0)
-                    .invoke(ObservableValueDecl().requireDeclaredMethod("removeListener", ChangeListenerDecl()))));
+                    .getfield(requireDeclaredField(CHANGE_LISTENER_FIELD))
+                    .ifnonnull(() -> code
+                        .aload(0)
+                        .getfield(requireDeclaredField(INVALIDATION_LISTENER_FIELD))
+                        .ifnull(() -> code
+                            .aload(1)
+                            .aload(0)
+                            .getfield(requireDeclaredField(SOURCE_WEAK_INVALIDATION_LISTENER_FIELD))
+                            .invoke(ObservableDecl().requireDeclaredMethod("addListener", InvalidationListenerDecl())))));
+        } else {
+            // if (this.observable != null)
+            code.aload(0)
+                .getfield(requireDeclaredField(OBSERVABLE_FIELD))
+                .ifnonnull(() -> code
+                    // if (this.sourceWeakInvalidationListener != null)
+                    .aload(0)
+                    .getfield(requireDeclaredField(SOURCE_WEAK_INVALIDATION_LISTENER_FIELD))
+                    .ifnonnull(() -> code
+                        // this.observable.removeListener(this.sourceWeakInvalidationListener)
+                        .aload(0)
+                        .getfield(requireDeclaredField(OBSERVABLE_FIELD))
+                        .aload(0)
+                        .getfield(requireDeclaredField(SOURCE_WEAK_INVALIDATION_LISTENER_FIELD))
+                        .invoke(ObservableDecl().requireDeclaredMethod("removeListener", InvalidationListenerDecl())))
 
-        // if ($1 != null)
-        code.aload(1)
-            .ifnonnull(() -> code
-                // if (this.invalidationListener != null)
-                .aload(0)
-                .getfield(requireDeclaredField(INVALIDATION_LISTENER_FIELD))
-                .ifnonnull(() -> code
-                    // this.observable.addListener((InvalidationListener)this)
-                    .aload(1)
+                    // if (this.sourceWeakChangeListener != null)
                     .aload(0)
-                    .invoke(ObservableDecl().requireDeclaredMethod("addListener", InvalidationListenerDecl())))
+                    .getfield(requireDeclaredField(SOURCE_WEAK_CHANGE_LISTENER_FIELD))
+                    .ifnonnull(() -> code
+                        // this.observable.removeListener(this.sourceWeakChangeListener)
+                        .aload(0)
+                        .getfield(requireDeclaredField(OBSERVABLE_FIELD))
+                        .aload(0)
+                        .getfield(requireDeclaredField(SOURCE_WEAK_CHANGE_LISTENER_FIELD))
+                        .invoke(ObservableValueDecl().requireDeclaredMethod("removeListener", ChangeListenerDecl()))));
 
-                // if (this.changeListener != null)
-                .aload(0)
-                .getfield(requireDeclaredField(CHANGE_LISTENER_FIELD))
+            // if ($1 != null)
+            code.aload(1)
                 .ifnonnull(() -> code
-                    // this.observable.addListener((ChangeListener)this)
-                    .aload(1)
+                    // if (this.sourceWeakInvalidationListener != null)
                     .aload(0)
-                    .invoke(ObservableValueDecl().requireDeclaredMethod("addListener", ChangeListenerDecl()))));
+                    .getfield(requireDeclaredField(SOURCE_WEAK_INVALIDATION_LISTENER_FIELD))
+                    .ifnonnull(() -> code
+                        .aload(1)
+                        .aload(0)
+                        .getfield(requireDeclaredField(SOURCE_WEAK_INVALIDATION_LISTENER_FIELD))
+                        .invoke(ObservableDecl().requireDeclaredMethod("addListener", InvalidationListenerDecl())))
+
+                    // if (this.sourceWeakChangeListener != null)
+                    .aload(0)
+                    .getfield(requireDeclaredField(SOURCE_WEAK_CHANGE_LISTENER_FIELD))
+                    .ifnonnull(() -> code
+                        .aload(1)
+                        .aload(0)
+                        .getfield(requireDeclaredField(SOURCE_WEAK_CHANGE_LISTENER_FIELD))
+                        .invoke(ObservableValueDecl().requireDeclaredMethod("addListener", ChangeListenerDecl()))));
+        }
 
         // this.observable = $1
         code.aload(0)
@@ -509,22 +638,51 @@ public class TailSegmentGenerator extends PropertySegmentGeneratorBase {
         // if (this.changeListener != null)
         code.aload(0)
             .getfield(requireDeclaredField(CHANGE_LISTENER_FIELD))
-            .ifnonnull(() -> code
-                // this.changed(null, null, $1 != null ? $1.getValue() : null)
-                .aload(0)
-                .aconst_null()
-                .aconst_null()
-                .aconst_null()
-                .aload(1)
-                .ifnonnull(() -> code
-                    .pop()
-                    .aload(1)
-                    .invoke(ObservableValueDecl().requireDeclaredMethod("getValue")))
-                .invoke(ChangeListenerDecl().requireDeclaredMethod("changed", ObservableValueDecl(), ObjectDecl(), ObjectDecl())));
+            .ifnonnull(() -> {
+                if (dependencyKind == ObservableDependencyKind.CONTENT) {
+                    code.aload(0)
+                        .aconst_null()
+                        .invoke(InvalidationListenerDecl().requireDeclaredMethod("invalidated", ObservableDecl()));
+                } else {
+                    code.aload(0)
+                        .aconst_null()
+                        .aconst_null()
+                        .aconst_null()
+                        .aload(1)
+                        .ifnonnull(() -> code
+                            .pop()
+                            .aload(1)
+                            .invoke(ObservableValueDecl().requireDeclaredMethod("getValue")))
+                        .invoke(ChangeListenerDecl().requireDeclaredMethod("changed", ObservableValueDecl(), ObjectDecl(), ObjectDecl()));
+                }
+            });
 
         code.vreturn();
 
         method.setCode(code);
+    }
+
+    private void emitInitSourceListenerField(Bytecode code, boolean changeListenerIsTrue) {
+        FieldDeclaration field = getSourceListenerField(changeListenerIsTrue);
+
+        code.aload(0)
+            .getfield(field)
+            .ifnull(() -> code
+                .aload(0)
+                .anew(field.type())
+                .dup()
+                .aload(0)
+                .invoke(field.type().requireConstructor(
+                    field.name().equals(SOURCE_WEAK_CHANGE_LISTENER_FIELD)
+                        ? ChangeListenerDecl()
+                        : InvalidationListenerDecl()))
+                .putfield(field));
+    }
+
+    private FieldDeclaration getSourceListenerField(boolean changeListenerIsTrue) {
+        return dependencyKind == ObservableDependencyKind.CONTENT || !changeListenerIsTrue
+            ? requireDeclaredField(SOURCE_WEAK_INVALIDATION_LISTENER_FIELD)
+            : requireDeclaredField(SOURCE_WEAK_CHANGE_LISTENER_FIELD);
     }
 
     private void emitChangedMethod(MethodDeclaration method) {
@@ -595,17 +753,12 @@ public class TailSegmentGenerator extends PropertySegmentGeneratorBase {
         Bytecode code = new Bytecode(method);
         Local valueLocal = code.acquireLocal(valueClass);
 
-        // if (this.observable != null)
-        code.aload(0)
-            .getfield(requireDeclaredField(OBSERVABLE_FIELD))
-            .dup()
-            .ifnull(
-                () -> code
-                    .pop()
-                    .defaultconst(valueClass),
-                () -> code
-                    // observable.getValue().foo().bar().baz()...
-                    .invoke(observableClass.requireMethod("getValue"))
+        if (rootSourceIsNonNull) {
+            code.aload(0)
+                .getfield(requireDeclaredField(OBSERVABLE_FIELD));
+
+            if (dependencyKind != ObservableDependencyKind.CONTENT) {
+                code.invoke(observableClass.requireMethod("getValue"))
                     .dup()
                     .ifnull(
                         () -> code
@@ -614,8 +767,41 @@ public class TailSegmentGenerator extends PropertySegmentGeneratorBase {
                         () -> {
                             code.checkcast(groups[segment].getFirstPathSegment().getValueTypeInstance().declaration());
                             emitInvariants(valueClass, groups[segment].getPath(), code);
-                        }))
-            .store(valueClass, valueLocal);
+                        });
+            } else if (groups[segment].getPath().length > 1) {
+                code.checkcast(groups[segment].getFirstPathSegment().getValueTypeInstance().declaration());
+                emitInvariants(valueClass, groups[segment].getPath(), code);
+            }
+
+            code.store(valueClass, valueLocal);
+        } else {
+            // if (this.observable != null)
+            code.aload(0)
+                .getfield(requireDeclaredField(OBSERVABLE_FIELD))
+                .dup()
+                .ifnull(
+                    () -> code
+                        .pop()
+                        .defaultconst(valueClass),
+                    () -> {
+                        if (dependencyKind != ObservableDependencyKind.CONTENT) {
+                            code.invoke(observableClass.requireMethod("getValue"))
+                                .dup()
+                                .ifnull(
+                                    () -> code
+                                        .pop()
+                                        .defaultconst(valueClass),
+                                    () -> {
+                                        code.checkcast(groups[segment].getFirstPathSegment().getValueTypeInstance().declaration());
+                                        emitInvariants(valueClass, groups[segment].getPath(), code);
+                                    });
+                        } else if (groups[segment].getPath().length > 1) {
+                            code.checkcast(groups[segment].getFirstPathSegment().getValueTypeInstance().declaration());
+                            emitInvariants(valueClass, groups[segment].getPath(), code);
+                        }
+                    })
+                .store(valueClass, valueLocal);
+        }
 
         if (valueClass.isPrimitive()) {
             // this.pvalue = valueLocal

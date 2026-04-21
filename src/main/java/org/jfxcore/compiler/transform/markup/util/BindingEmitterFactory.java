@@ -7,6 +7,7 @@ import org.jetbrains.annotations.Nullable;
 import org.jfxcore.compiler.ast.BindingMode;
 import org.jfxcore.compiler.ast.BindingNode;
 import org.jfxcore.compiler.ast.PropertyNode;
+import org.jfxcore.compiler.ast.ValueSourceKind;
 import org.jfxcore.compiler.ast.emit.EmitCollectionWrapperNode;
 import org.jfxcore.compiler.ast.emit.EmitPropertyBindingNode;
 import org.jfxcore.compiler.ast.emit.EmitPropertySetterNode;
@@ -56,7 +57,7 @@ public class BindingEmitterFactory {
         if (bindingMode.isContent()) {
             if (isValidContentBindingSource(bindingMode, targetType, result.getType())) {
                 value = result.getValue();
-            } else if (result.getObservableType() != null
+            } else if (result.getValueSourceType() != null
                     && isValidContentBindingSource(bindingMode, targetType, result.getValueType())) {
                 value = new EmitUnwrapObservableNode(result.getValue());
             }
@@ -76,7 +77,7 @@ public class BindingEmitterFactory {
         } else {
             if (targetType.isAssignableFrom(result.getType())) {
                 value = result.getValue();
-            } else if (result.getObservableType() != null) {
+            } else if (result.getValueSourceType() != null) {
                 value = new EmitUnwrapObservableNode(result.getValue());
             }
 
@@ -114,15 +115,15 @@ public class BindingEmitterFactory {
         }
 
         if (bindingMode.isContent()) {
-            if (isValidContentBindingSource(bindingMode, targetType, result.getType())) {
-                value = result.getValue();
-            } else if (isCollectionWrapperApplicable(bindingNode, targetType, result)) {
+            if (isCollectionWrapperApplicable(bindingNode, targetType, result)) {
                 value = new EmitCollectionWrapperNode(
                     result.getValue(),
                     result.getValueType(),
-                    result.getObservableType(),
+                    result.getValueSourceType(),
                     bindingMode.isReverse(),
                     bindingNode.getSourceInfo());
+            } else if (isValidContentBindingSource(bindingMode, targetType, result.getType())) {
+                value = result.getValue();
             } else {
                 if (bindingMode.isReverse()) {
                     // Find the List/Set/Map instantiation of the current target type.
@@ -213,8 +214,7 @@ public class BindingEmitterFactory {
                     result.getSourceInfo(), result.getValueType().javaName(), targetType.javaName());
             }
 
-            if (result.getObservableType() == null
-                    || !result.getObservableType().declaration().subtypeOf(PropertyDecl())) {
+            if (result.getValueSourceKind() != ValueSourceKind.WRITABLE) {
                 throw BindingSourceErrors.invalidReverseBindingSource(
                     result.getSourceInfo(), result.getSourceDeclaringType(),
                     result.getSourceName(), result.isFunction());
@@ -222,7 +222,7 @@ public class BindingEmitterFactory {
 
             value = result.getValue();
         } else if (targetType.isAssignableFrom(result.getValueType())) {
-            if (result.getObservableType() != null) {
+            if (result.getValueSourceType() != null) {
                 value = result.getValue();
             } else {
                 throw BindingSourceErrors.invalidUnidirectionalBindingSource(

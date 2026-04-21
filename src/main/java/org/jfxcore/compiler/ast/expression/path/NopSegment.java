@@ -4,17 +4,18 @@
 package org.jfxcore.compiler.ast.expression.path;
 
 import org.jfxcore.compiler.ast.AbstractNode;
+import org.jfxcore.compiler.ast.ObservableDependencyKind;
 import org.jfxcore.compiler.ast.ResolvedTypeNode;
+import org.jfxcore.compiler.ast.ValueSourceKind;
 import org.jfxcore.compiler.ast.emit.BytecodeEmitContext;
 import org.jfxcore.compiler.ast.emit.ValueEmitterNode;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.type.TypeInstance;
-import org.jfxcore.compiler.util.ObservableKind;
 
 public class NopSegment extends Segment {
 
     public NopSegment(TypeInstance valueType) {
-        super("<nop>", "<nop>", valueType, valueType, ObservableKind.NONE);
+        super("<nop>", "<nop>", valueType, valueType, ValueSourceKind.NONE, ObservableDependencyKind.NONE);
     }
 
 

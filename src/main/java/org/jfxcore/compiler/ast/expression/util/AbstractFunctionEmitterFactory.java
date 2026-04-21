@@ -6,11 +6,13 @@ package org.jfxcore.compiler.ast.expression.util;
 import org.jetbrains.annotations.Nullable;
 import org.jfxcore.compiler.ast.AbstractNode;
 import org.jfxcore.compiler.ast.Node;
+import org.jfxcore.compiler.ast.ObservableDependencyKind;
 import org.jfxcore.compiler.ast.ResolvedTypeNode;
 import org.jfxcore.compiler.ast.emit.BytecodeEmitContext;
 import org.jfxcore.compiler.ast.emit.EmitApplyMarkupExtensionNode;
 import org.jfxcore.compiler.ast.emit.EmitLiteralNode;
 import org.jfxcore.compiler.ast.emit.EmitMethodArgumentNode;
+import org.jfxcore.compiler.ast.emit.EmitObservablePathNode;
 import org.jfxcore.compiler.ast.emit.ValueEmitterNode;
 import org.jfxcore.compiler.ast.expression.BindingContextNode;
 import org.jfxcore.compiler.ast.expression.BindingEmitterInfo;
@@ -101,7 +103,7 @@ abstract class AbstractFunctionEmitterFactory {
         TypeInstance[] paramTypes = invoker.invokeParameterTypes(function.getBehavior(), function.getInvocationContext(), witnesses);
         TypeInstance returnType = invoker.invokeReturnType(function.getBehavior(), function.getInvocationContext(), witnesses);
         List<EmitMethodArgumentNode> argumentValues = new ArrayList<>();
-        boolean observableFunction = false;
+        boolean observableFunction = function.getReceiverDependencyKind() != ObservableDependencyKind.NONE;
 
         if (!isVarArgs && methodArguments.size() != paramTypes.length
                 || isVarArgs && methodArguments.size() < paramTypes.length) {
@@ -227,7 +229,8 @@ abstract class AbstractFunctionEmitterFactory {
             }
 
             return EmitMethodArgumentNode.newScalar(
-                paramType, new EmitLiteralNode(paramType, value, sourceInfo), false, sourceInfo);
+                paramType, new EmitLiteralNode(paramType, value, sourceInfo),
+                ObservableDependencyKind.NONE, sourceInfo);
         }
 
         if (argument instanceof TextNode textArg) {
@@ -238,7 +241,7 @@ abstract class AbstractFunctionEmitterFactory {
             return EmitMethodArgumentNode.newScalar(
                 paramType,
                 new EmitLiteralNode(paramType, textArg.getText(), sourceInfo),
-                false,
+                ObservableDependencyKind.NONE,
                 sourceInfo);
         }
 
@@ -272,11 +275,26 @@ abstract class AbstractFunctionEmitterFactory {
             }
 
             try {
-                BindingEmitterInfo emitterInfo = factory instanceof ObservableEmitterFactory observableFactory ?
-                    observableFactory.newInstance(bidirectional) : factory.newInstance();
+                BindingEmitterInfo emitterInfo;
+
+                if (factory instanceof ObservablePathEmitterFactory observablePathFactory) {
+                    emitterInfo = observablePathFactory.newInstance(bidirectional, true);
+                } else if (factory instanceof ObservableEmitterFactory observableFactory) {
+                    emitterInfo = observableFactory.newInstance(bidirectional);
+                } else {
+                    emitterInfo = factory.newInstance();
+                }
+
+                if (emitterInfo == null) {
+                    if (argument instanceof PathExpressionNode pathExpressionArg) {
+                        emitterInfo = new SimplePathEmitterFactory(pathExpressionArg).newInstance();
+                    } else {
+                        throw new AssertionError();
+                    }
+                }
 
                 return EmitMethodArgumentNode.newScalar(
-                    paramType, emitterInfo.getValue(), emitterInfo.getObservableType() != null, sourceInfo);
+                    paramType, emitterInfo.getValue(), getArgumentDependencyKind(emitterInfo), sourceInfo);
             } catch (MarkupException ex) {
                 throw new InconvertibleArgumentException(argument.getClass().getName(), ex);
             }
@@ -291,7 +309,7 @@ abstract class AbstractFunctionEmitterFactory {
                     new EmitApplyMarkupExtensionNode.Supplier(
                         valueEmitterArg, supplierInfo.markupExtensionInterface(), null,
                         paramType, supplierInfo.returnType(), null),
-                    false, sourceInfo);
+                    ObservableDependencyKind.NONE, sourceInfo);
             }
 
             if (extensionInfo instanceof MarkupExtensionInfo.PropertyConsumer) {
@@ -299,7 +317,8 @@ abstract class AbstractFunctionEmitterFactory {
                     ObjectInitializationErrors.invalidMarkupExtensionUsage(sourceInfo));
             }
 
-            return EmitMethodArgumentNode.newScalar(paramType, valueEmitterArg, false, sourceInfo);
+            return EmitMethodArgumentNode.newScalar(
+                paramType, valueEmitterArg, ObservableDependencyKind.NONE, sourceInfo);
         }
 
         throw new InconvertibleArgumentException(argument.getClass().getName());
@@ -336,7 +355,7 @@ abstract class AbstractFunctionEmitterFactory {
 
             try {
                 if (maybeInstanceMethod) {
-                    resolvedPath = pathExpression.resolvePath(false, limit);
+                    resolvedPath = pathExpression.resolvePath(preferObservable, limit);
                     className = resolvedPath.getValueTypeInstance().javaName();
                     invocationContext = List.of(resolvedPath.getValueTypeInstance());
                 }
@@ -411,8 +430,13 @@ abstract class AbstractFunctionEmitterFactory {
                         pathExpression.getSourceInfo(), method);
                 }
 
+                ReceiverInfo receiverInfo = getMethodReceiverInfo(
+                    pathExpression, resolvedPath, method, preferObservable);
+
                 return new Callable(
-                    invocationContext, getMethodReceiverEmitters(pathExpression, resolvedPath, method),
+                    invocationContext,
+                    receiverInfo.emitters(),
+                    receiverInfo.dependencyKind(),
                     method, pathExpression.getSourceInfo());
             }
         }
@@ -440,7 +464,9 @@ abstract class AbstractFunctionEmitterFactory {
                         pathExpression.getSourceInfo(), constructor, returnType);
                 }
 
-                return new Callable(List.of(invokingType), List.of(), constructor, pathExpression.getSourceInfo());
+                return new Callable(
+                    List.of(invokingType), List.of(), ObservableDependencyKind.NONE,
+                    constructor, pathExpression.getSourceInfo());
             }
         }
 
@@ -501,20 +527,37 @@ abstract class AbstractFunctionEmitterFactory {
         throw GeneralErrors.expressionNotApplicable(argument.getSourceInfo(), false);
     }
 
-    private List<ValueEmitterNode> getMethodReceiverEmitters(
-            PathExpressionNode pathExpression, ResolvedPath resolvedPath, MethodDeclaration method) {
+    private ReceiverInfo getMethodReceiverInfo(PathExpressionNode pathExpression,
+                                               ResolvedPath resolvedPath,
+                                               MethodDeclaration method,
+                                               boolean preferObservable) {
         if (resolvedPath != null) {
-            return resolvedPath.toValueEmitters(true, pathExpression.getSourceInfo());
+            if (preferObservable && resolvedPath.isObservable()) {
+                return new ReceiverInfo(
+                    List.of(new EmitObservablePathNode(resolvedPath, false, pathExpression.getSourceInfo())),
+                    getReceiverDependencyKind(resolvedPath));
+            }
+
+            return new ReceiverInfo(
+                resolvedPath.toValueEmitters(true, pathExpression.getSourceInfo()),
+                ObservableDependencyKind.NONE);
         }
 
         if (!method.isStatic()) {
             BindingContextNode bindingSource = pathExpression.getBindingContext();
             var result = new ArrayList<ValueEmitterNode>(1);
-            result.add((bindingSource.toSegment().toValueEmitter(true, bindingSource.getSourceInfo())));
-            return result;
+            var segment = bindingSource.toSegment();
+
+            if (preferObservable && segment.getObservableDependencyKind() != ObservableDependencyKind.NONE) {
+                result.add(segment.toEmitter(true, bindingSource.getSourceInfo()));
+                return new ReceiverInfo(result, segment.getObservableDependencyKind());
+            }
+
+            result.add(segment.toValueEmitter(true, bindingSource.getSourceInfo()));
+            return new ReceiverInfo(result, ObservableDependencyKind.NONE);
         }
 
-        return List.of();
+        return new ReceiverInfo(List.of(), ObservableDependencyKind.NONE);
     }
 
     private Callable findInverseFunctionViaAnnotation(
@@ -545,7 +588,32 @@ abstract class AbstractFunctionEmitterFactory {
                 diagnostics.stream().map(DiagnosticInfo::getDiagnostic).toArray(Diagnostic[]::new));
         }
 
-        return new Callable(method.getInvocationContext(), method.getReceiver(), foundMethod, sourceInfo);
+        return new Callable(
+            method.getInvocationContext(),
+            method.getReceiver(),
+            method.getReceiverDependencyKind(),
+            foundMethod,
+            sourceInfo);
+    }
+
+    private ObservableDependencyKind getArgumentDependencyKind(BindingEmitterInfo emitterInfo) {
+        if (emitterInfo.getObservableDependencyKind() != ObservableDependencyKind.NONE) {
+            return emitterInfo.getObservableDependencyKind();
+        }
+
+        return emitterInfo.getValueSourceType() != null
+            ? ObservableDependencyKind.VALUE
+            : ObservableDependencyKind.NONE;
+    }
+
+    private ObservableDependencyKind getReceiverDependencyKind(ResolvedPath resolvedPath) {
+        if (!resolvedPath.isObservable()) {
+            return ObservableDependencyKind.NONE;
+        }
+
+        return resolvedPath.getObservableDependencyKind() != ObservableDependencyKind.NONE
+            ? resolvedPath.getObservableDependencyKind()
+            : ObservableDependencyKind.VALUE;
     }
 
     private enum Keyword {
@@ -576,7 +644,8 @@ abstract class AbstractFunctionEmitterFactory {
             }
 
             return EmitMethodArgumentNode.newScalar(
-                paramType, new EmitLiteralNode(paramType, literal, sourceInfo), false, sourceInfo);
+                paramType, new EmitLiteralNode(paramType, literal, sourceInfo),
+                ObservableDependencyKind.NONE, sourceInfo);
         }
 
         static @Nullable AbstractFunctionEmitterFactory.Keyword of(String text) {
@@ -594,6 +663,10 @@ abstract class AbstractFunctionEmitterFactory {
         boolean bidirectional,
         boolean preferObservable,
         @Nullable TypeInstance targetType) {}
+
+    private record ReceiverInfo(
+        List<ValueEmitterNode> emitters,
+        ObservableDependencyKind dependencyKind) {}
 
     protected record InvocationInfo(
         boolean observable,

@@ -4,6 +4,8 @@
 package org.jfxcore.compiler.ast.expression.path;
 
 import org.jetbrains.annotations.Nullable;
+import org.jfxcore.compiler.ast.ObservableDependencyKind;
+import org.jfxcore.compiler.ast.ValueSourceKind;
 import org.jfxcore.compiler.ast.emit.EmitGetFieldNode;
 import org.jfxcore.compiler.ast.emit.EmitGetRootNode;
 import org.jfxcore.compiler.ast.emit.ValueEmitterNode;
@@ -11,7 +13,6 @@ import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.type.FieldDeclaration;
 import org.jfxcore.compiler.type.TypeDeclaration;
 import org.jfxcore.compiler.type.TypeInstance;
-import org.jfxcore.compiler.util.ObservableKind;
 
 public class RootSegment extends Segment {
 
@@ -19,9 +20,11 @@ public class RootSegment extends Segment {
 
     public RootSegment(TypeInstance type,
                        TypeInstance valueType,
-                       ObservableKind observableKind,
+                       ValueSourceKind valueSourceKind,
+                       ObservableDependencyKind dependencyKind,
                        @Nullable FieldDeclaration rootField) {
-        super(rootField != null ? rootField.name() : "<root>", "<root>", type, valueType, observableKind);
+        super(rootField != null ? rootField.name() : "<root>", "<root>",
+              type, valueType, valueSourceKind, dependencyKind);
         this.rootField = rootField;
     }
 

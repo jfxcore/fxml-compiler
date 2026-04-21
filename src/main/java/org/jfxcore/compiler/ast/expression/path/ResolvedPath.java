@@ -16,6 +16,8 @@ import kotlinx.metadata.jvm.KotlinClassHeader;
 import kotlinx.metadata.jvm.KotlinClassMetadata;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jfxcore.compiler.ast.ObservableDependencyKind;
+import org.jfxcore.compiler.ast.ValueSourceKind;
 import org.jfxcore.compiler.ast.emit.ValueEmitterNode;
 import org.jfxcore.compiler.ast.text.PathNode;
 import org.jfxcore.compiler.ast.text.PathSegmentNode;
@@ -32,7 +34,6 @@ import org.jfxcore.compiler.type.Resolver;
 import org.jfxcore.compiler.type.TypeDeclaration;
 import org.jfxcore.compiler.type.TypeInstance;
 import org.jfxcore.compiler.type.TypeInvoker;
-import org.jfxcore.compiler.util.ObservableKind;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Iterator;
@@ -164,13 +165,17 @@ public class ResolvedPath {
         return segments.get(segments.size() - 1).getValueTypeInstance();
     }
 
-    public ObservableKind getObservableKind() {
-        return segments.get(segments.size() - 1).getObservableKind();
+    public ValueSourceKind getValueSourceKind() {
+        return segments.get(segments.size() - 1).getValueSourceKind();
+    }
+
+    public ObservableDependencyKind getObservableDependencyKind() {
+        return segments.get(segments.size() - 1).getObservableDependencyKind();
     }
 
     public boolean isInvariant() {
         for (int i = 0; i < size(); ++i) {
-            if (segments.get(i).getObservableKind() != ObservableKind.NONE) {
+            if (segments.get(i).hasObservableDependency()) {
                 return false;
             }
         }
@@ -197,7 +202,7 @@ public class ResolvedPath {
      */
     public boolean isObservable() {
         for (Segment segment : segments) {
-            if (segment.getObservableKind() != ObservableKind.NONE) {
+            if (segment.hasObservableDependency()) {
                 return true;
             }
         }
@@ -212,14 +217,14 @@ public class ResolvedPath {
         List<FoldedGroup> result = new ArrayList<>();
         int i = 0;
 
-        while (segments.get(i).getObservableKind() == ObservableKind.NONE) {
+        while (segments.get(i).getObservableDependencyKind() == ObservableDependencyKind.NONE) {
             ++i;
         }
 
         while (i < segments.size()) {
             int start = i++;
 
-            while (i < segments.size() && segments.get(i).getObservableKind() == ObservableKind.NONE) {
+            while (i < segments.size() && segments.get(i).getObservableDependencyKind() == ObservableDependencyKind.NONE) {
                 ++i;
             }
 
@@ -365,9 +370,9 @@ public class ResolvedPath {
         int observable;
 
         if (preferObservable) {
-            observable = info.segment.getObservableKind() != ObservableKind.NONE ? -100 : 0;
+            observable = info.segment.hasObservableDependency() ? -100 : 0;
         } else {
-            observable = info.segment.getObservableKind() != ObservableKind.NONE ? 0 : -100;
+            observable = info.segment.hasObservableDependency() ? 0 : -100;
         }
 
         int source = 0;
@@ -402,9 +407,9 @@ public class ResolvedPath {
         }
 
         TypeDeclaration fieldType = fieldDeclaration.type();
-        ObservableKind observableKind = ObservableKind.get(fieldType);
+        ValueSourceKind valueSourceKind = ValueSourceKind.get(fieldType);
 
-        if (selectObservable && observableKind == ObservableKind.NONE) {
+        if (selectObservable && valueSourceKind == ValueSourceKind.NONE) {
             return null;
         }
 
@@ -416,17 +421,20 @@ public class ResolvedPath {
 
         if (selectObservable) {
             return new SegmentInfo(
-                new FieldSegment(fieldDeclaration.name(), propertyName, type, type, fieldDeclaration, ObservableKind.NONE),
+                new FieldSegment(
+                    fieldDeclaration.name(), propertyName, type, type, fieldDeclaration,
+                    ValueSourceKind.NONE, ObservableDependencyKind.NONE),
                 true);
         }
 
-        TypeInstance valueType = observableKind != ObservableKind.NONE ?
-            resolver.findObservableArgument(type) : type;
+        TypeInstance valueType = valueSourceKind.isObservable() ? resolver.findObservableArgument(type) : type;
+        ObservableDependencyKind dependencyKind = ObservableDependencyKind.get(fieldType);
 
         FieldSegment segment = new FieldSegment(
-            fieldDeclaration.name(), propertyName, type, valueType, fieldDeclaration, observableKind);
+            fieldDeclaration.name(), propertyName, type, valueType,
+            fieldDeclaration, valueSourceKind, dependencyKind);
 
-        return new SegmentInfo(segment, observableKind.isReadOnly());
+        return new SegmentInfo(segment, valueSourceKind.isReadOnly());
     }
 
     /**
@@ -455,7 +463,7 @@ public class ResolvedPath {
         }
 
         List<TypeInstance> invocationContext = segments.stream().map(segment -> {
-            if (segment.getObservableKind() == ObservableKind.NONE) {
+            if (!segment.getValueSourceKind().isObservable()) {
                 return segment.getTypeInstance();
             }
 
@@ -463,9 +471,9 @@ public class ResolvedPath {
         }).collect(Collectors.toList());
 
         TypeDeclaration returnType = getterDeclaration.returnType();
-        ObservableKind observableKind = ObservableKind.get(returnType);
+        ValueSourceKind valueSourceType = ValueSourceKind.get(returnType);
 
-        if (selectObservable && observableKind == ObservableKind.NONE) {
+        if (selectObservable && valueSourceType == ValueSourceKind.NONE) {
             return null;
         }
 
@@ -475,18 +483,18 @@ public class ResolvedPath {
             return new SegmentInfo(
                 new GetterSegment(
                     getterDeclaration.name(), propertyName, type, type,
-                    getterDeclaration, attachedProperty, ObservableKind.NONE),
+                    getterDeclaration, attachedProperty, ValueSourceKind.NONE, ObservableDependencyKind.NONE),
                 true);
         }
 
-        TypeInstance valueType = observableKind != ObservableKind.NONE ?
-            resolver.findObservableArgument(type) : type;
+        TypeInstance valueType = valueSourceType.isObservable() ? resolver.findObservableArgument(type) : type;
+        ObservableDependencyKind dependencyKind = ObservableDependencyKind.get(returnType);
 
         return new SegmentInfo(
             new GetterSegment(
                 getterDeclaration.name(), propertyName, type, valueType,
-                getterDeclaration, attachedProperty, observableKind),
-            observableKind.isReadOnly());
+                getterDeclaration, attachedProperty, valueSourceType, dependencyKind),
+            valueSourceType.isReadOnly());
     }
 
     private SegmentInfo getPathSegmentFromKotlinDelegate(
@@ -509,7 +517,7 @@ public class ResolvedPath {
         }
 
         List<TypeInstance> invocationContext = segments.stream().map(segment -> {
-            if (segment.getObservableKind() == ObservableKind.NONE) {
+            if (!segment.getValueSourceKind().isObservable()) {
                 return segment.getTypeInstance();
             }
 
@@ -517,8 +525,9 @@ public class ResolvedPath {
         }).collect(Collectors.toList());
 
         TypeDeclaration fieldType = delegateInfo.delegateField.type();
-        ObservableKind observableKind = ObservableKind.get(fieldType);
-        if (selectObservable && observableKind == ObservableKind.NONE) {
+        ValueSourceKind valueSourceType = ValueSourceKind.get(fieldType);
+
+        if (selectObservable && valueSourceType == ValueSourceKind.NONE) {
             return null;
         }
 
@@ -527,7 +536,7 @@ public class ResolvedPath {
         }
 
         if (!delegateInfo.publicSetter) {
-            observableKind = observableKind.toReadOnly();
+            valueSourceType = valueSourceType.toReadOnly();
         }
 
         TypeInstance valueType = invoker.invokeReturnType(delegateInfo.getter, invocationContext, providedArguments);
@@ -543,17 +552,18 @@ public class ResolvedPath {
             return new SegmentInfo(
                 new KotlinDelegateSegment(
                     delegateInfo.delegateField.name(), propertyName, type, type,
-                    delegateInfo.delegateField, ObservableKind.NONE),
-                observableKind.isReadOnly());
+                    delegateInfo.delegateField, ValueSourceKind.NONE, ObservableDependencyKind.NONE),
+                valueSourceType.isReadOnly());
         }
 
-        TypeInstance typeArg = observableKind != ObservableKind.NONE ? valueType : type;
+        TypeInstance typeArg = valueSourceType.isObservable() ? valueType : type;
+        ObservableDependencyKind dependencyKind = ObservableDependencyKind.get(fieldType);
 
         return new SegmentInfo(
             new KotlinDelegateSegment(
                 delegateInfo.delegateField.name(), propertyName, type, typeArg,
-                delegateInfo.delegateField, observableKind),
-            observableKind.isReadOnly());
+                delegateInfo.delegateField, valueSourceType, dependencyKind),
+            valueSourceType.isReadOnly());
     }
 
     @Nullable

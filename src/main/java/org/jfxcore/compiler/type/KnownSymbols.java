@@ -125,6 +125,7 @@ public final class KnownSymbols {
     // javafx.beans.value
     public static TypeDeclaration ObservableValueDecl() { return get("javafx.beans.value.ObservableValue"); }
     public static TypeDeclaration ChangeListenerDecl() { return get("javafx.beans.value.ChangeListener"); }
+    public static TypeDeclaration WeakChangeListenerDecl() { return get("javafx.beans.value.WeakChangeListener"); }
     public static TypeDeclaration ObservableBooleanValueDecl() { return get("javafx.beans.value.ObservableBooleanValue"); }
     public static TypeDeclaration ObservableIntegerValueDecl() { return get("javafx.beans.value.ObservableIntegerValue"); }
     public static TypeDeclaration ObservableLongValueDecl() { return get("javafx.beans.value.ObservableLongValue"); }
@@ -151,9 +152,6 @@ public final class KnownSymbols {
     public static TypeDeclaration DoublePropertyDecl() { return get("javafx.beans.property.DoubleProperty"); }
     public static TypeDeclaration StringPropertyDecl() { return get("javafx.beans.property.StringProperty"); }
     public static TypeDeclaration ReadOnlyPropertyDecl() { return get("javafx.beans.property.ReadOnlyProperty"); }
-    public static TypeDeclaration ReadOnlyListPropertyDecl() { return get("javafx.beans.property.ReadOnlyListProperty"); }
-    public static TypeDeclaration ReadOnlySetPropertyDecl() { return get("javafx.beans.property.ReadOnlySetProperty"); }
-    public static TypeDeclaration ReadOnlyMapPropertyDecl() { return get("javafx.beans.property.ReadOnlyMapProperty"); }
 
     // javafx.beans.binding
     public static TypeDeclaration BindingsDecl() { return get("javafx.beans.binding.Bindings"); }

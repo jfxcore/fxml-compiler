@@ -3,17 +3,6 @@
 
 package org.jfxcore.compiler.bindings;
 
-import org.jfxcore.compiler.diagnostic.ErrorCode;
-import org.jfxcore.compiler.diagnostic.MarkupException;
-import org.jfxcore.compiler.generate.PushListenerGenerator;
-import org.jfxcore.compiler.generate.collections.SetObservableValueWrapperGenerator;
-import org.jfxcore.compiler.generate.collections.SetReseatableSourceWrapperGenerator;
-import org.jfxcore.compiler.util.CompilerTestBase;
-import org.jfxcore.compiler.util.NameHelper;
-import org.jfxcore.compiler.util.TestExtension;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.Property;
 import javafx.beans.property.ReadOnlySetProperty;
@@ -25,6 +14,17 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableSet;
 import javafx.collections.SetChangeListener;
 import javafx.scene.layout.Pane;
+import org.jfxcore.compiler.diagnostic.ErrorCode;
+import org.jfxcore.compiler.diagnostic.MarkupException;
+import org.jfxcore.compiler.generate.PushListenerGenerator;
+import org.jfxcore.compiler.generate.collections.SetObservableValueWrapperGenerator;
+import org.jfxcore.compiler.generate.collections.SetReseatableSourceWrapperGenerator;
+import org.jfxcore.compiler.util.CompilerTestBase;
+import org.jfxcore.compiler.util.NameHelper;
+import org.jfxcore.compiler.util.TestExtension;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
@@ -71,6 +71,13 @@ public class SetBindingTest extends CompilerTestBase {
         public Collection<String> getTargetCollection() { return targetObservableSet; }
         public Set<String> getTargetSet() { return targetObservableSet; }
         public ObservableSet<String> getTargetObservableSet() { return targetObservableSet; }
+    }
+
+    @SuppressWarnings("unused")
+    public static class NullObservableSetTestPane extends SetTestPane {
+        public NullObservableSetTestPane() {
+            obsSet = null;
+        }
     }
 
     private static String PUSH_LISTENER;
@@ -438,6 +445,33 @@ public class SetBindingTest extends CompilerTestBase {
 
         assertEquals(ErrorCode.INVALID_UNIDIRECTIONAL_BINDING_SOURCE, ex.getDiagnostic().getCode());
         assertCodeHighlight("obsSet", ex);
+    }
+
+    @Test
+    public void Unidirectional_Binding_To_ObservableSet_Size_Reevaluates_On_Content_Change() {
+        SetTestPane root = compileAndRun("""
+            <SetTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                         prefWidth="${obsSet.size}"/>
+        """);
+
+        assertMethodCall(root, "requireNonNull");
+        assertEquals(3, root.getPrefWidth(), 0.001);
+
+        root.obsSet.clear();
+        assertEquals(0, root.getPrefWidth(), 0.001);
+
+        root.obsSet.addAll(Set.of("foo", "bar"));
+        assertEquals(2, root.getPrefWidth(), 0.001);
+    }
+
+    @Test
+    public void Unidirectional_Binding_To_Null_ObservableSet_Size_Throws_NPE() {
+        NullPointerException ex = assertThrows(NullPointerException.class, () -> compileAndRun("""
+            <NullObservableSetTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                                       prefWidth="${obsSet.size}"/>
+        """));
+
+        assertEquals("obsSet", ex.getMessage());
     }
 
     /*

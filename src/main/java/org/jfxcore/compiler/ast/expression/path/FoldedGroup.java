@@ -4,8 +4,9 @@
 package org.jfxcore.compiler.ast.expression.path;
 
 import org.jetbrains.annotations.Nullable;
+import org.jfxcore.compiler.ast.ObservableDependencyKind;
+import org.jfxcore.compiler.ast.ValueSourceKind;
 import org.jfxcore.compiler.type.TypeDeclaration;
-import org.jfxcore.compiler.util.ObservableKind;
 
 public class FoldedGroup {
 
@@ -50,8 +51,16 @@ public class FoldedGroup {
         return path[path.length - 1].getValueTypeInstance().declaration();
     }
 
+    public ObservableDependencyKind getObservableDependencyKind() {
+        return getFirstPathSegment().getObservableDependencyKind();
+    }
+
+    public TypeDeclaration getObservableDependencyType() {
+        return getFirstPathSegment().getTypeInstance().declaration();
+    }
+
     public @Nullable TypeDeclaration getObservableType() {
-        if (path[path.length - 1].getObservableKind() != ObservableKind.NONE) {
+        if (path[path.length - 1].getValueSourceKind() != ValueSourceKind.NONE) {
             return path[path.length - 1].getTypeInstance().declaration();
         }
 

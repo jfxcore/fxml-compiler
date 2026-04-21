@@ -3,6 +3,7 @@
 
 package org.jfxcore.compiler.generate;
 
+import org.jfxcore.compiler.ast.ObservableDependencyKind;
 import org.jfxcore.compiler.ast.emit.BytecodeEmitContext;
 import org.jfxcore.compiler.ast.expression.path.FoldedGroup;
 import org.jfxcore.compiler.ast.expression.path.Segment;
@@ -19,8 +20,11 @@ import static org.jfxcore.compiler.type.KnownSymbols.*;
 
 public class HeadSegmentGenerator extends PropertySegmentGeneratorBase {
 
+    private static final String WEAK_LISTENER_FIELD = "weakListener";
+
     private ConstructorDeclaration constructor;
     private MethodDeclaration changedMethod;
+    private MethodDeclaration invalidatedMethod;
 
     public HeadSegmentGenerator(SourceInfo sourceInfo, FoldedGroup[] groups) {
         super(sourceInfo, groups, 0);
@@ -28,11 +32,19 @@ public class HeadSegmentGenerator extends PropertySegmentGeneratorBase {
 
     @Override
     public TypeDeclaration emitClass(BytecodeEmitContext context) {
-        return super.emitClass(context).addInterface(ChangeListenerDecl());
+        return super.emitClass(context)
+            .addInterface(ChangeListenerDecl())
+            .addInterface(InvalidationListenerDecl());
     }
 
     @Override
     public void emitFields(BytecodeEmitContext context) {
+        createField(
+            WEAK_LISTENER_FIELD,
+            groups[segment].getObservableDependencyKind() == ObservableDependencyKind.VALUE
+                ? WeakChangeListenerDecl()
+                : WeakInvalidationListenerDecl())
+            .setModifiers(Modifier.PRIVATE | Modifier.FINAL);
         createField(NEXT_FIELD, groups[segment + 1].getCompiledClass()).setModifiers(Modifier.FINAL);
     }
 
@@ -40,10 +52,13 @@ public class HeadSegmentGenerator extends PropertySegmentGeneratorBase {
     public void emitMethods(BytecodeEmitContext context) {
         super.emitMethods(context);
 
-        constructor = createConstructor(ObservableValueDecl());
+        constructor = createConstructor(groups[segment].getObservableDependencyType());
 
         changedMethod = createMethod(
             "changed", voidDecl(), ObservableValueDecl(), ObjectDecl(), ObjectDecl())
+            .setModifiers(Modifier.PUBLIC | Modifier.FINAL);
+
+        invalidatedMethod = createMethod("invalidated", voidDecl(), ObservableDecl())
             .setModifiers(Modifier.PUBLIC | Modifier.FINAL);
     }
 
@@ -53,6 +68,7 @@ public class HeadSegmentGenerator extends PropertySegmentGeneratorBase {
 
         emitConstructor(constructor);
         emitChangedMethod(changedMethod);
+        emitInvalidatedMethod(invalidatedMethod);
         emitGetValueMethod(getValueMethod);
         emitSetValueMethod(setValueMethod);
         emitAddInvalidationListenerMethod(addInvalidationListenerMethod);
@@ -181,29 +197,55 @@ public class HeadSegmentGenerator extends PropertySegmentGeneratorBase {
         Bytecode code = new Bytecode(constructor.declaringType(), 2);
         TypeDeclaration nextClass = groups[segment + 1].getCompiledClass();
         MethodDeclaration changedMethod = requireDeclaredMethod("changed", ObservableValueDecl(), ObjectDecl(), ObjectDecl());
+        MethodDeclaration invalidatedMethod = requireDeclaredMethod("invalidated", ObservableDecl());
+        ObservableDependencyKind dependencyKind = groups[segment].getObservableDependencyKind();
 
         // this.next = new NextClassName();
         code.aload(0)
             .invoke(requireSuperClass().requireDeclaredConstructor())
+            .aload(0)
+            .anew(requireDeclaredField(WEAK_LISTENER_FIELD).type())
+            .dup()
+            .aload(0)
+            .invoke(requireDeclaredField(WEAK_LISTENER_FIELD).type().requireConstructor(
+                dependencyKind == ObservableDependencyKind.VALUE
+                    ? ChangeListenerDecl()
+                    : InvalidationListenerDecl()))
+            .putfield(requireDeclaredField(WEAK_LISTENER_FIELD))
             .aload(0)
             .anew(nextClass)
             .dup()
             .invoke(nextClass.requireDeclaredConstructor())
             .putfield(requireDeclaredField(NEXT_FIELD));
 
-        // $1.addListener(this);
-        code.aload(1)
-            .aload(0)
-            .invoke(ObservableValueDecl().requireDeclaredMethod("addListener", ChangeListenerDecl()));
+        if (dependencyKind == ObservableDependencyKind.VALUE) {
+            // $1.addListener(this);
+            code.aload(1)
+                .aload(0)
+                .getfield(requireDeclaredField(WEAK_LISTENER_FIELD))
+                .invoke(ObservableValueDecl().requireDeclaredMethod("addListener", ChangeListenerDecl()));
 
-        // this.changed(null, null, $1.getValue());
-        code.aload(0)
-            .aconst_null()
-            .aconst_null()
-            .aload(1)
-            .invoke(ObservableValueDecl().requireDeclaredMethod("getValue"))
-            .invoke(changedMethod)
-            .vreturn();
+            // this.changed(null, null, $1.getValue());
+            code.aload(0)
+                .aconst_null()
+                .aconst_null()
+                .aload(1)
+                .invoke(ObservableValueDecl().requireDeclaredMethod("getValue"))
+                .invoke(changedMethod)
+                .vreturn();
+        } else {
+            // $1.addListener(this);
+            code.aload(1)
+                .aload(0)
+                .getfield(requireDeclaredField(WEAK_LISTENER_FIELD))
+                .invoke(ObservableDecl().requireDeclaredMethod("addListener", InvalidationListenerDecl()));
+
+            // this.invalidated($1);
+            code.aload(0)
+                .aload(1)
+                .invoke(invalidatedMethod)
+                .vreturn();
+        }
 
         constructor.setCode(code);
     }
@@ -240,6 +282,41 @@ public class HeadSegmentGenerator extends PropertySegmentGeneratorBase {
         code.aload(0)
             .getfield(requireDeclaredField(NEXT_FIELD))
             .aload(3)
+            .invoke(nextClass.requireDeclaredMethod(UPDATE_METHOD, nextObservableType))
+            .vreturn();
+
+        method.setCode(code);
+    }
+
+    private void emitInvalidatedMethod(MethodDeclaration method) {
+        Bytecode code = new Bytecode(method);
+        TypeDeclaration nextClass = groups[segment + 1].getCompiledClass();
+        TypeDeclaration nextObservableType = groups[segment + 1].getObservableDependencyType();
+        TypeDeclaration firstValueType = groups[segment].getFirstPathSegment().getValueTypeInstance().declaration();
+        Segment[] path = this.groups[segment].getPath();
+
+        if (path.length > 1) {
+            Label L0 = code
+                .aload(1)
+                .aconst_null()
+                .astore(1)
+                .dup()
+                .ifnull();
+
+            code.dup()
+                .checkcast(firstValueType);
+
+            emitInvariants(firstValueType, path, code);
+
+            code.astore(1);
+
+            L0.resume().pop();
+        }
+
+        code.aload(0)
+            .getfield(requireDeclaredField(NEXT_FIELD))
+            .aload(1)
+            .checkcast(nextObservableType)
             .invoke(nextClass.requireDeclaredMethod(UPDATE_METHOD, nextObservableType))
             .vreturn();
 

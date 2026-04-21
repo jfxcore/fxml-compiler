@@ -10,9 +10,9 @@ import org.jfxcore.compiler.ast.GeneratorEmitterNode;
 import org.jfxcore.compiler.ast.NodeDataKey;
 import org.jfxcore.compiler.ast.Visitor;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
+import org.jfxcore.compiler.generate.ClassGenerator;
 import org.jfxcore.compiler.generate.Generator;
 import org.jfxcore.compiler.generate.InvertBooleanBindingGenerator;
-import org.jfxcore.compiler.generate.ClassGenerator;
 import org.jfxcore.compiler.generate.PushListenerGenerator;
 import org.jfxcore.compiler.generate.ReferenceTrackerGenerator;
 import org.jfxcore.compiler.type.BehaviorDeclaration;
@@ -80,7 +80,8 @@ public class EmitPropertyBindingNode extends AbstractNode implements EmitterNode
             generators.add(pushListenerGenerator);
         }
 
-        if (child instanceof EmitCollectionWrapperNode && bindingMode.isContent()) {
+        if (child instanceof EmitCollectionWrapperNode && bindingMode.isContent()
+                || requiresSourceReferenceTracking()) {
             generators.add(new ReferenceTrackerGenerator());
         }
 
@@ -136,8 +137,10 @@ public class EmitPropertyBindingNode extends AbstractNode implements EmitterNode
     }
 
     private void emitBindBidirectional(BytecodeEmitContext context, Local source) {
+        boolean trackReference = requiresSourceReferenceTracking();
         Bytecode code = context.getOutput();
         Local param2 = null;
+        Local target = null;
 
         if (converter != null) {
             param2 = code.acquireLocal(false);
@@ -150,8 +153,16 @@ public class EmitPropertyBindingNode extends AbstractNode implements EmitterNode
         }
 
         code.dup()
-            .invoke(checkNotNull(propertyInfo.getPropertyGetter()))
-            .aload(source);
+            .invoke(checkNotNull(propertyInfo.getPropertyGetter()));
+
+        if (trackReference) {
+            target = code.acquireLocal(false);
+
+            code.astore(target)
+                .aload(target);
+        }
+
+        code.aload(source);
 
         if (param2 != null) {
             code.aload(param2);
@@ -174,9 +185,31 @@ public class EmitPropertyBindingNode extends AbstractNode implements EmitterNode
             code.invoke(PropertyDecl().requireDeclaredMethod("bindBidirectional", PropertyDecl()));
         }
 
+        if (trackReference) {
+            code.aload(0)
+                .aload(target)
+                .aload(source)
+                .invoke(context.getMarkupClass()
+                               .requireDeclaredMethod(ReferenceTrackerGenerator.ADD_REFERENCE_METHOD,
+                                                      ObjectDecl(), ObjectDecl()));
+        }
+
         if (param2 != null) {
             code.releaseLocal(param2);
         }
+
+        if (target != null) {
+            code.releaseLocal(target);
+        }
+    }
+
+    private boolean requiresSourceReferenceTracking() {
+        if (!bindingMode.isBidirectional()) {
+            return false;
+        }
+
+        return child instanceof EmitObservableFunctionNode
+            || child instanceof EmitObservablePathNode pathNode && pathNode.isCompiledPath();
     }
 
     private void emitBindReverse(BytecodeEmitContext context, Local source) {
