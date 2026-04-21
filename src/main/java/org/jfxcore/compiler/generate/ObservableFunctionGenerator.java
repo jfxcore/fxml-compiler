@@ -600,12 +600,26 @@ public class ObservableFunctionGenerator extends ClassGenerator {
         Bytecode code = context.getOutput();
 
         Local valueLocal = code.acquireLocal(returnType);
+        Local receiverLocal = null;
+        Label endLabel = null;
+        TypeDeclaration methodReturnType;
+
+        if (function.getBehavior() instanceof MethodDeclaration m) {
+            methodReturnType = m.returnType();
+        } else if (function.getBehavior() instanceof ConstructorDeclaration c) {
+            methodReturnType = c.declaringType();
+        } else {
+            throw new InternalError();
+        }
 
         if (function.getBehavior() instanceof ConstructorDeclaration) {
             code.anew(function.getBehavior().declaringType())
                 .dup();
         } else if (!function.getBehavior().isStatic()) {
             FieldDeclaration receiverField = requireDeclaredField(RECEIVER_FIELD);
+            TypeDeclaration receiverType = function.getBehavior().declaringType();
+            receiverLocal = code.acquireLocal(receiverType);
+
             code.aload(0)
                 .getfield(receiverField);
 
@@ -613,9 +627,21 @@ public class ObservableFunctionGenerator extends ClassGenerator {
                 emitLoadDependencyValue(
                     code,
                     receiverField.type(),
-                    function.getBehavior().declaringType(),
+                    receiverType,
                     function.getReceiverDependencyKind());
             }
+
+            Label receiverIsNonNull = code
+                .store(receiverType, receiverLocal)
+                .load(receiverType, receiverLocal)
+                .ifnonnull();
+
+            code.defaultconst(returnType)
+                .store(returnType, valueLocal);
+
+            endLabel = code.goto_label();
+            receiverIsNonNull.resume();
+            code.load(receiverType, receiverLocal);
         }
 
         int fieldIdx = 0;
@@ -697,17 +723,12 @@ public class ObservableFunctionGenerator extends ClassGenerator {
             code.releaseLocal(varargsLocal);
         }
 
-        TypeDeclaration methodReturnType;
-        if (function.getBehavior() instanceof MethodDeclaration m) {
-            methodReturnType = m.returnType();
-        } else if (function.getBehavior() instanceof ConstructorDeclaration c) {
-            methodReturnType = c.declaringType();
-        } else {
-            throw new InternalError();
-        }
-
         code.castconv(methodReturnType, returnType)
             .store(returnType, valueLocal);
+
+        if (endLabel != null) {
+            endLabel.resume();
+        }
 
         if (returnType.isPrimitive()) {
             code.aload(0)
@@ -738,6 +759,11 @@ public class ObservableFunctionGenerator extends ClassGenerator {
         }
 
         code.releaseLocal(valueLocal);
+
+        if (receiverLocal != null) {
+            code.releaseLocal(receiverLocal);
+        }
+
         code.vreturn();
         method.setCode(code);
     }

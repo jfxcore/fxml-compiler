@@ -10,6 +10,7 @@ import org.jfxcore.compiler.ast.ObservableDependencyKind;
 import org.jfxcore.compiler.ast.ResolvedTypeNode;
 import org.jfxcore.compiler.ast.emit.BytecodeEmitContext;
 import org.jfxcore.compiler.ast.emit.EmitApplyMarkupExtensionNode;
+import org.jfxcore.compiler.ast.emit.EmitInvariantPathNode;
 import org.jfxcore.compiler.ast.emit.EmitLiteralNode;
 import org.jfxcore.compiler.ast.emit.EmitMethodArgumentNode;
 import org.jfxcore.compiler.ast.emit.EmitObservablePathNode;
@@ -539,7 +540,9 @@ abstract class AbstractFunctionEmitterFactory {
             }
 
             return new ReceiverInfo(
-                resolvedPath.toValueEmitters(true, pathExpression.getSourceInfo()),
+                List.of(new EmitInvariantPathNode(
+                    resolvedPath.toValueEmitters(pathExpression.getSourceInfo()),
+                    pathExpression.getSourceInfo())),
                 ObservableDependencyKind.NONE);
         }
 
@@ -553,7 +556,7 @@ abstract class AbstractFunctionEmitterFactory {
                 return new ReceiverInfo(result, segment.getObservableDependencyKind());
             }
 
-            result.add(segment.toValueEmitter(true, bindingSource.getSourceInfo()));
+            result.add(segment.toValueEmitter(false, bindingSource.getSourceInfo()));
             return new ReceiverInfo(result, ObservableDependencyKind.NONE);
         }
 

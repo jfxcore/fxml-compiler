@@ -8,8 +8,11 @@ import org.jfxcore.compiler.ast.ResolvedTypeNode;
 import org.jfxcore.compiler.ast.Visitor;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.type.MethodDeclaration;
+import org.jfxcore.compiler.type.TypeHelper;
 import org.jfxcore.compiler.type.TypeInstance;
 import org.jfxcore.compiler.util.Bytecode;
+import org.jfxcore.compiler.util.Label;
+import org.jfxcore.compiler.util.Local;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -61,9 +64,30 @@ public class EmitMethodCallNode extends AbstractNode implements ValueEmitterNode
     @Override
     public void emit(BytecodeEmitContext context) {
         Bytecode code = context.getOutput();
+        Local receiverLocal = null;
+        Label endLabel = null;
 
-        for (ValueEmitterNode emitterNode : methodReceiver) {
-            context.emit(emitterNode);
+        if (!method.isStatic()) {
+            TypeInstance receiverType = TypeHelper.getTypeInstance(methodReceiver.get(methodReceiver.size() - 1));
+            receiverLocal = code.acquireLocal(receiverType.declaration());
+
+            for (ValueEmitterNode emitterNode : methodReceiver) {
+                context.emit(emitterNode);
+            }
+
+            Label receiverIsNonNull = code
+                .store(receiverType.declaration(), receiverLocal)
+                .load(receiverType.declaration(), receiverLocal)
+                .ifnonnull();
+
+            code.defaultconst(type.getTypeDeclaration());
+            endLabel = code.goto_label();
+            receiverIsNonNull.resume();
+            code.load(receiverType.declaration(), receiverLocal);
+        } else {
+            for (ValueEmitterNode emitterNode : methodReceiver) {
+                context.emit(emitterNode);
+            }
         }
 
         for (EmitterNode argument : arguments) {
@@ -72,6 +96,11 @@ public class EmitMethodCallNode extends AbstractNode implements ValueEmitterNode
 
         code.invoke(method)
             .castconv(method.returnType(), type.getTypeDeclaration());
+
+        if (endLabel != null) {
+            endLabel.resume();
+            code.releaseLocal(receiverLocal);
+        }
     }
 
     @Override

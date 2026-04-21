@@ -115,6 +115,8 @@ public class FunctionBindingTest extends CompilerTestBase {
             new SimpleObjectProperty<>(FXCollections.observableArrayList(1, 2));
 
         public final Container1 c1 = new Container1(new Container2(new DecimalFormat("000")));
+        public Container1 nullC1;
+        public final ObjectProperty<Container1> observableC1 = new SimpleObjectProperty<>();
         public record Container1(Container2 c2) {}
         public record Container2(DecimalFormat fmt) {}
 
@@ -412,6 +414,17 @@ public class FunctionBindingTest extends CompilerTestBase {
         assertNewFunctionExpr(root, 0);
         Label label = (Label)root.getChildren().get(0);
         assertEquals("007", label.getText());
+    }
+
+    @Test
+    public void Bind_Once_To_Instance_Method_Of_Unresolved_Indirect_Object_Returns_Default_Value() {
+        TestPane root = compileAndRun("""
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                      id="$nullC1.c2.fmt.format(7)"/>
+        """);
+
+        assertNewFunctionExpr(root, 0);
+        assertNull(root.getId());
     }
 
     @Test
@@ -844,6 +857,27 @@ public class FunctionBindingTest extends CompilerTestBase {
         assertEquals("007", label.getText());
         label.setPrefWidth(10);
         assertEquals("010", label.getText());
+    }
+
+    @Test
+    public void Bind_Unidirectional_To_Instance_Method_Of_Unresolved_Observable_Indirect_Object_Returns_Default_Value() {
+        TestPane root = compileAndRun("""
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                      prefWidth="7" id="${observableC1.c2.fmt.format(prefWidth)}"/>
+        """);
+
+        assertNewFunctionExpr(root, 1);
+        assertTrue(root.idProperty().isBound());
+        assertNull(root.getId());
+
+        root.observableC1.set(new TestPane.Container1(new TestPane.Container2(new DecimalFormat("000"))));
+        assertEquals("007", root.getId());
+
+        root.setPrefWidth(10);
+        assertEquals("010", root.getId());
+
+        root.observableC1.set(null);
+        assertNull(root.getId());
     }
 
     @Test
@@ -1577,22 +1611,24 @@ public class FunctionBindingTest extends CompilerTestBase {
 
     @Test
     public void Bind_Bidirectional_To_NullIndirect_DoubleProperty() {
-        NullPointerException ex = assertThrows(NullPointerException.class, () -> compileAndRun("""
+        BidirectionalTestPane root = compileAndRun("""
             <BidirectionalTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                                    id="#{doubleToString(nullIndirect.doubleProp)}"/>
-        """));
+        """);
 
-        assertEquals("nullIndirect", ex.getMessage());
+        assertFalse(root.idProperty().isBound());
+        assertEquals("0.0", root.getId());
     }
 
     @Test
     public void Bind_Bidirectional_To_NullIndirect_StringProperty() {
-        NullPointerException ex = assertThrows(NullPointerException.class, () -> compileAndRun("""
+        BidirectionalTestPane root = compileAndRun("""
             <BidirectionalTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                                    prefWidth="#{stringToDouble(nullIndirect.stringProp)}"/>
-        """));
+        """);
 
-        assertEquals("nullIndirect", ex.getMessage());
+        assertFalse(root.prefWidthProperty().isBound());
+        assertEquals(0.0, root.getPrefWidth(), 0.001);
     }
 
     @Test
