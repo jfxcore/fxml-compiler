@@ -36,8 +36,9 @@ expression evaluates to the default value of its last member. For example, if th
 `${user.address.postalCode}` is of type `int`, the expression evaluates to zero if `user` or `address` is `null`.
 
 If the path contains `ObservableValue` members, the expression is automatically re-evaluated when any of the
-observable values are changed. This does not apply to [`fx:Evaluate`](../../reference/evaluate.html), which
-resolves its path once and does not observe it afterward.
+observable values are changed. Expressions can also be re-evaluated when they depend on the content of observable
+collections such as `ObservableList`, `ObservableSet`, or `ObservableMap`. This does not apply to
+[`fx:Evaluate`](../../reference/evaluate.html), which resolves its path once and does not observe it afterward.
 
 {: .note }
 The member selection operator looks just like the dot operator in Java, but its semantics are slightly different.
@@ -53,21 +54,25 @@ Consider the following binding expression:
 <MyAddressControl count="${user.addresses.size}"/>
 ```
 
-In this example, `addresses` is of type `ListProperty<Address>`. Since `ListProperty<Address>` implements
-`ObservableValue<ObservableList<Address>>`, the expression `user.addresses` would select the contained
-`ObservableList<Address>` value. Consequently, `.size` would select the `ObservableList.size()` method,
-returning an `int`. Since `ObservableList.size()` is not an observable property, the binding will not work
-as expected when the number of addresses in the list changes.
+In this example, `addresses` is a `ListProperty<Address>`. Since `ListProperty<Address>` implements
+`ObservableValue<ObservableList<Address>>`, the expression `user.addresses` selects the contained
+`ObservableList<Address>`. Consequently, `.size` selects the `ObservableList.size()` method, returning an
+`int`. Since the expression depends on the content of an observable collection, it is automatically re-evaluated
+when addresses are added or removed from the list.
 
-In order to solve this problem, the observable selection operator can be used to select the `ListProperty<Address>`
-instance itself, instead of the contained `ObservableList<Address>`:
+The observable selection operator becomes necessary when the expression needs to access the `ListProperty<Address>`
+instance itself, instead of the contained `ObservableList<Address>`. For example:
 
 ```xml
-<MyAddressControl count="${user::addresses.size}"/>
+<Label text="${user::addresses.name}"/>
 ```
 
-In this case, `.size` will select the `ListProperty.sizeProperty()` method, which returns an observable value.
-Now the binding is correctly re-evaluated when the number of addresses in the list changes.
+In this case, `.name` selects the `ReadOnlyProperty.getName()` method on the `ListProperty<Address>` instance. The
+expression `${user.addresses.name}` would not work the same way, because `user.addresses` selects the contained
+`ObservableList<Address>`, whose API is different from the API of `ListProperty<Address>`.
+
+This distinction is useful whenever the observable object exposes members that are different from the members of its
+current value, or when you need to pass the observable instance to another expression instead of its contained value.
 
 {: .note }
 Unlike the member selection operator, the observable selection operator can also be placed in front of the first
