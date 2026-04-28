@@ -6,6 +6,7 @@ package org.jfxcore.compiler.ast.emit;
 import org.jetbrains.annotations.Nullable;
 import org.jfxcore.compiler.ast.ResolvedTypeNode;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
+import org.jfxcore.compiler.type.FieldDeclaration;
 import org.jfxcore.compiler.type.TypeDeclaration;
 import org.jfxcore.compiler.type.TypeInstance;
 import org.jfxcore.compiler.type.TypeInvoker;
@@ -55,16 +56,19 @@ public class EmitClassConstantNode extends ReferenceableNode {
     @Override
     public void emit(BytecodeEmitContext context) {
         Bytecode code = context.getOutput();
+        FieldDeclaration fieldDecl = declaringType.requireField(fieldName);
 
         if (isEmitInPreamble()) {
             code.aload(0)
-                .getstatic(declaringType.requireField(fieldName))
+                .getstatic(fieldDecl)
+                .autoconv(fieldDecl.type(), type.getTypeDeclaration())
                 .dup_x1()
                 .putfield(context.getLocalMarkupClass().requireField(getId()));
 
             storeLocal(code, type.getTypeDeclaration());
         } else {
-            code.getstatic(declaringType.requireField(fieldName));
+            code.getstatic(fieldDecl)
+                .autoconv(fieldDecl.type(), type.getTypeDeclaration());
         }
     }
 

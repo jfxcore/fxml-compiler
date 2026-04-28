@@ -1070,5 +1070,19 @@ public class PropertyAssignmentTest {
 
             assertSame(javafx.scene.paint.Color.RED, root.getTextFill());
         }
+
+        @Test
+        public void Coerce_To_Boolean_Constant_Field() {
+            Button root = compileAndRun("""
+                <?import javafx.scene.control.*?>
+                <Button xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                        visible="FALSE" disable="TRUE"/>
+            """);
+
+            assertFieldAccess(root, Boolean.class.getName(), "TRUE", "Ljava/lang/Boolean;");
+            assertFieldAccess(root, Boolean.class.getName(), "FALSE", "Ljava/lang/Boolean;");
+            assertFalse(root.isVisible());
+            assertTrue(root.isDisable());
+        }
     }
 }
