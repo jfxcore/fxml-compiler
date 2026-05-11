@@ -19,7 +19,7 @@ field with the given name, and causes the element to resolve to the type of the 
 ```
 
 {: .note }
-> A more concise way to achieve the same result is to use an [assignment expression](once.html).
+> A more concise way to achieve the same result is to use an [assignment expression](evaluate.html).
 > Alternatively, if the constant is declared on the same class, its name can be used as a literal:
 > ```xml
 > <!-- Converting "UNCONSTRAINED_RESIZE_POLICY" to the value of
