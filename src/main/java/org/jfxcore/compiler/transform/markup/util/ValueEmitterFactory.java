@@ -28,9 +28,12 @@ import org.jfxcore.compiler.diagnostic.DiagnosticInfo;
 import org.jfxcore.compiler.diagnostic.ErrorCode;
 import org.jfxcore.compiler.diagnostic.MarkupException;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
+import org.jfxcore.compiler.diagnostic.errors.BindingSourceErrors;
 import org.jfxcore.compiler.diagnostic.errors.GeneralErrors;
+import org.jfxcore.compiler.diagnostic.errors.ParserErrors;
 import org.jfxcore.compiler.diagnostic.errors.PropertyAssignmentErrors;
 import org.jfxcore.compiler.diagnostic.errors.SymbolResolutionErrors;
+import org.jfxcore.compiler.parse.TypeParser;
 import org.jfxcore.compiler.transform.TransformContext;
 import org.jfxcore.compiler.type.AccessModifier;
 import org.jfxcore.compiler.type.AnnotationDeclaration;
@@ -207,6 +210,23 @@ public class ValueEmitterFactory {
             } catch (NumberFormatException ex) {
                 break;
             }
+        }
+
+        if (targetType.subtypeOf(ClassDecl())) {
+            List<TypeInstance> types = new TypeParser(value, sourceInfo.getStart()).parse();
+
+            if (types.size() > 1 || !types.getFirst().arguments().isEmpty() && !types.getFirst().isRaw()) {
+                throw ParserErrors.invalidExpression(sourceInfo);
+            }
+
+            TypeInstance sourceType = new TypeInvoker(sourceInfo).invokeType(ClassDecl(), types);
+
+            if (!targetType.isAssignableFrom(sourceType)) {
+                throw BindingSourceErrors.cannotConvertSourceType(
+                    sourceInfo, sourceType.javaName(), targetType.javaName());
+            }
+
+            return new EmitLiteralNode(id, targetType, types.getFirst().declaration().javaName(), sourceInfo);
         }
 
         if (targetType.declaration().isEnum()) {
