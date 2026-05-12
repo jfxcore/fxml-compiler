@@ -44,7 +44,7 @@ String resources can be formatted with arguments:
 <!-- String literal and expression arguments -->
 <Label text="{StaticResource greetingWithNameAndNumber; formatArguments=Jane Doe, $amount}"/>
 
-<!-- Note: 'formatArguments' is an Object[], so no target-type value coercion is performed.
+<!-- Note: 'formatArguments' is an Object[], so no target-type coercion is performed.
      In this example, all arguments are parsed as strings. -->
 <Label text="{StaticResource greetingWithNameAndNumber; formatArguments=Jane Doe, 1234.5}"/>
 

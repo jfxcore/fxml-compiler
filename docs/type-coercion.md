@@ -1,12 +1,12 @@
 ---
 layout: default
-title: Value coercion
+title: Type coercion
 nav_order: 6
 ---
 
-# Value coercion
-If a literal value is assigned to a property in an FXML 2.0 document, the literal value is automatically converted
-to the type of its property. This process, called value coercion, is supported in the following scenarios:
+# Type coercion
+When a value is assigned to a property in an FXML 2.0 document, the textual value is automatically converted
+to the property type. This process, called type coercion, is supported in the following scenarios:
 1. Primitive types and primitive boxes, for example:
     ```xml
     <!-- Converting "true" to a boolean value -->
@@ -45,11 +45,11 @@ to the type of its property. This process, called value coercion, is supported i
 
 {: .note }
 Values that use [markup extension](markup-extension.html) syntax are not treated as literals and therefore do not
-participate in literal value coercion. This includes both the standard attribute form such as `{StaticResource greeting}`
+participate in type coercion. This includes both the standard attribute form such as `{StaticResource greeting}`
 and a prefix shorthand such as `%greeting` after a matching `<?prefix?>` declaration.
 
-## Implicit constructor coercion
-An object instance can also be created implicitly from a literal value, provided that the literal value can be
+## Implicit construction
+An object instance can be created implicitly from a literal value, provided that the literal value can be
 coerced to the type of the constructor argument. This conversion only works for constructors where the parameter
 is annotated with `@NamedArg`.
 
@@ -69,14 +69,14 @@ An `Insets` instance would normally be created like this:
 </Button>
 ```
 
-However, since the literal `10` can be coerced to the named constructor argument `topLeftBottomRight`, the `Insets`
-object can also be created implicitly:
+However, since the literal `10` can be coerced to the type of the named constructor argument `topLeftBottomRight`,
+the `Insets` object can also be created implicitly:
 ```xml
 <Button padding="10"/>
 ```
 
-## Implicit constructor coercion with multiple arguments
-Implicit constructor coercion also works for constructors with multiple parameters, provided that all parameters
+## Implicit construction with multiple arguments
+Implicit construction also works for constructors with multiple parameters, provided that all parameters
 are annotated with `@NamedArg`. For example, we can create an instance of `Insets` with multiple arguments:
 ```xml
 <Button>

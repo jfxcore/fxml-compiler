@@ -8,7 +8,7 @@ parent: FXML 2.0 language reference
 The `fx:False` markup extension specifies the boolean `false` value.
 
 In many cases, using the `fx:False` markup extension is not necessary. In a boolean assignment context,
-the text `"false"` is automatically converted to a boolean value by [coercion](../value-coercion.html).
+the text `"false"` is automatically [converted](../type-coercion.html) to a boolean value.
 
 ## Usage
 
@@ -16,6 +16,6 @@ the text `"false"` is automatically converted to a boolean value by [coercion](.
 <!-- Using the fx:False markup extension -->
 <Button visible="{fx:False}"/>
 
-<!-- Using value coercion -->
+<!-- Using type coercion -->
 <Button visible="false"/>
 ```
