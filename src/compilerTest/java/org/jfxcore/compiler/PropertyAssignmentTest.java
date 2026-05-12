@@ -1084,5 +1084,85 @@ public class PropertyAssignmentTest {
             assertFalse(root.isVisible());
             assertTrue(root.isDisable());
         }
+
+        @SuppressWarnings("unused")
+        public static class ClassLiteralPane<T> extends Pane {
+            private Class<T> classLiteral;
+            private Class<?> wildcardClassLiteral;
+            public void setClassLiteral(Class<T> classLiteral) { this.classLiteral = classLiteral; }
+            public Class<T> getClassLiteral() { return classLiteral; }
+            public void setWildcardClassLiteral(Class<?> classLiteral) { this.wildcardClassLiteral = classLiteral; }
+            public Class<?> getWildcardClassLiteral() { return wildcardClassLiteral; }
+
+            public static <T> Class<T> func(Class<T> c) { return c; }
+        }
+
+        @Test
+        public void Coerce_To_Class_Literal() {
+            ClassLiteralPane<String> root = compileAndRun("""
+                <ClassLiteralPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                                  fx:typeArguments="String" classLiteral="String" wildcardClassLiteral="Double"/>
+            """);
+
+            assertSame(String.class, root.getClassLiteral());
+            assertSame(Double.class, root.getWildcardClassLiteral());
+        }
+
+        @Test
+        public void Coerce_To_Class_Literal_WithTypeArguments() {
+            ClassLiteralPane<Comparable<String>> root = compileAndRun("""
+                <ClassLiteralPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                                  fx:typeArguments="Comparable<String>"
+                                  classLiteral="Comparable"
+                                  wildcardClassLiteral="String"/>
+            """);
+
+            assertSame(Comparable.class, root.getClassLiteral());
+            assertSame(String.class, root.getWildcardClassLiteral());
+        }
+
+        @Test
+        public void Coerce_To_Multiple_Class_Literals_Fails() {
+            MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+                <ClassLiteralPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                                  fx:typeArguments="String" classLiteral="String, Double"/>
+            """));
+
+            assertEquals(ErrorCode.INVALID_EXPRESSION, ex.getDiagnostic().getCode());
+            assertCodeHighlight("String, Double", ex);
+        }
+
+        @Test
+        public void Coerce_To_Incompatible_Class_Literal_Fails() {
+            MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+                <ClassLiteralPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                                  fx:typeArguments="String" classLiteral="Double"/>
+            """));
+
+            assertEquals(ErrorCode.CANNOT_CONVERT_SOURCE_TYPE, ex.getDiagnostic().getCode());
+            assertCodeHighlight("Double", ex);
+        }
+
+        @Test
+        public void Parameterized_Class_Literal_Fails() {
+            MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+                <ClassLiteralPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                                  fx:typeArguments="Comparable<String>" classLiteral="Comparable<String>"/>
+            """));
+
+            assertEquals(ErrorCode.INVALID_EXPRESSION, ex.getDiagnostic().getCode());
+            assertCodeHighlight("Comparable<String>", ex);
+        }
+
+        @Test
+        public void Class_Literal_In_Function_Is_Interpreted_As_Path_And_Fails() {
+            MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+                <ClassLiteralPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                                  fx:typeArguments="String" classLiteral="$func<String>(String)"/>
+            """));
+
+            assertEquals(ErrorCode.MEMBER_NOT_FOUND, ex.getDiagnostic().getCode());
+            assertCodeHighlight("String", ex);
+        }
     }
 }

@@ -15,23 +15,28 @@ to the type of its property. This process, called value coercion, is supported i
     <!-- Converting "10" to a double value -->
     <Button lineSpacing="10"/>
     ```
-2. Enum constants, for example:
+2. Class literals, for example:
+   ```xml
+   <!-- Converting "Double" to a java.lang.Class instance -->
+   <MyControl type="Double"/>
+   ```
+3. Enum constants, for example:
     ```xml
     <!-- Converting "LEFT" to the enum constant ContentDisplay.LEFT -->
     <Button contentDisplay="LEFT"/>
     ```
-3. Static fields on the declaring class, for example:
+4. Static fields on the declaring class, for example:
     ```xml
     <!-- Converting "UNCONSTRAINED_RESIZE_POLICY" to the value of
          the static field TableView.UNCONSTRAINED_RESIZE_POLICY -->
     <TableView columnResizePolicy="UNCONSTRAINED_RESIZE_POLICY"/>
     ```
-4. Method [event handlers](event-handlers.html), for example:
+5. Method [event handlers](event-handlers.html), for example:
     ```xml
     <Button onAction="handleActionEvent"/>
     ```
     In this case, `handleActionEvent` is resolved to a compatible method on the [code-behind](code-behind.html) class.
-5. Color values, for example:
+6. Color values, for example:
     ```xml
     <Button textFill="RED"/>
     <Button textFill="#FF0000"/>
