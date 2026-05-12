@@ -8,7 +8,7 @@ parent: FXML 2.0 language reference
 The `fx:True` markup extension specifies the boolean `true` value.
 
 In many cases, using the `fx:True` markup extension is not necessary. In a boolean assignment context,
-the text `"true"` is automatically converted to a boolean value by [coercion](../value-coercion.html).
+the text `"true"` is automatically [converted](../type-coercion.html) to a boolean value.
 
 ## Usage
 
@@ -16,6 +16,6 @@ the text `"true"` is automatically converted to a boolean value by [coercion](..
 <!-- Using the fx:True markup extension -->
 <Button visible="{fx:True}"/>
 
-<!-- Using value coercion -->
+<!-- Using type coercion -->
 <Button visible="true"/>
 ```

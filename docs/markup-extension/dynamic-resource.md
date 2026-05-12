@@ -45,7 +45,7 @@ String resources can be formatted with literal arguments or expression arguments
 <!-- Observable expression argument -->
 <Label text="{DynamicResource greetingWithNameAndMessage; formatArguments=Jane Doe, ${message}}"/>
 
-<!-- Note: 'formatArguments' is an Object[], so no target-type value coercion is performed.
+<!-- Note: 'formatArguments' is an Object[], so no target-type coercion is performed.
      In this example, all arguments are parsed as strings. -->
 <Label text="{DynamicResource greetingWithNameAndNumber; formatArguments=Jane Doe, 1234.5}"/>
 

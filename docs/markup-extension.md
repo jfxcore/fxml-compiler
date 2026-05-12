@@ -6,8 +6,8 @@ has_children: true
 ---
 
 # Markup extensions
-Attribute values in an FXML document are [coerced](value-coercion.html) to the type of their property with a range of built-in
-conversions. This process can be customized with markup extensions to support advanced scenarios that the
+Attribute values in an FXML document are [converted](type-coercion.html) to the type of their property with a range of
+built-in conversions. This process can be customized with markup extensions to support advanced scenarios that the
 FXML 2.0 language does not offer out of the box.
 
 A markup extension can be used in attribute notation or element notation. When used in attribute notation, it has a
