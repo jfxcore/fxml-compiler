@@ -59,6 +59,7 @@ The [expression-related](markup-extension/expression.html) intrinsic markup exte
 |:-|:-|:-|
 | [`fx:Evaluate`](reference/evaluate.html) | yes | yes |
 | [`fx:Observe`](reference/observe.html) | yes | yes |
+| [`fx:Push`](reference/push.html) | yes | no |
 | [`fx:Synchronize`](reference/synchronize.html) | yes | no |
 
 ## User-defined markup extensions
