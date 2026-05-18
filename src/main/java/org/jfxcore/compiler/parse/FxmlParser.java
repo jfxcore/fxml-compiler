@@ -54,8 +54,7 @@ public class FxmlParser {
     // Intrinsics that are not interpreted by the inline parser.
     private static final Intrinsic[] VERBATIM_INTRINSICS = new Intrinsic[] {
         Intrinsics.ID,
-        Intrinsics.CLASS,
-        Intrinsics.STYLESHEET
+        Intrinsics.CLASS
     };
 
     private static final String[] INLINE_EXPR_TOKENS = new String[] {

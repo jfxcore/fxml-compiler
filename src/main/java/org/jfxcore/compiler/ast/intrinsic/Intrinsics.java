@@ -60,9 +60,6 @@ public class Intrinsics {
         "Class", Kind.OBJECT, Placement.ANY, KnownSymbols::ClassDecl,
         new IntrinsicProperty("name", KnownSymbols::StringDecl, true));
 
-    public static final Intrinsic STYLESHEET = new Intrinsic(
-        "Stylesheet", Kind.OBJECT, Placement.ANY, KnownSymbols::StringDecl);
-
     public static final Intrinsic EVALUATE = new Intrinsic(
         "Evaluate", Kind.OBJECT, Placement.ANY, KnownSymbols::BottomTypeDecl,
         new IntrinsicProperty("source", KnownSymbols::StringDecl, true));
@@ -84,8 +81,7 @@ public class Intrinsics {
 
     private static final List<Intrinsic> NODES = List.of(
         SUBCLASS, CLASS_MODIFIER, CLASS_NAME, CLASS_PARAMETERS, CONTEXT, ID, VALUE, CONSTANT, FACTORY,
-        TYPE_ARGUMENTS, ITEM_TYPE, DEFINE, NULL, TRUE, FALSE, CLASS, STYLESHEET, EVALUATE, OBSERVE,
-        PUSH, SYNCHRONIZE);
+        TYPE_ARGUMENTS, ITEM_TYPE, DEFINE, NULL, TRUE, FALSE, CLASS, EVALUATE, OBSERVE, PUSH, SYNCHRONIZE);
 
     public static Intrinsic find(ObjectNode node) {
         if (node.getType().isIntrinsic()){
