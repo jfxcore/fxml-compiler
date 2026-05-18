@@ -29,7 +29,6 @@ import org.jfxcore.compiler.transform.markup.ObjectToPropertyTransform;
 import org.jfxcore.compiler.transform.markup.ObjectTransform;
 import org.jfxcore.compiler.transform.markup.PropertyAssignmentTransform;
 import org.jfxcore.compiler.transform.markup.RemoveIntrinsicsTransform;
-import org.jfxcore.compiler.transform.markup.StylesheetTransform;
 import org.jfxcore.compiler.transform.markup.TemplateContentTransform;
 import org.jfxcore.compiler.transform.markup.TopologyTransform;
 import org.jfxcore.compiler.transform.markup.ValidateTypeTransform;
@@ -84,7 +83,6 @@ public class Transformer {
             new TemplateContentTransform(),
             new AddTemplateIdFields(),
             new RemoveIntrinsicsTransform(),
-            new StylesheetTransform(),
             new DocumentTransform(),
             new IdPropertyTransform(),
             new BindingContextTransform(),
