@@ -5,6 +5,7 @@ import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import java.util.Base64
+import org.gradle.api.publish.maven.tasks.PublishToMavenRepository
 
 plugins {
     `java-library`
@@ -228,13 +229,9 @@ publishing {
 }
 
 signing {
-    sign(publishing.publications["maven"])
-}
-
-tasks.withType<Sign>().configureEach {
-    val taskNames = gradle.startParameter.taskNames.map { it.substringAfterLast(':') }
-    val publishToMavenLocal = taskNames.isNotEmpty() && taskNames.all { name -> name == "publishToMavenLocal" }
-    onlyIf {
-        !publishToMavenLocal
+    setRequired {
+        gradle.taskGraph.allTasks.any { it is PublishToMavenRepository }
     }
+
+    sign(publishing.publications["maven"])
 }
