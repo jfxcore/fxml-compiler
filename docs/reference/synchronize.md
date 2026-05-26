@@ -1,7 +1,7 @@
 ---
 layout: default
 title: fx:Synchronize, <span class="nav-inline-code">#{x}</span>
-parent: FXML 2.0 language reference
+parent: FXML/2 language reference
 ---
 
 # fx:Synchronize markup extension, #{x}

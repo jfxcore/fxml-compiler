@@ -5,8 +5,8 @@ nav_order: 2
 ---
 
 # Getting started
-The easiest way to get started with FXML 2.0 is by using the [org.jfxcore.fxmlplugin](https://plugins.gradle.org/plugin/org.jfxcore.fxmlplugin),
-which automates the process of compiling [standalone](getting-started/standalone.html) or [embedded](getting-started/embedded.html) FXML 2.0 markup code in your Gradle project.
+The easiest way to get started with FXML/2 is by using the [org.jfxcore.fxmlplugin](https://plugins.gradle.org/plugin/org.jfxcore.fxmlplugin),
+which automates the process of compiling [standalone](getting-started/standalone.html) or [embedded](getting-started/embedded.html) FXML markup code in your Gradle project.
 At this point, there is no plugin yet for the Maven build system. Manually invoking the FXML compiler is possible, but not recommended.
 
 ## Using the Gradle plugin

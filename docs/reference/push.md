@@ -1,7 +1,7 @@
 ---
 layout: default
 title: fx:Push, <span class="nav-inline-code">>{x}</span>
-parent: FXML 2.0 language reference
+parent: FXML/2 language reference
 ---
 
 # fx:Push markup extension, >{x}

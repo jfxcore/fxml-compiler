@@ -4,16 +4,18 @@ title: Overview
 nav_order: 1
 ---
 
-# FXML 2.0 overview
+# FXML/2 overview
 
-FXML 2.0 is a declarative markup language for JavaFX based on the [FXML 1.0](https://openjfx.io/javadoc/24/javafx.fxml/javafx/fxml/doc-files/introduction_to_fxml.html) markup language, adding powerful new features:
+FXML/2 is a declarative markup language for JavaFX based on the
+[FXML](https://openjfx.io/javadoc/24/javafx.fxml/javafx/fxml/doc-files/introduction_to_fxml.html)
+markup language, adding powerful new features:
 
 ## Compile markup directly to bytecode
-FXML 2.0 markup is compiled directly to bytecode, and doesn't require `FXMLLoader` to load the document at runtime.
+FXML/2 markup is compiled directly to bytecode, and doesn't require `FXMLLoader` to load the document at runtime.
 No parsing is required, and no reflection is necessary to instantiate the JavaFX object graph.
 This dramatically improves the loading performance of FXML documents.
 
-Here's how an [FXML 2.0 file](getting-started/standalone.html) is compiled to a Java class:
+Here's how an [FXML file](getting-started/standalone.html) is compiled to a Java class:
 <div class="filename">com/sample/NumberDialog.fxml</div>
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
@@ -70,11 +72,11 @@ public class NumberDialog extends VBox {
 </details>
 
 In many cases, custom controls or user interfaces require imperative code for additional functionality.
-FXML 2.0 supports this with an optional [code-behind](code-behind.html) class to combine FXML markup and Java code.
+FXML/2 supports this with an optional [code-behind](code-behind.html) class to combine FXML markup and Java code.
 
 ## Embed markup into Java or Kotlin files
 
-FXML 2.0 markup can optionally be [embedded](getting-started/embedded.html) into Java or Kotlin source code,
+FXML markup can optionally be [embedded](getting-started/embedded.html) into Java or Kotlin source code,
 keeping markup and imperative code in the same file. The annotated class supplies the FXML source text,
 and the compiler treats it like a regular FXML view associated with that class:
 
@@ -101,7 +103,7 @@ This makes it easy to build components in a single source file while still getti
 including type-safe symbol resolution and seamless integration with imperative code.
 
 ## Compile-time type safety
-All symbols referenced in FXML 2.0 markup are resolved at compile time. Errors are surfaced early in the build,
+All symbols referenced in FXML markup are resolved at compile time. Errors are surfaced early in the build,
 instead of later at runtime. Compiler diagnostics make it easy to see what went wrong:
 
 ```
@@ -112,7 +114,7 @@ NumberDialog.fxml:8: 'textFiel' in NumberDialog cannot be resolved
 ```
 
 ## Custom markup extensions
-FXML 2.0 can be extended with [markup extensions](markup-extension.html) for advanced markup processing scenarios.
+FXML/2 can be extended with [markup extensions](markup-extension.html) for advanced markup processing scenarios.
 A markup extension is a user-definable function that computes a value or modifies a JavaFX property.
 
 For example, an application could define an `I18n` extension to look up a localized string in a user-definable way,
@@ -123,11 +125,11 @@ and apply that string to a JavaFX property:
 ```
 
 ## Bring your own pattern
-FXML 2.0 does not use the markup/controller pattern as featured in FXML 1.0 with `FXMLLoader`.
-Instead, FXML 2.0 markup compiles down to scene graph nodes, optionally including a [code-behind](code-behind.html)
+FXML/2 does not use the markup/controller pattern as featured in classic FXML with `FXMLLoader`.
+Instead, FXML/2 markup compiles down to scene graph nodes, optionally including a [code-behind](code-behind.html)
 class to combine it with imperative code.
 
 Application developers are free to implement their preferred patterns like
 [MVC](https://en.wikipedia.org/wiki/Model%E2%80%93view%E2%80%93controller) or
 [MVVM](https://en.wikipedia.org/wiki/Model%E2%80%93view%E2%80%93viewmodel),
-but this is not a design choice that is imposed by the FXML 2.0 markup language.
+but this is not a design choice that is imposed by the FXML/2 markup language.

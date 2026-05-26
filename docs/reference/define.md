@@ -1,7 +1,7 @@
 ---
 layout: default
 title: fx:define
-parent: FXML 2.0 language reference
+parent: FXML/2 language reference
 ---
 
 # fx:define element

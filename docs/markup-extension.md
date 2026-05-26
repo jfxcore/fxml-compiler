@@ -8,7 +8,7 @@ has_children: true
 # Markup extensions
 Attribute values in an FXML document are [converted](type-coercion.html) to the type of their property with a range of
 built-in conversions. This process can be customized with markup extensions to support advanced scenarios that the
-FXML 2.0 language does not offer out of the box.
+FXML/2 language does not offer out of the box.
 
 A markup extension can be used in attribute notation or element notation. When used in attribute notation, it has a
 special syntax where the name of the markup extension is surrounded by curly braces:
@@ -77,7 +77,7 @@ User-defined markup extensions must implement one or both types of the following
 
 ## Prefix shorthand in attribute notation
 Markup extensions that use attribute notation can also be written with a single-character prefix.
-The `$` and `#` prefixes are intrinsic to the FXML 2.0 language and expand to [expression extensions](markup-extension/expression.html).
+The `$` and `#` prefixes are intrinsic to the FXML/2 language and expand to [expression extensions](markup-extension/expression.html).
 The `%` and `@` prefixes expand to [`StaticResource`](markup-extension/static-resource.html)
 and [`ClassPathResource`](markup-extension/class-path-resource.html):
 

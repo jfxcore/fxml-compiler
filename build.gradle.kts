@@ -190,7 +190,7 @@ publishing {
             pom {
                 url.set("https://github.com/jfxcore/fxml-compiler")
                 name.set("fxml-compiler")
-                description.set("FXML markup compiler")
+                description.set("FXML/2 markup compiler")
                 licenses {
                     license {
                         name.set("BSD-3-Clause")
