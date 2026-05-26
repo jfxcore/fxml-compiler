@@ -43,4 +43,4 @@ files in IntelliJ IDEA, which significantly improves the developer experience. F
 * Inspections for unresolved tags and attributes, unused imports, invalid values, and more
 * Import optimization and intentions to move markup between `.fxml` files and [embedded markup](getting-started/embedded.html)
 
-The is available on the JetBrains Marketplace.
+The plugin is available on the JetBrains Marketplace.
