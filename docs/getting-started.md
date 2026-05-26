@@ -34,7 +34,7 @@ see [Enable annotation processing](getting-started/embedded.html#enable-annotati
 > Usually you don't need to run these tasks manually, as they are automatically run when you build the project.
 
 ## Using the IntelliJ IDEA plugin
-The [FXML/2 IntelliJ plugin](https://github.com/jfxcore/fxml-intellij-plugin) enables IDE support for FXML/2 markup
+The [FXML/2 IntelliJ IDEA plugin](https://github.com/jfxcore/fxml-intellij-plugin) enables IDE support for FXML/2 markup
 files in IntelliJ IDEA, which significantly improves the developer experience. Features of the plugin include:
 
 * Syntax highlighting, folding, formatting, and EditorConfig-aware indentation
@@ -43,4 +43,4 @@ files in IntelliJ IDEA, which significantly improves the developer experience. F
 * Inspections for unresolved tags and attributes, unused imports, invalid values, and more
 * Import optimization and intentions to move markup between `.fxml` files and [embedded markup](getting-started/embedded.html)
 
-The IntelliJ plugin is available on the JetBrains Marketplace.
+The is available on the JetBrains Marketplace.
