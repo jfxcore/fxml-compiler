@@ -32,3 +32,15 @@ see [Enable annotation processing](getting-started/embedded.html#enable-annotati
 > The task is named `processFxml`, `processTestFxml`, etc. and is responsible for parsing FXML markup files and generating Java code files.
 >
 > Usually you don't need to run these tasks manually, as they are automatically run when you build the project.
+
+## Using the IntelliJ IDEA plugin
+The [FXML/2 IntelliJ plugin](https://github.com/jfxcore/fxml-intellij-plugin) enables IDE support for FXML/2 markup
+files in IntelliJ IDEA, which significantly improves the developer experience. Features of the plugin include:
+
+* Syntax highlighting, folding, formatting, and EditorConfig-aware indentation
+* Tag and attribute resolution, code completion, and navigation to JavaFX classes
+* Rename, find usages, and go to declaration for `fx:id` and bindings
+* Inspections for unresolved tags and attributes, unused imports, invalid values, and more
+* Import optimization and intentions to move markup between `.fxml` files and [embedded markup](getting-started/embedded.html)
+
+The IntelliJ plugin is available on the JetBrains Marketplace.
