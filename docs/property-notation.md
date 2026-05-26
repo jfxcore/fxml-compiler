@@ -5,8 +5,8 @@ nav_order: 4
 ---
 
 # Properties
-The FXML 2.0 property syntax is similar to FXML 1.0, and most of the time the notations look identical.
-However, FXML 2.0 relaxes the restriction that property names must be lower-cased, and allows a qualified
+The FXML/2 property syntax is similar to classic FXML, and most of the time the notations look identical.
+However, FXML/2 relaxes the restriction that property names must be lower-cased, and allows a qualified
 notation to resolve ambiguities.
 
 ## Instance property notation

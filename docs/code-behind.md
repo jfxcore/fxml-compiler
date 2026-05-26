@@ -87,12 +87,12 @@ that make up the scene graph will never be instantiated.
 > but before you actually access the FXML scene graph.
 
 ## What is the relationship between `fx:subclass`, `fx:controller`, and `fx:root`?
-`fx:controller` and `fx:root` are both directives of the FXML 1.0 format, and are not available in the FXML 2.0 format.
+`fx:controller` and `fx:root` are both directives of the classic FXML format, and are not available in the FXML/2 format.
 [`fx:subclass`](reference/subclass.html) is a new directive that allows combining markup and imperative code.
 This is similar to the `fx:root` directive, but doesn't require using `FXMLLoader` to load the markup at runtime.
 
-FXML 2.0 always compiles down to scene graph nodes; it does not support the markup/controller model of FXML 1.0
+FXML/2 always compiles down to scene graph nodes; it does not support the markup/controller model of classic FXML
 out of the box. Instead, it is left to developers to implement their favorite architectural patterns.
-FXML 2.0 is well-suited to implement patterns like
+FXML/2 is well-suited to implement patterns like
 [MVC](https://en.wikipedia.org/wiki/Model%E2%80%93view%E2%80%93controller) or
 [MVVM](https://en.wikipedia.org/wiki/Model%E2%80%93view%E2%80%93viewmodel).

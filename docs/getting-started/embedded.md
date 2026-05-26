@@ -6,7 +6,7 @@ nav_order: 2
 ---
 
 # Embedded markup
-FXML 2.0 markup can be embedded directly into Java or Kotlin source code with the `@ComponentView` annotation.
+FXML markup can be embedded directly into Java or Kotlin source code with the `@ComponentView` annotation.
 This can be useful for custom controls and reusable components that benefit from keeping markup and imperative
 logic in the same file.
 
@@ -56,7 +56,7 @@ In Kotlin projects, the embedded FXML document cannot reference type aliases.
 
 ## Enable annotation processing
 The `@ComponentView` annotation is processed at compile time by an annotation processor, it is not retained in
-the compiled class file. The [FXML 2.0 Gradle plugin](https://plugins.gradle.org/plugin/org.jfxcore.fxmlplugin)
+the compiled class file. The [FXML/2 Gradle plugin](https://plugins.gradle.org/plugin/org.jfxcore.fxmlplugin)
 does not enable annotation processing by default, you need to opt in explicitly in your Gradle build script:
 
 ```kotlin

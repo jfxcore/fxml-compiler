@@ -1,7 +1,7 @@
 ---
 layout: default
 title: fx:classParameters
-parent: FXML 2.0 language reference
+parent: FXML/2 language reference
 ---
 
 # fx:classParameters directive
@@ -21,4 +21,4 @@ If omitted, the generated class has a parameterless constructor.
 
 {: .note }
 In XML files, the < character can only be used as a markup delimiter, and must be escaped using &lt; in attribute text.
-However, the FXML 2.0 compiler accepts the non-standard literal form for better code readability.
+However, the FXML/2 compiler accepts the non-standard literal form for better code readability.

@@ -1,7 +1,7 @@
 ---
 layout: default
 title: fx:constant
-parent: FXML 2.0 language reference
+parent: FXML/2 language reference
 ---
 
 # fx:constant directive

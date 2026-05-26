@@ -5,7 +5,7 @@ nav_order: 6
 ---
 
 # Type coercion
-When a value is assigned to a property in an FXML 2.0 document, the textual value is automatically converted
+When a value is assigned to a property in an FXML document, the textual value is automatically converted
 to the property type. This process, called type coercion, is supported in the following scenarios:
 1. Primitive types and primitive boxes, for example:
     ```xml

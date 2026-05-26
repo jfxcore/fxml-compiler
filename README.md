@@ -1,13 +1,13 @@
 # Overview
-FXML 2.0 is a markup language that makes it easy to declaratively build JavaFX applications.
-In contrast to classic FXML files, which are parsed and loaded at runtime with `FXMLLoader`, FXML 2.0 files
+FXML/2 is a markup language that makes it easy to declaratively build JavaFX applications.
+In contrast to classic FXML files, which are parsed and loaded at runtime with `FXMLLoader`, FXML/2 files
 are compiled directly to bytecode.
 
 Since the compiled files are just regular class files, no repeated parsing and loading is required at runtime.
 In many cases, scene graph loading performance can be significantly improved compared to `FXMLLoader`.
 
-Additionally, FXML 2.0 offers many new features and a more concise syntax that results in significantly
-shorter markup code. Refer to the [FXML 2.0 documentation](https://jfxcore.github.io/fxml-compiler/) to get started.
+Additionally, FXML/2 offers many new features and a more concise syntax that results in significantly
+shorter markup code. Refer to the [FXML/2 documentation](https://jfxcore.github.io/fxml-compiler/) to get started.
 
 ## Getting started
 

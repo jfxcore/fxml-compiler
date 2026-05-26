@@ -7,7 +7,7 @@ has_children: true
 ---
 
 # Compiled expressions
-FXML 2.0 supports compiled expressions for one-time evaluation, observation, and bindings.
+FXML/2 supports compiled expressions for one-time evaluation, observation, and bindings.
 These expressions are implemented as intrinsic markup extensions and compiled to specialized code by the FXML compiler.
 
 | Markup extension | [Prefix notation](../markup-extension.html#prefix-shorthand-in-attribute-notation) | [Usage](../markup-extension.html#where-markup-extensions-can-be-used) |
@@ -22,7 +22,7 @@ These expressions are implemented as intrinsic markup extensions and compiled to
 target and/or the source.
 
 ## Setting up a binding
-Here's how a simple binding is specified in FXML 2.0, using different but equivalent notations:
+Here's how a simple binding is specified in FXML, using different but equivalent notations:
 
 <div class="filename">com/sample/MyControl.fxml</div>
 ```xml
@@ -34,7 +34,7 @@ Here's how a simple binding is specified in FXML 2.0, using different but equiva
     <!-- 'source' is the default property of the fx:Observe markup extension, so it can be omitted -->
     <Button text="{fx:Observe caption}"/>
 
-    <!-- Prefix notation, similar to FXML 1.0 -->
+    <!-- Prefix notation, similar to classic FXML -->
     <Button text="${caption}"/>
 </VBox>
 ```
