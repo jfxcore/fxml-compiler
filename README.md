@@ -16,14 +16,14 @@ shorter markup code. Refer to the [FXML/2 documentation](https://jfxcore.github.
 **Groovy**
 ```groovy
 plugins {
-    id "org.jfxcore.fxmlplugin" version "0.13.0"
+    id "org.jfxcore.fxmlplugin" version "0.14.0"
 }
 ```
 
 **Kotlin**
 ```kotlin
 plugins {
-    id("org.jfxcore.fxmlplugin") version "0.13.0"
+    id("org.jfxcore.fxmlplugin") version "0.14.0"
 }
 ```
 
@@ -38,7 +38,7 @@ buildscript {
     }
   }
   dependencies {
-    classpath "org.jfxcore:fxml-gradle-plugin:0.13.0"
+    classpath "org.jfxcore:fxml-gradle-plugin:0.14.0"
   }
 }
 
@@ -54,7 +54,7 @@ buildscript {
     }
   }
   dependencies {
-    classpath("org.jfxcore:fxml-gradle-plugin:0.13.0")
+    classpath("org.jfxcore:fxml-gradle-plugin:0.14.0")
   }
 }
 

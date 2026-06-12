@@ -70,6 +70,6 @@ In Kotlin projects, the KSP plugin also needs to be explicitly applied:
 plugins {
     kotlin("jvm") version "2.3.20"
     id("com.google.devtools.ksp") version "2.3.6"
-    id("org.jfxcore.fxmlplugin") version "0.13.0"
+    id("org.jfxcore.fxmlplugin") version "0.14.0"
 }
 ```
