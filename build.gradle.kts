@@ -17,6 +17,12 @@ plugins {
 group = "org.jfxcore"
 version = project.findProperty("TAG_VERSION_COMPILER") ?: "1.0-SNAPSHOT"
 
+val signingKey: String? by project
+val signingKeyName: String? by project
+val signingPassword: String? by project
+val repositoryUserName: String? by project
+val repositoryPassword: String? by project
+
 repositories {
     mavenCentral()
     maven(url = "https://plugins.gradle.org/m2/")
@@ -159,12 +165,10 @@ tasks.withType<GenerateModuleMetadata> {
 val mavenCentralFixup by tasks.registering {
     doLast {
         val url = project.property("REPOSITORY_POST_URL") as String
-        val username = project.property("REPOSITORY_USERNAME") as String
-        val password = project.property("REPOSITORY_PASSWORD") as String
-        val userToken = Base64.getEncoder().encodeToString("$username:$password".toByteArray(Charsets.UTF_8))
         val request = HttpRequest.newBuilder()
             .uri(URI.create(url))
-            .header("Authorization", "Bearer $userToken")
+            .header("Authorization", "Bearer ${Base64.getEncoder().encodeToString(
+                "$repositoryUserName:$repositoryPassword".toByteArray(Charsets.UTF_8))}")
             .POST(HttpRequest.BodyPublishers.noBody())
             .build()
 
@@ -215,12 +219,10 @@ publishing {
     }
     repositories {
         maven {
-            if (project.hasProperty("REPOSITORY_USERNAME")
-                    && project.hasProperty("REPOSITORY_PASSWORD")
-                    && project.hasProperty("REPOSITORY_URL")) {
+            if (project.hasProperty("REPOSITORY_URL")) {
                 credentials {
-                    username = project.property("REPOSITORY_USERNAME") as String
-                    password = project.property("REPOSITORY_PASSWORD") as String
+                    username = repositoryUserName
+                    password = repositoryPassword
                 }
                 url = uri(project.property("REPOSITORY_URL") as String)
             }
@@ -233,5 +235,6 @@ signing {
         gradle.taskGraph.allTasks.any { it is PublishToMavenRepository }
     }
 
+    useInMemoryPgpKeys(signingKeyName, signingKey, signingPassword)
     sign(publishing.publications["maven"])
 }

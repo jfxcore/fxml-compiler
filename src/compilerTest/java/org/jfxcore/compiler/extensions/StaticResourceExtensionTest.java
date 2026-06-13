@@ -252,9 +252,9 @@ public class StaticResourceExtensionTest extends CompilerTestBase {
         var locale = new SimpleObjectProperty<>(Locale.US);
 
         resourceContext = ResourceContext.ofResourceBundle(
-            bundle(new Object[][] {
+            loc -> bundle(new Object[][] {
                 { "message", "Amount = {0,number,#,##0.0}" }
-            }, Locale.US), locale);
+            }, loc), locale);
 
         LocalizedLabel root = compileAndRun("""
             <?import org.jfxcore.markup.resource.*?>
