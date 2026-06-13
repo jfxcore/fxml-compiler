@@ -36,27 +36,14 @@ jobs:
           sudo apt-get install libgl1-mesa-dev libx11-dev libxxf86vm-dev libxt-dev pkg-config libgtk2.0-dev libgtk-3-dev libxtst-dev gcc-11 g++-11
           sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-11 100 --slave /usr/bin/g++ g++ /usr/bin/g++-11
 
-      - name: Configure GPG
-        run: |
-          cat <<EOT >> ./gpgkey
-          ${{ secrets.SIGNING_KEY }}
-          EOT
-          gpg --batch --import ./gpgkey
-          gpg --pinentry-mode=loopback --passphrase ${{ secrets.SIGNING_PASSWORD }} --export-secret-keys > ~/.gnupg/secring.gpg
-
-      - name: Set up Gradle properties
-        run: |
-          cat <<EOT >> ./gradle.properties
-          signing.keyId=${{ secrets.SIGNING_KEYNAME }}
-          signing.password=${{ secrets.SIGNING_PASSWORD }}
-          signing.secretKeyRingFile=$HOME/.gnupg/secring.gpg
-          EOT
-
       - name: Run Gradle build
-        run: ./gradlew publish -x test -x compilerTest -x check -PREPOSITORY_URL=${URL} -PREPOSITORY_POST_URL=${POST_URL} -PREPOSITORY_USERNAME=${USERNAME} -PREPOSITORY_PASSWORD=${PASSWORD} -PTAG_VERSION_COMPILER=${VERSION}
+        run: ./gradlew publish -x test -x compilerTest -x check -PREPOSITORY_URL=${URL} -PREPOSITORY_POST_URL=${POST_URL} -PTAG_VERSION_COMPILER=${VERSION}
         env:
           URL: https://ossrh-staging-api.central.sonatype.com/service/local/staging/deploy/maven2
           POST_URL: https://ossrh-staging-api.central.sonatype.com/manual/upload/defaultRepository/org.jfxcore
           VERSION: ${{ github.ref_name }}
-          USERNAME: ${{ secrets.SONATYPE_USERNAME }}
-          PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
+          ORG_GRADLE_PROJECT_repositoryUserName: ${{ secrets.SONATYPE_USERNAME }}
+          ORG_GRADLE_PROJECT_repositoryPassword: ${{ secrets.SONATYPE_PASSWORD }}
+          ORG_GRADLE_PROJECT_signingKeyId: ${{ secrets.SIGNING_KEYNAME }}
+          ORG_GRADLE_PROJECT_signingKey: ${{ secrets.SIGNING_KEY }}
+          ORG_GRADLE_PROJECT_signingPassword: ${{ secrets.SIGNING_PASSWORD }}
