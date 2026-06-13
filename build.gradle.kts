@@ -17,8 +17,8 @@ plugins {
 group = "org.jfxcore"
 version = project.findProperty("TAG_VERSION_COMPILER") ?: "1.0-SNAPSHOT"
 
-val signingKeyId: String? by project
 val signingKey: String? by project
+val signingKeyName: String? by project
 val signingPassword: String? by project
 val repositoryUserName: String? by project
 val repositoryPassword: String? by project
@@ -235,6 +235,6 @@ signing {
         gradle.taskGraph.allTasks.any { it is PublishToMavenRepository }
     }
 
-    useInMemoryPgpKeys(signingKeyId, signingKey, signingPassword)
+    useInMemoryPgpKeys(signingKeyName, signingKey, signingPassword)
     sign(publishing.publications["maven"])
 }

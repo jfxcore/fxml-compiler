@@ -44,6 +44,6 @@ jobs:
           VERSION: ${{ github.ref_name }}
           ORG_GRADLE_PROJECT_repositoryUserName: ${{ secrets.SONATYPE_USERNAME }}
           ORG_GRADLE_PROJECT_repositoryPassword: ${{ secrets.SONATYPE_PASSWORD }}
-          ORG_GRADLE_PROJECT_signingKeyId: ${{ secrets.SIGNING_KEYNAME }}
           ORG_GRADLE_PROJECT_signingKey: ${{ secrets.SIGNING_KEY }}
+          ORG_GRADLE_PROJECT_signingKeyName: ${{ secrets.SIGNING_KEYNAME }}
           ORG_GRADLE_PROJECT_signingPassword: ${{ secrets.SIGNING_PASSWORD }}
