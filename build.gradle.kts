@@ -219,11 +219,13 @@ publishing {
     }
     repositories {
         maven {
-            credentials {
-                username = repositoryUserName
-                password = repositoryPassword
+            if (project.hasProperty("REPOSITORY_URL")) {
+                credentials {
+                    username = repositoryUserName
+                    password = repositoryPassword
+                }
+                url = uri(project.property("REPOSITORY_URL") as String)
             }
-            url = uri(project.property("REPOSITORY_URL") as String)
         }
     }
 }
