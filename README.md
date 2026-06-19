@@ -62,8 +62,8 @@ apply(plugin = "org.jfxcore.fxmlplugin")
 ```
 
 ## IntelliJ IDEA plugin
-The [FXML/2 IntelliJ IDEA plugin](https://github.com/jfxcore/fxml-intellij-plugin) enables IDE support for FXML/2 markup
-files in IntelliJ IDEA, which significantly improves the developer experience. Features of the plugin include:
+The [FXML/2 IntelliJ IDEA plugin](https://plugins.jetbrains.com/plugin/32337-fxml-2-for-javafx) enables IDE support for
+FXML/2 markup files in IntelliJ IDEA, which significantly improves the developer experience. Features of the plugin include:
 
 * Syntax highlighting, folding, formatting, and EditorConfig-aware indentation
 * Tag and attribute resolution, code completion, and navigation to JavaFX classes
