@@ -120,6 +120,7 @@ public class BindingSourceTest extends CompilerTestBase {
 
     @Nested
     public class ContextSelector extends CompilerTestBase {
+
         @Test
         public void Bind_Once_To_Parent_Property_With_Indexed_Parent_Selector_Does_Not_Apply_Latest_Value() {
             Pane root = compileAndRun("""
