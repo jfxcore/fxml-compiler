@@ -183,6 +183,10 @@ public class CompilerTestBase {
         assertTrue(testFieldAccess(root, className, fieldName, signature), "FieldAccess assertion failed");
     }
 
+    public void assertNotFieldAccess(Object root, String className, String fieldName, String signature) {
+        assertFalse(testFieldAccess(root, className, fieldName, signature), "FieldAccess assertion failed");
+    }
+
     private synchronized boolean testMethodExpr(Object root, Predicate<List<MethodDeclaration>> predicate) {
         try (var ignored = new CompilationScope(new CompilationContext(new CompilationSource.InMemory("")))) {
             if (classPool == null) {

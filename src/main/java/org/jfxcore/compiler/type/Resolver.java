@@ -325,7 +325,7 @@ public final class Resolver {
     }
 
     /**
-     * Returns the public field with the specified name.
+     * Returns the non-private field with the specified name.
      */
     public FieldDeclaration resolveField(TypeDeclaration type, String name) {
         FieldDeclaration field = tryResolveField(type, name);
@@ -339,8 +339,8 @@ public final class Resolver {
     /**
      * Returns the field with the specified name.
      */
-    public FieldDeclaration resolveField(TypeDeclaration type, String name, boolean publicOnly) {
-        FieldDeclaration field = tryResolveField(type, name, publicOnly);
+    public FieldDeclaration resolveField(TypeDeclaration type, String name, boolean nonPrivateOnly) {
+        FieldDeclaration field = tryResolveField(type, name, nonPrivateOnly);
         if (field == null) {
             throw SymbolResolutionErrors.memberNotFound(sourceInfo, type, name);
         }
@@ -349,7 +349,7 @@ public final class Resolver {
     }
 
     /**
-     * Returns the public field with the specified name, or {@code null} if no such public field can be found.
+     * Returns the non-private field with the specified name, or {@code null} if no such field can be found.
      */
     public @Nullable FieldDeclaration tryResolveField(TypeDeclaration type, String name) {
         return tryResolveField(type, name, true);
@@ -358,9 +358,9 @@ public final class Resolver {
     /**
      * Returns the field with the specified name, or {@code null} if no such field can be found.
      */
-    public @Nullable FieldDeclaration tryResolveField(TypeDeclaration type, String name, boolean publicOnly) {
+    public @Nullable FieldDeclaration tryResolveField(TypeDeclaration type, String name, boolean nonPrivateOnly) {
         for (FieldDeclaration field : type.declaredFields()) {
-            if (publicOnly && field.accessModifier() == AccessModifier.PRIVATE) {
+            if (nonPrivateOnly && field.accessModifier() == AccessModifier.PRIVATE) {
                 continue;
             }
 
@@ -370,7 +370,7 @@ public final class Resolver {
         }
 
         return type.superClass()
-            .map(superClass -> tryResolveField(superClass, name, publicOnly))
+            .map(superClass -> tryResolveField(superClass, name, nonPrivateOnly))
             .orElse(null);
     }
 
@@ -460,7 +460,7 @@ public final class Resolver {
         }
 
         MethodDeclaration method = findMethod(type, m ->
-            m.accessModifier() == AccessModifier.PUBLIC
+            m.accessModifier() != AccessModifier.PRIVATE
                 && (m.name().equals(name) || (!verbatim && (m.name().equals(alt0) || m.name().equals(alt1))))
                 && m.parameters().isEmpty()
                 && !m.returnType().equals(voidDecl())
@@ -498,7 +498,7 @@ public final class Resolver {
         }
 
         MethodDeclaration method = findMethod(type, m ->
-            m.accessModifier() == AccessModifier.PUBLIC
+            m.accessModifier() != AccessModifier.PRIVATE
                 && (m.name().equals(name) || (!verbatim && m.name().equals(setterName)))
                 && m.parameters().size() == 1
                 && m.returnType().equals(voidDecl())
@@ -540,7 +540,7 @@ public final class Resolver {
         }
 
         MethodDeclaration method = findMethod(declaringClass, m ->
-            m.accessModifier() == AccessModifier.PUBLIC
+            m.accessModifier() != AccessModifier.PRIVATE
                 && m.isStatic()
                 && (m.name().equals(name) || (!verbatim && m.name().equals(setterName)))
                 && m.parameters().size() == 2
@@ -581,7 +581,7 @@ public final class Resolver {
         }
 
         MethodDeclaration method = findMethod(declaringClass, m ->
-            m.accessModifier() == AccessModifier.PUBLIC
+            m.accessModifier() != AccessModifier.PRIVATE
                 && m.isStatic()
                 && (m.name().equals(name) || (!verbatim && (m.name().equals(alt0) || m.name().equals(alt1))))
                 && m.parameters().size() == 1
@@ -631,7 +631,7 @@ public final class Resolver {
     private MethodDeclaration resolvePropertyGetterImpl(
             TypeDeclaration declaringClass, @Nullable TypeDeclaration receiverClass, String methodName) {
         return findMethod(declaringClass, m -> {
-            if (m.accessModifier() != AccessModifier.PUBLIC
+            if (m.accessModifier() == AccessModifier.PRIVATE
                     || (receiverClass != null && !m.isStatic())
                     || !m.name().equals(methodName)
                     || !m.returnType().subtypeOf(ObservableValueDecl())

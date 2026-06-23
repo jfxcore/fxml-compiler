@@ -166,19 +166,21 @@ public class EventHandlerTest extends CompilerTestBase {
         """));
 
         assertEquals(ErrorCode.MEMBER_NOT_FOUND, ex.getDiagnostic().getCode());
+        assertCodeHighlight("inaccessibleHandler", ex);
     }
 
     @Test
-    public void PackagePrivate_EventHandler_Is_Not_Accessible() {
-        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+    public void PackagePrivate_EventHandler_Is_Accessible() {
+        TestPane root = compileAndRun("""
             <?import javafx.scene.control.*?>
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <Button onAction="packagePrivateHandler"/>
             </TestPane>
-        """));
+        """);
 
-        assertEquals(ErrorCode.MEMBER_NOT_ACCESSIBLE, ex.getDiagnostic().getCode());
-        assertCodeHighlight("packagePrivateHandler", ex);
+        root.flag = false;
+        ((Button)root.getChildren().get(0)).getOnAction().handle(new ActionEvent());
+        assertTrue(root.flag);
     }
 
     @Test
@@ -186,11 +188,11 @@ public class EventHandlerTest extends CompilerTestBase {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.scene.control.*?>
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
-                <Button onAction="   packagePrivateHandler   "/>
+                <Button onAction="   inaccessibleHandler   "/>
             </TestPane>
         """));
 
-        assertEquals(ErrorCode.MEMBER_NOT_ACCESSIBLE, ex.getDiagnostic().getCode());
-        assertCodeHighlight("packagePrivateHandler", ex);
+        assertEquals(ErrorCode.MEMBER_NOT_FOUND, ex.getDiagnostic().getCode());
+        assertCodeHighlight("inaccessibleHandler", ex);
     }
 }
