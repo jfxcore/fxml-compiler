@@ -68,7 +68,7 @@ public class TestCompiler extends AbstractCompiler {
         StringBuilder codeBehind = new StringBuilder();
         DocumentNode document;
         String simpleClassName;
-        Path fxmlTestSourcePath = Path.of("org/jfxcore/compiler/classes/" + fileName + ".fxml");
+        Path fxmlTestSourcePath = Path.of("org/jfxcore/compiler/" + fileName + ".fxml");
 
         CompilationContext context = new CompilationContext(new CompilationSource.InMemory(source));
         if (configure != null) {

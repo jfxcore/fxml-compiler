@@ -44,7 +44,7 @@ public class ClassPathResourceExtensionTest extends CompilerTestBase {
         """);
 
         URL url = Objects.requireNonNull(root.getClass().getResource("image.jpg"));
-        assertTrue(root.getText().endsWith("org/jfxcore/compiler/classes/image.jpg"));
+        assertTrue(root.getText().endsWith("org/jfxcore/compiler/image.jpg"));
         assertEquals(url, root.getUrl());
         assertEquals(url.toURI(), root.getUri());
     }
@@ -61,7 +61,7 @@ public class ClassPathResourceExtensionTest extends CompilerTestBase {
         """);
 
         URL url = Objects.requireNonNull(root.getClass().getResource("image.jpg"));
-        assertTrue(root.getText().endsWith("org/jfxcore/compiler/classes/image.jpg"));
+        assertTrue(root.getText().endsWith("org/jfxcore/compiler/image.jpg"));
         assertEquals(url, root.getUrl());
         assertEquals(url.toURI(), root.getUri());
     }
@@ -76,7 +76,7 @@ public class ClassPathResourceExtensionTest extends CompilerTestBase {
         """);
 
         URL url = Objects.requireNonNull(root.getClass().getResource("image.jpg"));
-        assertTrue(root.getText().endsWith("org/jfxcore/compiler/classes/image.jpg"));
+        assertTrue(root.getText().endsWith("org/jfxcore/compiler/image.jpg"));
         assertEquals(url, root.getUrl());
         assertEquals(url.toURI(), root.getUri());
     }
@@ -86,13 +86,13 @@ public class ClassPathResourceExtensionTest extends CompilerTestBase {
         TestLabel root = compileAndRun("""
             <?import org.jfxcore.markup.resource.*?>
             <TestLabel xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                       text="{ClassPathResource /org/jfxcore/compiler/classes/image.jpg}"
-                       url="{ClassPathResource /org/jfxcore/compiler/classes/image.jpg}"
-                       uri="{ClassPathResource /org/jfxcore/compiler/classes/image.jpg}"/>
+                       text="{ClassPathResource /org/jfxcore/compiler/image.jpg}"
+                       url="{ClassPathResource /org/jfxcore/compiler/image.jpg}"
+                       uri="{ClassPathResource /org/jfxcore/compiler/image.jpg}"/>
         """);
 
         URL url = Objects.requireNonNull(root.getClass().getResource("image.jpg"));
-        assertTrue(root.getText().endsWith("org/jfxcore/compiler/classes/image.jpg"));
+        assertTrue(root.getText().endsWith("org/jfxcore/compiler/image.jpg"));
         assertEquals(url, root.getUrl());
         assertEquals(url.toURI(), root.getUri());
     }
@@ -102,13 +102,13 @@ public class ClassPathResourceExtensionTest extends CompilerTestBase {
         TestLabel root = compileAndRun("""
             <?import org.jfxcore.markup.resource.*?>
             <TestLabel xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                       text="{ClassPathResource '/org/jfxcore/compiler/classes/image with   spaces.jpg'}"
-                       url="{ClassPathResource '/org/jfxcore/compiler/classes/image with   spaces.jpg'}"
-                       uri="{ClassPathResource '/org/jfxcore/compiler/classes/image with   spaces.jpg'}"/>
+                       text="{ClassPathResource '/org/jfxcore/compiler/image with   spaces.jpg'}"
+                       url="{ClassPathResource '/org/jfxcore/compiler/image with   spaces.jpg'}"
+                       uri="{ClassPathResource '/org/jfxcore/compiler/image with   spaces.jpg'}"/>
         """);
 
         URL url = Objects.requireNonNull(root.getClass().getResource("image with   spaces.jpg"));
-        assertTrue(root.getText().endsWith("org/jfxcore/compiler/classes/image%20with%20%20%20spaces.jpg"));
+        assertTrue(root.getText().endsWith("org/jfxcore/compiler/image%20with%20%20%20spaces.jpg"));
         assertEquals(url, root.getUrl());
         assertEquals(url.toURI(), root.getUri());
     }
@@ -125,7 +125,7 @@ public class ClassPathResourceExtensionTest extends CompilerTestBase {
             </Label>
         """);
 
-        assertTrue(root.getText().endsWith("org/jfxcore/compiler/classes/image.jpg"));
+        assertTrue(root.getText().endsWith("org/jfxcore/compiler/image.jpg"));
     }
 
     @Test
@@ -140,7 +140,7 @@ public class ClassPathResourceExtensionTest extends CompilerTestBase {
             </Label>
         """);
 
-        assertTrue(root.getStylesheets().stream().anyMatch(s -> s.endsWith("org/jfxcore/compiler/classes/image.jpg")));
+        assertTrue(root.getStylesheets().stream().anyMatch(s -> s.endsWith("org/jfxcore/compiler/image.jpg")));
     }
 
     @Test

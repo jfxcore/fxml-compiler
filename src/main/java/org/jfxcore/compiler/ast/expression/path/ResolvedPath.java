@@ -29,14 +29,15 @@ import org.jfxcore.compiler.diagnostic.errors.SymbolResolutionErrors;
 import org.jfxcore.compiler.type.AccessModifier;
 import org.jfxcore.compiler.type.AnnotationDeclaration;
 import org.jfxcore.compiler.type.FieldDeclaration;
+import org.jfxcore.compiler.type.MemberDeclaration;
 import org.jfxcore.compiler.type.MethodDeclaration;
 import org.jfxcore.compiler.type.Resolver;
 import org.jfxcore.compiler.type.TypeDeclaration;
 import org.jfxcore.compiler.type.TypeInstance;
 import org.jfxcore.compiler.type.TypeInvoker;
+import org.jfxcore.compiler.util.AccessVerifier;
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
 import java.util.TreeMap;
@@ -331,58 +332,40 @@ public class ResolvedPath {
         SegmentMap segments = new SegmentMap();
 
         for (ResolveSegmentMethod method : methods) {
-            segments.tryAdd(
-                method.resolve(
-                    resolver, invoker, propertyName, declaringClass, receiverClass, staticContext,
-                    attachedProperty, selectObservable, providedArguments),
-                0, preferObservable, selectObservable);
+            String[] names = new String[] {
+                propertyName,
+                propertyName + "Property",
+                "get" + propertyNameUpper,
+                "is" + propertyNameUpper
+            };
 
-            segments.tryAdd(
-                method.resolve(
-                    resolver, invoker, String.format("%sProperty", propertyName), declaringClass, receiverClass,
-                    staticContext, attachedProperty, selectObservable, providedArguments),
-                1, preferObservable, selectObservable);
+            for (int i = 0; i < names.length; ++i) {
+                SegmentInfo segmentInfo = method.resolve(
+                    resolver, invoker, names[i], declaringClass, receiverClass, staticContext,
+                    attachedProperty, selectObservable, providedArguments);
 
-            segments.tryAdd(
-                method.resolve(
-                    resolver, invoker, String.format("get%s", propertyNameUpper), declaringClass, receiverClass,
-                    staticContext, attachedProperty, selectObservable, providedArguments),
-                2, false, selectObservable);
-
-            segments.tryAdd(
-                method.resolve(
-                    resolver, invoker, String.format("is%s", propertyNameUpper), declaringClass, receiverClass,
-                    staticContext, attachedProperty, selectObservable, providedArguments),
-                3, false, selectObservable);
+                segments.tryAdd(segmentInfo, i, preferObservable && i < 2, selectObservable);
+            }
         }
 
-        Iterator<SegmentInfo> it = segments.values().iterator();
-        if (it.hasNext()) {
-            return it.next().segment;
+        SegmentInfo inaccessibleSegment = null;
+
+        for (SegmentInfo segmentInfo : segments.values()) {
+            if (AccessVerifier.isAccessible(segmentInfo.declaration(), declaringClass)) {
+                return segmentInfo.segment();
+            }
+
+            if (inaccessibleSegment == null) {
+                inaccessibleSegment = segmentInfo;
+            }
+        }
+
+        if (inaccessibleSegment != null) {
+            throw SymbolResolutionErrors.memberNotAccessible(
+                segment.getSourceInfo(), inaccessibleSegment.declaration());
         }
 
         return null;
-    }
-
-    /**
-     * Computes the score of the resolved path segment, which is used to rank potential path interpretations.
-     */
-    private static int getSegmentScore(SegmentInfo info, int nameOrder, boolean preferObservable) {
-        int observable;
-
-        if (preferObservable) {
-            observable = info.segment.hasObservableDependency() ? -100 : 0;
-        } else {
-            observable = info.segment.hasObservableDependency() ? 0 : -100;
-        }
-
-        int source = 0;
-
-        if (info.segment instanceof FieldSegment) {
-            source = -20;
-        }
-
-        return observable + source + nameOrder;
     }
 
     /**
@@ -425,6 +408,7 @@ public class ResolvedPath {
                 new FieldSegment(
                     fieldDeclaration.name(), propertyName, type, type, fieldDeclaration,
                     ValueSourceKind.NONE, ObservableDependencyKind.NONE),
+                fieldDeclaration,
                 true);
         }
 
@@ -435,7 +419,7 @@ public class ResolvedPath {
             fieldDeclaration.name(), propertyName, type, valueType,
             fieldDeclaration, valueSourceKind, dependencyKind);
 
-        return new SegmentInfo(segment, valueSourceKind.isReadOnly());
+        return new SegmentInfo(segment, fieldDeclaration, valueSourceKind.isReadOnly());
     }
 
     /**
@@ -485,6 +469,7 @@ public class ResolvedPath {
                 new GetterSegment(
                     getterDeclaration.name(), propertyName, type, type,
                     getterDeclaration, attachedProperty, ValueSourceKind.NONE, ObservableDependencyKind.NONE),
+                getterDeclaration,
                 true);
         }
 
@@ -495,6 +480,7 @@ public class ResolvedPath {
             new GetterSegment(
                 getterDeclaration.name(), propertyName, type, valueType,
                 getterDeclaration, attachedProperty, valueSourceType, dependencyKind),
+            getterDeclaration,
             valueSourceType.isReadOnly());
     }
 
@@ -554,6 +540,7 @@ public class ResolvedPath {
                 new KotlinDelegateSegment(
                     delegateInfo.delegateField.name(), propertyName, type, type,
                     delegateInfo.delegateField, ValueSourceKind.NONE, ObservableDependencyKind.NONE),
+                delegateInfo.getter(),
                 valueSourceType.isReadOnly());
         }
 
@@ -564,6 +551,7 @@ public class ResolvedPath {
             new KotlinDelegateSegment(
                 delegateInfo.delegateField.name(), propertyName, type, typeArg,
                 delegateInfo.delegateField, valueSourceType, dependencyKind),
+            delegateInfo.getter(),
             valueSourceType.isReadOnly());
     }
 
@@ -692,12 +680,34 @@ public class ResolvedPath {
 
             if (!acceptOnlyObservable ||
                     segmentInfo.segment().getTypeInstance().subtypeOf(ObservableValueDecl())) {
-                put(getSegmentScore(segmentInfo, nameOrder, preferObservable), segmentInfo);
+                put(segmentInfo.getScore(nameOrder, preferObservable), segmentInfo);
             }
         }
     }
 
-    private record SegmentInfo(Segment segment, boolean readonly) {
+    private record SegmentInfo(Segment segment, MemberDeclaration declaration, boolean readonly) {
+
+        /**
+         * Computes the score of the resolved path segment, which is used to rank potential path interpretations.
+         */
+        public int getScore(int nameOrder, boolean preferObservable) {
+            int observable;
+
+            if (preferObservable) {
+                observable = segment.hasObservableDependency() ? -100 : 0;
+            } else {
+                observable = segment.hasObservableDependency() ? 0 : -100;
+            }
+
+            int source = 0;
+
+            if (segment instanceof FieldSegment) {
+                source = -20;
+            }
+
+            return observable + source + nameOrder;
+        }
+
         @Override
         public boolean equals(Object o) {
             if (this == o) return true;
