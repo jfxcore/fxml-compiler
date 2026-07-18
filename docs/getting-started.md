@@ -11,13 +11,13 @@ At this point, there is no plugin yet for the Maven build system. Manually invok
 
 ## Using the Gradle plugin
 Add the following line to the `plugins` block of your `build.gradle` file:
-### Kotlin
+<div class="filename">Kotlin</div>
 ```kotlin
 plugins {
     id("org.jfxcore.fxmlplugin") version "0.15.0"
 }
 ```
-### Groovy
+<div class="filename">Groovy</div>
 ```groovy
 plugins {
     id "org.jfxcore.fxmlplugin" version "0.15.0"
@@ -32,6 +32,28 @@ see [Enable annotation processing](getting-started/embedded.html#enable-annotati
 > The task is named `processFxml`, `processTestFxml`, etc. and is responsible for parsing FXML markup files and generating Java code files.
 >
 > Usually you don't need to run these tasks manually, as they are automatically run when you build the project.
+
+### Configuration
+The plugin registers an extension named `fxml` with the following configuration options:
+
+| Option | Default | Description |
+| --- | --- | --- |
+| `annotationProcessing` | `false` | Specifies whether the plugin processes the `@ComponentView` annotation; see [Enable annotation processing](getting-started/embedded.html#enable-annotation-processing). |
+| `sourceFileExtensions` | `["fxml"]` | Specifies the file extensions used to select FXML source files for compilation. |
+
+### Gradual migration of legacy FXML to FXML/2
+Specifying a custom file extension can be used to gradually migrate a project containing legacy FXML files to FXML/2.
+For example, the following configuration selects `.fxmlx` files for compilation and leaves `.fxml` files unprocessed
+by the FXML/2 compiler:
+
+```kotlin
+fxml {
+    sourceFileExtensions = listOf("fxmlx")
+}
+```
+
+{: .note}
+It is advisable to use the `fxmlx` extension in migration scenarios, as it is also recognized by the FXML/2 IntelliJ IDEA Plugin.
 
 ## Using the IntelliJ IDEA plugin
 The [FXML/2 IntelliJ IDEA plugin](https://plugins.jetbrains.com/plugin/32337-fxml-2-for-javafx) enables IDE support for
