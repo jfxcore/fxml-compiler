@@ -142,17 +142,19 @@ public class ClassNode extends ObjectNode implements JavaEmitterNode {
                 code.append("\t\tinitializeComponent();\r\n");
             }
 
-            code.append("\t}\r\n");
+            code.append("\t}\r\n\n");
         }
 
         if (hasCodeBehind) {
-            code.append("\r\n\t/** Loads and initializes the scene graph of this component. */\r\n");
-            code.append("\tprotected final void initializeComponent() {}\r\n");
+            code.append("\t/** Loads and initializes the scene graph of this component. */\r\n")
+                .append("\tprotected final void initializeComponent() {\r\n");
         } else {
-            code.append("\r\n\tprivate void initializeComponent() {}\r\n");
+            code.append("\tprivate void initializeComponent() {\r\n");
         }
 
-        code.append("}");
+        code.append("\t\t// Component markup is compiled directly into bytecode; this stub method is intentionally empty.\r\n")
+            .append("\t}\r\n")
+            .append("}");
     }
 
     @Override
