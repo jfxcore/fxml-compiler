@@ -103,6 +103,12 @@ public class PropertyAssignmentErrors {
             ErrorCode.PROPERTY_CANNOT_HAVE_MULTIPLE_VALUES, formatPropertyName(declaringType, propertyName)));
     }
 
+    public static MarkupException propertyCannotHaveMultipleValues(
+            SourceInfo sourceInfo, String declaringType, String propertyName) {
+        return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
+            ErrorCode.PROPERTY_CANNOT_HAVE_MULTIPLE_VALUES, formatPropertyName(declaringType, propertyName)));
+    }
+
     public static MarkupException propertyMustBeSpecified(SourceInfo sourceInfo, String declaringType, String propertyName) {
         return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
             ErrorCode.PROPERTY_MUST_BE_SPECIFIED, formatPropertyName(declaringType, propertyName)));

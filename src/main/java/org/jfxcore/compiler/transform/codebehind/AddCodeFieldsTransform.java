@@ -3,7 +3,6 @@
 
 package org.jfxcore.compiler.transform.codebehind;
 
-import java.util.List;
 import javassist.Modifier;
 import org.jfxcore.compiler.ast.DocumentNode;
 import org.jfxcore.compiler.ast.Node;
@@ -67,12 +66,9 @@ public class AddCodeFieldsTransform implements Transform {
             if (unresolvedTypeNode.getArguments().isEmpty()) {
                 valueNode = new TextNode(objectNode.getType().getMarkupName(), idNode.getSourceInfo());
             } else {
-                List<String> typeArgs = unresolvedTypeNode.getArguments().stream()
-                    .map(value -> ((TextNode)value).getText())
-                    .toList();
-
                 valueNode = new TextNode(
-                    objectNode.getType().getMarkupName() + "<" + String.join(", ", typeArgs) + ">",
+                    objectNode.getType().getMarkupName()
+                        + "<" + String.join(", ", unresolvedTypeNode.getArguments()) + ">",
                     idNode.getSourceInfo());
             }
         } else {

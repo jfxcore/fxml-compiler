@@ -4,12 +4,10 @@
 package org.jfxcore.compiler.ast.text;
 
 import org.jfxcore.compiler.ast.AbstractNode;
-import org.jfxcore.compiler.ast.ResolvedTypeNode;
 import org.jfxcore.compiler.ast.TypeNode;
 import org.jfxcore.compiler.ast.ValueNode;
 import org.jfxcore.compiler.ast.Visitor;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
-import org.jfxcore.compiler.type.TypeInstance;
 import java.util.Objects;
 
 import static org.jfxcore.compiler.type.KnownSymbols.*;
@@ -22,10 +20,6 @@ public class TextNode extends AbstractNode implements ValueNode {
 
     public static TextNode createRawUnresolved(String text, SourceInfo sourceInfo) {
         return new TextNode(text, true, new TypeNode(StringName, sourceInfo), sourceInfo);
-    }
-
-    public static TextNode createRawResolved(String text, SourceInfo sourceInfo) {
-        return new TextNode(text, true, new ResolvedTypeNode(TypeInstance.StringType(), sourceInfo), sourceInfo);
     }
 
     public TextNode(String text, SourceInfo sourceInfo) {

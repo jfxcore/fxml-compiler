@@ -1,10 +1,11 @@
-// Copyright (c) 2021, 2024, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.parse;
 
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jfxcore.compiler.diagnostic.MarkupException;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.diagnostic.errors.ParserErrors;
 import java.lang.reflect.Array;
@@ -191,8 +192,9 @@ public abstract class AbstractTokenizer<TTokenType extends TokenType, TToken ext
     public TToken peekNotNull() {
         TToken token = peek();
         if (token == null) {
-            throw ParserErrors.unexpectedEndOfFile(
-                lastRemoved != null ? SourceInfo.after(lastRemoved.getSourceInfo()) : SourceInfo.none());
+            throw unexpectedEnd(lastRemoved != null
+                ? SourceInfo.after(lastRemoved.getSourceInfo())
+                : SourceInfo.none());
         }
 
         return token;
@@ -320,8 +322,9 @@ public abstract class AbstractTokenizer<TTokenType extends TokenType, TToken ext
                 remove();
             }
 
-            throw ParserErrors.unexpectedEndOfFile(
-                lastRemoved != null ? SourceInfo.after(lastRemoved.getSourceInfo()) : SourceInfo.none());
+            throw unexpectedEnd(lastRemoved != null
+                ? SourceInfo.after(lastRemoved.getSourceInfo())
+                : SourceInfo.none());
         }
 
         return tokens;
@@ -428,8 +431,9 @@ public abstract class AbstractTokenizer<TTokenType extends TokenType, TToken ext
         if (token != null) {
             lastRemoved = token;
         } else {
-            throw ParserErrors.unexpectedEndOfFile(
-                lastRemoved != null ? SourceInfo.after(lastRemoved.getSourceInfo()) : SourceInfo.none());
+            throw unexpectedEnd(lastRemoved != null
+                ? SourceInfo.after(lastRemoved.getSourceInfo())
+                : SourceInfo.none());
         }
 
         return token;
@@ -495,8 +499,9 @@ public abstract class AbstractTokenizer<TTokenType extends TokenType, TToken ext
         TToken token = pollQualifiedIdentifier(allowStar);
         if (token == null) {
             if (isEmpty()) {
-                throw ParserErrors.unexpectedEndOfFile(
-                    lastRemoved != null ? SourceInfo.after(lastRemoved.getSourceInfo()) : SourceInfo.none());
+                throw unexpectedEnd(lastRemoved != null
+                    ? SourceInfo.after(lastRemoved.getSourceInfo())
+                    : SourceInfo.none());
             } else {
                 throw ParserErrors.expectedIdentifier(peek().getSourceInfo());
             }
@@ -531,6 +536,10 @@ public abstract class AbstractTokenizer<TTokenType extends TokenType, TToken ext
         first.setContent(builder.toString(), SourceInfo.span(first.getSourceInfo(), last.getSourceInfo()));
 
         return first;
+    }
+
+    protected MarkupException unexpectedEnd(SourceInfo sourceInfo) {
+        return ParserErrors.unexpectedEndOfFile(sourceInfo);
     }
 
     private int parseQualifiedIdentifierTokens(boolean allowStar) {
@@ -635,7 +644,7 @@ public abstract class AbstractTokenizer<TTokenType extends TokenType, TToken ext
                 throw ParserErrors.expectedToken(sourceInfo, expected.getSymbol());
             }
 
-            throw ParserErrors.unexpectedEndOfFile(sourceInfo);
+            throw unexpectedEnd(sourceInfo);
         }
 
         if (token.getType() != expected) {
@@ -709,5 +718,4 @@ public abstract class AbstractTokenizer<TTokenType extends TokenType, TToken ext
             return value;
         }
     }
-
 }

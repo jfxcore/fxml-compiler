@@ -1,9 +1,10 @@
-// Copyright (c) 2021, 2025, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.parse;
 
 import org.jfxcore.compiler.diagnostic.Location;
+import org.jfxcore.compiler.diagnostic.MarkupException;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.diagnostic.errors.ParserErrors;
 import java.util.ArrayList;
@@ -22,6 +23,11 @@ public class TypeTokenizer extends AbstractTokenizer<TypeTokenType, TypeToken> {
         super(text, typeTokenClass);
         this.sourceOffset = sourceOffset;
         tokenize(text);
+    }
+
+    @Override
+    protected MarkupException unexpectedEnd(SourceInfo sourceInfo) {
+        return ParserErrors.unexpectedEndOfTypeDeclaration(sourceInfo);
     }
 
     private void tokenize(String text) {
