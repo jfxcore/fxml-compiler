@@ -14,13 +14,13 @@ Add the following line to the `plugins` block of your `build.gradle` file:
 <div class="filename">Kotlin</div>
 ```kotlin
 plugins {
-    id("org.jfxcore.fxmlplugin") version "0.15.0"
+    id("org.jfxcore.fxmlplugin") version "0.15.1"
 }
 ```
 <div class="filename">Groovy</div>
 ```groovy
 plugins {
-    id "org.jfxcore.fxmlplugin" version "0.15.0"
+    id "org.jfxcore.fxmlplugin" version "0.15.1"
 }
 ```
 After the plugin is applied, `.fxml` files in your Gradle project will be automatically compiled with the rest of your source files.
