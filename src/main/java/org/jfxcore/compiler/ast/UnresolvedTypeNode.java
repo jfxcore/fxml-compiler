@@ -15,14 +15,14 @@ import java.util.List;
 public final class UnresolvedTypeNode extends TypeNode {
 
     private final MarkupException exception;
-    private final List<? extends Node> arguments;
+    private final List<String> arguments;
 
-    public UnresolvedTypeNode(TypeNode typeNode, List<? extends Node> arguments, MarkupException exception) {
+    public UnresolvedTypeNode(TypeNode typeNode, List<String> arguments, MarkupException exception) {
         this(typeNode.getName(), typeNode.getMarkupName(), typeNode.getSourceInfo(), arguments, exception);
     }
 
     private UnresolvedTypeNode(String name, String markupName, SourceInfo sourceInfo,
-                               Collection<? extends Node> arguments, MarkupException exception) {
+                               Collection<String> arguments, MarkupException exception) {
         super(name, markupName, sourceInfo);
         this.exception = checkNotNull(exception);
         this.arguments = new ArrayList<>(checkNotNull(arguments));
@@ -32,20 +32,13 @@ public final class UnresolvedTypeNode extends TypeNode {
         return exception;
     }
 
-    public List<? extends Node> getArguments() {
+    public List<String> getArguments() {
         return arguments;
     }
 
     @Override
-    public void acceptChildren(Visitor visitor) {
-        super.acceptChildren(visitor);
-        acceptChildren(arguments, visitor, Node.class);
-    }
-
-    @Override
     public UnresolvedTypeNode deepClone() {
-        return new UnresolvedTypeNode(
-            getName(), getMarkupName(), getSourceInfo(), deepClone(arguments), exception).copy(this);
+        return new UnresolvedTypeNode(getName(), getMarkupName(), getSourceInfo(), arguments, exception).copy(this);
     }
 
     @Override

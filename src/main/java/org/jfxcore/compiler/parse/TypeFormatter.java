@@ -1,4 +1,4 @@
-// Copyright (c) 2022, 2023, JFXcore. All rights reserved.
+// Copyright (c) 2022, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.parse;
@@ -23,7 +23,7 @@ public class TypeFormatter {
         this.sourceOffset = sourceOffset;
     }
 
-    public String format() {
+    public List<String> format() {
         List<String> result = new ArrayList<>();
         TypeTokenizer tokenizer = new TypeTokenizer(sourceOffset, text, TypeToken.class);
 
@@ -35,7 +35,7 @@ public class TypeFormatter {
             throw ParserErrors.unexpectedToken(tokenizer.peekNotNull());
         }
 
-        return String.join(", ", result);
+        return result;
     }
 
     private String parseType(TypeTokenizer tokenizer) {

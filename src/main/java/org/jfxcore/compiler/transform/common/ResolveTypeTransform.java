@@ -13,7 +13,6 @@ import org.jfxcore.compiler.ast.TypeNode;
 import org.jfxcore.compiler.ast.UnresolvedTypeNode;
 import org.jfxcore.compiler.ast.intrinsic.Intrinsic;
 import org.jfxcore.compiler.ast.intrinsic.Intrinsics;
-import org.jfxcore.compiler.ast.text.ListNode;
 import org.jfxcore.compiler.ast.text.TextNode;
 import org.jfxcore.compiler.diagnostic.ErrorCode;
 import org.jfxcore.compiler.diagnostic.MarkupException;
@@ -69,7 +68,22 @@ public class ResolveTypeTransform implements Transform {
         try {
             objectTypeClass = resolver.resolveClassAgainstImports(typeNode.getName());
         } catch (MarkupException ex) {
-            return new UnresolvedTypeNode(typeNode, List.of(), ex);
+            PropertyNode typeArgsNode = objectNode.findIntrinsicProperty(Intrinsics.TYPE_ARGUMENTS);
+            if (typeArgsNode == null) {
+                return new UnresolvedTypeNode(typeNode, List.of(), ex);
+            }
+
+            validateTypeArgs(typeArgsNode, typeNode.getName());
+
+            List<String> formattedTypeArgs = new TypeFormatter(
+                typeArgsNode.getTrimmedTextNotEmpty(context),
+                typeArgsNode.getTrimmedTextSourceInfo(context).getStart()).format();
+
+            if (parentIsDocument) {
+                objectNode.setNodeData(NodeDataKey.FORMATTED_TYPE_ARGUMENTS, String.join(", ", formattedTypeArgs));
+            }
+
+            return new UnresolvedTypeNode(typeNode, formattedTypeArgs, ex);
         }
 
         if (objectNode != null) {
@@ -107,31 +121,17 @@ public class ResolveTypeTransform implements Transform {
             }
 
             if (parentIsDocument) {
-                String formattedTypeArgs = new TypeFormatter(
+                List<String> formattedTypeArgs = new TypeFormatter(
                     typeArgsNode.getTrimmedTextNotEmpty(context),
                     typeArgsNode.getTrimmedTextSourceInfo(context).getStart()).format();
 
-                objectNode.setNodeData(NodeDataKey.FORMATTED_TYPE_ARGUMENTS, formattedTypeArgs);
+                objectNode.setNodeData(NodeDataKey.FORMATTED_TYPE_ARGUMENTS, String.join(", ", formattedTypeArgs));
             }
 
             typeArgsNode.remove();
 
             try {
-                switch (typeArgsNode.getValues().size()) {
-                    case 1: break;
-                    case 0: throw PropertyAssignmentErrors.propertyCannotBeEmpty(
-                        typeArgsNode.getSourceInfo(), objectTypeClass, typeArgsNode.getMarkupName());
-                    default: throw PropertyAssignmentErrors.propertyCannotHaveMultipleValues(
-                        typeArgsNode.getSourceInfo(), objectTypeClass, typeArgsNode.getMarkupName());
-                }
-
-                if (!(typeArgsNode.getValues().get(0) instanceof TextNode)) {
-                    throw PropertyAssignmentErrors.propertyMustContainText(
-                        typeArgsNode.getSourceInfo(), objectTypeClass, typeArgsNode.getMarkupName());
-                } else if (((TextNode)typeArgsNode.getValues().get(0)).getText().isEmpty()) {
-                    throw PropertyAssignmentErrors.propertyCannotBeEmpty(
-                        typeArgsNode.getSourceInfo(), objectTypeClass, typeArgsNode.getMarkupName());
-                }
+                validateTypeArgs(typeArgsNode, objectTypeClass.javaName());
 
                 List<TypeInstance> typeArguments = new TypeParser(
                     typeArgsNode.getTrimmedTextNotEmpty(context),
@@ -146,11 +146,9 @@ public class ResolveTypeTransform implements Transform {
                     throw ex;
                 }
 
-                List<? extends Node> typeArgs = typeArgsNode.getValues() instanceof ListNode listNode
-                    ? listNode.getValues()
-                    : List.of(typeArgsNode.getValues().get(0));
-
-                return new UnresolvedTypeNode(typeNode, typeArgs, ex);
+                return new UnresolvedTypeNode(typeNode, new TypeFormatter(
+                    typeArgsNode.getTrimmedTextNotEmpty(context),
+                    typeArgsNode.getTrimmedTextSourceInfo(context).getStart()).format(), ex);
             }
         } else {
             try {
@@ -175,6 +173,24 @@ public class ResolveTypeTransform implements Transform {
             typeNode.getMarkupName(),
             false,
             node.getSourceInfo());
+    }
+
+    private void validateTypeArgs(PropertyNode typeArgsNode, String declaringTypeName) {
+        switch (typeArgsNode.getValues().size()) {
+            case 1: break;
+            case 0: throw PropertyAssignmentErrors.propertyCannotBeEmpty(
+                typeArgsNode.getSourceInfo(), declaringTypeName, typeArgsNode.getMarkupName());
+            default: throw PropertyAssignmentErrors.propertyCannotHaveMultipleValues(
+                typeArgsNode.getSourceInfo(), declaringTypeName, typeArgsNode.getMarkupName());
+        }
+
+        if (!(typeArgsNode.getValues().get(0) instanceof TextNode)) {
+            throw PropertyAssignmentErrors.propertyMustContainText(
+                typeArgsNode.getSourceInfo(), declaringTypeName, typeArgsNode.getMarkupName());
+        } else if (((TextNode)typeArgsNode.getValues().get(0)).getText().isEmpty()) {
+            throw PropertyAssignmentErrors.propertyCannotBeEmpty(
+                typeArgsNode.getSourceInfo(), declaringTypeName, typeArgsNode.getMarkupName());
+        }
     }
 
     private ResolvedTypeNode resolveConstantType(
