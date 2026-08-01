@@ -527,6 +527,20 @@ public class MapBindingTest extends CompilerTestBase {
         assertEquals(3, root.targetMapProp.size());
     }
 
+    @Test
+    public void Unidirectional_ContentBinding_To_ObservableMap_Indirect_On_Nested_Object() {
+        MapTestPane root = compileAndRun("""
+            <MapTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
+                <MapTestPane targetMapProp="${..indirect.obsMap}"/>
+            </MapTestPane>
+        """);
+
+        MapTestPane child = (MapTestPane)root.getChildren().get(0);
+        assertEquals(3, child.targetMapProp.size());
+        root.indirect.get().obsMap.clear();
+        assertEquals(0, child.targetMapProp.size());
+    }
+
     /*
      *  source:   ObservableValue<Map>
      *  expected: error

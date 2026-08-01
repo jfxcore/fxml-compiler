@@ -536,6 +536,20 @@ public class ListBindingTest extends CompilerTestBase {
         assertEquals(List.of("foo", "bar", "baz"), root.targetListProp);
     }
 
+    @Test
+    public void Unidirectional_ContentBinding_To_ObservableList_Indirect_On_Nested_Object() {
+        ListTestPane root = compileAndRun("""
+            <ListTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
+                <ListTestPane targetListProp="${..indirect.obsList}"/>
+            </ListTestPane>
+        """);
+
+        ListTestPane child = (ListTestPane)root.getChildren().get(0);
+        assertEquals(3, child.targetListProp.size());
+        root.indirect.get().obsList.clear();
+        assertEquals(0, child.targetListProp.size());
+    }
+
     /*
      *  source:   ObservableValue<List>
      *  expected: error

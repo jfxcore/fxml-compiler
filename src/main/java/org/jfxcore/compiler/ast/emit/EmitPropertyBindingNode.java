@@ -261,8 +261,11 @@ public class EmitPropertyBindingNode extends AbstractNode implements EmitterNode
 
         code.dup()
             .invoke(propertyInfo.getPropertyGetterOrGetter())
-            .astore(target)
-            .aload(target);
+            .astore(target);
+
+        if (bindingMode.isReverse()) {
+            code.aload(target);
+        }
 
         child.emit(context);
 

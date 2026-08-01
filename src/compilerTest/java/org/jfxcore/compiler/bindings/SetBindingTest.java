@@ -527,6 +527,20 @@ public class SetBindingTest extends CompilerTestBase {
         assertEquals(3, root.targetSetProp.size());
     }
 
+    @Test
+    public void Unidirectional_ContentBinding_To_ObservableSet_Indirect_On_Nested_Object() {
+        SetTestPane root = compileAndRun("""
+            <SetTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
+                <SetTestPane targetSetProp="${..indirect.obsSet}"/>
+            </SetTestPane>
+        """);
+
+        SetTestPane child = (SetTestPane)root.getChildren().get(0);
+        assertEquals(3, child.targetSetProp.size());
+        root.indirect.get().obsSet.clear();
+        assertEquals(0, child.targetSetProp.size());
+    }
+
     /*
      *  source:   ObservableValue<Set>
      *  expected: error
