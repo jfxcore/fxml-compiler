@@ -29,16 +29,17 @@ public class MarkupException extends RuntimeException {
 
     public String getMessageWithSourceInfo() {
         StringBuilder builder = new StringBuilder(getMessage());
-        String lineText = sourceInfo.getLineText();
+        SourceInfo originalSourceInfo = getOriginalSourceInfo();
+        String lineText = originalSourceInfo.getLineText();
 
         if (lineText != null) {
-            int cols = sourceInfo.getStart().getLine() == sourceInfo.getEnd().getLine() ?
-                sourceInfo.getEnd().getColumn() - sourceInfo.getStart().getColumn() :
-                lineText.length() - sourceInfo.getStart().getColumn();
+            int cols = originalSourceInfo.getStart().getLine() == originalSourceInfo.getEnd().getLine() ?
+                originalSourceInfo.getEnd().getColumn() - originalSourceInfo.getStart().getColumn() :
+                lineText.length() - originalSourceInfo.getStart().getColumn();
 
             builder.append(System.lineSeparator()).append(System.lineSeparator());
             builder.append(lineText).append(System.lineSeparator());
-            builder.append(" ".repeat(sourceInfo.getStart().getColumn()));
+            builder.append(" ".repeat(originalSourceInfo.getStart().getColumn()));
             builder.append("^".repeat(Math.max(1, cols)));
         }
 
@@ -51,6 +52,10 @@ public class MarkupException extends RuntimeException {
 
     public SourceInfo getSourceInfo() {
         return sourceInfo;
+    }
+
+    public SourceInfo getOriginalSourceInfo() {
+        return sourceInfo.toOriginal();
     }
 
     public Location getSourceOffset() {

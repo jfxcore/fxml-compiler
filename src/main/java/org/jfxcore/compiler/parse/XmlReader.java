@@ -9,6 +9,7 @@ import org.jfxcore.compiler.diagnostic.errors.ParserErrors;
 import org.jfxcore.compiler.diagnostic.errors.PropertyAssignmentErrors;
 import org.jfxcore.compiler.util.ExceptionHelper;
 import org.jfxcore.compiler.util.StringHelper;
+import org.jfxcore.compiler.util.XmlEntityDecoder;
 import org.w3c.dom.Attr;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -34,6 +35,7 @@ public class XmlReader {
     public final static String SOURCE_INFO_KEY = XmlReader.class.getName() + "$sourceInfo";
     public final static String ELEMENT_NAME_SOURCE_INFO_KEY = XmlReader.class.getName() + "$elemNameSourceInfo";
     public final static String ATTR_VALUE_SOURCE_INFO_KEY = XmlReader.class.getName() + "$attrValueSourceInfo";
+    public final static String ATTR_VALUE_LEXER_INPUT_KEY = XmlReader.class.getName() + "$attrValueLexerInput";
     public final static String NAMESPACE_TO_PREFIX_MAP_KEY = XmlReader.class.getName() + "$namespaceToPrefix";
 
     private final static String XML_RESERVED_NAMESPACE = "http://www.w3.org/XML/1998/namespace";
@@ -143,8 +145,8 @@ public class XmlReader {
         String value;
 
         try {
-            value = StringHelper.unescapeXml(builder.toString());
-        } catch (NumberFormatException ex) {
+            value = XmlEntityDecoder.decode(builder.toString()).text();
+        } catch (XmlEntityDecoder.DecodeException ex) {
             throw ParserErrors.invalidExpression(SourceInfo.span(start, end));
         }
 
@@ -221,6 +223,7 @@ public class XmlReader {
             attr = element.getAttributeNodeNS(uri, attribute.name.localName);
             attr.setUserData(SOURCE_INFO_KEY, attribute.sourceInfo, null);
             attr.setUserData(ATTR_VALUE_SOURCE_INFO_KEY, attribute.valueSourceInfo, null);
+            attr.setUserData(ATTR_VALUE_LEXER_INPUT_KEY, attribute.lexerInput, null);
         }
 
         XmlToken token = tokenizer.peekNotNullSkipWS();
@@ -315,19 +318,26 @@ public class XmlReader {
         QName name = readQName();
         tokenizer.removeSkipWS(EQUALS);
         XmlToken token = tokenizer.removeSkipWS(QUOTED_STRING);
-        String value;
+        SourceInfo valueSourceInfo = SourceInfo.shrink(token.getSourceInfo());
+        String rawValue = StringHelper.unquote(token.getValue());
+        LexerInput lexerInput;
 
         try {
-            value = StringHelper.unescapeXml(StringHelper.unquote(token.getValue()));
-        } catch (NumberFormatException ex) {
-            throw ParserErrors.invalidExpression(token.getSourceInfo());
+            lexerInput = LexerInput.decodedXml(
+                rawValue,
+                valueSourceInfo.getStart(),
+                XmlEntityDecoder.decode(rawValue));
+        } catch (XmlEntityDecoder.DecodeException ex) {
+            LexerInput rawInput = LexerInput.identity(rawValue, valueSourceInfo.getStart());
+            throw ParserErrors.invalidExpression(rawInput.sourceInfo(ex.rawStart(), ex.rawEnd()));
         }
 
         return new Attribute(
             name,
-            value,
+            lexerInput.text(),
             SourceInfo.span(name.sourceInfo, token.getSourceInfo()),
-            SourceInfo.shrink(token.getSourceInfo()));
+            lexerInput.sourceInfo(0, lexerInput.text().length()),
+            lexerInput);
     }
 
     private QName readQName() {
@@ -355,12 +365,19 @@ public class XmlReader {
         final String value;
         final SourceInfo sourceInfo;
         final SourceInfo valueSourceInfo;
+        final LexerInput lexerInput;
 
-        Attribute(QName name, String value, SourceInfo sourceInfo, SourceInfo valueSourceInfo) {
+        Attribute(
+                QName name,
+                String value,
+                SourceInfo sourceInfo,
+                SourceInfo valueSourceInfo,
+                LexerInput lexerInput) {
             this.name = name;
             this.value = value;
             this.sourceInfo = sourceInfo;
             this.valueSourceInfo = valueSourceInfo;
+            this.lexerInput = lexerInput;
         }
 
         @Override

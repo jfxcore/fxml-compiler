@@ -23,24 +23,26 @@ public class TypeParser {
             SourceInfo sourceInfo) {}
 
     private final String text;
-    private final Location sourceOffset;
+    private final LexerInput input;
     private final Resolver resolver;
     private final TypeInvoker invoker;
 
     public TypeParser(String text) {
         this.text = text;
-        this.sourceOffset = new Location(0, 0);
+        this.input = LexerInput.identity(text, new Location(0, 0));
         this.resolver = new Resolver(SourceInfo.none());
         this.invoker = new TypeInvoker(SourceInfo.none());
     }
 
-    public TypeParser(String text, Location sourceOffset) {
-        int line = sourceOffset.getLine();
-        int column = sourceOffset.getColumn();
-        var sourceInfo = new SourceInfo(line, column, line, column + text.length());
+    public TypeParser(String text, SourceInfo sourceInfo) {
+        this(text, LexerInput.identity(text, sourceInfo));
+    }
+
+    private TypeParser(String text, LexerInput input) {
+        var sourceInfo = input.sourceInfo(0, text.length());
 
         this.text = text;
-        this.sourceOffset = sourceOffset;
+        this.input = input;
         this.resolver = new Resolver(sourceInfo);
         this.invoker = new TypeInvoker(sourceInfo);
     }
@@ -68,21 +70,17 @@ public class TypeParser {
         }
 
         if (start < 0) {
-            throw ParserErrors.expectedIdentifier(
-                new SourceInfo(sourceOffset.getLine(), sourceOffset.getColumn()));
+            throw ParserErrors.expectedIdentifier(input.sourceInfo(0, 0));
         }
 
-        var sourceInfo = new SourceInfo(
-            sourceOffset.getLine(), sourceOffset.getColumn() + start,
-            sourceOffset.getLine(), sourceOffset.getColumn() + end + 1);
+        var sourceInfo = input.sourceInfo(start, end + 1);
 
         int openingAngleIndex = text.indexOf('<');
         if (openingAngleIndex < 0) {
             String methodName = text.trim();
 
             if (!NameHelper.isJavaIdentifier(methodName)) {
-                throw ParserErrors.expectedIdentifier(
-                    new SourceInfo(sourceOffset.getLine(), sourceOffset.getColumn() + start));
+                throw ParserErrors.expectedIdentifier(input.sourceInfo(start, start));
             }
 
             return new MethodInfo(List.of(), methodName, sourceInfo);
@@ -91,13 +89,11 @@ public class TypeParser {
         String methodName = text.substring(start, openingAngleIndex).trim();
 
         if (!NameHelper.isJavaIdentifier(methodName)) {
-            throw ParserErrors.expectedIdentifier(
-                new SourceInfo(sourceOffset.getLine(), sourceOffset.getColumn() + start));
+            throw ParserErrors.expectedIdentifier(input.sourceInfo(start, start));
         }
 
         if (text.charAt(end) != '>') {
-            throw ParserErrors.expectedToken(
-                new SourceInfo(sourceOffset.getLine(), sourceOffset.getColumn() + end), ">");
+            throw ParserErrors.expectedToken(input.sourceInfo(end, end), ">");
         }
 
         List<TypeInstance> typeWitnesses = parseText(
@@ -108,9 +104,7 @@ public class TypeParser {
 
     private List<TypeInstance> parseText(String text, int offset) {
         List<TypeInstance> result = new ArrayList<>();
-        TypeTokenizer tokenizer = new TypeTokenizer(
-            new Location(this.sourceOffset.getLine(), this.sourceOffset.getColumn() + offset),
-            text, TypeToken.class);
+        TypeTokenizer tokenizer = new TypeTokenizer(input, offset, text, TypeToken.class);
 
         do {
             result.add(parseType(tokenizer));

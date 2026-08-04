@@ -192,9 +192,7 @@ public abstract class AbstractTokenizer<TTokenType extends TokenType, TToken ext
     public TToken peekNotNull() {
         TToken token = peek();
         if (token == null) {
-            throw unexpectedEnd(lastRemoved != null
-                ? SourceInfo.after(lastRemoved.getSourceInfo())
-                : SourceInfo.none());
+            throw unexpectedEnd(getEndOfInputSourceInfo());
         }
 
         return token;
@@ -322,9 +320,7 @@ public abstract class AbstractTokenizer<TTokenType extends TokenType, TToken ext
                 remove();
             }
 
-            throw unexpectedEnd(lastRemoved != null
-                ? SourceInfo.after(lastRemoved.getSourceInfo())
-                : SourceInfo.none());
+            throw unexpectedEnd(getEndOfInputSourceInfo());
         }
 
         return tokens;
@@ -431,9 +427,7 @@ public abstract class AbstractTokenizer<TTokenType extends TokenType, TToken ext
         if (token != null) {
             lastRemoved = token;
         } else {
-            throw unexpectedEnd(lastRemoved != null
-                ? SourceInfo.after(lastRemoved.getSourceInfo())
-                : SourceInfo.none());
+            throw unexpectedEnd(getEndOfInputSourceInfo());
         }
 
         return token;
@@ -499,9 +493,7 @@ public abstract class AbstractTokenizer<TTokenType extends TokenType, TToken ext
         TToken token = pollQualifiedIdentifier(allowStar);
         if (token == null) {
             if (isEmpty()) {
-                throw unexpectedEnd(lastRemoved != null
-                    ? SourceInfo.after(lastRemoved.getSourceInfo())
-                    : SourceInfo.none());
+                throw unexpectedEnd(getEndOfInputSourceInfo());
             } else {
                 throw ParserErrors.expectedIdentifier(peek().getSourceInfo());
             }
@@ -540,6 +532,12 @@ public abstract class AbstractTokenizer<TTokenType extends TokenType, TToken ext
 
     protected MarkupException unexpectedEnd(SourceInfo sourceInfo) {
         return ParserErrors.unexpectedEndOfFile(sourceInfo);
+    }
+
+    protected SourceInfo getEndOfInputSourceInfo() {
+        return lastRemoved != null
+            ? SourceInfo.after(lastRemoved.getSourceInfo())
+            : SourceInfo.none();
     }
 
     private int parseQualifiedIdentifierTokens(boolean allowStar) {
@@ -632,9 +630,7 @@ public abstract class AbstractTokenizer<TTokenType extends TokenType, TToken ext
 
     private void checkExpected(TToken token, TTokenType expected) {
         if (token == null) {
-            TToken lastRemoved = getLastRemoved();
-            SourceInfo sourceInfo = lastRemoved != null ?
-                SourceInfo.after(lastRemoved.getSourceInfo()) : SourceInfo.none();
+            SourceInfo sourceInfo = getEndOfInputSourceInfo();
 
             if (expected.isIdentifier()) {
                 throw ParserErrors.expectedIdentifier(sourceInfo);

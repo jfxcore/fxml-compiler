@@ -213,7 +213,7 @@ public class ValueEmitterFactory {
         }
 
         if (targetType.subtypeOf(ClassDecl())) {
-            List<TypeInstance> types = new TypeParser(value, sourceInfo.getStart()).parse();
+            List<TypeInstance> types = new TypeParser(value, sourceInfo).parse();
 
             if (types.size() > 1 || !types.getFirst().arguments().isEmpty() && !types.getFirst().isRaw()) {
                 throw ParserErrors.invalidExpression(sourceInfo);

@@ -313,7 +313,7 @@ public class ObjectTransform implements Transform {
     private ValueNode createFactoryNode(
             TransformContext context, ObjectNode objectNode, PropertyNode factoryProperty) {
         String factoryMethodName = factoryProperty.getTrimmedTextNotEmpty(context);
-        TypeParser typeParser = new TypeParser(factoryMethodName, factoryProperty.getTrimmedTextSourceInfo(context).getStart());
+        TypeParser typeParser = new TypeParser(factoryMethodName, factoryProperty.getTrimmedTextSourceInfo(context));
         TypeParser.MethodInfo methodInfo = typeParser.parseMethod();
         TypeDeclaration declaringClass = (TypeDeclaration)objectNode.getType().getNodeData(NodeDataKey.FACTORY_DECLARING_TYPE);
         MethodDeclaration factoryMethod = new Resolver(methodInfo.sourceInfo()).tryResolveMethod(declaringClass, m ->

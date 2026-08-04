@@ -135,7 +135,7 @@ public class ResolveTypeTransform implements Transform {
 
                 List<TypeInstance> typeArguments = new TypeParser(
                     typeArgsNode.getTrimmedTextNotEmpty(context),
-                    typeArgsNode.getTrimmedTextSourceInfo(context).getStart()).parse();
+                    typeArgsNode.getTrimmedTextSourceInfo(context)).parse();
 
                 type = invoker.invokeType(objectTypeClass, typeArguments);
 
@@ -222,9 +222,7 @@ public class ResolveTypeTransform implements Transform {
                 sourceInfo, objectTypeClass, factoryProperty.getMarkupName());
         }
 
-        TypeParser.MethodInfo methodInfo =
-            new TypeParser(methodNameTextNode.getText(), sourceInfo.getStart()).parseMethod();
-
+        TypeParser.MethodInfo methodInfo = new TypeParser(methodNameTextNode.getText(), sourceInfo).parseMethod();
         var resolver = new Resolver(methodInfo.sourceInfo());
         var invoker = new TypeInvoker(methodInfo.sourceInfo());
         MethodDeclaration method = resolver.resolveGetter(objectTypeClass, methodInfo.methodName(), true, null);

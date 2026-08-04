@@ -64,7 +64,9 @@ public class FlattenClassTransform implements Transform {
 
         PropertyNode paramsNode = root.findIntrinsicProperty(Intrinsics.CLASS_PARAMETERS);
         List<TypeInstance> params = paramsNode != null
-            ? new TypeParser(paramsNode.getTrimmedTextNotEmpty(context)).parse()
+            ? new TypeParser(
+                paramsNode.getTrimmedTextNotEmpty(context),
+                paramsNode.getTrimmedTextSourceInfo(context)).parse()
             : List.of();
 
         if (codeBehindClass != null) {
