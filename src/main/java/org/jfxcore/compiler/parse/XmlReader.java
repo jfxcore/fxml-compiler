@@ -329,14 +329,14 @@ public class XmlReader {
                 XmlEntityDecoder.decode(rawValue));
         } catch (XmlEntityDecoder.DecodeException ex) {
             LexerInput rawInput = LexerInput.identity(rawValue, valueSourceInfo.getStart());
-            throw ParserErrors.invalidExpression(rawInput.sourceInfo(ex.rawStart(), ex.rawEnd()));
+            throw ParserErrors.invalidExpression(rawInput.getSourceInfo(ex.rawStart(), ex.rawEnd()));
         }
 
         return new Attribute(
             name,
-            lexerInput.text(),
+            lexerInput.getText(),
             SourceInfo.span(name.sourceInfo, token.getSourceInfo()),
-            lexerInput.sourceInfo(0, lexerInput.text().length()),
+            lexerInput.getSourceInfo(0, lexerInput.getText().length()),
             lexerInput);
     }
 

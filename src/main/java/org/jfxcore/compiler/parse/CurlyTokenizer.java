@@ -34,10 +34,10 @@ public abstract class CurlyTokenizer<TToken extends CurlyToken> extends Abstract
         this(tokenClass, LexerInput.identity(text, sourceOffset));
     }
 
-    protected CurlyTokenizer(Class<TToken> tokenClass, LexerInput input) {
-        super(input.text(), tokenClass);
+    CurlyTokenizer(Class<TToken> tokenClass, LexerInput input) {
+        super(input.getText(), tokenClass);
         this.input = input;
-        tokenize(input.text());
+        tokenize(input.getText());
     }
 
     protected abstract TToken parseToken(String value, String line, SourceInfo sourceInfo);
@@ -51,8 +51,8 @@ public abstract class CurlyTokenizer<TToken extends CurlyToken> extends Abstract
         int fromColumn = sourceInfo.getStart().getColumn();
         int endLine = sourceInfo.getEnd().getLine();
         int endColumn = sourceInfo.getEnd().getColumn();
-        int localFromColumn = input.localColumn(sourceInfo.getStart());
-        int localEndColumn = input.localColumn(sourceInfo.getEnd());
+        int localFromColumn = input.getLocalColumn(sourceInfo.getStart());
+        int localEndColumn = input.getLocalColumn(sourceInfo.getEnd());
 
         if (fromLine == endLine && fromColumn == endColumn) {
             return "";
@@ -61,18 +61,18 @@ public abstract class CurlyTokenizer<TToken extends CurlyToken> extends Abstract
         builder.append(" ".repeat(fromColumn));
 
         builder.append(
-            input.lineText(fromLine),
+            input.getLineText(fromLine),
             localFromColumn,
-            fromLine == endLine ? localEndColumn : input.lineText(fromLine).length());
+            fromLine == endLine ? localEndColumn : input.getLineText(fromLine).length());
 
         builder.append('\n');
 
         for (int line = fromLine + 1; line < endLine; ++line) {
-            builder.append(input.lineText(line)).append('\n');
+            builder.append(input.getLineText(line)).append('\n');
         }
 
         if (endLine > fromLine) {
-            builder.append(input.lineText(endLine), 0, localEndColumn).append('\n');
+            builder.append(input.getLineText(endLine), 0, localEndColumn).append('\n');
         }
 
         return builder.toString();
@@ -111,7 +111,7 @@ public abstract class CurlyTokenizer<TToken extends CurlyToken> extends Abstract
                     CurlyTokenType.NEWLINE,
                     value,
                     getLines().get(decodedSourceInfo.getStart().getLine()),
-                    input.sourceInfo(start, end));
+                    input.getSourceInfo(start, end));
 
                 tokens.add(newToken);
                 lastPosition = start + value.length();
@@ -141,14 +141,14 @@ public abstract class CurlyTokenizer<TToken extends CurlyToken> extends Abstract
 
             if (firstNonWhitespace >= 0) {
                 throw ParserErrors.unexpectedToken(
-                    input.sourceInfo(lastPosition + firstNonWhitespace, end));
+                    input.getSourceInfo(lastPosition + firstNonWhitespace, end));
             }
 
             SourceInfo decodedSourceInfo = getSourceInfo(start, end);
             TToken newToken = parseToken(
                 value,
                 getLines().get(decodedSourceInfo.getStart().getLine()),
-                input.sourceInfo(start, end));
+                input.getSourceInfo(start, end));
 
             tokens.add(newToken);
             lastPosition = start + value.length();
@@ -219,7 +219,7 @@ public abstract class CurlyTokenizer<TToken extends CurlyToken> extends Abstract
 
     @Override
     protected SourceInfo getEndOfInputSourceInfo() {
-        return input.endOfInput();
+        return input.getEndOfInput();
     }
 
     private boolean removeNewlineAfter(CurlyTokenType type) {
