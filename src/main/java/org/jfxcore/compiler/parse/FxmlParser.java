@@ -234,7 +234,7 @@ public class FxmlParser {
                 input = LexerInput.identity(text, fallbackSourceInfo.getStart());
             }
 
-            text = input.text();
+            text = input.getText();
             boolean parseAsPath = false;
 
             if (FxmlNamespace.FXML.equalsIgnoreCase(attr.getOwnerElement().getNamespaceURI())) {
@@ -268,8 +268,8 @@ public class FxmlParser {
     }
 
     private TextNode createTextNode(LexerInput input) {
-        String text = input.text();
-        SourceInfo sourceInfo = input.sourceInfo(0, text.length());
+        String text = input.getText();
+        SourceInfo sourceInfo = input.getSourceInfo(0, text.length());
         TextNode scalarNode = createScalarTextNode(text, sourceInfo);
 
         if (scalarNode instanceof NumberNode) {
@@ -285,7 +285,7 @@ public class FxmlParser {
         for (int i = 0; i < items.size(); ++i) {
             StringHelper.OffsetPart item = items.get(i);
             textNodes[i] = createScalarTextNode(
-                item.text(), input.sourceInfo(item.start(), item.end()));
+                item.text(), input.getSourceInfo(item.start(), item.end()));
         }
 
         return new ListNode(text, Arrays.asList(textNodes), sourceInfo);

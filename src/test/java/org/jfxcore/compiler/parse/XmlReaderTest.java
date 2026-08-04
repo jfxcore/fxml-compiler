@@ -24,8 +24,8 @@ public class XmlReaderTest {
         int start = source.indexOf("a&amp;b");
 
         assertEquals("a&b", attribute.getValue());
-        assertEquals("a&b", input.text());
-        SourceInfo sourceInfo = input.sourceInfo(0, 3);
+        assertEquals("a&b", input.getText());
+        SourceInfo sourceInfo = input.getSourceInfo(0, 3);
         assertEquals(new SourceInfo(0, start, 0, start + 3), sourceInfo);
         assertEquals(new SourceInfo(0, start, 0, start + 7), sourceInfo.toOriginal());
         assertEquals(sourceInfo, attribute.getUserData(XmlReader.ATTR_VALUE_SOURCE_INFO_KEY));

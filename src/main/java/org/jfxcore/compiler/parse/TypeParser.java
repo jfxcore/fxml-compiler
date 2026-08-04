@@ -39,7 +39,7 @@ public class TypeParser {
     }
 
     private TypeParser(String text, LexerInput input) {
-        var sourceInfo = input.sourceInfo(0, text.length());
+        var sourceInfo = input.getSourceInfo(0, text.length());
 
         this.text = text;
         this.input = input;
@@ -70,17 +70,17 @@ public class TypeParser {
         }
 
         if (start < 0) {
-            throw ParserErrors.expectedIdentifier(input.sourceInfo(0, 0));
+            throw ParserErrors.expectedIdentifier(input.getSourceInfo(0, 0));
         }
 
-        var sourceInfo = input.sourceInfo(start, end + 1);
+        var sourceInfo = input.getSourceInfo(start, end + 1);
 
         int openingAngleIndex = text.indexOf('<');
         if (openingAngleIndex < 0) {
             String methodName = text.trim();
 
             if (!NameHelper.isJavaIdentifier(methodName)) {
-                throw ParserErrors.expectedIdentifier(input.sourceInfo(start, start));
+                throw ParserErrors.expectedIdentifier(input.getSourceInfo(start, start));
             }
 
             return new MethodInfo(List.of(), methodName, sourceInfo);
@@ -89,11 +89,11 @@ public class TypeParser {
         String methodName = text.substring(start, openingAngleIndex).trim();
 
         if (!NameHelper.isJavaIdentifier(methodName)) {
-            throw ParserErrors.expectedIdentifier(input.sourceInfo(start, start));
+            throw ParserErrors.expectedIdentifier(input.getSourceInfo(start, start));
         }
 
         if (text.charAt(end) != '>') {
-            throw ParserErrors.expectedToken(input.sourceInfo(end, end), ">");
+            throw ParserErrors.expectedToken(input.getSourceInfo(end, end), ">");
         }
 
         List<TypeInstance> typeWitnesses = parseText(

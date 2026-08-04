@@ -22,11 +22,11 @@ public class LexerInputTest {
     public void Identity_Input_Maps_Utf16_Ranges_From_Origin() {
         LexerInput input = LexerInput.identity("ab\uD83D\uDE00cd", new Location(3, 7));
 
-        assertEquals(new SourceInfo(3, 7), input.sourceInfo(0, 0));
-        assertEquals(new SourceInfo(3, 9, 3, 10), input.sourceInfo(2, 3));
-        assertEquals(new SourceInfo(3, 10, 3, 11), input.sourceInfo(3, 4));
-        assertEquals(new SourceInfo(3, 13), input.sourceInfo(6, 6));
-        assertEquals(new SourceInfo(3, 13), input.endOfInput());
+        assertEquals(new SourceInfo(3, 7), input.getSourceInfo(0, 0));
+        assertEquals(new SourceInfo(3, 9, 3, 10), input.getSourceInfo(2, 3));
+        assertEquals(new SourceInfo(3, 10, 3, 11), input.getSourceInfo(3, 4));
+        assertEquals(new SourceInfo(3, 13), input.getSourceInfo(6, 6));
+        assertEquals(new SourceInfo(3, 13), input.getEndOfInput());
     }
 
     @Test
@@ -34,26 +34,26 @@ public class LexerInputTest {
         String raw = "ab&amp;cd&#x1F600;ef";
         LexerInput input = LexerInput.decodedXml(raw, new Location(4, 10), XmlEntityDecoder.decode(raw));
 
-        assertEquals("ab&cd\uD83D\uDE00ef", input.text());
-        assertEquals(new SourceInfo(4, 12), input.sourceInfo(2, 2));
-        assertEquals(new SourceInfo(4, 12, 4, 13), input.sourceInfo(2, 3));
-        assertEquals(new SourceInfo(4, 13), input.sourceInfo(3, 3));
-        assertEquals(new SourceInfo(4, 15, 4, 16), input.sourceInfo(5, 6));
-        assertEquals(new SourceInfo(4, 16, 4, 17), input.sourceInfo(6, 7));
-        assertEquals(new SourceInfo(4, 16), input.sourceInfo(6, 6));
-        assertEquals(new SourceInfo(4, 17), input.sourceInfo(7, 7));
-        assertEquals(new SourceInfo(4, 11, 4, 18), input.sourceInfo(1, 8));
-        assertEquals(new SourceInfo(4, 19), input.endOfInput());
+        assertEquals("ab&cd\uD83D\uDE00ef", input.getText());
+        assertEquals(new SourceInfo(4, 12), input.getSourceInfo(2, 2));
+        assertEquals(new SourceInfo(4, 12, 4, 13), input.getSourceInfo(2, 3));
+        assertEquals(new SourceInfo(4, 13), input.getSourceInfo(3, 3));
+        assertEquals(new SourceInfo(4, 15, 4, 16), input.getSourceInfo(5, 6));
+        assertEquals(new SourceInfo(4, 16, 4, 17), input.getSourceInfo(6, 7));
+        assertEquals(new SourceInfo(4, 16), input.getSourceInfo(6, 6));
+        assertEquals(new SourceInfo(4, 17), input.getSourceInfo(7, 7));
+        assertEquals(new SourceInfo(4, 11, 4, 18), input.getSourceInfo(1, 8));
+        assertEquals(new SourceInfo(4, 19), input.getEndOfInput());
 
-        assertEquals(new SourceInfo(4, 12), input.sourceInfo(2, 2).toOriginal());
-        assertEquals(new SourceInfo(4, 12, 4, 17), input.sourceInfo(2, 3).toOriginal());
-        assertEquals(new SourceInfo(4, 17), input.sourceInfo(3, 3).toOriginal());
-        assertEquals(new SourceInfo(4, 19, 4, 28), input.sourceInfo(5, 6).toOriginal());
-        assertEquals(new SourceInfo(4, 19, 4, 28), input.sourceInfo(6, 7).toOriginal());
-        assertEquals(new SourceInfo(4, 19), input.sourceInfo(6, 6).toOriginal());
-        assertEquals(new SourceInfo(4, 28), input.sourceInfo(7, 7).toOriginal());
-        assertEquals(new SourceInfo(4, 11, 4, 29), input.sourceInfo(1, 8).toOriginal());
-        assertEquals(new SourceInfo(4, 30), input.endOfInput().toOriginal());
+        assertEquals(new SourceInfo(4, 12), input.getSourceInfo(2, 2).toOriginal());
+        assertEquals(new SourceInfo(4, 12, 4, 17), input.getSourceInfo(2, 3).toOriginal());
+        assertEquals(new SourceInfo(4, 17), input.getSourceInfo(3, 3).toOriginal());
+        assertEquals(new SourceInfo(4, 19, 4, 28), input.getSourceInfo(5, 6).toOriginal());
+        assertEquals(new SourceInfo(4, 19, 4, 28), input.getSourceInfo(6, 7).toOriginal());
+        assertEquals(new SourceInfo(4, 19), input.getSourceInfo(6, 6).toOriginal());
+        assertEquals(new SourceInfo(4, 28), input.getSourceInfo(7, 7).toOriginal());
+        assertEquals(new SourceInfo(4, 11, 4, 29), input.getSourceInfo(1, 8).toOriginal());
+        assertEquals(new SourceInfo(4, 30), input.getEndOfInput().toOriginal());
     }
 
     @Test
@@ -61,22 +61,22 @@ public class LexerInputTest {
         String raw = "a&#10;b";
         LexerInput input = LexerInput.decodedXml(raw, new Location(2, 3), XmlEntityDecoder.decode(raw));
 
-        assertEquals("a\nb", input.text());
-        assertEquals(new SourceInfo(2, 4, 3, 0), input.sourceInfo(1, 2));
-        assertEquals(new SourceInfo(3, 0, 3, 1), input.sourceInfo(2, 3));
-        assertEquals(new SourceInfo(2, 4, 2, 9), input.sourceInfo(1, 2).toOriginal());
-        assertEquals(new SourceInfo(2, 9, 2, 10), input.sourceInfo(2, 3).toOriginal());
+        assertEquals("a\nb", input.getText());
+        assertEquals(new SourceInfo(2, 4, 3, 0), input.getSourceInfo(1, 2));
+        assertEquals(new SourceInfo(3, 0, 3, 1), input.getSourceInfo(2, 3));
+        assertEquals(new SourceInfo(2, 4, 2, 9), input.getSourceInfo(1, 2).toOriginal());
+        assertEquals(new SourceInfo(2, 9, 2, 10), input.getSourceInfo(2, 3).toOriginal());
     }
 
     @Test
     public void Identity_Input_Maps_Crlf_Boundaries_Once() {
         LexerInput input = LexerInput.identity("a\r\nb", new Location(5, 4));
 
-        assertEquals(new SourceInfo(5, 4), input.sourceInfo(0, 0));
-        assertEquals(new SourceInfo(5, 5), input.sourceInfo(1, 1));
-        assertEquals(new SourceInfo(6, 0), input.sourceInfo(2, 2));
-        assertEquals(new SourceInfo(6, 0), input.sourceInfo(3, 3));
-        assertEquals(new SourceInfo(6, 1), input.sourceInfo(4, 4));
+        assertEquals(new SourceInfo(5, 4), input.getSourceInfo(0, 0));
+        assertEquals(new SourceInfo(5, 5), input.getSourceInfo(1, 1));
+        assertEquals(new SourceInfo(6, 0), input.getSourceInfo(2, 2));
+        assertEquals(new SourceInfo(6, 0), input.getSourceInfo(3, 3));
+        assertEquals(new SourceInfo(6, 1), input.getSourceInfo(4, 4));
     }
 
     @Test
@@ -84,23 +84,23 @@ public class LexerInputTest {
         for (String separator : new String[] {"\n", "\r", "\u000B", "\u000C", "\u0085", "\u2028", "\u2029"}) {
             LexerInput input = LexerInput.identity("a" + separator + "b", new Location(8, 2));
             int b = 1 + separator.length();
-            assertEquals(new SourceInfo(9, 0, 9, 1), input.sourceInfo(b, b + 1), separator);
+            assertEquals(new SourceInfo(9, 0, 9, 1), input.getSourceInfo(b, b + 1), separator);
         }
     }
 
     @Test
     public void Empty_And_Newline_Terminated_Input_Have_Deterministic_Eof() {
-        assertEquals(new SourceInfo(7, 9), LexerInput.identity("", new Location(7, 9)).endOfInput());
-        assertEquals(new SourceInfo(8, 0), LexerInput.identity("x\n", new Location(7, 9)).endOfInput());
+        assertEquals(new SourceInfo(7, 9), LexerInput.identity("", new Location(7, 9)).getEndOfInput());
+        assertEquals(new SourceInfo(8, 0), LexerInput.identity("x\n", new Location(7, 9)).getEndOfInput());
     }
 
     @Test
     public void Invalid_Ranges_Fail_Fast() {
         LexerInput input = LexerInput.identity("abc", new Location(0, 0));
 
-        assertThrows(IndexOutOfBoundsException.class, () -> input.sourceInfo(-1, 0));
-        assertThrows(IndexOutOfBoundsException.class, () -> input.sourceInfo(0, 4));
-        assertThrows(IllegalArgumentException.class, () -> input.sourceInfo(2, 1));
+        assertThrows(IndexOutOfBoundsException.class, () -> input.getSourceInfo(-1, 0));
+        assertThrows(IndexOutOfBoundsException.class, () -> input.getSourceInfo(0, 4));
+        assertThrows(IllegalArgumentException.class, () -> input.getSourceInfo(2, 1));
     }
 
     @Test
@@ -112,7 +112,7 @@ public class LexerInputTest {
             String raw = "a&amp;b";
             LexerInput input = LexerInput.decodedXml(raw, new Location(0, 7), XmlEntityDecoder.decode(raw));
 
-            SourceInfo sourceInfo = input.sourceInfo(1, 2);
+            SourceInfo sourceInfo = input.getSourceInfo(1, 2);
             assertEquals("&", sourceInfo.getText());
             assertEquals("&amp;", sourceInfo.toOriginal().getText());
         }
@@ -134,7 +134,7 @@ public class LexerInputTest {
             LexerInput second = LexerInput.decodedXml(
                 secondRaw, new Location(0, secondOrigin), XmlEntityDecoder.decode(secondRaw));
 
-            SourceInfo span = SourceInfo.span(first.sourceInfo(1, 2), second.sourceInfo(1, 2));
+            SourceInfo span = SourceInfo.span(first.getSourceInfo(1, 2), second.getSourceInfo(1, 2));
 
             assertEquals(new SourceInfo(0, firstOrigin + 1, 0, secondOrigin + 7), span);
             assertEquals("&amp;b; right=c&#100;", span.getText());
@@ -150,7 +150,7 @@ public class LexerInputTest {
 
         try (var ignored = new CompilationScope(context)) {
             LexerInput input = LexerInput.identity("\\${foo}", new Location(0, 7)).without(0);
-            SourceInfo sourceInfo = input.sourceInfo(0, input.text().length());
+            SourceInfo sourceInfo = input.getSourceInfo(0, input.getText().length());
 
             assertEquals("${foo}", sourceInfo.getText());
             assertEquals(new SourceInfo(0, 7, 0, 13), sourceInfo);
@@ -167,7 +167,7 @@ public class LexerInputTest {
         try (var ignored = new CompilationScope(context)) {
             String raw = "&#32;Foo&#32;";
             LexerInput input = LexerInput.decodedXml(raw, new Location(0, 7), XmlEntityDecoder.decode(raw));
-            SourceInfo trimmed = input.sourceInfo(0, input.text().length()).getTrimmed();
+            SourceInfo trimmed = input.getSourceInfo(0, input.getText().length()).getTrimmed();
 
             assertEquals(new SourceInfo(0, 8, 0, 11), trimmed);
             assertEquals("Foo", trimmed.getText());
@@ -185,7 +185,7 @@ public class LexerInputTest {
             String raw = "a&amp;b";
             LexerInput input = LexerInput.decodedXml(raw, new Location(0, 7), XmlEntityDecoder.decode(raw));
             exception = new MarkupException(
-                input.sourceInfo(1, 2),
+                input.getSourceInfo(1, 2),
                 Diagnostic.newDiagnostic(ErrorCode.INVALID_EXPRESSION));
         }
 
@@ -207,7 +207,7 @@ public class LexerInputTest {
             MarkupException exception = assertThrows(
                 MarkupException.class,
                 () -> new TypeParser(
-                    input.text(), input.sourceInfo(0, input.text().length())).parse());
+                    input.getText(), input.getSourceInfo(0, input.getText().length())).parse());
 
             assertEquals(new SourceInfo(0, 23, 0, 27), exception.getSourceInfo());
             assertEquals(new SourceInfo(0, 23, 0, 31), exception.getOriginalSourceInfo());

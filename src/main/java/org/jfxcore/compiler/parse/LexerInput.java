@@ -16,7 +16,7 @@ import java.util.Objects;
 /**
  * Source-aware input for parsers that operate on transformed text.
  * <p>
- * The {@link SourceInfo} instances produced by this class use locations in {@link #text()}.
+ * The {@link SourceInfo} instances produced by this class use locations in {@link #getText()}.
  * Their source view retains enough information to project those locations onto the original
  * compilation source when a diagnostic is rendered.
  */
@@ -233,8 +233,7 @@ final class LexerInput {
         return new LexerInput(text, sourceInfo.getStart(), sourceInfo.getSource());
     }
 
-    static LexerInput decodedXml(
-            String rawText, Location origin, XmlEntityDecoder.DecodeResult decodeResult) {
+    static LexerInput decodedXml(String rawText, Location origin, XmlEntityDecoder.DecodeResult decodeResult) {
         Objects.requireNonNull(rawText, "rawText");
         Objects.requireNonNull(origin, "origin");
         Objects.requireNonNull(decodeResult, "decodeResult");
@@ -263,15 +262,15 @@ final class LexerInput {
         this.source = source;
     }
 
-    String text() {
+    String getText() {
         return text;
     }
 
-    String lineText(int line) {
+    String getLineText(int line) {
         return textIndex.line(line - textIndex.origin.getLine());
     }
 
-    int localColumn(Location location) {
+    int getLocalColumn(Location location) {
         return location.getLine() == textIndex.origin.getLine()
             ? location.getColumn() - textIndex.origin.getColumn()
             : location.getColumn();
@@ -294,7 +293,7 @@ final class LexerInput {
         return new LexerInput(transformed, textIndex.origin, transformedSource);
     }
 
-    SourceInfo sourceInfo(int decodedStart, int decodedEnd) {
+    SourceInfo getSourceInfo(int decodedStart, int decodedEnd) {
         validateRange(decodedStart, decodedEnd);
         Location start = textIndex.locationOf(decodedStart);
         Location end = textIndex.locationOf(decodedEnd);
@@ -304,8 +303,8 @@ final class LexerInput {
             : new SourceInfo(start.getLine(), start.getColumn(), end.getLine(), end.getColumn());
     }
 
-    SourceInfo endOfInput() {
-        return sourceInfo(text.length(), text.length());
+    SourceInfo getEndOfInput() {
+        return getSourceInfo(text.length(), text.length());
     }
 
     private void validateRange(int decodedStart, int decodedEnd) {

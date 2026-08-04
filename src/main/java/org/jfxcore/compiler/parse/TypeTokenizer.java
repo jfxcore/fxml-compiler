@@ -59,12 +59,12 @@ public class TypeTokenizer extends AbstractTokenizer<TypeTokenType, TypeToken> {
             }
 
             if (firstNonWhitespace >= 0) {
-                throw ParserErrors.unexpectedToken(input.sourceInfo(
+                throw ParserErrors.unexpectedToken(input.getSourceInfo(
                     inputOffset + lastPosition + firstNonWhitespace, inputOffset + end));
             }
 
             SourceInfo localSourceInfo = getSourceInfo(start, end);
-            SourceInfo sourceInfo = input.sourceInfo(inputOffset + start, inputOffset + end);
+            SourceInfo sourceInfo = input.getSourceInfo(inputOffset + start, inputOffset + end);
             tokens.add(new TypeToken(
                 token, getLines().get(localSourceInfo.getStart().getLine()), sourceInfo));
             lastPosition = end;
@@ -75,6 +75,6 @@ public class TypeTokenizer extends AbstractTokenizer<TypeTokenType, TypeToken> {
 
     @Override
     protected SourceInfo getEndOfInputSourceInfo() {
-        return input.sourceInfo(inputOffset + inputLength, inputOffset + inputLength);
+        return input.getSourceInfo(inputOffset + inputLength, inputOffset + inputLength);
     }
 }
