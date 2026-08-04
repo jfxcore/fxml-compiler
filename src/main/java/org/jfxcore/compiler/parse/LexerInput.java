@@ -123,7 +123,7 @@ final class LexerInput {
 
             if (localLine == 0) {
                 String parentLine = parentSource != null
-                    ? parentSource.sourceInfo(decodedIndex.origin, decodedIndex.origin).getLineText()
+                    ? parentSource.getSourceInfo(decodedIndex.origin, decodedIndex.origin).getLineText()
                     : null;
 
                 String prefix = parentLine != null
@@ -135,7 +135,7 @@ final class LexerInput {
 
             if (localLine == decodedIndex.lines.length - 1) {
                 String parentLine = parentSource != null
-                    ? parentSource.sourceInfo(parentEnd, parentEnd).getLineText()
+                    ? parentSource.getSourceInfo(parentEnd, parentEnd).getLineText()
                     : null;
 
                 if (parentLine != null && parentEnd.getColumn() <= parentLine.length()) {
@@ -169,7 +169,7 @@ final class LexerInput {
                     projectedEnd.getLine(), projectedEnd.getColumn());
             }
 
-            return parentSource.sourceInfo(projectedStart, projectedEnd).toOriginal();
+            return parentSource.getSourceInfo(projectedStart, projectedEnd).toOriginal();
         }
 
         private int mapStart(int decodedOffset) {
@@ -300,7 +300,7 @@ final class LexerInput {
         Location end = textIndex.locationOf(decodedEnd);
 
         return source != null
-            ? source.sourceInfo(start, end)
+            ? source.getSourceInfo(start, end)
             : new SourceInfo(start.getLine(), start.getColumn(), end.getLine(), end.getColumn());
     }
 

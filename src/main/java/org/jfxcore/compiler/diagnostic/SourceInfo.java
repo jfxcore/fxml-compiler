@@ -24,16 +24,16 @@ public final class SourceInfo {
      */
     public abstract static class Source {
 
-        public final SourceInfo sourceInfo(Location start, Location end) {
+        public final SourceInfo getSourceInfo(Location start, Location end) {
             return new SourceInfo(start, end, this);
         }
 
-        public final SourceInfo sourceInfo(int line, int column) {
-            return sourceInfo(new Location(line, column), new Location(line, column));
+        public final SourceInfo getSourceInfo(int line, int column) {
+            return getSourceInfo(new Location(line, column), new Location(line, column));
         }
 
-        public final SourceInfo sourceInfo(int line, int column, int endLine, int endColumn) {
-            return sourceInfo(new Location(line, column), new Location(endLine, endColumn));
+        public final SourceInfo getSourceInfo(int line, int column, int endLine, int endColumn) {
+            return getSourceInfo(new Location(line, column), new Location(endLine, endColumn));
         }
 
         @Nullable
@@ -43,7 +43,7 @@ public final class SourceInfo {
         protected abstract String getLineText(int line);
 
         protected SourceInfo toOriginal(Location start, Location end) {
-            return sourceInfo(start, end);
+            return getSourceInfo(start, end);
         }
     }
 
