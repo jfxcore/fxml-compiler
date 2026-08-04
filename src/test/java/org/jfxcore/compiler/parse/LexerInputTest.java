@@ -1,0 +1,218 @@
+// Copyright (c) 2026, JFXcore. All rights reserved.
+// Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
+
+package org.jfxcore.compiler.parse;
+
+import org.jfxcore.compiler.diagnostic.Location;
+import org.jfxcore.compiler.diagnostic.Diagnostic;
+import org.jfxcore.compiler.diagnostic.ErrorCode;
+import org.jfxcore.compiler.diagnostic.MarkupException;
+import org.jfxcore.compiler.diagnostic.SourceInfo;
+import org.jfxcore.compiler.util.CompilationContext;
+import org.jfxcore.compiler.util.CompilationScope;
+import org.jfxcore.compiler.util.CompilationSource;
+import org.jfxcore.compiler.util.XmlEntityDecoder;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+public class LexerInputTest {
+
+    @Test
+    public void Identity_Input_Maps_Utf16_Ranges_From_Origin() {
+        LexerInput input = LexerInput.identity("ab\uD83D\uDE00cd", new Location(3, 7));
+
+        assertEquals(new SourceInfo(3, 7), input.sourceInfo(0, 0));
+        assertEquals(new SourceInfo(3, 9, 3, 10), input.sourceInfo(2, 3));
+        assertEquals(new SourceInfo(3, 10, 3, 11), input.sourceInfo(3, 4));
+        assertEquals(new SourceInfo(3, 13), input.sourceInfo(6, 6));
+        assertEquals(new SourceInfo(3, 13), input.endOfInput());
+    }
+
+    @Test
+    public void Mapped_Input_Uses_Decoded_Locations_And_Projects_Entity_Ranges_Outward() {
+        String raw = "ab&amp;cd&#x1F600;ef";
+        LexerInput input = LexerInput.decodedXml(raw, new Location(4, 10), XmlEntityDecoder.decode(raw));
+
+        assertEquals("ab&cd\uD83D\uDE00ef", input.text());
+        assertEquals(new SourceInfo(4, 12), input.sourceInfo(2, 2));
+        assertEquals(new SourceInfo(4, 12, 4, 13), input.sourceInfo(2, 3));
+        assertEquals(new SourceInfo(4, 13), input.sourceInfo(3, 3));
+        assertEquals(new SourceInfo(4, 15, 4, 16), input.sourceInfo(5, 6));
+        assertEquals(new SourceInfo(4, 16, 4, 17), input.sourceInfo(6, 7));
+        assertEquals(new SourceInfo(4, 16), input.sourceInfo(6, 6));
+        assertEquals(new SourceInfo(4, 17), input.sourceInfo(7, 7));
+        assertEquals(new SourceInfo(4, 11, 4, 18), input.sourceInfo(1, 8));
+        assertEquals(new SourceInfo(4, 19), input.endOfInput());
+
+        assertEquals(new SourceInfo(4, 12), input.sourceInfo(2, 2).toOriginal());
+        assertEquals(new SourceInfo(4, 12, 4, 17), input.sourceInfo(2, 3).toOriginal());
+        assertEquals(new SourceInfo(4, 17), input.sourceInfo(3, 3).toOriginal());
+        assertEquals(new SourceInfo(4, 19, 4, 28), input.sourceInfo(5, 6).toOriginal());
+        assertEquals(new SourceInfo(4, 19, 4, 28), input.sourceInfo(6, 7).toOriginal());
+        assertEquals(new SourceInfo(4, 19), input.sourceInfo(6, 6).toOriginal());
+        assertEquals(new SourceInfo(4, 28), input.sourceInfo(7, 7).toOriginal());
+        assertEquals(new SourceInfo(4, 11, 4, 29), input.sourceInfo(1, 8).toOriginal());
+        assertEquals(new SourceInfo(4, 30), input.endOfInput().toOriginal());
+    }
+
+    @Test
+    public void Decoded_Newline_Changes_Logical_Line_But_Projects_To_Raw_Line() {
+        String raw = "a&#10;b";
+        LexerInput input = LexerInput.decodedXml(raw, new Location(2, 3), XmlEntityDecoder.decode(raw));
+
+        assertEquals("a\nb", input.text());
+        assertEquals(new SourceInfo(2, 4, 3, 0), input.sourceInfo(1, 2));
+        assertEquals(new SourceInfo(3, 0, 3, 1), input.sourceInfo(2, 3));
+        assertEquals(new SourceInfo(2, 4, 2, 9), input.sourceInfo(1, 2).toOriginal());
+        assertEquals(new SourceInfo(2, 9, 2, 10), input.sourceInfo(2, 3).toOriginal());
+    }
+
+    @Test
+    public void Identity_Input_Maps_Crlf_Boundaries_Once() {
+        LexerInput input = LexerInput.identity("a\r\nb", new Location(5, 4));
+
+        assertEquals(new SourceInfo(5, 4), input.sourceInfo(0, 0));
+        assertEquals(new SourceInfo(5, 5), input.sourceInfo(1, 1));
+        assertEquals(new SourceInfo(6, 0), input.sourceInfo(2, 2));
+        assertEquals(new SourceInfo(6, 0), input.sourceInfo(3, 3));
+        assertEquals(new SourceInfo(6, 1), input.sourceInfo(4, 4));
+    }
+
+    @Test
+    public void Identity_Input_Recognizes_All_Supported_Line_Separators() {
+        for (String separator : new String[] {"\n", "\r", "\u000B", "\u000C", "\u0085", "\u2028", "\u2029"}) {
+            LexerInput input = LexerInput.identity("a" + separator + "b", new Location(8, 2));
+            int b = 1 + separator.length();
+            assertEquals(new SourceInfo(9, 0, 9, 1), input.sourceInfo(b, b + 1), separator);
+        }
+    }
+
+    @Test
+    public void Empty_And_Newline_Terminated_Input_Have_Deterministic_Eof() {
+        assertEquals(new SourceInfo(7, 9), LexerInput.identity("", new Location(7, 9)).endOfInput());
+        assertEquals(new SourceInfo(8, 0), LexerInput.identity("x\n", new Location(7, 9)).endOfInput());
+    }
+
+    @Test
+    public void Invalid_Ranges_Fail_Fast() {
+        LexerInput input = LexerInput.identity("abc", new Location(0, 0));
+
+        assertThrows(IndexOutOfBoundsException.class, () -> input.sourceInfo(-1, 0));
+        assertThrows(IndexOutOfBoundsException.class, () -> input.sourceInfo(0, 4));
+        assertThrows(IllegalArgumentException.class, () -> input.sourceInfo(2, 1));
+    }
+
+    @Test
+    public void Mapped_SourceInfo_Text_Is_Decoded_And_Original_Text_Contains_Entity() {
+        String source = "prefix a&amp;b suffix";
+        var context = new CompilationContext(new CompilationSource.InMemory(source));
+
+        try (var ignored = new CompilationScope(context)) {
+            String raw = "a&amp;b";
+            LexerInput input = LexerInput.decodedXml(raw, new Location(0, 7), XmlEntityDecoder.decode(raw));
+
+            SourceInfo sourceInfo = input.sourceInfo(1, 2);
+            assertEquals("&", sourceInfo.getText());
+            assertEquals("&amp;", sourceInfo.toOriginal().getText());
+        }
+    }
+
+    @Test
+    public void Span_Of_Different_Transformed_Views_Uses_Original_Source() {
+        String source = "left=a&amp;b; right=c&#100;d";
+        var context = new CompilationContext(new CompilationSource.InMemory(source));
+
+        try (var ignored = new CompilationScope(context)) {
+            String firstRaw = "a&amp;b";
+            int firstOrigin = source.indexOf(firstRaw);
+            LexerInput first = LexerInput.decodedXml(
+                firstRaw, new Location(0, firstOrigin), XmlEntityDecoder.decode(firstRaw));
+
+            String secondRaw = "c&#100;d";
+            int secondOrigin = source.indexOf(secondRaw);
+            LexerInput second = LexerInput.decodedXml(
+                secondRaw, new Location(0, secondOrigin), XmlEntityDecoder.decode(secondRaw));
+
+            SourceInfo span = SourceInfo.span(first.sourceInfo(1, 2), second.sourceInfo(1, 2));
+
+            assertEquals(new SourceInfo(0, firstOrigin + 1, 0, secondOrigin + 7), span);
+            assertEquals("&amp;b; right=c&#100;", span.getText());
+            assertSame(context.getSourceInfoSource(), span.getSource());
+            assertEquals(span, span.toOriginal());
+        }
+    }
+
+    @Test
+    public void Removed_Escape_Uses_Logical_Text_And_Projects_Onto_Retained_Source() {
+        String source = "prefix \\${foo} suffix";
+        var context = new CompilationContext(new CompilationSource.InMemory(source));
+
+        try (var ignored = new CompilationScope(context)) {
+            LexerInput input = LexerInput.identity("\\${foo}", new Location(0, 7)).without(0);
+            SourceInfo sourceInfo = input.sourceInfo(0, input.text().length());
+
+            assertEquals("${foo}", sourceInfo.getText());
+            assertEquals(new SourceInfo(0, 7, 0, 13), sourceInfo);
+            assertEquals(new SourceInfo(0, 8, 0, 14), sourceInfo.toOriginal());
+            assertEquals("${foo}", sourceInfo.toOriginal().getText());
+        }
+    }
+
+    @Test
+    public void Trimming_Uses_Decoded_Whitespace() {
+        String source = "prefix &#32;Foo&#32; suffix";
+        var context = new CompilationContext(new CompilationSource.InMemory(source));
+
+        try (var ignored = new CompilationScope(context)) {
+            String raw = "&#32;Foo&#32;";
+            LexerInput input = LexerInput.decodedXml(raw, new Location(0, 7), XmlEntityDecoder.decode(raw));
+            SourceInfo trimmed = input.sourceInfo(0, input.text().length()).getTrimmed();
+
+            assertEquals(new SourceInfo(0, 8, 0, 11), trimmed);
+            assertEquals("Foo", trimmed.getText());
+            assertEquals(new SourceInfo(0, 12, 0, 15), trimmed.toOriginal());
+        }
+    }
+
+    @Test
+    public void Formatted_Error_Projects_To_Raw_Entity_After_Compilation_Scope_Closes() {
+        String source = "prefix a&amp;b suffix";
+        var context = new CompilationContext(new CompilationSource.InMemory(source));
+        MarkupException exception;
+
+        try (var ignored = new CompilationScope(context)) {
+            String raw = "a&amp;b";
+            LexerInput input = LexerInput.decodedXml(raw, new Location(0, 7), XmlEntityDecoder.decode(raw));
+            exception = new MarkupException(
+                input.sourceInfo(1, 2),
+                Diagnostic.newDiagnostic(ErrorCode.INVALID_EXPRESSION));
+        }
+
+        assertEquals("&", exception.getSourceInfo().getText());
+        assertEquals("&amp;", exception.getOriginalSourceInfo().getText());
+        assertTrue(exception.getMessageWithSourceInfo().endsWith(
+            source + System.lineSeparator() + " ".repeat(8) + "^^^^^"));
+    }
+
+    @Test
+    public void Derived_Type_Parser_Retains_Decoded_Source_View() {
+        String raw = "java.lang.String&#35;Foo";
+        String source = "prefix " + raw + " suffix";
+        var context = new CompilationContext(new CompilationSource.InMemory(source));
+
+        try (var ignored = new CompilationScope(context)) {
+            LexerInput input = LexerInput.decodedXml(
+                raw, new Location(0, 7), XmlEntityDecoder.decode(raw));
+            MarkupException exception = assertThrows(
+                MarkupException.class,
+                () -> new TypeParser(
+                    input.text(), input.sourceInfo(0, input.text().length())).parse());
+
+            assertEquals(new SourceInfo(0, 23, 0, 27), exception.getSourceInfo());
+            assertEquals(new SourceInfo(0, 23, 0, 31), exception.getOriginalSourceInfo());
+            assertEquals("#Foo", exception.getSourceInfo().getText());
+            assertEquals("&#35;Foo", exception.getOriginalSourceInfo().getText());
+        }
+    }
+}
