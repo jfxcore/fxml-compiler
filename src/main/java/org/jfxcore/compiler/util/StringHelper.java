@@ -16,9 +16,6 @@ public class StringHelper {
     private static final Pattern ESCAPE_PATTERN = Pattern.compile(
         "\\\\b|\\\\t|\\\\n|\\\\f|\\\\r|\\\\\"|\\\\'|\\\\\\\\|\\\\u[\\da-fA-F]{4}");
 
-    private static final Pattern XML_ESCAPE_PATTERN = Pattern.compile(
-        "(?:&gt;)|(?:&lt;)|(?:&amp;)|(?:&quot;)|(?:&apos;)|(?:&#x?[\\da-fA-F]+;)");
-
     public static String quote(String value) {
         if (value.isEmpty()) {
             return "\"\"";
@@ -61,26 +58,7 @@ public class StringHelper {
     }
     
     public static String unescapeXml(String value) {
-        if (value.isEmpty()) {
-            return "";
-        }
-
-        Matcher matcher = XML_ESCAPE_PATTERN.matcher(value);
-
-        return matcher.replaceAll(result -> {
-            switch (result.group()) {
-                case "&gt;": return ">";
-                case "&lt;": return "<";
-                case "&amp;": return "&";
-                case "&quot;": return "\"";
-                case "&apos;": return "'";
-                default:
-                    String numValue = result.group().substring(2, result.group().length() - 1);
-                    String text = String.valueOf((char)(numValue.startsWith("x") ?
-                        Integer.parseInt(numValue.substring(1), 16) : Integer.parseInt(numValue)));
-                    return Matcher.quoteReplacement(text);
-            }
-        });
+        return XmlEntityDecoder.decode(value).text();
     }
 
     public static String stripIndent(String value) {
@@ -221,9 +199,22 @@ public class StringHelper {
 
     public record Part(String text, boolean lineBreak, int line, int column) {}
 
+    public record OffsetPart(String text, boolean lineBreak, int start, int end, int line, int column) {}
+
     public static List<Part> splitList(String text) {
+        List<OffsetPart> offsetParts = splitListWithOffsets(text);
+        List<Part> result = new ArrayList<>(offsetParts.size());
+
+        for (OffsetPart part : offsetParts) {
+            result.add(new Part(part.text(), part.lineBreak(), part.line(), part.column()));
+        }
+
+        return result;
+    }
+
+    public static List<OffsetPart> splitListWithOffsets(String text) {
         Matcher splitMatcher = SPLIT_PATTERN.matcher(text);
-        List<Part> result = new ArrayList<>();
+        List<OffsetPart> result = new ArrayList<>();
         int rawStart = 0;
         int line = 0;
         int lineStart = 0;
@@ -241,7 +232,8 @@ public class StringHelper {
 
             boolean linebreak = LINEBREAK_PATTERN.matcher(separator).find();
             int column = logicalStart - lineStart;
-            result.add(new Part(item, linebreak, line, column));
+            result.add(new OffsetPart(
+                item, linebreak, logicalStart, splitMatcher.start(), line, column));
 
             Matcher linebreakMatcher = LINEBREAK_PATTERN.matcher(separator);
             while (linebreakMatcher.find()) {
@@ -260,7 +252,7 @@ public class StringHelper {
 
         logicalStart = hspaceMatcher.end();
         int column = logicalStart - lineStart;
-        result.add(new Part(text.substring(logicalStart), false, line, column));
+        result.add(new OffsetPart(text.substring(logicalStart), false, logicalStart, text.length(), line, column));
         return result;
     }
 

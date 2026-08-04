@@ -226,7 +226,15 @@ public class FxmlParser {
         }
 
         if (node instanceof Attr attr) {
-            sourceInfo = (SourceInfo)node.getUserData(XmlReader.ATTR_VALUE_SOURCE_INFO_KEY);
+            SourceInfo valueSourceInfo = (SourceInfo)node.getUserData(XmlReader.ATTR_VALUE_SOURCE_INFO_KEY);
+            LexerInput input = (LexerInput)node.getUserData(XmlReader.ATTR_VALUE_LEXER_INPUT_KEY);
+
+            if (input == null) {
+                SourceInfo fallbackSourceInfo = valueSourceInfo != null ? valueSourceInfo : sourceInfo;
+                input = LexerInput.identity(text, fallbackSourceInfo.getStart());
+            }
+
+            text = input.text();
             boolean parseAsPath = false;
 
             if (FxmlNamespace.FXML.equalsIgnoreCase(attr.getOwnerElement().getNamespaceURI())) {
@@ -240,44 +248,63 @@ public class FxmlParser {
             }
 
             if (parseAsPath) {
-                return new InlineParser(text, getFxmlNamespacePrefix(node), sourceInfo.getStart(), prefixMappings).parsePath();
+                return new InlineParser(input, getFxmlNamespacePrefix(node), prefixMappings).parsePath();
             }
 
             String trimmed = text.trim();
             if (trimmed.startsWith("\\") && isInlineExpression(trimmed.substring(1))) {
                 int start = text.indexOf('\\');
-                return createTextNode(
-                    text.substring(0, start) + text.substring(start + 1),
-                    new SourceInfo(
-                        sourceInfo.getStart().getLine(),
-                        sourceInfo.getStart().getColumn() + 1,
-                        sourceInfo.getEnd().getLine(),
-                        sourceInfo.getEnd().getColumn()),
-                    true);
+                return createEscapedTextNode(input, start);
             }
 
             if (isInlineExpression(trimmed)) {
-                return new InlineParser(text, getFxmlNamespacePrefix(node), sourceInfo.getStart(), prefixMappings).parseObject();
+                return new InlineParser(input, getFxmlNamespacePrefix(node), prefixMappings).parseObject();
             }
+
+            return createTextNode(input);
         }
 
         return createTextNode(text, sourceInfo, true);
     }
 
-    private TextNode createTextNode(String text, SourceInfo sourceInfo, boolean allowList) {
-        try {
-            NumberUtil.parse(text);
-            return new NumberNode(text, sourceInfo);
-        } catch (NumberFormatException ignored) {
+    private TextNode createTextNode(LexerInput input) {
+        String text = input.text();
+        SourceInfo sourceInfo = input.sourceInfo(0, text.length());
+        TextNode scalarNode = createScalarTextNode(text, sourceInfo);
+
+        if (scalarNode instanceof NumberNode) {
+            return scalarNode;
         }
 
-        if (!allowList) {
-            return new TextNode(text, sourceInfo);
+        List<StringHelper.OffsetPart> items = StringHelper.splitListWithOffsets(text);
+        if (items.size() == 1) {
+            return scalarNode;
+        }
+
+        TextNode[] textNodes = new TextNode[items.size()];
+        for (int i = 0; i < items.size(); ++i) {
+            StringHelper.OffsetPart item = items.get(i);
+            textNodes[i] = createScalarTextNode(
+                item.text(), input.sourceInfo(item.start(), item.end()));
+        }
+
+        return new ListNode(text, Arrays.asList(textNodes), sourceInfo);
+    }
+
+    private TextNode createEscapedTextNode(LexerInput input, int escapeOffset) {
+        return createTextNode(input.without(escapeOffset));
+    }
+
+    private TextNode createTextNode(String text, SourceInfo sourceInfo, boolean allowList) {
+        TextNode scalarNode = createScalarTextNode(text, sourceInfo);
+
+        if (!allowList || scalarNode instanceof NumberNode) {
+            return scalarNode;
         }
 
         List<StringHelper.Part> items = StringHelper.splitList(text);
         if (items.size() == 1) {
-            return new TextNode(text, sourceInfo);
+            return scalarNode;
         }
 
         TextNode[] textNodes = new TextNode[items.size()];
@@ -296,6 +323,15 @@ public class FxmlParser {
         }
 
         return new ListNode(text, Arrays.asList(textNodes), sourceInfo);
+    }
+
+    private TextNode createScalarTextNode(String text, SourceInfo sourceInfo) {
+        try {
+            NumberUtil.parse(text);
+            return new NumberNode(text, sourceInfo);
+        } catch (NumberFormatException ignored) {
+            return new TextNode(text, sourceInfo);
+        }
     }
 
     private boolean isInlineExpression(String text) {

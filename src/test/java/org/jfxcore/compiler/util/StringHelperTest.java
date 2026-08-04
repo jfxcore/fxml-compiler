@@ -4,6 +4,7 @@
 package org.jfxcore.compiler.util;
 
 import org.jfxcore.compiler.util.StringHelper.Part;
+import org.jfxcore.compiler.util.StringHelper.OffsetPart;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import java.util.List;
@@ -178,6 +179,16 @@ public class StringHelperTest {
             assertEquals(2, parts.size());
             assertPart(parts.get(0), "first", false, 0, 3);
             assertPart(parts.get(1), "second", false, 0, 10);
+        }
+
+        @Test
+        public void Offset_Parts_Preserve_Decoded_Ranges() {
+            List<OffsetPart> parts = StringHelper.splitListWithOffsets("  first,\n  second,,third");
+
+            assertEquals(new OffsetPart("first", true, 2, 7, 0, 2), parts.get(0));
+            assertEquals(new OffsetPart("second", false, 11, 17, 1, 2), parts.get(1));
+            assertEquals(new OffsetPart("", false, 18, 18, 1, 9), parts.get(2));
+            assertEquals(new OffsetPart("third", false, 19, 24, 1, 10), parts.get(3));
         }
 
         private static void assertPart(Part part, String text, boolean lineBreak, int line, int column) {

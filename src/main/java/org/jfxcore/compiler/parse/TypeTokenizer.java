@@ -17,11 +17,19 @@ public class TypeTokenizer extends AbstractTokenizer<TypeTokenType, TypeToken> {
     private static final Pattern TOKENIZER_PATTERN = Pattern.compile(
         "\\p{javaJavaIdentifierStart}\\p{javaJavaIdentifierPart}*|\\.|<|>|\\(|\\)|\\[|]|,|\\?");
 
-    private final Location sourceOffset;
+    private final LexerInput input;
+    private final int inputOffset;
+    private final int inputLength;
 
     public TypeTokenizer(Location sourceOffset, String text, Class<TypeToken> typeTokenClass) {
+        this(LexerInput.identity(text, sourceOffset), 0, text, typeTokenClass);
+    }
+
+    TypeTokenizer(LexerInput input, int inputOffset, String text, Class<TypeToken> typeTokenClass) {
         super(text, typeTokenClass);
-        this.sourceOffset = sourceOffset;
+        this.input = input;
+        this.inputOffset = inputOffset;
+        this.inputLength = text.length();
         tokenize(text);
     }
 
@@ -51,16 +59,22 @@ public class TypeTokenizer extends AbstractTokenizer<TypeTokenType, TypeToken> {
             }
 
             if (firstNonWhitespace >= 0) {
-                SourceInfo sourceInfo = getSourceInfo(lastPosition + firstNonWhitespace, end);
-                throw ParserErrors.unexpectedToken(SourceInfo.offset(sourceInfo, sourceOffset));
+                throw ParserErrors.unexpectedToken(input.sourceInfo(
+                    inputOffset + lastPosition + firstNonWhitespace, inputOffset + end));
             }
 
-            SourceInfo sourceInfo = getSourceInfo(start, end);
-            tokens.add(new TypeToken(token, getLines().get(sourceInfo.getStart().getLine()),
-                                     SourceInfo.offset(sourceInfo, sourceOffset)));
+            SourceInfo localSourceInfo = getSourceInfo(start, end);
+            SourceInfo sourceInfo = input.sourceInfo(inputOffset + start, inputOffset + end);
+            tokens.add(new TypeToken(
+                token, getLines().get(localSourceInfo.getStart().getLine()), sourceInfo));
             lastPosition = end;
         }
 
         addAll(tokens);
+    }
+
+    @Override
+    protected SourceInfo getEndOfInputSourceInfo() {
+        return input.sourceInfo(inputOffset + inputLength, inputOffset + inputLength);
     }
 }

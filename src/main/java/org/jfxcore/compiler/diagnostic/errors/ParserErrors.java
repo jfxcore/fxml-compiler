@@ -21,14 +21,12 @@ public class ParserErrors {
     }
 
     public static MarkupException unexpectedEndOfFile(SourceInfo sourceInfo) {
-        sourceInfo = new SourceInfo(sourceInfo.getEnd().getLine(), sourceInfo.getEnd().getColumn());
-        return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
+        return new MarkupException(SourceInfo.after(sourceInfo), Diagnostic.newDiagnostic(
             ErrorCode.UNEXPECTED_END_OF_FILE));
     }
 
     public static MarkupException unexpectedEndOfTypeDeclaration(SourceInfo sourceInfo) {
-        sourceInfo = new SourceInfo(sourceInfo.getEnd().getLine(), sourceInfo.getEnd().getColumn());
-        return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
+        return new MarkupException(SourceInfo.after(sourceInfo), Diagnostic.newDiagnostic(
             ErrorCode.UNEXPECTED_END_OF_TYPE_DECLARATION));
     }
 

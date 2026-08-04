@@ -46,9 +46,8 @@ public class InlineParser {
         new SyntaxMapping(EVALUATE_EXPR_PREFIX, Intrinsics.EVALUATE.getName(), true, false),
     };
 
-    private final String source;
+    private final LexerInput input;
     private final String intrinsicPrefix;
-    private final Location sourceOffset;
     private final Map<Character, String> prefixMappings;
 
     public InlineParser(String source, @Nullable String intrinsicPrefix) {
@@ -63,14 +62,19 @@ public class InlineParser {
                         @Nullable String intrinsicPrefix,
                         Location sourceOffset,
                         Map<Character, String> prefixMappings) {
-        this.source = source;
+        this(LexerInput.identity(source, sourceOffset), intrinsicPrefix, prefixMappings);
+    }
+
+    InlineParser(LexerInput input,
+                 @Nullable String intrinsicPrefix,
+                 Map<Character, String> prefixMappings) {
+        this.input = input;
         this.intrinsicPrefix = intrinsicPrefix;
-        this.sourceOffset = sourceOffset;
         this.prefixMappings = Map.copyOf(prefixMappings);
     }
 
     public ObjectNode parseObject() {
-        InlineTokenizer tokenizer = new InlineTokenizer(source, sourceOffset);
+        InlineTokenizer tokenizer = new InlineTokenizer(input);
         ObjectNode result = parseObjectExpression(tokenizer, tryGetSyntaxMapping(tokenizer));
         if (!tokenizer.isEmpty()) {
             throw ParserErrors.unexpectedToken(tokenizer.peekNotNull());
@@ -80,7 +84,7 @@ public class InlineParser {
     }
 
     public ValueNode parsePath() {
-        InlineTokenizer tokenizer = new InlineTokenizer(source, sourceOffset);
+        InlineTokenizer tokenizer = new InlineTokenizer(input);
         PathNode pathNode = parsePath(tokenizer, true, true, false);
         return !tokenizer.isEmpty() && tokenizer.peekNotNull().getType() == OPEN_PAREN ?
             parseFunctionExpression(tokenizer, pathNode) : pathNode;
@@ -201,16 +205,16 @@ public class InlineParser {
         String cleanName;
 
         if (mapping != null) {
-            sourceStart = tokenizer.remove().getSourceInfo();
+            InlineToken firstToken = tokenizer.remove();
+            InlineToken lastToken = firstToken;
+            sourceStart = firstToken.getSourceInfo();
             cleanName = mapping.name();
 
             for (int i = 0; i < mapping.compact().length() - 1; ++i) {
-                tokenizer.remove();
+                lastToken = tokenizer.remove();
             }
 
-            sourceEnd = new SourceInfo(
-                sourceStart.getStart().getLine(),
-                sourceStart.getStart().getColumn() + mapping.compact().length());
+            sourceEnd = lastToken.getSourceInfo();
 
             name = new TextNode(
                 intrinsicPrefix != null && mapping.intrinsic()

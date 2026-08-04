@@ -4,6 +4,7 @@
 package org.jfxcore.compiler.util;
 
 import javassist.ClassPool;
+import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.type.TypeDeclaration;
 import org.jfxcore.compiler.type.KnownSymbols;
 import java.nio.file.Path;
@@ -18,6 +19,7 @@ public class CompilationContext extends HashMap<Object, Object> {
     private static CompilationContext current;
 
     private final CompilationSource compilationSource;
+    private final SourceInfo.Source sourceInfoSource;
     private final Map<String, Path> modifiedClasses = new HashMap<>();
 
     private List<String> imports;
@@ -25,6 +27,7 @@ public class CompilationContext extends HashMap<Object, Object> {
 
     public CompilationContext(CompilationSource sourceFile) {
         compilationSource = sourceFile;
+        sourceInfoSource = SourceInfo.createSource(sourceFile);
     }
 
     public static boolean isCurrent() {
@@ -63,6 +66,10 @@ public class CompilationContext extends HashMap<Object, Object> {
         }
 
         return compilationSource;
+    }
+
+    public SourceInfo.Source getSourceInfoSource() {
+        return sourceInfoSource;
     }
 
     public void addModifiedClass(TypeDeclaration ctclass) {

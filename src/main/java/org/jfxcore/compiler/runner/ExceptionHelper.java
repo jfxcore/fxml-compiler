@@ -48,7 +48,7 @@ final class ExceptionHelper {
             Class<?> cls = ex.getClass();
             File sourceFile = (File)cls.getMethod("getSourceFile").invoke(ex);
             String message = (String)cls.getMethod("getMessageWithSourceInfo").invoke(ex);
-            Object sourceInfo = cls.getMethod("getSourceInfo").invoke(ex);
+            Object sourceInfo = cls.getMethod("getOriginalSourceInfo").invoke(ex);
             Object sourceOffset = cls.getMethod("getSourceOffset").invoke(ex);
             Object location = sourceInfo.getClass().getMethod("getStart").invoke(sourceInfo);
             int line = (int)location.getClass().getMethod("getLine").invoke(location);

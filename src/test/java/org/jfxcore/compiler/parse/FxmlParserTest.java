@@ -283,9 +283,11 @@ public class FxmlParserTest extends TestBase {
                        lt="&lt;"
                        quot="&quot;"
                        amp="&amp;"
-                       apos="&apos;">
+                       apos="&apos;"
+                       supplementary="&#x1F600;">
                     <num1>&#100;</num1>
                     <num2>&#xff;</num2>
+                    <num3>&#x1F600;</num3>
                 </Label>
             """).parseDocument();
 
@@ -294,8 +296,73 @@ public class FxmlParserTest extends TestBase {
         assertEquals("\"", getPropertyText(document, "quot"));
         assertEquals("&", getPropertyText(document, "amp"));
         assertEquals("'", getPropertyText(document, "apos"));
+        assertEquals("\uD83D\uDE00", getPropertyText(document, "supplementary"));
         assertEquals(String.valueOf((char)100), getElementText(document, "num1"));
         assertEquals(String.valueOf((char)255), getElementText(document, "num2"));
+        assertEquals("\uD83D\uDE00", getElementText(document, "num3"));
+    }
+
+    @Test
+    public void Unknown_Entities_Bare_Ampersands_And_OnePass_Decoding_Are_Preserved() {
+        DocumentNode document = new FxmlParser("""
+                <Label xmlns="http://javafx.com/javafx"
+                       text="&unknown; & &amp;lt; &AMP;"/>
+            """).parseDocument();
+
+        assertEquals("&unknown; & &lt; &AMP;", getPropertyText(document, "text"));
+    }
+
+    @Test
+    public void Invalid_Numeric_Reference_Has_Exact_Attribute_Source_Range() {
+        for (String reference : new String[] {
+                "&#;", "&#x;", "&#xG;", "&#x110000;", "&#xD800;", "&#0;", "&#1;"}) {
+            String source = "<Label xmlns=\"http://javafx.com/javafx\" text=\"x" + reference + "y\"/>";
+            MarkupException exception = assertThrows(MarkupException.class, () -> new FxmlParser(source).parseDocument(), reference);
+            int start = source.indexOf(reference);
+
+            assertEquals(ErrorCode.INVALID_EXPRESSION, exception.getDiagnostic().getCode());
+            assertEquals(new SourceInfo(0, start, 0, start + reference.length()), exception.getSourceInfo());
+        }
+    }
+
+    @Test
+    public void Missing_Numeric_Semicolon_Stops_Before_Adjacent_Entity() {
+        String source = "<Label xmlns=\"http://javafx.com/javafx\" text=\"x&#12&amp;y\"/>";
+        MarkupException exception = assertThrows(MarkupException.class, () -> new FxmlParser(source).parseDocument());
+        int start = source.indexOf("&#12");
+
+        assertEquals(new SourceInfo(0, start, 0, start + 4), exception.getSourceInfo());
+    }
+
+    @Test
+    public void Encoded_Compact_Prefix_Uses_Logical_Source_Spans_With_Raw_Projection() {
+        String source = "<Label xmlns=\"http://javafx.com/javafx\" "
+            + "xmlns:fx=\"http://jfxcore.org/fxml/2.0\" text=\"&#36;{foo}\"/>";
+        DocumentNode document = new FxmlParser(source).parseDocument();
+        var property = ((ObjectNode)document.getRoot()).findProperty("text");
+        ObjectNode value = assertInstanceOf(ObjectNode.class, property.getValues().get(0));
+        int start = source.indexOf("&#36;");
+
+        assertEquals(new SourceInfo(0, start, 0, start + 2), value.getType().getSourceInfo());
+        assertEquals(new SourceInfo(0, start, 0, start + 6), value.getSourceInfo());
+        assertEquals(
+            new SourceInfo(0, start, 0, start + 6),
+            value.getType().getSourceInfo().toOriginal());
+        assertEquals(
+            new SourceInfo(0, start, 0, start + 10),
+            value.getSourceInfo().toOriginal());
+    }
+
+    @Test
+    public void Inline_Eof_After_Discarded_Whitespace_Uses_Logical_End_With_Raw_Projection() {
+        String source = "<Label xmlns=\"http://javafx.com/javafx\" "
+            + "xmlns:fx=\"http://jfxcore.org/fxml/2.0\" text=\"&#36;{foo   \"/>";
+        MarkupException exception = assertThrows(MarkupException.class, () -> new FxmlParser(source).parseDocument());
+        int end = source.indexOf('"', source.indexOf("&#36;"));
+
+        assertEquals(ErrorCode.EXPECTED_TOKEN, exception.getDiagnostic().getCode());
+        assertEquals(new SourceInfo(0, end - 4), exception.getSourceInfo());
+        assertEquals(new SourceInfo(0, end), exception.getOriginalSourceInfo());
     }
 
     @Test
@@ -330,9 +397,25 @@ public class FxmlParserTest extends TestBase {
         assertEquals("{foo}  ", getPropertyText(document, "text1"));
         assertEquals("  {foo}  ", getPropertyText(document, "text2"));
         assertEquals("  \\ bar ", getPropertyText(document, "text3"));
-        assertSourceInfo(2, 19, 2, 26, getPropertyValue(document, "text1").getSourceInfo());
-        assertSourceInfo(3, 19, 3, 28, getPropertyValue(document, "text2").getSourceInfo());
+        assertSourceInfo(2, 18, 2, 25, getPropertyValue(document, "text1").getSourceInfo());
+        assertSourceInfo(3, 18, 3, 27, getPropertyValue(document, "text2").getSourceInfo());
         assertSourceInfo(4, 18, 4, 26, getPropertyValue(document, "text3").getSourceInfo());
+        assertSourceInfo(2, 19, 2, 26, getPropertyValue(document, "text1").getSourceInfo().toOriginal());
+        assertSourceInfo(3, 18, 3, 28, getPropertyValue(document, "text2").getSourceInfo().toOriginal());
+    }
+
+    @Test
+    public void Escaped_Markup_With_Entity_Whitespace_Uses_Logical_Text_And_Raw_Projection() {
+        String source = "<Label xmlns=\"http://javafx.com/javafx\" "
+            + "xmlns:fx=\"http://jfxcore.org/fxml/2.0\" text=\"&#32;\\&#36;{foo}\"/>";
+        DocumentNode document = new FxmlParser(source).parseDocument();
+        TextNode value = getPropertyValue(document, "text");
+        int start = source.indexOf("&#32;");
+        int end = source.indexOf('"', start);
+
+        assertEquals(" ${foo}", value.getText());
+        assertEquals(new SourceInfo(0, start, 0, start + 7), value.getSourceInfo());
+        assertEquals(new SourceInfo(0, start, 0, end), value.getSourceInfo().toOriginal());
     }
 
     @Test
@@ -460,6 +543,62 @@ public class FxmlParserTest extends TestBase {
         var item5 = assertInstanceOf(TextNode.class, list.get(4));
         assertEquals("true", item5.getText());
         assertSourceInfo(7, 21, 7, 25, item5.getSourceInfo());
+    }
+
+    @Test
+    public void Attribute_List_Items_Use_Logical_Ranges_With_Raw_Projection() {
+        String source = "<Label xmlns=\"http://javafx.com/javafx\" "
+            + "userData=\"one&amp;two, &#x1F600;, three\"/>";
+        DocumentNode document = new FxmlParser(source).parseDocument();
+        ListNode list = assertInstanceOf(ListNode.class,
+            ((ObjectNode)document.getRoot()).findProperty("userData").getValues().get(0));
+
+        int firstStart = source.indexOf("one&amp;two");
+        int firstEnd = source.indexOf(',', firstStart);
+        int secondStart = source.indexOf("&#x1F600;");
+        int thirdStart = source.indexOf("three");
+
+        assertEquals("one&two", ((TextNode)list.getValues().get(0)).getText());
+        assertEquals(new SourceInfo(0, firstStart, 0, firstStart + 7), list.getValues().get(0).getSourceInfo());
+        assertEquals("\uD83D\uDE00", ((TextNode)list.getValues().get(1)).getText());
+        assertEquals(new SourceInfo(0, firstStart + 9, 0, firstStart + 11), list.getValues().get(1).getSourceInfo());
+        assertEquals(new SourceInfo(0, firstStart + 13, 0, firstStart + 18), list.getValues().get(2).getSourceInfo());
+        assertEquals(
+            new SourceInfo(0, firstStart, 0, firstEnd),
+            list.getValues().get(0).getSourceInfo().toOriginal());
+        assertEquals(
+            new SourceInfo(0, secondStart, 0, secondStart + 9),
+            list.getValues().get(1).getSourceInfo().toOriginal());
+        assertEquals(
+            new SourceInfo(0, thirdStart, 0, thirdStart + 5),
+            list.getValues().get(2).getSourceInfo().toOriginal());
+    }
+
+    @Test
+    public void Entity_Newline_List_Items_Use_Logical_Lines_With_Raw_Projection() {
+        String source = "<Label xmlns=\"http://javafx.com/javafx\" userData=\"one&#10;two\"/>";
+        DocumentNode document = new FxmlParser(source).parseDocument();
+        ListNode list = assertInstanceOf(ListNode.class,
+            ((ObjectNode)document.getRoot()).findProperty("userData").getValues().get(0));
+
+        int firstStart = source.indexOf("one&#10;two");
+        int secondStart = source.indexOf("two", firstStart);
+
+        assertEquals(new SourceInfo(0, firstStart, 0, firstStart + 3), list.getValues().get(0).getSourceInfo());
+        assertEquals(new SourceInfo(1, 0, 1, 3), list.getValues().get(1).getSourceInfo());
+        assertEquals(
+            new SourceInfo(0, secondStart, 0, secondStart + 3),
+            list.getValues().get(1).getSourceInfo().toOriginal());
+    }
+
+    @Test
+    public void Literal_Crlf_Attribute_List_Uses_Second_Line_Columns() {
+        String source = "<Label xmlns=\"http://javafx.com/javafx\" userData=\"one,\r\n  two\"/>";
+        DocumentNode document = new FxmlParser(source).parseDocument();
+        ListNode list = assertInstanceOf(ListNode.class,
+            ((ObjectNode)document.getRoot()).findProperty("userData").getValues().get(0));
+
+        assertEquals(new SourceInfo(1, 2, 1, 5), list.getValues().get(1).getSourceInfo());
     }
 
     private ObjectNode getElement(DocumentNode document, String elementName) {

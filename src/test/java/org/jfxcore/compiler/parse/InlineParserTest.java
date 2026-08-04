@@ -15,8 +15,10 @@ import org.jfxcore.compiler.ast.text.PathNode;
 import org.jfxcore.compiler.ast.text.TextNode;
 import org.jfxcore.compiler.ast.text.TextSegmentNode;
 import org.jfxcore.compiler.diagnostic.ErrorCode;
+import org.jfxcore.compiler.diagnostic.Location;
 import org.jfxcore.compiler.diagnostic.MarkupException;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
+import org.jfxcore.compiler.util.XmlEntityDecoder;
 import org.junit.jupiter.api.Test;
 import org.jfxcore.compiler.TestBase;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -698,5 +700,21 @@ public class InlineParserTest extends TestBase {
         assertTrue(values.get(0) instanceof TextNode t && t.getText().equals("."));
         assertTrue(values.get(1) instanceof TextNode t && t.getText().equals("."));
         assertTrue(values.get(2) instanceof PathNode t && t.getText().equals("foo.bar.baz"));
+    }
+
+    @Test
+    public void Mapped_Path_Uses_Logical_Source_Ranges_With_Raw_Projection() {
+        String raw = "foo&#46;bar";
+        LexerInput input = LexerInput.decodedXml(raw, new Location(2, 4), XmlEntityDecoder.decode(raw));
+        PathNode path = (PathNode)new InlineParser(input, null, Map.of()).parsePath();
+
+        assertEquals("foo.bar", path.getText());
+        assertEquals(new SourceInfo(2, 4, 2, 11), path.getSourceInfo());
+        assertEquals(new SourceInfo(2, 4, 2, 7), path.getSegments().get(0).getSourceInfo());
+        assertEquals(new SourceInfo(2, 8, 2, 11), path.getSegments().get(1).getSourceInfo());
+        assertEquals(new SourceInfo(2, 4, 2, 15), path.getSourceInfo().toOriginal());
+        assertEquals(
+            new SourceInfo(2, 12, 2, 15),
+            path.getSegments().get(1).getSourceInfo().toOriginal());
     }
 }
