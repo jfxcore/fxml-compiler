@@ -93,7 +93,7 @@ public class EmitMapToBooleanNode extends AbstractNode
 
     private void emitSharedImpl(BytecodeEmitContext context) {
         Bytecode code = context.getOutput();
-        String name = invert ? "isZero" : "isNotZero";
+        String name = invert ? "isZeroOrNaN" : "isNotZeroOrNaN";
         TypeInstance childType = child.getType().getTypeInstance();
 
         context.emit(child);

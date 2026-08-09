@@ -86,7 +86,7 @@ public class OperatorTest extends CompilerTestBase {
             Class<?> argType = getArgClass(type);
             String methodName;
             if (Number.class.isAssignableFrom(type)) {
-                methodName = invert ? "isZero" : "isNotZero";
+                methodName = invert ? "isZeroOrNaN" : "isNotZeroOrNaN";
             } else if (Boolean.class.isAssignableFrom(type)) {
                 if (!invert) throw new AssertionError();
                 methodName = "isNot";
