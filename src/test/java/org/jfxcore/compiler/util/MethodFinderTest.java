@@ -4,6 +4,8 @@
 package org.jfxcore.compiler.util;
 
 import org.jfxcore.compiler.TestBase;
+import org.jfxcore.compiler.diagnostic.ErrorCode;
+import org.jfxcore.compiler.diagnostic.MarkupException;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.type.BehaviorDeclaration;
 import org.jfxcore.compiler.type.ConstructorDeclaration;
@@ -114,6 +116,7 @@ public class MethodFinderTest extends TestBase {
     public static class GenericReceiver<T> {
         public T get(int index) { return null; }
         public void set(T value) {}
+        public <U extends T> U constrained(U value) { return value; }
     }
 
     public static class ConstructorTarget {
@@ -451,6 +454,33 @@ public class MethodFinderTest extends TestBase {
     }
 
     @Test
+    public void Generic_Method_Type_Witness_Bound_Uses_Invocation_Context() {
+        var resolver = new Resolver(SourceInfo.none());
+        var invoker = new TypeInvoker(SourceInfo.none());
+        var declaringClass = resolver.resolveClass(GenericReceiver.class.getName());
+        var receiverType = invoker.invokeType(declaringClass, List.of(TypeInstance.NumberType()));
+        var invocationContext = List.of(receiverType);
+        MethodDeclaration method = declaringClass.declaredMethods("constrained").get(0);
+
+        assertEquals(
+            TypeInstance.IntegerType(),
+            invoker.invokeReturnType(method, invocationContext, List.of(TypeInstance.IntegerType())));
+
+        assertEquals(
+            TypeInstance.IntegerType(),
+            invoker.invokeParameterTypes(method, invocationContext, List.of(TypeInstance.IntegerType()))[0]);
+
+        MarkupException returnTypeException = assertThrows(MarkupException.class, () ->
+            invoker.invokeReturnType(method, invocationContext, List.of(TypeInstance.StringType())));
+
+        MarkupException parameterTypeException = assertThrows(MarkupException.class, () ->
+            invoker.invokeParameterTypes(method, invocationContext, List.of(TypeInstance.StringType())));
+
+        assertEquals(ErrorCode.TYPE_ARGUMENT_OUT_OF_BOUND, returnTypeException.getDiagnostic().getCode());
+        assertEquals(ErrorCode.TYPE_ARGUMENT_OUT_OF_BOUND, parameterTypeException.getDiagnostic().getCode());
+    }
+
+    @Test
     public void Generic_Constructor_Type_Witness_Instantiates_Parameters() {
         ConstructorDeclaration constructor = findConstructor(
             GenericConstructorTarget.class,
@@ -459,6 +489,32 @@ public class MethodFinderTest extends TestBase {
 
         assertNotNull(constructor);
         assertInvokedParameterTypes(constructor, List.of(TypeInstance.IntegerType()), Integer.class.getName());
+    }
+
+    @Test
+    public void Generic_Method_And_Constructor_Witnesses_Reject_Primitive_Types() {
+        var resolver = new Resolver(SourceInfo.none());
+        var invoker = new TypeInvoker(SourceInfo.none());
+        TypeDeclaration methodClass = resolver.resolveClass(MethodFinderTest.class.getName());
+        TypeInstance methodContext = invoker.invokeType(methodClass);
+        MethodDeclaration method = methodClass.declaredMethods("Generic_Method_With_Witness").get(0);
+
+        MarkupException methodParameterException = assertThrows(MarkupException.class, () ->
+            invoker.invokeParameterTypes(method, List.of(methodContext), List.of(TypeInstance.intType())));
+        MarkupException methodReturnException = assertThrows(MarkupException.class, () ->
+            invoker.invokeReturnType(method, List.of(methodContext), List.of(TypeInstance.intType())));
+
+        TypeDeclaration constructorClass = resolver.resolveClass(GenericConstructorTarget.class.getName());
+        ConstructorDeclaration constructor = constructorClass.declaredConstructors().get(0);
+        MarkupException constructorException = assertThrows(MarkupException.class, () ->
+            invoker.invokeParameterTypes(
+                constructor,
+                List.of(invoker.invokeType(constructorClass)),
+                List.of(TypeInstance.intType())));
+
+        assertEquals(ErrorCode.TYPE_ARGUMENT_NOT_REFERENCE, methodParameterException.getDiagnostic().getCode());
+        assertEquals(ErrorCode.TYPE_ARGUMENT_NOT_REFERENCE, methodReturnException.getDiagnostic().getCode());
+        assertEquals(ErrorCode.TYPE_ARGUMENT_NOT_REFERENCE, constructorException.getDiagnostic().getCode());
     }
 
     private static MethodDeclaration findMethod(String methodName, TypeInstance... argumentTypes) {

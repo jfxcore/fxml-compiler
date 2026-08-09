@@ -125,6 +125,13 @@ public final class SourceInfo {
         return span(list.get(0), list.get(list.size() - 1));
     }
 
+    public static SourceInfo subspan(SourceInfo sourceInfo, Location start, Location end) {
+        SourceInfo.Source source = sourceInfo.getSource();
+        return source != null
+            ? source.getSourceInfo(start, end)
+            : new SourceInfo(start.getLine(), start.getColumn(), end.getLine(), end.getColumn());
+    }
+
     public static SourceInfo shrink(SourceInfo sourceInfo) {
         if (sourceInfo.start.equals(sourceInfo.end)) {
             throw new IllegalArgumentException();

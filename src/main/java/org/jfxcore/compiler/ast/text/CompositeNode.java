@@ -14,12 +14,13 @@ import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public class CompositeNode extends TextNode {
+public class CompositeNode extends DerivedTextNode {
 
     private final List<ValueNode> values;
 
     public CompositeNode(Collection<? extends ValueNode> values, SourceInfo sourceInfo) {
-        super(format(values), sourceInfo);
+        super(sourceInfo);
+
         this.values = new ArrayList<>(AbstractNode.checkNotNull(values));
 
         if (values.size() < 2) {
@@ -28,7 +29,8 @@ public class CompositeNode extends TextNode {
     }
 
     private CompositeNode(Collection<? extends ValueNode> values, TypeNode type, SourceInfo sourceInfo) {
-        super(format(values), false, type, sourceInfo);
+        super(type, sourceInfo);
+
         this.values = new ArrayList<>(AbstractNode.checkNotNull(values));
 
         if (values.size() < 2) {
@@ -41,6 +43,11 @@ public class CompositeNode extends TextNode {
     }
 
     @Override
+    public String formatText() {
+        return format(values);
+    }
+
+    @Override
     public void acceptChildren(Visitor visitor) {
         super.acceptChildren(visitor);
         acceptChildren(values, visitor, ValueNode.class);
@@ -48,17 +55,21 @@ public class CompositeNode extends TextNode {
 
     @Override
     public CompositeNode deepClone() {
-        return new CompositeNode(deepClone(values), getType(), getSourceInfo()).copy(this);
+        return new CompositeNode(deepClone(values), getType().deepClone(), getSourceInfo()).copy(this);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        return super.equals(o) && values.equals(((CompositeNode)o).values);
+    }
+
+    @Override
+    public int hashCode() {
+        return java.util.Objects.hash(super.hashCode(), values);
     }
 
     private static String format(Collection<? extends ValueNode> arguments) {
         return StringHelper.concatValues(
-            arguments.stream().map(node -> {
-                if (node instanceof TextNode) {
-                    return ((TextNode)node).getText();
-                }
-
-                return node.getType().getMarkupName();
-            }).collect(Collectors.toList()));
+            arguments.stream().map(TextNode::formatValue).collect(Collectors.toList()));
     }
 }

@@ -8,15 +8,12 @@ import org.jfxcore.compiler.ast.BindingMode;
 import org.jfxcore.compiler.ast.ObservableDependencyKind;
 import org.jfxcore.compiler.ast.ValueSourceKind;
 import org.jfxcore.compiler.ast.emit.EmitMethodCallNode;
-import org.jfxcore.compiler.ast.emit.EmitObjectNode;
 import org.jfxcore.compiler.ast.emit.ValueEmitterNode;
 import org.jfxcore.compiler.ast.expression.BindingEmitterInfo;
 import org.jfxcore.compiler.ast.expression.FunctionExpressionNode;
-import org.jfxcore.compiler.type.ConstructorDeclaration;
 import org.jfxcore.compiler.type.MethodDeclaration;
 import org.jfxcore.compiler.type.TypeHelper;
 import org.jfxcore.compiler.type.TypeInstance;
-import org.jfxcore.compiler.type.TypeInvoker;
 import org.jfxcore.compiler.util.AccessVerifier;
 
 public class SimpleFunctionEmitterFactory extends AbstractFunctionEmitterFactory implements EmitterFactory {
@@ -39,22 +36,10 @@ public class SimpleFunctionEmitterFactory extends AbstractFunctionEmitterFactory
             functionExpression.getInvocationContext(),
             functionExpression.getPath().getSourceInfo());
 
-        ValueEmitterNode value;
-
-        if (invocationInfo.function().getBehavior() instanceof ConstructorDeclaration constructor) {
-            value = EmitObjectNode
-                .constructor(
-                    new TypeInvoker(functionExpression.getSourceInfo()).invokeType(constructor.declaringType()),
-                    constructor,
-                    invocationInfo.arguments(),
-                    functionExpression.getSourceInfo())
-                .create();
-        } else {
-            value = new EmitMethodCallNode(
-                (MethodDeclaration)invocationInfo.function().getBehavior(), invocationInfo.type(),
-                invocationInfo.function().getReceiver(), invocationInfo.arguments(),
-                functionExpression.getSourceInfo());
-        }
+        ValueEmitterNode value = new EmitMethodCallNode(
+            (MethodDeclaration)invocationInfo.function().getBehavior(), invocationInfo.type(),
+            invocationInfo.function().getReceiver(), invocationInfo.arguments(),
+            functionExpression.getSourceInfo());
 
         value = functionExpression.getPath().getOperator().toEmitter(value, BindingMode.ONCE);
 

@@ -109,7 +109,9 @@ public class ObservableFunctionGenerator extends ClassGenerator {
         this.bidirectional = inverseFunction != null;
         this.function = function;
         this.inverseFunction = inverseFunction;
-        this.storeReceiver = !function.getBehavior().isStatic() && function.getBehavior() instanceof MethodDeclaration;
+        this.storeReceiver =
+            !function.getBehavior().isStatic() && function.getBehavior() instanceof MethodDeclaration
+            || function.getBehavior() instanceof ConstructorDeclaration && !function.getReceiver().isEmpty();
         this.storeInverseReceiver = inverseFunction != null &&
             !inverseFunction.getBehavior().isStatic() && inverseFunction.getBehavior() instanceof MethodDeclaration;
         this.arguments = new ArrayList<>(arguments);
@@ -194,7 +196,7 @@ public class ObservableFunctionGenerator extends ClassGenerator {
                 RECEIVER_FIELD,
                 function.getReceiverDependencyKind() != ObservableDependencyKind.NONE
                     ? TypeHelper.getTypeDeclaration(function.getReceiver().get(0))
-                    : function.getBehavior().declaringType())
+                    : getFunctionReceiverType())
                 .setModifiers(Modifier.FINAL | Modifier.PRIVATE);
 
             if (function.getReceiverDependencyKind() != ObservableDependencyKind.NONE) {
@@ -612,9 +614,38 @@ public class ObservableFunctionGenerator extends ClassGenerator {
             throw new InternalError();
         }
 
-        if (function.getBehavior() instanceof ConstructorDeclaration) {
-            code.anew(function.getBehavior().declaringType())
+        if (function.getBehavior() instanceof ConstructorDeclaration constructorDeclaration) {
+            if (storeReceiver) {
+                FieldDeclaration receiverField = requireDeclaredField(RECEIVER_FIELD);
+                TypeDeclaration receiverType = getFunctionReceiverType();
+                receiverLocal = code.acquireLocal(receiverType);
+
+                code.aload(0)
+                    .getfield(receiverField);
+
+                if (function.getReceiverDependencyKind() != ObservableDependencyKind.NONE) {
+                    emitLoadDependencyValue(
+                        code,
+                        receiverField.type(),
+                        receiverType,
+                        function.getReceiverDependencyKind());
+                }
+
+                code.store(receiverType, receiverLocal)
+                    .load(receiverType, receiverLocal)
+                    .ldc("The enclosing instance must not be null")
+                    .invoke(ObjectsDecl().requireDeclaredMethod(
+                        "requireNonNull", ObjectDecl(), StringDecl()))
+                    .checkcast(receiverType)
+                    .store(receiverType, receiverLocal);
+            }
+
+            code.anew(constructorDeclaration.declaringType())
                 .dup();
+
+            if (receiverLocal != null) {
+                code.load(getFunctionReceiverType(), receiverLocal);
+            }
         } else if (!function.getBehavior().isStatic()) {
             FieldDeclaration receiverField = requireDeclaredField(RECEIVER_FIELD);
             TypeDeclaration receiverType = function.getBehavior().declaringType();
@@ -766,6 +797,14 @@ public class ObservableFunctionGenerator extends ClassGenerator {
 
         code.vreturn();
         method.setCode(code);
+    }
+
+    private TypeDeclaration getFunctionReceiverType() {
+        if (function.getBehavior() instanceof ConstructorDeclaration constructorDeclaration) {
+            return constructorDeclaration.enclosingInstanceType().orElseThrow();
+        }
+
+        return function.getBehavior().declaringType();
     }
 
     private void emitGetMethod(MethodDeclaration method) {

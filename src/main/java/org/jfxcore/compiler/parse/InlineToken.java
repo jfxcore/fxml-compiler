@@ -1,4 +1,4 @@
-// Copyright (c) 2021, 2023, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.parse;
@@ -20,17 +20,30 @@ public class InlineToken extends CurlyToken {
         "super", "switch", "synchronized", "throw", "throws", "transient", "try", "void",
         "volatile", "while"));
 
+    private final String lexeme;
+
     public InlineToken(CurlyTokenType type, String value, String line, SourceInfo sourceInfo) {
+        this(type, value, value, line, sourceInfo);
+    }
+
+    private InlineToken(
+            CurlyTokenType type, String value, String lexeme, String line, SourceInfo sourceInfo) {
         super(type, value, line, sourceInfo);
+        this.lexeme = lexeme;
     }
 
     public static InlineToken parse(String value, String line, SourceInfo sourceInfo) {
+        String lexeme = value;
         CurlyTokenType type = parseTokenType(value);
         if (type == CurlyTokenType.STRING) {
             value = StringHelper.unescape(StringHelper.unquote(value));
         }
 
-        return new InlineToken(type, value, line, sourceInfo);
+        return new InlineToken(type, value, lexeme, line, sourceInfo);
+    }
+
+    public String getLexeme() {
+        return lexeme;
     }
 
     protected static CurlyTokenType parseTokenType(String token) {
@@ -40,5 +53,4 @@ public class InlineToken extends CurlyToken {
 
         return CurlyToken.parseTokenType(token);
     }
-
 }

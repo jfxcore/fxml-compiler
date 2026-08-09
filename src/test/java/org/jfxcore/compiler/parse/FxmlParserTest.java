@@ -234,7 +234,7 @@ public class FxmlParserTest extends TestBase {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"@", "%", "&", "^", "°", "§", "?", "~"})
+    @ValueSource(strings = {"@", "%", "^", "°", "§", "?", "~"})
     public void All_Custom_Prefix_Mappings_Are_Parsed_Correctly(String prefix) {
         DocumentNode document = new FxmlParser(String.format("""
                 <?xml version="1.0" encoding="UTF-8"?>
@@ -248,6 +248,18 @@ public class FxmlParserTest extends TestBase {
         var objectNode = assertInstanceOf(ObjectNode.class, property.getValues().get(0));
         assertEquals("com.example.CustomResource", objectNode.getType().getName());
         assertTrue(objectNode.getChildren().get(0) instanceof TextNode textNode && textNode.getText().equals("greeting"));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"+", "-", "!", "&", "|"})
+    public void Operator_Characters_Cannot_Be_Custom_Prefixes(String prefix) {
+        MarkupException ex = assertThrows(MarkupException.class, () -> new FxmlParser(String.format("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <?prefix %s = com.example.CustomResource?>
+                <Label xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"/>
+            """, prefix)).parseDocument());
+
+        assertEquals(ErrorCode.INVALID_EXPRESSION, ex.getDiagnostic().getCode());
     }
 
     @Test
@@ -345,12 +357,14 @@ public class FxmlParserTest extends TestBase {
 
         assertEquals(new SourceInfo(0, start, 0, start + 2), value.getType().getSourceInfo());
         assertEquals(new SourceInfo(0, start, 0, start + 6), value.getSourceInfo());
-        assertEquals(
-            new SourceInfo(0, start, 0, start + 6),
-            value.getType().getSourceInfo().toOriginal());
-        assertEquals(
-            new SourceInfo(0, start, 0, start + 10),
-            value.getSourceInfo().toOriginal());
+        assertEquals(new SourceInfo(0, start, 0, start + 6), value.getType().getSourceInfo().toOriginal());
+        assertEquals(new SourceInfo(0, start, 0, start + 10), value.getSourceInfo().toOriginal());
+    }
+
+    @Test
+    public void Encoded_Atomic_Operators_Use_Logical_Spans_With_Raw_Projection() {
+        assertEncodedAtomicOperatorSpan("&lt;=", "<=");
+        assertEncodedAtomicOperatorSpan("&amp;&amp;", "&&");
     }
 
     @Test
@@ -627,6 +641,23 @@ public class FxmlParserTest extends TestBase {
 
     private String getPropertyText(DocumentNode document, String propertyName) {
         return getPropertyValue(document, propertyName).getText();
+    }
+
+    private void assertEncodedAtomicOperatorSpan(String encodedOperator, String decodedOperator) {
+        String expressionStart = "{Example ";
+        String source = "<Label xmlns=\"http://javafx.com/javafx\" "
+            + "xmlns:fx=\"http://jfxcore.org/fxml/2.0\" text=\"" + expressionStart
+            + encodedOperator + "}\"/>";
+        DocumentNode document = new FxmlParser(source).parseDocument();
+        ObjectNode extension = assertInstanceOf(ObjectNode.class,
+            ((ObjectNode)document.getRoot()).findProperty("text").getValues().get(0));
+        TextNode operator = assertInstanceOf(TextNode.class, extension.getChildren().get(0));
+        int originalStart = source.indexOf(encodedOperator);
+        int logicalStart = source.indexOf(expressionStart) + expressionStart.length();
+
+        assertEquals(decodedOperator, operator.getText());
+        assertEquals(new SourceInfo(0, logicalStart, 0, logicalStart + decodedOperator.length()), operator.getSourceInfo());
+        assertEquals(new SourceInfo(0, originalStart, 0, originalStart + encodedOperator.length()), operator.getSourceInfo().toOriginal());
     }
 
     public static void assertSourceInfo(

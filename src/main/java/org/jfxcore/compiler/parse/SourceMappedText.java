@@ -20,7 +20,7 @@ import java.util.Objects;
  * Their source view retains enough information to project those locations onto the original
  * compilation source when a diagnostic is rendered.
  */
-final class LexerInput {
+final class SourceMappedText {
 
     private record Replacement(int parentStart, int parentEnd, int decodedStart, int decodedEnd) {}
 
@@ -218,22 +218,22 @@ final class LexerInput {
     private final TextIndex textIndex;
     private final SourceInfo.Source source;
 
-    static LexerInput identity(String text, Location origin) {
+    static SourceMappedText identity(String text, Location origin) {
         Objects.requireNonNull(text, "text");
         Objects.requireNonNull(origin, "origin");
         SourceInfo.Source source = CompilationContext.isCurrent()
             ? CompilationContext.getCurrent().getSourceInfoSource()
             : null;
 
-        return new LexerInput(text, origin, source);
+        return new SourceMappedText(text, origin, source);
     }
 
-    static LexerInput identity(String text, SourceInfo sourceInfo) {
+    static SourceMappedText identity(String text, SourceInfo sourceInfo) {
         Objects.requireNonNull(sourceInfo, "sourceInfo");
-        return new LexerInput(text, sourceInfo.getStart(), sourceInfo.getSource());
+        return new SourceMappedText(text, sourceInfo.getStart(), sourceInfo.getSource());
     }
 
-    static LexerInput decodedXml(String rawText, Location origin, XmlEntityDecoder.DecodeResult decodeResult) {
+    static SourceMappedText decodedXml(String rawText, Location origin, XmlEntityDecoder.DecodeResult decodeResult) {
         Objects.requireNonNull(rawText, "rawText");
         Objects.requireNonNull(origin, "origin");
         Objects.requireNonNull(decodeResult, "decodeResult");
@@ -253,10 +253,10 @@ final class LexerInput {
             : null;
 
         var source = new TransformedSource(decodeResult.text(), rawText, origin, parentSource, replacements);
-        return new LexerInput(decodeResult.text(), origin, source);
+        return new SourceMappedText(decodeResult.text(), origin, source);
     }
 
-    private LexerInput(String text, Location origin, @Nullable SourceInfo.Source source) {
+    private SourceMappedText(String text, Location origin, @Nullable SourceInfo.Source source) {
         this.text = Objects.requireNonNull(text, "text");
         this.textIndex = new TextIndex(text, Objects.requireNonNull(origin, "origin"));
         this.source = source;
@@ -276,7 +276,7 @@ final class LexerInput {
             : location.getColumn();
     }
 
-    LexerInput without(int offset) {
+    SourceMappedText without(int offset) {
         if (offset < 0 || offset >= text.length()) {
             throw new IndexOutOfBoundsException("Invalid removal offset: " + offset);
         }
@@ -290,7 +290,7 @@ final class LexerInput {
             source,
             List.of(new Replacement(offset, offset + 1, offset, offset)));
 
-        return new LexerInput(transformed, textIndex.origin, transformedSource);
+        return new SourceMappedText(transformed, textIndex.origin, transformedSource);
     }
 
     SourceInfo getSourceInfo(int decodedStart, int decodedEnd) {

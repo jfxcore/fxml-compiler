@@ -35,7 +35,7 @@ public class XmlReader {
     public final static String SOURCE_INFO_KEY = XmlReader.class.getName() + "$sourceInfo";
     public final static String ELEMENT_NAME_SOURCE_INFO_KEY = XmlReader.class.getName() + "$elemNameSourceInfo";
     public final static String ATTR_VALUE_SOURCE_INFO_KEY = XmlReader.class.getName() + "$attrValueSourceInfo";
-    public final static String ATTR_VALUE_LEXER_INPUT_KEY = XmlReader.class.getName() + "$attrValueLexerInput";
+    public final static String ATTR_VALUE_SOURCE_MAPPED_TEXT_KEY = XmlReader.class.getName() + "$attrValueSourceMappedText";
     public final static String NAMESPACE_TO_PREFIX_MAP_KEY = XmlReader.class.getName() + "$namespaceToPrefix";
 
     private final static String XML_RESERVED_NAMESPACE = "http://www.w3.org/XML/1998/namespace";
@@ -223,7 +223,7 @@ public class XmlReader {
             attr = element.getAttributeNodeNS(uri, attribute.name.localName);
             attr.setUserData(SOURCE_INFO_KEY, attribute.sourceInfo, null);
             attr.setUserData(ATTR_VALUE_SOURCE_INFO_KEY, attribute.valueSourceInfo, null);
-            attr.setUserData(ATTR_VALUE_LEXER_INPUT_KEY, attribute.lexerInput, null);
+            attr.setUserData(ATTR_VALUE_SOURCE_MAPPED_TEXT_KEY, attribute.text, null);
         }
 
         XmlToken token = tokenizer.peekNotNullSkipWS();
@@ -320,24 +320,24 @@ public class XmlReader {
         XmlToken token = tokenizer.removeSkipWS(QUOTED_STRING);
         SourceInfo valueSourceInfo = SourceInfo.shrink(token.getSourceInfo());
         String rawValue = StringHelper.unquote(token.getValue());
-        LexerInput lexerInput;
+        SourceMappedText text;
 
         try {
-            lexerInput = LexerInput.decodedXml(
+            text = SourceMappedText.decodedXml(
                 rawValue,
                 valueSourceInfo.getStart(),
                 XmlEntityDecoder.decode(rawValue));
         } catch (XmlEntityDecoder.DecodeException ex) {
-            LexerInput rawInput = LexerInput.identity(rawValue, valueSourceInfo.getStart());
+            SourceMappedText rawInput = SourceMappedText.identity(rawValue, valueSourceInfo.getStart());
             throw ParserErrors.invalidExpression(rawInput.getSourceInfo(ex.rawStart(), ex.rawEnd()));
         }
 
         return new Attribute(
             name,
-            lexerInput.getText(),
+            text.getText(),
             SourceInfo.span(name.sourceInfo, token.getSourceInfo()),
-            lexerInput.getSourceInfo(0, lexerInput.getText().length()),
-            lexerInput);
+            text.getSourceInfo(0, text.getText().length()),
+            text);
     }
 
     private QName readQName() {
@@ -365,19 +365,19 @@ public class XmlReader {
         final String value;
         final SourceInfo sourceInfo;
         final SourceInfo valueSourceInfo;
-        final LexerInput lexerInput;
+        final SourceMappedText text;
 
         Attribute(
                 QName name,
                 String value,
                 SourceInfo sourceInfo,
                 SourceInfo valueSourceInfo,
-                LexerInput lexerInput) {
+                SourceMappedText text) {
             this.name = name;
             this.value = value;
             this.sourceInfo = sourceInfo;
             this.valueSourceInfo = valueSourceInfo;
-            this.lexerInput = lexerInput;
+            this.text = text;
         }
 
         @Override

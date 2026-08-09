@@ -4,6 +4,7 @@
 package org.jfxcore.compiler.ast.text;
 
 import org.jetbrains.annotations.Nullable;
+import org.jfxcore.compiler.ast.TypeNode;
 import org.jfxcore.compiler.ast.Visitor;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.type.Resolver;
@@ -15,7 +16,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
-public class PathNode extends TextNode {
+public class PathNode extends DerivedTextNode {
 
     private final List<PathSegmentNode> segments;
     private final List<PathNode> arguments;
@@ -26,7 +27,19 @@ public class PathNode extends TextNode {
             Collection<? extends PathSegmentNode> segments,
             Collection<? extends PathNode> arguments,
             SourceInfo sourceInfo) {
-        super(formatPath(contextSelector, segments), sourceInfo);
+        super(sourceInfo);
+        this.contextSelector = contextSelector;
+        this.segments = new ArrayList<>(checkNotNull(segments));
+        this.arguments = new ArrayList<>(checkNotNull(arguments));
+    }
+
+    private PathNode(
+            @Nullable ContextSelectorNode contextSelector,
+            Collection<? extends PathSegmentNode> segments,
+            Collection<? extends PathNode> arguments,
+            TypeNode type,
+            SourceInfo sourceInfo) {
+        super(type, sourceInfo);
         this.contextSelector = contextSelector;
         this.segments = new ArrayList<>(checkNotNull(segments));
         this.arguments = new ArrayList<>(checkNotNull(arguments));
@@ -42,6 +55,18 @@ public class PathNode extends TextNode {
 
     public List<PathNode> getArguments() {
         return arguments;
+    }
+
+    @Override
+    public String formatText() {
+        String path = formatPath(contextSelector, segments);
+        if (arguments.isEmpty()) {
+            return path;
+        }
+
+        return path + "<" + arguments.stream()
+            .map(PathNode::formatText)
+            .collect(Collectors.joining(",")) + ">";
     }
 
     public TypeInstance resolve() {
@@ -87,17 +112,19 @@ public class PathNode extends TextNode {
 
     @Override
     public PathNode deepClone() {
-        return new PathNode(contextSelector, deepClone(segments), deepClone(arguments), getSourceInfo()).copy(this);
+        return new PathNode(
+            contextSelector != null ? contextSelector.deepClone() : null,
+            deepClone(segments), deepClone(arguments), getType().deepClone(), getSourceInfo()).copy(this);
     }
 
     private static String formatPath(
             @Nullable ContextSelectorNode contextSelector,
             Collection<? extends PathSegmentNode> segments) {
         var text = new StringBuilder();
-        boolean firstSegment = true;
+        boolean firstSegment = contextSelector == null;
 
         if (contextSelector != null) {
-            text.append(contextSelector.getText()).append("/");
+            text.append(':').append(contextSelector.formatText());
         }
 
         for (PathSegmentNode segment : segments) {
@@ -107,10 +134,10 @@ public class PathNode extends TextNode {
                 text.append(segment.isObservableSelector() ? "::" : ".");
             }
 
-            if (segment instanceof SubPathSegmentNode) {
-                text.append("(").append(segment.getText()).append(")");
+            if (segment instanceof AttachedSegmentNode) {
+                text.append("(").append(segment.formatText()).append(")");
             } else {
-                text.append(segment.getText());
+                text.append(segment.formatText());
             }
         }
 

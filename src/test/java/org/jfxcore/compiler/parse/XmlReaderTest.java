@@ -20,7 +20,7 @@ public class XmlReaderTest {
     public void Attribute_Retains_Mapped_Lexer_Input_User_Data() {
         String source = "<Root value=\"a&amp;b\"/>";
         Attr attribute = new XmlReader(source, Map.of()).getDocument().getDocumentElement().getAttributeNode("value");
-        LexerInput input = assertInstanceOf(LexerInput.class, attribute.getUserData(XmlReader.ATTR_VALUE_LEXER_INPUT_KEY));
+        SourceMappedText input = assertInstanceOf(SourceMappedText.class, attribute.getUserData(XmlReader.ATTR_VALUE_SOURCE_MAPPED_TEXT_KEY));
         int start = source.indexOf("a&amp;b");
 
         assertEquals("a&b", attribute.getValue());

@@ -23,22 +23,22 @@ public class TypeParser {
             SourceInfo sourceInfo) {}
 
     private final String text;
-    private final LexerInput input;
+    private final SourceMappedText input;
     private final Resolver resolver;
     private final TypeInvoker invoker;
 
     public TypeParser(String text) {
         this.text = text;
-        this.input = LexerInput.identity(text, new Location(0, 0));
+        this.input = SourceMappedText.identity(text, new Location(0, 0));
         this.resolver = new Resolver(SourceInfo.none());
         this.invoker = new TypeInvoker(SourceInfo.none());
     }
 
     public TypeParser(String text, SourceInfo sourceInfo) {
-        this(text, LexerInput.identity(text, sourceInfo));
+        this(text, SourceMappedText.identity(text, sourceInfo));
     }
 
-    private TypeParser(String text, LexerInput input) {
+    private TypeParser(String text, SourceMappedText input) {
         var sourceInfo = input.getSourceInfo(0, text.length());
 
         this.text = text;

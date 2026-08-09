@@ -1,4 +1,4 @@
-// Copyright (c) 2021, 2024, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler;
@@ -212,7 +212,7 @@ public class TemplatesTest extends CompilerTestBase {
                 <fx:define>
                     <Template fx:typeArguments="java.lang.String">
                         <ScrollPane>
-                            <Button prefWidth="${parent[2]/prefHeight}"/>
+                            <Button prefWidth="${:parent(2).prefHeight}"/>
                         </ScrollPane>
                     </Template>
                 </fx:define>
@@ -232,7 +232,7 @@ public class TemplatesTest extends CompilerTestBase {
                 <fx:define>
                     <Template fx:typeArguments="java.lang.String">
                         <ScrollPane>
-                            <Button prefWidth="${parent[Pane]/prefHeight}"/>
+                            <Button prefWidth="${:parent(Pane).prefHeight}"/>
                         </ScrollPane>
                     </Template>
                 </fx:define>

@@ -122,7 +122,7 @@ If type arguments are required, use the regular markup extension syntax instead;
 
 ### Prefix declarations
 Additional prefixes can be declared explicitly with a `<?prefix?>` processing instruction before the root element.
-A declared prefix can be any of the following characters: `@ % & ^ ° § ? ~`
+A declared prefix can be any of the following characters: `@ % ^ ° § ? ~`
 
 Explicit declarations can also override the built-in defaults for `%` and `@`:
 
@@ -142,6 +142,9 @@ Explicit declarations can also override the built-in defaults for `%` and `@`:
 > - The `%` and `@` prefixes are implicitly defined to expand to `StaticResource` and `ClassPathResource`.
 >   They can still be declared explicitly, in which case the explicit declaration overrides the default mapping for the current document.
 > - The `$` and `#` prefixes are reserved for [expressions](markup-extension/expression.html) and cannot be redeclared.
+> - Angle brackets immediately after a markup-extension type belong to that type regardless of whitespace. For
+>   example, `{MyExtension<String> value}` and `{MyExtension <String> value}` have the same parameterized extension
+>   type.
 
 ### Escaping declared prefixes
 

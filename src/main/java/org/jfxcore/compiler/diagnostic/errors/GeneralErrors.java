@@ -56,16 +56,6 @@ public class GeneralErrors {
             ErrorCode.INVALID_ID, id));
     }
 
-    public static MarkupException invalidContentInStylesheet(SourceInfo sourceInfo) {
-        return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
-            ErrorCode.INVALID_CONTENT_IN_STYLESHEET));
-    }
-
-    public static MarkupException stylesheetError(SourceInfo sourceInfo, String message) {
-        return new MarkupException(sourceInfo, Diagnostic.newDiagnosticMessage(
-            ErrorCode.STYLESHEET_ERROR, message));
-    }
-
     public static MarkupException cannotAddItemIncompatibleType(
             SourceInfo sourceInfo, PropertyInfo propertyInfo, TypeInstance addType, TypeInstance requiredType) {
         return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
@@ -115,6 +105,13 @@ public class GeneralErrors {
             type.javaName(), typeArg.javaName()));
     }
 
+    public static MarkupException typeArgumentNotReference(
+            SourceInfo sourceInfo, BehaviorDeclaration behavior, TypeInstance typeArg) {
+        return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
+            ErrorCode.TYPE_ARGUMENT_NOT_REFERENCE,
+            behavior.declaringType().javaName() + "." + behavior.name(), typeArg.javaName()));
+    }
+
     public static MarkupException numTypeArgumentsMismatch(
             SourceInfo sourceInfo, TypeDeclaration declaringType, int expected, int actual) {
         return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
@@ -158,5 +155,43 @@ public class GeneralErrors {
         return new MarkupException(sourceInfo, allowAssignment ?
             Diagnostic.newDiagnosticVariant(ErrorCode.EXPRESSION_NOT_APPLICABLE, "assign") :
             Diagnostic.newDiagnostic(ErrorCode.EXPRESSION_NOT_APPLICABLE));
+    }
+
+    public static MarkupException invalidOperand(SourceInfo sourceInfo, String operator, String operandType) {
+        return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
+            ErrorCode.INVALID_ARITHMETIC_OPERAND, operator, operandType));
+    }
+
+    public static MarkupException expressionTooComplex(SourceInfo sourceInfo) {
+        return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
+            ErrorCode.ARITHMETIC_EXPRESSION_TOO_COMPLEX));
+    }
+
+    public static MarkupException invalidRelationalOperands(
+            SourceInfo sourceInfo, String operator, TypeInstance left, TypeInstance right) {
+        return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
+            ErrorCode.INVALID_RELATIONAL_OPERANDS, operator, left.javaName(), right.javaName()));
+    }
+
+    public static MarkupException rawComparableOperand(
+            SourceInfo sourceInfo, String operator, TypeInstance type) {
+        return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
+            ErrorCode.RAW_COMPARABLE_OPERAND, operator, type.javaName()));
+    }
+
+    public static MarkupException chainedRelation(SourceInfo sourceInfo) {
+        return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(ErrorCode.INVALID_CHAINED_RELATION));
+    }
+
+    public static MarkupException invalidIdentityOperands(
+            SourceInfo sourceInfo, String operator, TypeInstance left, TypeInstance right) {
+        return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
+            ErrorCode.INVALID_IDENTITY_OPERANDS, operator, left.javaName(), right.javaName()));
+    }
+
+    public static MarkupException invalidLogicalOperand(
+            SourceInfo sourceInfo, String operator, TypeInstance type) {
+        return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
+            ErrorCode.INVALID_LOGICAL_OPERAND, operator, type.javaName()));
     }
 }

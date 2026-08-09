@@ -13,26 +13,32 @@ For other use cases, alternative evaluation contexts can be specified:
 | Selector | Evaluates against |
 |:-|:-|
 | (no notation) | root element, or [`fx:context`](../../reference/context.html) if set |
-| `self` | current element |
-| `parent` | parent of the current element, equivalent to `parent[0]` |
-| `parent[N]` | N-th ancestor of the current element |
-| `parent<MyType>` | first `MyType` ancestor of the current element |
-| `parent<MyType>[N]` | N-th `MyType` ancestor of the current element |
+| `:root` | root element, regardless of `fx:context` |
+| `:self` | current element |
+| `:parent` or `:parent(0)` | immediate parent of the current element |
+| `:parent(N)` | parent at zero-based depth `N` |
+| `:parent(MyType)` | nearest ancestor assignable to `MyType` |
+| `:parent(MyType, N)` | ancestor at zero-based depth `N` among ancestors assignable to `MyType` |
 
-Context selectors are specified as part of the expression path, separated by a forward slash:
+Context selectors are specified as part of the expression path:
 ```xml
-<Rectangle height="${self/width}"/>
+<Rectangle height="${:self.width}"/>
 ```
 
+A context selector is also a complete expression primary. For example:
+* `:parent` returns the immediate parent object
+* `:parent === owner` is an identity comparison with another object
+* `:parent < value` is an ordinary relation when the static types of `:parent` and `value` are compatible
+
 {: .warning }
-> Using [`fx:Evaluate`](../../reference/evaluate.html) with `self` or `parent` selectors may lead to unexpected results,
+> Using [`fx:Evaluate`](../../reference/evaluate.html) with `:self` or `:parent` selectors may lead to unexpected results,
 > since the evaluated value may depend on the order of element initialization.
 >
 > Consider the following example:
 >
 > ```xml
 > <Pane prefWidth="123">
->     <Label prefWidth="$parent/prefWidth"/>
+>     <Label prefWidth="$:parent.prefWidth"/>
 > </Pane>
 > ```
 >

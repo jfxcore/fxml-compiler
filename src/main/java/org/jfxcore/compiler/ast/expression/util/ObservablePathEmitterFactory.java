@@ -10,7 +10,7 @@ import org.jfxcore.compiler.ast.ValueSourceKind;
 import org.jfxcore.compiler.ast.emit.EmitObservablePathNode;
 import org.jfxcore.compiler.ast.emit.ValueEmitterNode;
 import org.jfxcore.compiler.ast.expression.BindingEmitterInfo;
-import org.jfxcore.compiler.ast.expression.Operator;
+import org.jfxcore.compiler.ast.expression.BindingOperator;
 import org.jfxcore.compiler.ast.expression.PathExpressionNode;
 import org.jfxcore.compiler.ast.expression.path.ResolvedPath;
 import org.jfxcore.compiler.ast.expression.path.Segment;
@@ -66,7 +66,7 @@ public class ObservablePathEmitterFactory implements ObservableEmitterFactory {
 
         var emitPathNode = new EmitObservablePathNode(path, bidirectional, sourceInfo);
         ValueEmitterNode value = emitPathNode;
-        Operator operator = pathExpression.getOperator();
+        BindingOperator operator = pathExpression.getOperator();
 
         if (bidirectional && !operator.isInvertible(path.getValueTypeInstance())) {
             throw BindingSourceErrors.expressionNotInvertible(value.getSourceInfo());

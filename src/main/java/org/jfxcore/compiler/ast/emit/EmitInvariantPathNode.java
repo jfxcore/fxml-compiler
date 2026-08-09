@@ -21,7 +21,7 @@ import java.util.Objects;
 /**
  * Emits bytecodes that resolve a path expression to a value at runtime.
  * The type of the resolved value corresponds to the type of the last path segment.
- *
+ * <p>
  * {@link EmitObservablePathNode} can be used to resolve a path expression to an observable value that
  * emits change notifications along the path.
  */
@@ -113,6 +113,10 @@ public class EmitInvariantPathNode extends AbstractNode implements ValueEmitterN
     @Override
     public ResolvedTypeNode getType() {
         return type;
+    }
+
+    public List<ValueEmitterNode> getChildren() {
+        return children;
     }
 
     @Override

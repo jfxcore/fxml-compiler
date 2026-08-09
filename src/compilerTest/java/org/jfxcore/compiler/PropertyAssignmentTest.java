@@ -545,6 +545,24 @@ public class PropertyAssignmentTest {
         }
 
         @Test
+        public void Explicit_Boolean_Literal_Is_Typed_In_Object_Context() {
+            NullCoercionPane root = compileAndRun("""
+                <NullCoercionPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                                  objectProp="{fx:True}"/>
+            """);
+            assertSame(Boolean.TRUE, root.getObjectProp());
+        }
+
+        @Test
+        public void Explicit_Null_Literal_Is_Typed_In_Object_Context() {
+            NullCoercionPane root = compileAndRun("""
+                <NullCoercionPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                                  objectProp="{fx:Null}"/>
+            """);
+            assertNull(root.getObjectProp());
+        }
+
+        @Test
         public void AttributeValue_Null_Is_Not_Coerced_In_Object_Context() {
             NullCoercionPane root = compileAndRun("""
                 <NullCoercionPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
@@ -1158,7 +1176,7 @@ public class PropertyAssignmentTest {
         public void Class_Literal_In_Function_Is_Interpreted_As_Path_And_Fails() {
             MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
                 <ClassLiteralPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                                  fx:typeArguments="String" classLiteral="$func<String>(String)"/>
+                                  fx:typeArguments="String" classLiteral="$this.<String>func(String)"/>
             """));
 
             assertEquals(ErrorCode.MEMBER_NOT_FOUND, ex.getDiagnostic().getCode());

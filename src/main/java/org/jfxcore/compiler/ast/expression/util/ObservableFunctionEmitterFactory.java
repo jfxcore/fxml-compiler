@@ -11,7 +11,7 @@ import org.jfxcore.compiler.ast.emit.EmitObservableFunctionNode;
 import org.jfxcore.compiler.ast.emit.ValueEmitterNode;
 import org.jfxcore.compiler.ast.expression.BindingEmitterInfo;
 import org.jfxcore.compiler.ast.expression.FunctionExpressionNode;
-import org.jfxcore.compiler.ast.expression.Operator;
+import org.jfxcore.compiler.ast.expression.BindingOperator;
 import org.jfxcore.compiler.diagnostic.errors.BindingSourceErrors;
 import org.jfxcore.compiler.type.Resolver;
 import org.jfxcore.compiler.type.TypeHelper;
@@ -53,7 +53,7 @@ public class ObservableFunctionEmitterFactory
             functionExpression.getInvocationContext(),
             functionExpression.getSourceInfo());
 
-        Operator operator = functionExpression.getPath().getOperator();
+        BindingOperator operator = functionExpression.getPath().getOperator();
         if (bidirectional && !operator.isInvertible(valueType)) {
             throw BindingSourceErrors.expressionNotInvertible(value.getSourceInfo());
         }

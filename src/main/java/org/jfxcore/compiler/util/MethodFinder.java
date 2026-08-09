@@ -122,7 +122,7 @@ public class MethodFinder {
             SourceInfo sourceInfo) {
         try {
             TypeInvoker invoker = new TypeInvoker(sourceInfo);
-            TypeInstance[] paramTypes = invoker.invokeParameterTypes(method, invocationContext, context.typeWitnesses());
+            TypeInstance[] paramTypes = invokeApplicableParameterTypes(invoker, method, context.typeWitnesses());
 
             if (!method.isStatic() && context.staticInvocation()) {
                 if (diagnostics != null) {
@@ -289,12 +289,12 @@ public class MethodFinder {
 
         TypeInstance[] params1 = parameterCache.get(m1);
         if (params1 == null) {
-            parameterCache.put(m1, params1 = invoker.invokeParameterTypes(m1, invocationContext));
+            parameterCache.put(m1, params1 = invokeApplicableParameterTypes(invoker, m1, List.of()));
         }
 
         TypeInstance[] params2 = parameterCache.get(m2);
         if (params2 == null) {
-            parameterCache.put(m2, params2 = invoker.invokeParameterTypes(m2, invocationContext));
+            parameterCache.put(m2, params2 = invokeApplicableParameterTypes(invoker, m2, List.of()));
         }
 
         if (params1.length != params2.length) {
@@ -373,6 +373,15 @@ public class MethodFinder {
         }
 
         return false;
+    }
+
+    private TypeInstance[] invokeApplicableParameterTypes(
+            TypeInvoker invoker,
+            BehaviorDeclaration behavior,
+            List<TypeInstance> typeWitnesses) {
+        return behavior instanceof ConstructorDeclaration
+            ? invoker.invokeSourceParameterTypes(behavior, invocationContext, typeWitnesses)
+            : invoker.invokeParameterTypes(behavior, invocationContext, typeWitnesses);
     }
 
     private int maxWideningConversions(TypeInstance from, TypeInstance to) {

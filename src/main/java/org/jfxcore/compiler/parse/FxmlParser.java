@@ -43,8 +43,8 @@ import java.util.Set;
 
 public class FxmlParser {
 
-    // Intrinsic properties that are always interpreted as paths.
-    private static final IntrinsicProperty[] PATH_INTRINSICS = new IntrinsicProperty[] {
+    // Intrinsic properties that are always interpreted as expressions.
+    private static final IntrinsicProperty[] EXPRESSION_INTRINSICS = new IntrinsicProperty[] {
         Intrinsics.EVALUATE.findProperty("source"),
         Intrinsics.OBSERVE.findProperty("source"),
         Intrinsics.PUSH.findProperty("source"),
@@ -70,7 +70,7 @@ public class FxmlParser {
         '@', "org.jfxcore.markup.resource.ClassPathResource"
     );
 
-    private static final String RESERVED_PREFIX_CHARACTERS = "{}()[]<>,;:=*/.#\"'";
+    private static final String RESERVED_PREFIX_CHARACTERS = "{}()[]<>,;:=+-*/.#\"'!&|";
 
     private final String sourceText;
     private final Path documentFile;
@@ -227,18 +227,18 @@ public class FxmlParser {
 
         if (node instanceof Attr attr) {
             SourceInfo valueSourceInfo = (SourceInfo)node.getUserData(XmlReader.ATTR_VALUE_SOURCE_INFO_KEY);
-            LexerInput input = (LexerInput)node.getUserData(XmlReader.ATTR_VALUE_LEXER_INPUT_KEY);
+            SourceMappedText input = (SourceMappedText)node.getUserData(XmlReader.ATTR_VALUE_SOURCE_MAPPED_TEXT_KEY);
 
             if (input == null) {
                 SourceInfo fallbackSourceInfo = valueSourceInfo != null ? valueSourceInfo : sourceInfo;
-                input = LexerInput.identity(text, fallbackSourceInfo.getStart());
+                input = SourceMappedText.identity(text, fallbackSourceInfo.getStart());
             }
 
             text = input.getText();
             boolean parseAsPath = false;
 
             if (FxmlNamespace.FXML.equalsIgnoreCase(attr.getOwnerElement().getNamespaceURI())) {
-                for (IntrinsicProperty intrinsicProperty : PATH_INTRINSICS) {
+                for (IntrinsicProperty intrinsicProperty : EXPRESSION_INTRINSICS) {
                     if (intrinsicProperty.getIntrinsic().getName().equals(attr.getOwnerElement().getLocalName())
                             && intrinsicProperty.getName().equals(attr.getLocalName())) {
                         parseAsPath = true;
@@ -248,7 +248,7 @@ public class FxmlParser {
             }
 
             if (parseAsPath) {
-                return new InlineParser(input, getFxmlNamespacePrefix(node), prefixMappings).parsePath();
+                return new InlineParser(input, getFxmlNamespacePrefix(node), prefixMappings).parseExpression();
             }
 
             String trimmed = text.trim();
@@ -267,7 +267,7 @@ public class FxmlParser {
         return createTextNode(text, sourceInfo, true);
     }
 
-    private TextNode createTextNode(LexerInput input) {
+    private TextNode createTextNode(SourceMappedText input) {
         String text = input.getText();
         SourceInfo sourceInfo = input.getSourceInfo(0, text.length());
         TextNode scalarNode = createScalarTextNode(text, sourceInfo);
@@ -291,7 +291,7 @@ public class FxmlParser {
         return new ListNode(text, Arrays.asList(textNodes), sourceInfo);
     }
 
-    private TextNode createEscapedTextNode(LexerInput input, int escapeOffset) {
+    private TextNode createEscapedTextNode(SourceMappedText input, int escapeOffset) {
         return createTextNode(input.without(escapeOffset));
     }
 

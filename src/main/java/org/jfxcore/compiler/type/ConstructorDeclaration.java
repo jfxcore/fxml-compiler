@@ -5,6 +5,7 @@ package org.jfxcore.compiler.type;
 
 import javassist.CtConstructor;
 import org.jfxcore.compiler.util.Bytecode;
+import java.util.Optional;
 
 public final class ConstructorDeclaration extends BehaviorDeclaration {
 
@@ -14,6 +15,14 @@ public final class ConstructorDeclaration extends BehaviorDeclaration {
 
     ConstructorDeclaration(CtConstructor constructor, TypeDeclaration declaringType) {
         super(constructor, declaringType);
+    }
+
+    public boolean requiresEnclosingInstance() {
+        return !declaringType().isStatic() && declaringType().declaringType().isPresent();
+    }
+
+    public Optional<TypeDeclaration> enclosingInstanceType() {
+        return requiresEnclosingInstance() ? declaringType().declaringType() : Optional.empty();
     }
 
     @Override

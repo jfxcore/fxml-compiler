@@ -7,7 +7,7 @@ import org.jfxcore.compiler.ast.AbstractNode;
 import org.jfxcore.compiler.ast.GeneratorEmitterNode;
 import org.jfxcore.compiler.ast.ResolvedTypeNode;
 import org.jfxcore.compiler.ast.Visitor;
-import org.jfxcore.compiler.ast.expression.Operator;
+import org.jfxcore.compiler.ast.expression.BindingOperator;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.generate.BooleanMapperGenerator;
 import org.jfxcore.compiler.generate.ClassGenerator;
@@ -26,7 +26,7 @@ import static org.jfxcore.compiler.type.KnownSymbols.Markup.Runtime.*;
 
 /**
  * Emits its child node, which places an {@link javafx.beans.value.ObservableValue} on top of the operand stack.
- * Then maps the observable value to a boolean value as specified by {@link Operator}.
+ * Then maps the observable value to a boolean value as specified by {@link BindingOperator}.
  */
 public class EmitMapToBooleanNode extends AbstractNode
         implements ValueEmitterNode, GeneratorEmitterNode, NullableInfo {

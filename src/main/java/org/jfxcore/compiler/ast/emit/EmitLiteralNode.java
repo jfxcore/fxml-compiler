@@ -207,7 +207,7 @@ public class EmitLiteralNode extends ReferenceableNode {
         if (o == null || getClass() != o.getClass()) return false;
         EmitLiteralNode that = (EmitLiteralNode)o;
         return Objects.equals(getId(), that.getId())
-            && literal.equals(that.literal)
+            && Objects.equals(literal, that.literal)
             && requestedType.equals(that.requestedType);
     }
 

@@ -11,6 +11,7 @@ import org.jfxcore.compiler.parse.TypeParser;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 
 import static org.jfxcore.compiler.type.KnownSymbols.*;
@@ -643,6 +644,31 @@ public class TypeInstanceTest extends TestBase {
     public static class Type4<D, S> {}
     public static class Type5<S, D> extends Type4<D, S> {}
 
+    public static class OwnerPair<A, B> {}
+
+    public static class GenericOwner<O> {
+        public class GenericMember<M> extends OwnerPair<O, M> {
+            public O ownerValue;
+            public M memberValue;
+        }
+
+        public static class StaticMember<M> {}
+    }
+
+    public static class GenericSubOwner<S> extends GenericOwner<S> {}
+
+    public static class BoundedOwner<O> {
+        public class BoundedMember<M extends O> {}
+    }
+
+    public static class OwnerAwareField {
+        public GenericOwner<String>.GenericMember<Integer> value;
+    }
+
+    public static class OwnerAwareGenericField<H> {
+        public GenericOwner<H>.GenericMember<H> value;
+    }
+
     @Test
     public void Parameterize_Generic_Type() {
         TypeInstance typeInstance = invoker.invokeType(
@@ -651,6 +677,144 @@ public class TypeInstanceTest extends TestBase {
 
         assertEquals("TypeInstanceTest$Type5<String, Double>", typeInstance.toString());
         assertEquals("TypeInstanceTest$Type4<Double, String>", typeInstance.superTypes().get(0).toString());
+    }
+
+    @Test
+    public void Parameterize_NonStaticMemberType_With_Owner() {
+        TypeDeclaration ownerClass = resolver.resolveClass(GenericOwner.class.getName());
+        TypeDeclaration memberClass = resolver.resolveClass(GenericOwner.GenericMember.class.getName());
+        TypeInstance owner = invoker.invokeType(ownerClass, List.of(TypeInstance.StringType()));
+        TypeInstance member = invoker.invokeType(owner, memberClass, List.of(TypeInstance.IntegerType()));
+
+        assertSame(owner, member.owner());
+
+        assertEquals(
+            "org.jfxcore.compiler.type.TypeInstanceTest.GenericOwner<java.lang.String>.GenericMember<java.lang.Integer>",
+            member.javaName());
+
+        assertEquals(
+            "TypeInstanceTest$GenericOwner<String>$GenericMember<Integer>",
+            member.toString());
+
+        assertSame(member, invoker.invokeType(owner, memberClass, List.of(TypeInstance.IntegerType())));
+    }
+
+    @Test
+    public void ParameterizedMemberTypes_With_DifferentOwners_Are_Distinct() {
+        TypeDeclaration ownerClass = resolver.resolveClass(GenericOwner.class.getName());
+        TypeDeclaration memberClass = resolver.resolveClass(GenericOwner.GenericMember.class.getName());
+        TypeInstance stringOwner = invoker.invokeType(ownerClass, List.of(TypeInstance.StringType()));
+        TypeInstance doubleOwner = invoker.invokeType(ownerClass, List.of(TypeInstance.DoubleType()));
+        TypeInstance stringMember = invoker.invokeType(stringOwner, memberClass, List.of(TypeInstance.IntegerType()));
+        TypeInstance doubleMember = invoker.invokeType(doubleOwner, memberClass, List.of(TypeInstance.IntegerType()));
+
+        assertNotSame(stringMember, doubleMember);
+        assertNotEquals(stringMember, doubleMember);
+        assertEquals(2, new HashSet<>(List.of(stringMember, doubleMember)).size());
+        assertFalse(stringMember.isAssignableFrom(doubleMember));
+        assertFalse(doubleMember.isAssignableFrom(stringMember));
+    }
+
+    @Test
+    public void OwnerlessMemberType_Remains_Assignable_As_UnknownOwner() {
+        TypeDeclaration ownerClass = resolver.resolveClass(GenericOwner.class.getName());
+        TypeDeclaration memberClass = resolver.resolveClass(GenericOwner.GenericMember.class.getName());
+        TypeInstance owner = invoker.invokeType(ownerClass, List.of(TypeInstance.StringType()));
+        TypeInstance ownedMember = invoker.invokeType(owner, memberClass, List.of(TypeInstance.IntegerType()));
+        TypeInstance ownerlessMember = invoker.invokeType(memberClass, List.of(TypeInstance.IntegerType()));
+
+        assertNull(ownerlessMember.owner());
+        assertNotEquals(ownerlessMember, ownedMember);
+        assertTrue(ownerlessMember.isAssignableFrom(ownedMember));
+        assertTrue(ownedMember.isAssignableFrom(ownerlessMember));
+    }
+
+    @Test
+    public void MemberType_Resolves_Owner_And_Direct_TypeVariables() {
+        TypeDeclaration ownerClass = resolver.resolveClass(GenericOwner.class.getName());
+        TypeDeclaration memberClass = resolver.resolveClass(GenericOwner.GenericMember.class.getName());
+        TypeInstance owner = invoker.invokeType(ownerClass, List.of(TypeInstance.StringType()));
+        TypeInstance member = invoker.invokeType(owner, memberClass, List.of(TypeInstance.IntegerType()));
+        TypeInstance ownerValueType = invoker.invokeFieldType(resolver.resolveField(memberClass, "ownerValue"), List.of(member));
+        TypeInstance memberValueType = invoker.invokeFieldType(resolver.resolveField(memberClass, "memberValue"), List.of(member));
+
+        assertEquals(TypeInstance.StringType(), ownerValueType);
+        assertEquals(TypeInstance.IntegerType(), memberValueType);
+        assertEquals(TypeInstance.StringType(), member.superTypes().get(0).arguments().get(0));
+        assertEquals(TypeInstance.IntegerType(), member.superTypes().get(0).arguments().get(1));
+    }
+
+    @Test
+    public void InheritedMemberType_Resolves_TypeVariables_From_QualifierOwner() {
+        TypeDeclaration ownerClass = resolver.resolveClass(GenericSubOwner.class.getName());
+        TypeDeclaration memberClass = resolver.resolveClass(GenericOwner.GenericMember.class.getName());
+        TypeInstance owner = invoker.invokeType(ownerClass, List.of(TypeInstance.StringType()));
+        TypeInstance member = invoker.invokeType(owner, memberClass, List.of(TypeInstance.IntegerType()));
+        TypeInstance ownerValueType = invoker.invokeFieldType(resolver.resolveField(memberClass, "ownerValue"), List.of(member));
+
+        assertSame(owner, member.owner());
+        assertEquals(TypeInstance.StringType(), ownerValueType);
+    }
+
+    @Test
+    public void MemberType_Uses_Owner_TypeArguments_For_Bounds() {
+        TypeDeclaration ownerClass = resolver.resolveClass(BoundedOwner.class.getName());
+        TypeDeclaration memberClass = resolver.resolveClass(BoundedOwner.BoundedMember.class.getName());
+        TypeInstance numberOwner = invoker.invokeType(ownerClass, List.of(TypeInstance.NumberType()));
+        TypeInstance stringOwner = invoker.invokeType(ownerClass, List.of(TypeInstance.StringType()));
+
+        assertDoesNotThrow(() -> invoker.invokeType(numberOwner, memberClass, List.of(TypeInstance.IntegerType())));
+
+        MarkupException ex = assertThrows(MarkupException.class, () -> invoker.invokeType(
+            stringOwner, memberClass, List.of(TypeInstance.IntegerType())));
+
+        assertEquals(ErrorCode.TYPE_ARGUMENT_OUT_OF_BOUND, ex.getDiagnostic().getCode());
+    }
+
+    @Test
+    public void GenericSignature_Preserves_ParameterizedMemberOwner() {
+        TypeDeclaration holderClass = resolver.resolveClass(OwnerAwareField.class.getName());
+        TypeInstance fieldType = invoker.invokeFieldType(resolver.resolveField(holderClass, "value"), List.of());
+
+        assertNotNull(fieldType.owner());
+        assertEquals(TypeInstance.StringType(), fieldType.owner().arguments().get(0));
+        assertEquals(TypeInstance.IntegerType(), fieldType.arguments().get(0));
+        assertEquals(
+            "org.jfxcore.compiler.type.TypeInstanceTest.GenericOwner<java.lang.String>.GenericMember<java.lang.Integer>",
+            fieldType.javaName());
+    }
+
+    @Test
+    public void GenericSignature_Substitutes_Owner_From_InvocationContext() {
+        TypeDeclaration holderClass = resolver.resolveClass(OwnerAwareGenericField.class.getName());
+        TypeInstance holderType = invoker.invokeType(holderClass, List.of(TypeInstance.StringType()));
+        TypeInstance fieldType = invoker.invokeFieldType(resolver.resolveField(holderClass, "value"), List.of(holderType));
+
+        assertNotNull(fieldType.owner());
+        assertEquals(TypeInstance.StringType(), fieldType.owner().arguments().get(0));
+        assertEquals(TypeInstance.StringType(), fieldType.arguments().get(0));
+    }
+
+    @Test
+    public void OwnerAwareInvocation_Rejects_Types_That_Cannot_Have_That_Owner() {
+        TypeDeclaration ownerClass = resolver.resolveClass(GenericOwner.class.getName());
+        TypeInstance owner = invoker.invokeType(ownerClass, List.of(TypeInstance.StringType()));
+        TypeDeclaration staticMember = resolver.resolveClass(GenericOwner.StaticMember.class.getName());
+
+        assertThrows(IllegalArgumentException.class, () ->
+            invoker.invokeType(owner, staticMember, List.of(TypeInstance.IntegerType())));
+
+        assertThrows(IllegalArgumentException.class, () ->
+            invoker.invokeType(owner, resolver.resolveClass(String.class.getName()), List.of()));
+    }
+
+    @Test
+    public void Static_Member_Type_Has_No_Owner_Instance() {
+        TypeDeclaration staticMember = resolver.resolveClass(GenericOwner.StaticMember.class.getName());
+        TypeInstance type = invoker.invokeType(staticMember, List.of(TypeInstance.IntegerType()));
+
+        assertNull(type.owner());
+        assertEquals(TypeInstance.IntegerType(), type.arguments().get(0));
     }
 
     public static class Type13<T extends Type1<R>, R> {}

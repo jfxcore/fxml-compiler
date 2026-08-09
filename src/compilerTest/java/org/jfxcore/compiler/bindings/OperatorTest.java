@@ -59,6 +59,8 @@ public class OperatorTest extends CompilerTestBase {
     public static class TestPane extends Pane {
         public final DoubleProperty doubleProp = new SimpleDoubleProperty(123);
         public final BooleanProperty booleanProp = new SimpleBooleanProperty(true);
+        public final ObjectProperty<Number> numberProp = new SimpleObjectProperty<>(0.5);
+        public final ObjectProperty<Object> objectProp = new SimpleObjectProperty<>(Integer.valueOf(0));
         public final BooleanProperty failingBooleanProp = new SimpleBooleanProperty(true) {
             @Override
             public void set(boolean newValue) {
@@ -136,6 +138,7 @@ public class OperatorTest extends CompilerTestBase {
             else if (type == Float.class) className = invert ? "FloatToInvBoolean" : "FloatToBoolean";
             else if (type == Integer.class) className = invert ? "IntToInvBoolean" : "IntToBoolean";
             else if (type == Long.class) className = invert ? "LongToInvBoolean" : "LongToBoolean";
+            else if (type == Number.class) className = invert ? "NumberToInvBoolean" : "NumberToBoolean";
             else if (type == Boolean.class) className = invert ? "BooleanToInvBoolean" : null;
             else className = invert ? "ObjectToInvBoolean" : "ObjectToBoolean";
 
@@ -273,6 +276,10 @@ public class OperatorTest extends CompilerTestBase {
         assertFalse(root.isVisible());
         root.doubleProp.set(0);
         assertTrue(root.isVisible());
+        root.doubleProp.set(Double.NaN);
+        assertTrue(root.isVisible());
+        root.doubleProp.set(Double.POSITIVE_INFINITY);
+        assertFalse(root.isVisible());
         root.doubleProp.set(1);
         assertFalse(root.isVisible());
 
@@ -290,10 +297,56 @@ public class OperatorTest extends CompilerTestBase {
         assertTrue(root.isVisible());
         root.doubleProp.set(0);
         assertFalse(root.isVisible());
+        root.doubleProp.set(-0.0);
+        assertFalse(root.isVisible());
+        root.doubleProp.set(Double.NaN);
+        assertFalse(root.isVisible());
+        root.doubleProp.set(Double.POSITIVE_INFINITY);
+        assertTrue(root.isVisible());
         root.doubleProp.set(1);
         assertTrue(root.isVisible());
 
         implType.assertImpl(this, root, Double.class, false);
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = ImplType.class, names = {"UNIDIRECTIONAL_LOCAL", "UNIDIRECTIONAL_LIBRARY"})
+    public void Bind_Unidirectional_With_BoolifyOperator_Uses_Number_DoubleValue_Truthiness(ImplType implType) {
+        TestPane root = compileAndRun("""
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                      visible="${!!numberProp}"/>
+        """, implType.suffix(), implType::configure);
+
+        assertTrue(root.isVisible());
+        root.numberProp.set(0.0);
+        assertFalse(root.isVisible());
+        root.numberProp.set(-0.0);
+        assertFalse(root.isVisible());
+        root.numberProp.set(Double.NaN);
+        assertFalse(root.isVisible());
+        root.numberProp.set(Double.POSITIVE_INFINITY);
+        assertTrue(root.isVisible());
+        root.numberProp.set(null);
+        assertFalse(root.isVisible());
+
+        implType.assertImpl(this, root, Number.class, false);
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = ImplType.class, names = {"UNIDIRECTIONAL_LOCAL", "UNIDIRECTIONAL_LIBRARY"})
+    public void Bind_Unidirectional_With_BoolifyOperator_Does_Not_Redispatch_Object_Values(ImplType implType) {
+        TestPane root = compileAndRun("""
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                      visible="${!!objectProp}"/>
+        """, implType.suffix(), implType::configure);
+
+        assertTrue(root.isVisible());
+        root.objectProp.set(Boolean.FALSE);
+        assertTrue(root.isVisible());
+        root.objectProp.set(null);
+        assertFalse(root.isVisible());
+
+        implType.assertImpl(this, root, Object.class, false);
     }
 
     @ParameterizedTest
@@ -441,6 +494,30 @@ public class OperatorTest extends CompilerTestBase {
 
         root.setVisible(false);
         assertFalse(root.booleanProp.get());
+    }
+
+    @Test
+    public void Bind_Bidirectional_With_Grouped_NotOperator_Retains_Direct_Inversion() {
+        TestPane root = compileAndRun("""
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                      visible="#{(!booleanProp)}"/>
+        """);
+
+        root.booleanProp.set(false);
+        assertTrue(root.isVisible());
+
+        root.setVisible(false);
+        assertTrue(root.booleanProp.get());
+    }
+
+    @Test
+    public void Bind_Bidirectional_With_Chained_NotOperator_Is_Not_A_Direct_Inversion() {
+        MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                      visible="#{!!!booleanProp}"/>
+        """));
+
+        assertEquals(ErrorCode.EXPRESSION_NOT_INVERTIBLE, ex.getDiagnostic().getCode());
     }
 
     @ParameterizedTest

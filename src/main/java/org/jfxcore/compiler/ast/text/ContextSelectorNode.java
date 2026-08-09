@@ -4,13 +4,18 @@
 package org.jfxcore.compiler.ast.text;
 
 import org.jetbrains.annotations.Nullable;
+import org.jfxcore.compiler.ast.TypeNode;
 import org.jfxcore.compiler.ast.Visitor;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 
 import java.util.Objects;
 
-public class ContextSelectorNode extends TextNode {
+public class ContextSelectorNode extends DerivedTextNode {
 
+    private final @Nullable SourceInfo colonSourceInfo;
+    private final @Nullable SourceInfo openParenSourceInfo;
+    private final @Nullable SourceInfo commaSourceInfo;
+    private final @Nullable SourceInfo closeParenSourceInfo;
     private TextNode selector;
     private TextNode searchType;
     private NumberNode level;
@@ -19,11 +24,39 @@ public class ContextSelectorNode extends TextNode {
             TextNode selector,
             @Nullable TextNode searchType,
             @Nullable NumberNode level,
+            @Nullable SourceInfo colonSourceInfo,
+            @Nullable SourceInfo openParenSourceInfo,
+            @Nullable SourceInfo commaSourceInfo,
+            @Nullable SourceInfo closeParenSourceInfo,
             SourceInfo sourceInfo) {
-        super(formatText(selector, searchType, level), sourceInfo);
-        this.selector = selector;
+        super(sourceInfo);
+        this.selector = checkNotNull(selector);
         this.searchType = searchType;
         this.level = level;
+        this.colonSourceInfo = colonSourceInfo;
+        this.openParenSourceInfo = openParenSourceInfo;
+        this.commaSourceInfo = commaSourceInfo;
+        this.closeParenSourceInfo = closeParenSourceInfo;
+    }
+
+    private ContextSelectorNode(
+            TextNode selector,
+            @Nullable TextNode searchType,
+            @Nullable NumberNode level,
+            @Nullable SourceInfo colonSourceInfo,
+            @Nullable SourceInfo openParenSourceInfo,
+            @Nullable SourceInfo commaSourceInfo,
+            @Nullable SourceInfo closeParenSourceInfo,
+            TypeNode type,
+            SourceInfo sourceInfo) {
+        super(type, sourceInfo);
+        this.selector = checkNotNull(selector);
+        this.searchType = searchType;
+        this.level = level;
+        this.colonSourceInfo = colonSourceInfo;
+        this.openParenSourceInfo = openParenSourceInfo;
+        this.commaSourceInfo = commaSourceInfo;
+        this.closeParenSourceInfo = closeParenSourceInfo;
     }
 
     public TextNode getSelector() {
@@ -36,6 +69,27 @@ public class ContextSelectorNode extends TextNode {
 
     public @Nullable NumberNode getLevel() {
         return level;
+    }
+
+    public @Nullable SourceInfo getColonSourceInfo() {
+        return colonSourceInfo;
+    }
+
+    public @Nullable SourceInfo getOpenParenSourceInfo() {
+        return openParenSourceInfo;
+    }
+
+    public @Nullable SourceInfo getCommaSourceInfo() {
+        return commaSourceInfo;
+    }
+
+    public @Nullable SourceInfo getCloseParenSourceInfo() {
+        return closeParenSourceInfo;
+    }
+
+    @Override
+    public String formatText() {
+        return formatText(selector, searchType, level);
     }
 
     @Override
@@ -59,7 +113,11 @@ public class ContextSelectorNode extends TextNode {
             selector.deepClone(),
             searchType != null ? searchType.deepClone() : null,
             level != null ? level.deepClone() : null,
-            getSourceInfo()).copy(this);
+            colonSourceInfo,
+            openParenSourceInfo,
+            commaSourceInfo,
+            closeParenSourceInfo,
+            getType().deepClone(), getSourceInfo()).copy(this);
     }
 
     @Override
@@ -80,23 +138,23 @@ public class ContextSelectorNode extends TextNode {
 
     private static String formatText(TextNode selector, @Nullable TextNode typeName, @Nullable NumberNode depth) {
         if (typeName == null && depth == null) {
-            return selector.getText();
+            return selector.formatText();
         }
 
-        var builder = new StringBuilder(selector.getText()).append('[');
+        var builder = new StringBuilder(selector.formatText()).append('(');
 
         if (typeName != null) {
-            builder.append(typeName.getText());
+            builder.append(typeName.formatText());
             if (depth != null) {
-                builder.append(':');
+                builder.append(", ");
             }
         }
 
         if (depth != null) {
-            builder.append(depth.getText());
+            builder.append(depth.formatText());
         }
 
-        builder.append(']');
+        builder.append(')');
         return builder.toString();
     }
 }

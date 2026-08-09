@@ -8,9 +8,9 @@ import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.type.TypeDeclaration;
 import org.jfxcore.compiler.type.TypeInstance;
 import org.jfxcore.compiler.type.TypeInvoker;
+import org.jfxcore.compiler.util.BooleanConversionHelper;
 import org.jfxcore.compiler.util.NameHelper;
 import java.lang.reflect.Modifier;
-import java.util.function.BiConsumer;
 
 import static org.jfxcore.compiler.type.KnownSymbols.*;
 
@@ -93,37 +93,15 @@ public class BooleanMapperGenerator extends ClassGenerator {
         });
 
         SharedMethodImpls.createBehavior(createMethod("computeValue", booleanDecl()), code -> {
-            BiConsumer<Runnable, Runnable> op = code::ifeq;
-
             code.aload(0)
                 .getfield(requireDeclaredField("observable"))
                 .invoke(ObservableValueDecl().requireDeclaredMethod("getValue"));
 
-            if (valueType.subtypeOf(BooleanDecl())) {
-                code.checkcast(BooleanDecl())
-                    .castconv(BooleanDecl(), booleanDecl());
-            } else if (valueType.subtypeOf(FloatDecl())) {
-                code.checkcast(FloatDecl())
-                    .castconv(FloatDecl(), floatDecl())
-                    .fconst(0)
-                    .fcmpl();
-            } else if (valueType.subtypeOf(DoubleDecl())) {
-                code.checkcast(DoubleDecl())
-                    .castconv(DoubleDecl(), doubleDecl())
-                    .dconst(0)
-                    .dcmpl();
-            } else if (valueType.subtypeOf(CharacterDecl())) {
-                code.checkcast(CharacterDecl())
-                    .castconv(CharacterDecl(), intDecl());
-            } else if (valueType.subtypeOf(NumberDecl())) {
-                code.checkcast(NumberDecl())
-                    .castconv(NumberDecl(), intDecl());
-            } else {
-                op = code::ifnull;
+            if (!valueType.equals(ObjectDecl())) {
+                code.checkcast(valueType);
             }
 
-            op.accept(() -> code.iconst(invert ? 1 : 0), () -> code.iconst(invert ? 0 : 1));
-
+            BooleanConversionHelper.emit(code, valueType, invert);
             code.ireturn();
         });
     }

@@ -182,6 +182,18 @@ public class AccessibleTests extends CompilerTestBase {
     }
 
     @Test
+    public void Bind_Unidirectional_To_Protected_Member_Construction_With_Observable_Argument_Succeeds() {
+        PublicTestPane root = compileAndRun("""
+            <?import org.jfxcore.compiler.accesstest.*?>
+            <PublicTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                            result="${this.new ProtectedMember(prefWidth)}"/>
+        """);
+
+        root.setPrefWidth(5);
+        assertEquals(5, root.getResultValue(), 0.001);
+    }
+
+    @Test
     public void Bind_Bidirectional_To_Protected_Method_With_Observable_Argument_Succeeds() {
         PublicTestPane root = compileAndRun("""
             <?import org.jfxcore.compiler.accesstest.*?>

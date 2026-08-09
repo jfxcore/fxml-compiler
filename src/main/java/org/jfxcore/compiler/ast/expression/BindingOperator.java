@@ -14,7 +14,7 @@ import org.jfxcore.compiler.type.TypeInstance;
 
 import static org.jfxcore.compiler.type.KnownSymbols.*;
 
-public enum Operator {
+public enum BindingOperator {
 
     IDENTITY,
 

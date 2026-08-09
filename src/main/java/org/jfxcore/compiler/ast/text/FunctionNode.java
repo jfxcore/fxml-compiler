@@ -11,22 +11,21 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
-import java.util.stream.Collectors;
 
-public class FunctionNode extends TextNode {
+public class FunctionNode extends DerivedTextNode {
 
     private PathNode path;
     private final List<ValueNode> arguments;
 
     public FunctionNode(PathNode path, Collection<? extends ValueNode> arguments, SourceInfo sourceInfo) {
-        super(format(path, arguments), sourceInfo);
-        this.path = path;
+        super(sourceInfo);
+        this.path = checkNotNull(path);
         this.arguments = new ArrayList<>(checkNotNull(arguments));
     }
 
     private FunctionNode(PathNode path, Collection<? extends ValueNode> arguments, TypeNode type, SourceInfo sourceInfo) {
-        super(format(path, arguments), false, type, sourceInfo);
-        this.path = path;
+        super(type, sourceInfo);
+        this.path = checkNotNull(path);
         this.arguments = new ArrayList<>(checkNotNull(arguments));
     }
 
@@ -39,6 +38,13 @@ public class FunctionNode extends TextNode {
     }
 
     @Override
+    public String formatText() {
+        return path.formatText() + "(" + arguments.stream()
+            .map(TextNode::formatValue)
+            .collect(java.util.stream.Collectors.joining(",")) + ")";
+    }
+
+    @Override
     public void acceptChildren(Visitor visitor) {
         super.acceptChildren(visitor);
         path = (PathNode)path.accept(visitor);
@@ -47,7 +53,8 @@ public class FunctionNode extends TextNode {
 
     @Override
     public FunctionNode deepClone() {
-        return new FunctionNode(path.deepClone(), deepClone(arguments), getType(), getSourceInfo()).copy(this);
+        return new FunctionNode(
+            path.deepClone(), deepClone(arguments), getType().deepClone(), getSourceInfo()).copy(this);
     }
 
     @Override
@@ -63,15 +70,5 @@ public class FunctionNode extends TextNode {
     @Override
     public int hashCode() {
         return Objects.hash(super.hashCode(), path, arguments);
-    }
-
-    private static String format(TextNode name, Collection<? extends ValueNode> arguments) {
-        return name.getText() + "(" + arguments.stream().map(node -> {
-            if (node instanceof TextNode) {
-                return ((TextNode)node).getText();
-            }
-
-            return node.getType().getMarkupName();
-        }).collect(Collectors.joining(",")) + ")";
     }
 }

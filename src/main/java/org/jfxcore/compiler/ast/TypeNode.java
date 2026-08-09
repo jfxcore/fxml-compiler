@@ -67,4 +67,9 @@ public class TypeNode extends AbstractNode {
             && Objects.equals(markupName, that.markupName)
             && intrinsic == that.intrinsic;
     }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(name, markupName, intrinsic);
+    }
 }

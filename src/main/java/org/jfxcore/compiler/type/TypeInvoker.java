@@ -11,12 +11,13 @@ import org.jfxcore.compiler.diagnostic.errors.GeneralErrors;
 import org.jfxcore.compiler.util.CompilationContext;
 import org.jfxcore.compiler.util.ExceptionHelper;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 
 import static org.jfxcore.compiler.type.KnownSymbols.*;
 
@@ -72,10 +73,56 @@ public final class TypeInvoker {
                 return invokeType(clazz);
             }
 
-            Map<String, TypeInstance> providedArguments = associateProvidedArguments(
-                clazz, arguments, classSignature.getParameters(), EMPTY_TYPE_PARAMS);
+            Map<String, TypeInstance> providedArguments = associateClassArguments(
+                clazz, arguments, classSignature.getParameters(), List.of());
 
             TypeInstance invokedType = invokeType(clazz.declaringType().orElse(null), clazz, providedArguments);
+            invokedType.freeze(sourceInfo);
+            return getCache().put(key, invokedType);
+        } catch (BadBytecode ex) {
+            throw ExceptionHelper.unchecked(ex);
+        }
+    }
+
+    public TypeInstance invokeType(TypeInstance owner, TypeDeclaration clazz, List<TypeInstance> arguments) {
+        Objects.requireNonNull(owner, "owner");
+        Objects.requireNonNull(clazz, "clazz");
+        Objects.requireNonNull(arguments, "arguments");
+
+        TypeDeclaration declaringType = clazz.declaringType().orElseThrow(
+            () -> new IllegalArgumentException("clazz is not a member type"));
+
+        if (clazz.isStatic()) {
+            throw new IllegalArgumentException("clazz is a static member type");
+        }
+
+        if (!owner.subtypeOf(declaringType)) {
+            throw new IllegalArgumentException(
+                owner.javaName() + " is not compatible with " + declaringType.javaName());
+        }
+
+        CacheKey key = new CacheKey("invokeType", owner, clazz, arguments);
+        CacheEntry entry = getCache().get(key);
+        if (entry.found() && cacheEnabled) {
+            return (TypeInstance)entry.value();
+        }
+
+        try {
+            SignatureAttribute.ClassSignature classSignature = getGenericClassSignature(clazz);
+            if (classSignature == null) {
+                if (!arguments.isEmpty()) {
+                    throw GeneralErrors.numTypeArgumentsMismatch(sourceInfo, clazz, 0, arguments.size());
+                }
+
+                TypeInstance invokedType = invokeType(owner, declaringType, clazz, Map.of());
+                invokedType.freeze(sourceInfo);
+                return getCache().put(key, invokedType);
+            }
+
+            Map<String, TypeInstance> providedArguments = associateClassArguments(
+                clazz, arguments, classSignature.getParameters(), List.of(owner));
+
+            TypeInstance invokedType = invokeType(owner, declaringType, clazz, providedArguments);
             invokedType.freeze(sourceInfo);
             return getCache().put(key, invokedType);
         } catch (BadBytecode ex) {
@@ -156,10 +203,12 @@ public final class TypeInvoker {
                     classTypeParams,
                     methodSignature.getTypeParameters(),
                     invocationContext,
-                    associateProvidedArguments(
+                    associateMethodArguments(
                         method,
                         providedArguments,
-                        methodSignature.getTypeParameters()));
+                        classTypeParams,
+                        methodSignature.getTypeParameters(),
+                        invocationContext));
             }
 
             return getCache().put(key, Objects.requireNonNullElse(typeInstance, TypeInstance.ObjectType()).freeze(sourceInfo));
@@ -190,9 +239,7 @@ public final class TypeInvoker {
                 result = new TypeInstance[params.size()];
 
                 for (int i = 0; i < params.size(); ++i) {
-                    var typeInst = invokeType(params.get(i).type());
-                    result[i] = new TypeInstance(
-                        typeInst.declaration(), List.of(), typeInst.superTypes(), typeInst.wildcardType());
+                    result[i] = invokeType(params.get(i).type());
                 }
             } else {
                 SignatureAttribute.ClassSignature classSignature = getGenericClassSignature(behavior.declaringType());
@@ -219,6 +266,27 @@ public final class TypeInvoker {
         } catch (BadBytecode ex) {
             throw ExceptionHelper.unchecked(ex);
         }
+    }
+
+    /**
+     * Resolves the parameters visible at a source-level invocation. A non-static member-class
+     * constructor has a hidden leading enclosing-instance parameter in its descriptor, while its
+     * generic signature may already omit that parameter. This method normalizes both shapes to the
+     * explicit source parameter list.
+     */
+    public TypeInstance[] invokeSourceParameterTypes(
+            BehaviorDeclaration behavior,
+            List<TypeInstance> invocationContext,
+            List<TypeInstance> providedArguments) {
+        TypeInstance[] result = invokeParameterTypes(behavior, invocationContext, providedArguments);
+
+        if (behavior instanceof ConstructorDeclaration constructor
+                && constructor.requiresEnclosingInstance()
+                && result.length == constructor.parameters().size()) {
+            return java.util.Arrays.copyOfRange(result, 1, result.length);
+        }
+
+        return result;
     }
 
     private SignatureAttribute.ObjectType getGenericFieldSignature(FieldDeclaration field) throws BadBytecode {
@@ -248,6 +316,14 @@ public final class TypeInvoker {
                     return typeInstance;
                 }
 
+                TypeInstance owner = typeInstance.owner();
+                if (owner != null) {
+                    TypeInstance result = findTypeInstance(owner, type);
+                    if (result != null) {
+                        return result;
+                    }
+                }
+
                 for (TypeInstance superType : typeInstance.superTypes()) {
                     typeInstance = findTypeInstance(superType, type);
                     if (typeInstance != null) {
@@ -259,25 +335,21 @@ public final class TypeInvoker {
             }
         }
 
-        Map<String, TypeInstance> result = new HashMap<>();
         SignatureAttribute.TypeParameter[] methodTypeParams = methodSignature.getTypeParameters();
+        TypeDeclaration declaringClass = behavior.declaringType();
+        SignatureAttribute.ClassSignature classSignature = getGenericClassSignature(declaringClass);
+        SignatureAttribute.TypeParameter[] classTypeParams = classSignature != null ?
+            classSignature.getParameters() : EMPTY_TYPE_PARAMS;
 
         if (methodTypeParams.length != providedArguments.size()) {
             throw GeneralErrors.numTypeArgumentsMismatch(
                 sourceInfo, behavior, methodTypeParams.length, providedArguments.size());
         }
 
-        for (int i = 0; i < methodTypeParams.length; ++i) {
-            result.put(methodTypeParams[i].getName(), providedArguments.get(i));
-        }
+        Map<String, TypeInstance> result = associateArguments(
+            declaringClass, behavior, providedArguments, methodTypeParams,
+            classTypeParams, methodTypeParams, invocationContext);
 
-        for (int i = 0; i < methodTypeParams.length; ++i) {
-            checkProvidedArgument(
-                providedArguments.get(i), methodTypeParams[i], EMPTY_TYPE_PARAMS, methodTypeParams, result);
-        }
-
-        TypeDeclaration declaringClass = behavior.declaringType();
-        SignatureAttribute.ClassSignature classSignature = getGenericClassSignature(declaringClass);
         if (classSignature == null) {
             return result;
         }
@@ -308,41 +380,32 @@ public final class TypeInvoker {
         return result;
     }
 
-    private Map<String, TypeInstance> associateProvidedArguments(
+    private Map<String, TypeInstance> associateClassArguments(
             TypeDeclaration type,
             List<TypeInstance> providedArguments,
             SignatureAttribute.TypeParameter[] classTypeParams,
-            SignatureAttribute.TypeParameter[] methodTypeParams)
+            List<TypeInstance> invocationContext)
                 throws BadBytecode {
         if (providedArguments.isEmpty()) {
             return Map.of();
         }
 
-        var typeParams = Arrays.copyOf(classTypeParams, classTypeParams.length + methodTypeParams.length);
-        System.arraycopy(methodTypeParams, 0, typeParams, classTypeParams.length, methodTypeParams.length);
-
-        if (typeParams.length != providedArguments.size()) {
+        if (classTypeParams.length != providedArguments.size()) {
             throw GeneralErrors.numTypeArgumentsMismatch(
-                sourceInfo, type, typeParams.length, providedArguments.size());
+                sourceInfo, type, classTypeParams.length, providedArguments.size());
         }
 
-        Map<String, TypeInstance> result = new HashMap<>();
-
-        for (int i = 0; i < typeParams.length; ++i) {
-            result.put(typeParams[i].getName(), providedArguments.get(i));
-        }
-
-        for (int i = 0; i < typeParams.length; ++i) {
-            checkProvidedArgument(providedArguments.get(i), typeParams[i], classTypeParams, methodTypeParams, result);
-        }
-
-        return result;
+        return associateArguments(
+            type, null, providedArguments, classTypeParams,
+            classTypeParams, EMPTY_TYPE_PARAMS, invocationContext);
     }
 
-    private Map<String, TypeInstance> associateProvidedArguments(
+    private Map<String, TypeInstance> associateMethodArguments(
             BehaviorDeclaration behavior,
             List<TypeInstance> providedArguments,
-            SignatureAttribute.TypeParameter[] methodTypeParams)
+            SignatureAttribute.TypeParameter[] classTypeParams,
+            SignatureAttribute.TypeParameter[] methodTypeParams,
+            List<TypeInstance> invocationContext)
                 throws BadBytecode {
         if (providedArguments.isEmpty()) {
             return Map.of();
@@ -353,34 +416,58 @@ public final class TypeInvoker {
                 sourceInfo, behavior, methodTypeParams.length, providedArguments.size());
         }
 
+        return associateArguments(
+            behavior.declaringType(), behavior, providedArguments, methodTypeParams,
+            classTypeParams, methodTypeParams, invocationContext);
+    }
+
+    private Map<String, TypeInstance> associateArguments(
+            TypeDeclaration invokingClass,
+            @Nullable BehaviorDeclaration behavior,
+            List<TypeInstance> providedArguments,
+            SignatureAttribute.TypeParameter[] providedTypeParams,
+            SignatureAttribute.TypeParameter[] classTypeParams,
+            SignatureAttribute.TypeParameter[] methodTypeParams,
+            List<TypeInstance> invocationContext)
+                throws BadBytecode {
         Map<String, TypeInstance> result = new HashMap<>();
 
-        for (int i = 0; i < methodTypeParams.length; ++i) {
-            result.put(methodTypeParams[i].getName(), providedArguments.get(i));
+        for (int i = 0; i < providedTypeParams.length; ++i) {
+            result.put(providedTypeParams[i].getName(), providedArguments.get(i));
         }
 
-        for (int i = 0; i < methodTypeParams.length; ++i) {
+        for (int i = 0; i < providedTypeParams.length; ++i) {
             checkProvidedArgument(
-                providedArguments.get(i), methodTypeParams[i], EMPTY_TYPE_PARAMS, methodTypeParams, result);
+                invokingClass, behavior, providedArguments.get(i), providedTypeParams[i],
+                classTypeParams, methodTypeParams, invocationContext, result);
         }
 
         return result;
     }
 
     private void checkProvidedArgument(
+            TypeDeclaration invokingClass,
+            @Nullable BehaviorDeclaration behavior,
             TypeInstance argumentType,
             SignatureAttribute.TypeParameter requiredType,
             SignatureAttribute.TypeParameter[] classTypeParams,
             SignatureAttribute.TypeParameter[] methodTypeParams,
+            List<TypeInstance> invocationContext,
             Map<String, TypeInstance> providedArguments)
                 throws BadBytecode {
+        if (argumentType.isPrimitive()) {
+            throw behavior != null ?
+                GeneralErrors.typeArgumentNotReference(sourceInfo, behavior, argumentType) :
+                GeneralErrors.typeArgumentNotReference(sourceInfo, invokingClass, argumentType);
+        }
+
         TypeInstance bound = requiredType.getClassBound() != null ?
             invokeType(
-                null, requiredType.getClassBound(), TypeInstance.WildcardType.NONE,
-                classTypeParams, methodTypeParams, List.of(), providedArguments) :
+                invokingClass, requiredType.getClassBound(), TypeInstance.WildcardType.NONE,
+                classTypeParams, methodTypeParams, invocationContext, providedArguments) :
             invokeType(
-                null, requiredType.getInterfaceBound()[0], TypeInstance.WildcardType.NONE,
-                classTypeParams, methodTypeParams, List.of(), providedArguments);
+                invokingClass, requiredType.getInterfaceBound()[0], TypeInstance.WildcardType.NONE,
+                classTypeParams, methodTypeParams, invocationContext, providedArguments);
 
         if (bound != null && !bound.isAssignableFrom(argumentType)) {
             throw GeneralErrors.typeArgumentOutOfBound(sourceInfo, argumentType, bound);
@@ -388,13 +475,23 @@ public final class TypeInvoker {
     }
 
     private TypeInstance invokeType(TypeDeclaration invokingClass, TypeDeclaration invokedClass,
-                                    Map<String, TypeInstance> providedArguments)
-            throws BadBytecode {
+                                    Map<String, TypeInstance> providedArguments) throws BadBytecode {
+        return invokeType(null, invokingClass, invokedClass, providedArguments);
+    }
+
+    private TypeInstance invokeType(@Nullable TypeInstance owner,
+                                    TypeDeclaration invokingClass,
+                                    TypeDeclaration invokedClass,
+                                    Map<String, TypeInstance> providedArguments) throws BadBytecode {
         SignatureAttribute.ClassSignature classSignature = getGenericClassSignature(invokedClass);
         List<TypeInstance> arguments = new ArrayList<>();
         List<TypeInstance> superTypes = new ArrayList<>();
+
         TypeInstance invokedTypeInstance = new TypeInstance(
-            invokedClass, arguments, superTypes, TypeInstance.WildcardType.NONE);
+            owner, invokedClass, arguments, superTypes, TypeInstance.WildcardType.NONE);
+
+        List<TypeInstance> invocationContext = owner != null ?
+            List.of(owner, invokedTypeInstance) : List.of(invokedTypeInstance);
 
         if (classSignature != null) {
             if (providedArguments.size() > 0 && providedArguments.size() != classSignature.getParameters().length) {
@@ -413,11 +510,11 @@ public final class TypeInvoker {
                     if (typeParam.getClassBound() != null) {
                         bound = invokeType(
                             invokingClass, typeParam.getClassBound(), TypeInstance.WildcardType.NONE,
-                            EMPTY_TYPE_PARAMS, EMPTY_TYPE_PARAMS, Collections.emptyList(), providedArguments);
+                            EMPTY_TYPE_PARAMS, EMPTY_TYPE_PARAMS, invocationContext, providedArguments);
                     } else if (typeParam.getInterfaceBound().length > 0) {
                         bound = invokeType(
                             invokingClass, typeParam.getInterfaceBound()[0], TypeInstance.WildcardType.NONE,
-                            EMPTY_TYPE_PARAMS, EMPTY_TYPE_PARAMS, Collections.emptyList(), providedArguments);
+                            EMPTY_TYPE_PARAMS, EMPTY_TYPE_PARAMS, invocationContext, providedArguments);
                     }
 
                     if (bound != null) {
@@ -434,7 +531,7 @@ public final class TypeInvoker {
                 TypeInstance.WildcardType.NONE,
                 classSignature.getParameters(),
                 EMPTY_TYPE_PARAMS,
-                List.of(invokedTypeInstance),
+                invocationContext,
                 Map.of());
 
             if (superType != null) {
@@ -448,7 +545,7 @@ public final class TypeInvoker {
                     TypeInstance.WildcardType.NONE,
                     classSignature.getParameters(),
                     EMPTY_TYPE_PARAMS,
-                    List.of(invokedTypeInstance),
+                    invocationContext,
                     Map.of());
 
                 if (superType != null) {
@@ -495,6 +592,10 @@ public final class TypeInvoker {
         if (invokedType instanceof SignatureAttribute.ClassType classType) {
             TypeDeclaration clazz = resolveDeclaration(invokedType.jvmTypeName());
             TypeInstance typeInstance;
+            TypeInstance owner = invokeOwnerType(
+                invokingClass, clazz, classType, classTypeParams,
+                methodTypeParams, invocationContext, providedArguments);
+
             SignatureAttribute.ClassSignature classSignature = getGenericClassSignature(clazz);
 
             if (classSignature != null) {
@@ -525,9 +626,13 @@ public final class TypeInvoker {
                     }
                 }
 
-                typeInstance = new TypeInstance(clazz, arguments, new ArrayList<>(), wildcard);
-                List<TypeInstance> extendedInvocationContext = new ArrayList<>(invocationContext.size() + 1);
+                typeInstance = new TypeInstance(owner, clazz, arguments, new ArrayList<>(), wildcard);
+                List<TypeInstance> extendedInvocationContext = new ArrayList<>(invocationContext.size() + 2);
                 extendedInvocationContext.addAll(invocationContext);
+                if (owner != null) {
+                    extendedInvocationContext.add(owner);
+                }
+
                 extendedInvocationContext.add(typeInstance);
 
                 SignatureAttribute.TypeParameter[] typeParams = classSignature.getParameters();
@@ -550,7 +655,7 @@ public final class TypeInvoker {
                     }
                 }
             } else {
-                typeInstance = new TypeInstance(clazz, Collections.emptyList(), new ArrayList<>(), wildcard);
+                typeInstance = new TypeInstance(owner, clazz, Collections.emptyList(), new ArrayList<>(), wildcard);
                 TypeDeclaration superClass = clazz.superClass().orElse(null);
 
                 if (superClass != null) {
@@ -566,8 +671,8 @@ public final class TypeInvoker {
         }
 
         if (invokedType instanceof SignatureAttribute.TypeVariable typeVar) {
-            if (providedArguments.size() > 0) {
-                TypeInstance result = providedArguments.get(typeVar.getName());
+            TypeInstance result = providedArguments.get(typeVar.getName());
+            if (result != null) {
                 if (wildcard == TypeInstance.WildcardType.NONE) {
                     return result;
                 }
@@ -580,6 +685,25 @@ public final class TypeInvoker {
         }
 
         throw new IllegalArgumentException();
+    }
+
+    private @Nullable TypeInstance invokeOwnerType(
+            TypeDeclaration invokingClass,
+            TypeDeclaration clazz,
+            SignatureAttribute.ClassType classType,
+            SignatureAttribute.TypeParameter[] classTypeParams,
+            SignatureAttribute.TypeParameter[] methodTypeParams,
+            List<TypeInstance> invocationContext,
+            Map<String, TypeInstance> providedArguments)
+                throws BadBytecode {
+        SignatureAttribute.ClassType declaringClass = classType.getDeclaringClass();
+        if (declaringClass == null || clazz.isStatic()) {
+            return null;
+        }
+
+        return invokeType(
+            invokingClass, declaringClass, TypeInstance.WildcardType.NONE,
+            classTypeParams, methodTypeParams, invocationContext, providedArguments);
     }
 
     private List<TypeInstance> invokeTypeArguments(
@@ -607,6 +731,9 @@ public final class TypeInvoker {
             if (typeArg.getType() instanceof SignatureAttribute.ClassType classTypeArg) {
                 TypeDeclaration argClass = resolveDeclaration(typeArg.getType().jvmTypeName());
                 TypeInstance existingInstance = null;
+                TypeInstance owner = invokeOwnerType(
+                    invokingClass, argClass, classTypeArg, classTypeParams,
+                    methodTypeParams, invocationContext, Map.of());
 
                 List<TypeInstance> typeArgs = invokeTypeArguments(
                     argClass, classTypeArg, classTypeParams, methodTypeParams, invocationContext);
@@ -616,6 +743,7 @@ public final class TypeInvoker {
 
                     if (instance.equals(argClass)
                             && instance.isRaw() == typeArgs.stream().anyMatch(TypeInstance::isRaw)
+                            && Objects.equals(instance.owner(), owner)
                             && instance.arguments().equals(typeArgs)) {
                         existingInstance = invocationContext.get(i);
                         break;
@@ -679,12 +807,14 @@ public final class TypeInvoker {
             }
 
             if (!invocationContext.isEmpty()) {
-                TypeInstance invoker = findInvoker(invokingClass, invocationContext.get(invocationContext.size() - 1));
-                if (invoker == null || invoker.arguments().isEmpty()) {
-                    continue;
-                }
+                for (int j = invocationContext.size() - 1; j >= 0; --j) {
+                    TypeInstance invoker = findInvoker(invokingClass, invocationContext.get(j));
+                    if (invoker == null || i >= invoker.arguments().size()) {
+                        continue;
+                    }
 
-                return invoker.arguments().get(i);
+                    return invoker.arguments().get(i);
+                }
             }
 
             return typeParam.getClassBound() != null ?
@@ -696,12 +826,62 @@ public final class TypeInvoker {
                     List.of(), List.of(), TypeInstance.WildcardType.NONE);
         }
 
+        Set<TypeInstance> visited = Collections.newSetFromMap(new IdentityHashMap<>());
+
+        for (int i = invocationContext.size() - 1; i >= 0; --i) {
+            TypeInstance result = findTypeArgument(invocationContext.get(i), typeVariableName, visited);
+            if (result != null) {
+                return result;
+            }
+        }
+
+        return null;
+    }
+
+    private @Nullable TypeInstance findTypeArgument(
+            TypeInstance typeInstance, String typeVariableName, Set<TypeInstance> visited) throws BadBytecode {
+        if (!visited.add(typeInstance)) {
+            return null;
+        }
+
+        SignatureAttribute.ClassSignature signature = getGenericClassSignature(typeInstance.declaration());
+        if (signature != null) {
+            SignatureAttribute.TypeParameter[] parameters = signature.getParameters();
+            for (int i = 0; i < parameters.length && i < typeInstance.arguments().size(); ++i) {
+                if (parameters[i].getName().equals(typeVariableName)) {
+                    return typeInstance.arguments().get(i);
+                }
+            }
+        }
+
+        if (typeInstance.owner() != null) {
+            TypeInstance result = findTypeArgument(typeInstance.owner(), typeVariableName, visited);
+            if (result != null) {
+                return result;
+            }
+        }
+
+        for (TypeInstance superType : typeInstance.superTypes()) {
+            TypeInstance result = findTypeArgument(superType, typeVariableName, visited);
+            if (result != null) {
+                return result;
+            }
+        }
+
         return null;
     }
 
     private @Nullable TypeInstance findInvoker(TypeDeclaration invokingClass, TypeInstance potentialInvoker) {
         if (potentialInvoker.equals(invokingClass)) {
             return potentialInvoker;
+        }
+
+        TypeInstance owner = potentialInvoker.owner();
+        if (owner != null) {
+            TypeInstance result = findInvoker(invokingClass, owner);
+            if (result != null) {
+                return result;
+            }
         }
 
         for (TypeInstance superType : potentialInvoker.superTypes()) {
@@ -719,7 +899,30 @@ public final class TypeInvoker {
             resolver = new Resolver(sourceInfo, cacheEnabled);
         }
 
-        return resolver.resolveClass(fullyQualifiedName);
+        return resolver.resolveClass(withoutTypeArguments(fullyQualifiedName));
+    }
+
+    private String withoutTypeArguments(String name) {
+        StringBuilder result = null;
+        int depth = 0;
+
+        for (int i = 0; i < name.length(); ++i) {
+            char ch = name.charAt(i);
+            if (ch == '<') {
+                if (result == null) {
+                    result = new StringBuilder(name.length());
+                    result.append(name, 0, i);
+                }
+
+                ++depth;
+            } else if (ch == '>') {
+                --depth;
+            } else if (depth == 0 && result != null) {
+                result.append(ch);
+            }
+        }
+
+        return result != null ? result.toString() : name;
     }
 
     private static Cache getCache() {

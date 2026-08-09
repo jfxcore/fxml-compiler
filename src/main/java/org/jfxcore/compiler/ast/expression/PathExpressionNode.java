@@ -27,14 +27,14 @@ import java.util.stream.Collectors;
 
 public class PathExpressionNode extends AbstractNode implements ExpressionNode {
 
-    private final Operator operator;
+    private final BindingOperator operator;
     private final List<PathSegmentNode> segments;
     private BindingContextNode bindingContext;
     private ResolvedPath resolvedPath;
     private ResolvedPath resolvedObservablePath;
 
     public PathExpressionNode(
-            Operator operator,
+            BindingOperator operator,
             BindingContextNode bindingContext,
             Collection<? extends PathSegmentNode> segments,
             SourceInfo sourceInfo) {
@@ -44,12 +44,17 @@ public class PathExpressionNode extends AbstractNode implements ExpressionNode {
         this.segments = new ArrayList<>(checkNotNull(segments));
     }
 
-    public Operator getOperator() {
+    public BindingOperator getOperator() {
         return operator;
     }
 
     public BindingContextNode getBindingContext() {
         return bindingContext;
+    }
+
+    @Override
+    public int getBindingDistance() {
+        return bindingContext.getBindingDistance();
     }
 
     public List<PathSegmentNode> getSegments() {
@@ -85,19 +90,23 @@ public class PathExpressionNode extends AbstractNode implements ExpressionNode {
     }
 
     private ResolvedPath resolvePath(boolean preferObservable, boolean mayResolveAgainstImports, int limit) {
+        if (!mayResolveAgainstImports || limit != Integer.MAX_VALUE) {
+            return resolvePathImpl(preferObservable, mayResolveAgainstImports, limit);
+        }
+
         if (preferObservable) {
             if (resolvedObservablePath != null) {
                 return resolvedObservablePath;
             }
 
-            return resolvedObservablePath = resolvePathImpl(true, mayResolveAgainstImports, limit);
+            return resolvedObservablePath = resolvePathImpl(true, true, limit);
         }
 
         if (resolvedPath != null) {
             return resolvedPath;
         }
 
-        return resolvedPath = resolvePathImpl(false, mayResolveAgainstImports, limit);
+        return resolvedPath = resolvePathImpl(false, true, limit);
     }
 
     private ResolvedPath resolvePathImpl(boolean preferObservable, boolean mayResolveAgainstImports, int limit) {

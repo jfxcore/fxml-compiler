@@ -6,6 +6,7 @@ package org.jfxcore.compiler.type;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.diagnostic.errors.GeneralErrors;
 import org.jfxcore.compiler.util.CompilationContext;
+import org.jetbrains.annotations.Nullable;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -22,15 +23,16 @@ public class TypeInstance {
 
     private static final class ErasedTypeInstance extends TypeInstance {
         ErasedTypeInstance(TypeInstance source) {
-            super(source.declaration(), source.arguments(), source.superTypes(), source.wildcardType());
+            super(source.owner(), source.declaration(), source.arguments(), source.superTypes(), source.wildcardType());
         }
 
-        ErasedTypeInstance(TypeDeclaration type,
+        ErasedTypeInstance(@Nullable TypeInstance owner,
+                           TypeDeclaration type,
                            int dimensions,
                            List<TypeInstance> arguments,
                            List<TypeInstance> superTypes,
                            WildcardType wildcard) {
-            super(type, dimensions, arguments, superTypes, wildcard);
+            super(owner, type, dimensions, arguments, superTypes, wildcard);
         }
     }
 
@@ -150,6 +152,7 @@ public class TypeInstance {
     }
 
     private final TypeDeclaration type;
+    private final @Nullable TypeInstance owner;
     private final int dimensions;
     private final WildcardType wildcard;
     private List<TypeInstance> arguments;
@@ -174,6 +177,15 @@ public class TypeInstance {
                  List<TypeInstance> arguments,
                  List<TypeInstance> superTypes,
                  WildcardType wildcard) {
+        this(null, type, arguments, superTypes, wildcard);
+    }
+
+    TypeInstance(@Nullable TypeInstance owner,
+                 TypeDeclaration type,
+                 List<TypeInstance> arguments,
+                 List<TypeInstance> superTypes,
+                 WildcardType wildcard) {
+        this.owner = owner;
         this.type = Objects.requireNonNull(type);
         this.dimensions = type.dimensions();
         this.arguments = arguments;
@@ -190,6 +202,16 @@ public class TypeInstance {
                          List<TypeInstance> arguments,
                          List<TypeInstance> superTypes,
                          WildcardType wildcard) {
+        this(null, type, dimensions, arguments, superTypes, wildcard);
+    }
+
+    private TypeInstance(@Nullable TypeInstance owner,
+                         TypeDeclaration type,
+                         int dimensions,
+                         List<TypeInstance> arguments,
+                         List<TypeInstance> superTypes,
+                         WildcardType wildcard) {
+        this.owner = owner;
         this.type = Objects.requireNonNull(type);
         this.dimensions = dimensions;
         this.arguments = arguments;
@@ -202,6 +224,10 @@ public class TypeInstance {
     }
 
     TypeInstance freeze(SourceInfo sourceInfo) {
+        if (owner != null) {
+            owner.freeze(sourceInfo);
+        }
+
         superTypes = List.copyOf(superTypes);
 
         if (arguments != (arguments = List.copyOf(arguments))) {
@@ -230,8 +256,8 @@ public class TypeInstance {
             .resolveClass(this.type.name() + "[]".repeat(dimensions));
 
         return this instanceof ErasedTypeInstance ?
-            new ErasedTypeInstance(type, dimensions, arguments, superTypes, wildcard) :
-            new TypeInstance(type, dimensions, arguments, superTypes, wildcard);
+            new ErasedTypeInstance(owner, type, dimensions, arguments, superTypes, wildcard) :
+            new TypeInstance(owner, type, dimensions, arguments, superTypes, wildcard);
     }
 
     public TypeInstance withWildcard(WildcardType wildcard) {
@@ -240,11 +266,15 @@ public class TypeInstance {
         }
 
         return this instanceof ErasedTypeInstance ?
-            new ErasedTypeInstance(type, dimensions, arguments, superTypes, wildcard) :
-            new TypeInstance(type, dimensions, arguments, superTypes, wildcard);
+            new ErasedTypeInstance(owner, type, dimensions, arguments, superTypes, wildcard) :
+            new TypeInstance(owner, type, dimensions, arguments, superTypes, wildcard);
     }
 
     public boolean isRaw() {
+        if (owner != null && owner.isRaw()) {
+            return true;
+        }
+
         for (int i = 0, max = arguments.size(); i < max; ++i) {
             if (arguments.get(i) instanceof ErasedTypeInstance) {
                 return true;
@@ -268,6 +298,10 @@ public class TypeInstance {
 
     public TypeDeclaration declaration() {
         return type;
+    }
+
+    public @Nullable TypeInstance owner() {
+        return owner;
     }
 
     public String name() {
@@ -304,7 +338,7 @@ public class TypeInstance {
         }
 
         return componentType = new TypeInstance(
-            type.requireComponentType(), arguments, superTypes, wildcard);
+            owner, type.requireComponentType(), arguments, superTypes, wildcard);
     }
 
     /**
@@ -432,6 +466,10 @@ public class TypeInstance {
             return false;
         }
 
+        if (type.equals(from.type) && !isOwnerAssignableFrom(from, context)) {
+            return false;
+        }
+
         if (isRaw() || from.isRaw()) {
             return true;
         }
@@ -469,6 +507,14 @@ public class TypeInstance {
         }
 
         return false;
+    }
+
+    private boolean isOwnerAssignableFrom(TypeInstance from, AssignmentContext context) {
+        if (owner == null || from.owner == null) {
+            return true;
+        }
+
+        return owner.isAssignableFrom(from.owner, context);
     }
 
     public boolean subtypeOf(TypeInstance other) {
@@ -527,7 +573,8 @@ public class TypeInstance {
         if (arguments.size() != that.arguments.size()) return false;
         if (dimensions != that.dimensions) return false;
         if (wildcard != that.wildcard) return false;
-        return arguments.isEmpty() ? type.equals(that.type) : equals(new HashSet<>(), that);
+        if (owner == null && that.owner == null && arguments.isEmpty()) return type.equals(that.type);
+        return equals(new HashSet<>(), that);
     }
 
     private boolean equals(Set<TypeInstance> set, TypeInstance other) {
@@ -540,6 +587,14 @@ public class TypeInstance {
         if (!type.equals(other.type)
                 || arguments.size() != other.arguments.size()
                 || wildcard != other.wildcard) {
+            return false;
+        }
+
+        if ((owner == null) != (other.owner == null)) {
+            return false;
+        }
+
+        if (owner != null && !owner.equals(set, other.owner)) {
             return false;
         }
 
@@ -567,7 +622,11 @@ public class TypeInstance {
 
         String className;
 
-        if (javaNames) {
+        if (owner != null) {
+            builder.append(owner.toString(simpleNames, javaNames));
+            builder.append(javaNames ? '.' : '$');
+            className = memberName();
+        } else if (javaNames) {
             className = type.javaName();
         } else if (simpleNames) {
             className = type.simpleName();
@@ -600,9 +659,20 @@ public class TypeInstance {
         return builder.toString();
     }
 
+    private String memberName() {
+        String className = type.name();
+
+        while (className.endsWith("[]")) {
+            className = className.substring(0, className.length() - 2);
+        }
+
+        int separator = Math.max(className.lastIndexOf('$'), className.lastIndexOf('.'));
+        return separator >= 0 ? className.substring(separator + 1) : className;
+    }
+
     @Override
     public int hashCode() {
-        return Objects.hash(type, arguments.size(), superTypes.size(), dimensions, wildcard);
+        return Objects.hash(owner, type, arguments.size(), superTypes.size(), dimensions, wildcard);
     }
 
     @Override

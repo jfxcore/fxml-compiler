@@ -20,6 +20,7 @@ import org.jfxcore.compiler.type.TypeHelper;
 import org.jfxcore.compiler.type.TypeInstance;
 import org.jfxcore.compiler.type.TypeInvoker;
 import org.jfxcore.compiler.util.Bytecode;
+import org.jfxcore.compiler.util.Local;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -47,6 +48,7 @@ public class EmitObjectNode extends ReferenceableNode {
         private final Collection<? extends ValueNode> arguments;
         private final SourceInfo sourceInfo;
         private Collection<? extends Node> children = Collections.emptyList();
+        private ValueEmitterNode enclosingInstance;
         private String fieldName;
 
         private ConstructorBuilder(
@@ -70,6 +72,11 @@ public class EmitObjectNode extends ReferenceableNode {
             return this;
         }
 
+        public ConstructorBuilder enclosingInstance(@Nullable ValueEmitterNode enclosingInstance) {
+            this.enclosingInstance = enclosingInstance;
+            return this;
+        }
+
         public EmitObjectNode create() {
             for (ValueNode argument : arguments) {
                 if (argument instanceof ObjectNode objectNode) {
@@ -81,6 +88,7 @@ public class EmitObjectNode extends ReferenceableNode {
                 fieldName,
                 type,
                 constructor,
+                enclosingInstance,
                 arguments,
                 children,
                 EmitObjectNode.CreateKind.CONSTRUCTOR,
@@ -245,6 +253,7 @@ public class EmitObjectNode extends ReferenceableNode {
     private final List<ValueNode> arguments;
     private final List<Node> children;
     private final CreateKind createKind;
+    private ValueEmitterNode enclosingInstance;
     private ResolvedTypeNode type;
 
     private EmitObjectNode(
@@ -259,6 +268,18 @@ public class EmitObjectNode extends ReferenceableNode {
     }
 
     private EmitObjectNode(
+            @Nullable String fieldName,
+            TypeInstance type,
+            @Nullable BehaviorDeclaration constructorOrFactoryMethod,
+            @Nullable ValueEmitterNode enclosingInstance,
+            Collection<? extends ValueNode> arguments,
+            Collection<? extends Node> children,
+            CreateKind createKind,
+            SourceInfo sourceInfo) {
+        this(null, fieldName, type, constructorOrFactoryMethod, enclosingInstance, arguments, children, createKind, sourceInfo);
+    }
+
+    private EmitObjectNode(
             @Nullable ReferenceableNode referencedNode,
             @Nullable String fieldName,
             TypeInstance type,
@@ -267,9 +288,23 @@ public class EmitObjectNode extends ReferenceableNode {
             Collection<? extends Node> children,
             CreateKind createKind,
             SourceInfo sourceInfo) {
+        this(referencedNode, fieldName, type, constructorOrFactoryMethod, null, arguments, children, createKind, sourceInfo);
+    }
+
+    private EmitObjectNode(
+            @Nullable ReferenceableNode referencedNode,
+            @Nullable String fieldName,
+            TypeInstance type,
+            @Nullable BehaviorDeclaration constructorOrFactoryMethod,
+            @Nullable ValueEmitterNode enclosingInstance,
+            Collection<? extends ValueNode> arguments,
+            Collection<? extends Node> children,
+            CreateKind createKind,
+            SourceInfo sourceInfo) {
         super(referencedNode, fieldName, sourceInfo);
         this.type = new ResolvedTypeNode(checkNotNull(type), sourceInfo);
         this.constructorOrFactoryMethod = constructorOrFactoryMethod;
+        this.enclosingInstance = enclosingInstance;
         this.arguments = new ArrayList<>(checkNotNull(arguments));
         this.children = new ArrayList<>(checkNotNull(children));
         this.createKind = checkNotNull(createKind);
@@ -287,7 +322,8 @@ public class EmitObjectNode extends ReferenceableNode {
     public boolean addsToParentStack() {
         return !(Markup.isAvailable() && type.getTypeInstance().subtypeOf(Markup.MarkupExtensionDecl()))
             && (children.stream().anyMatch(RuntimeContextHelper::needsParentStack)
-                || arguments.stream().anyMatch(RuntimeContextHelper::needsParentStack));
+                || arguments.stream().anyMatch(RuntimeContextHelper::needsParentStack)
+                || enclosingInstance != null && RuntimeContextHelper.needsParentStack(enclosingInstance));
     }
 
     /**
@@ -407,44 +443,90 @@ public class EmitObjectNode extends ReferenceableNode {
     private void emitInvokeConstructor(TypeDeclaration type, BytecodeEmitContext context) {
         Bytecode code = context.getOutput();
         ConstructorDeclaration constructor = (ConstructorDeclaration)constructorOrFactoryMethod;
-        TypeInstance[] paramTypes = new TypeInvoker(getSourceInfo()).invokeParameterTypes(constructor, List.of());
+        boolean preparedArguments = arguments.stream().allMatch(EmitMethodArgumentNode.class::isInstance);
+        TypeInstance[] paramTypes = null;
+
+        if (!preparedArguments) {
+            List<TypeInstance> invocationContext = new ArrayList<>();
+            addOwnerChain(invocationContext, this.type.getTypeInstance());
+
+            paramTypes = new TypeInvoker(getSourceInfo()).invokeSourceParameterTypes(
+                constructor, invocationContext, List.of());
+        }
+
         boolean varargs = constructor.isVarArgs();
+        Local enclosingLocal = null;
+
+        if (enclosingInstance != null) {
+            TypeDeclaration enclosingType = constructor.enclosingInstanceType().orElseThrow();
+            enclosingLocal = code.acquireLocal(enclosingType);
+
+            context.emit(enclosingInstance);
+
+            code.ldc("The enclosing instance must not be null")
+                .invoke(ObjectsDecl().requireDeclaredMethod("requireNonNull", ObjectDecl(), StringDecl()))
+                .checkcast(enclosingType)
+                .astore(enclosingLocal);
+        }
 
         code.anew(type)
             .dup();
 
-        for (int i = 0; i < paramTypes.length; ++i) {
-            boolean lastParam = i == paramTypes.length - 1;
+        if (enclosingLocal != null) {
+            code.aload(enclosingLocal);
+        }
 
-            if (varargs && lastParam) {
-                TypeDeclaration componentType = paramTypes[i].componentType().declaration();
-                TypeInstance argType = TypeHelper.getTypeInstance(arguments.get(i));
+        if (preparedArguments) {
+            for (ValueNode argument : arguments) {
+                context.emit(argument);
+            }
+        } else {
+            for (int i = 0; i < paramTypes.length; ++i) {
+                boolean lastParam = i == paramTypes.length - 1;
 
-                if (arguments.size() > paramTypes.length || !argType.subtypeOf(paramTypes[i])) {
-                    code.newarray(componentType, arguments.size() - paramTypes.length + 1);
+                if (varargs && lastParam) {
+                    TypeDeclaration componentType = paramTypes[i].componentType().declaration();
+                    TypeInstance argType = TypeHelper.getTypeInstance(arguments.get(i));
 
-                    for (int j = i; j < arguments.size(); ++j) {
-                        argType = TypeHelper.getTypeInstance(arguments.get(j));
+                    if (arguments.size() > paramTypes.length || !argType.subtypeOf(paramTypes[i])) {
+                        code.newarray(componentType, arguments.size() - paramTypes.length + 1);
 
-                        code.dup()
-                            .iconst(j - i);
+                        for (int j = i; j < arguments.size(); ++j) {
+                            argType = TypeHelper.getTypeInstance(arguments.get(j));
 
-                        context.emit(arguments.get(j));
+                            code.dup()
+                                .iconst(j - i);
 
-                        code.castconv(argType.declaration(), componentType)
-                            .arraystore(componentType);
+                            context.emit(arguments.get(j));
+
+                            code.castconv(argType.declaration(), componentType)
+                                .arraystore(componentType);
+                        }
+                    } else {
+                        context.emit(arguments.get(i));
+                        code.castconv(argType.declaration(), paramTypes[i].declaration());
                     }
                 } else {
                     context.emit(arguments.get(i));
-                    code.castconv(argType.declaration(), paramTypes[i].declaration());
+                    code.castconv(TypeHelper.getTypeDeclaration(arguments.get(i)), paramTypes[i].declaration());
                 }
-            } else {
-                context.emit(arguments.get(i));
-                code.castconv(TypeHelper.getTypeDeclaration(arguments.get(i)), paramTypes[i].declaration());
             }
         }
 
         code.invoke(constructor);
+
+        if (enclosingLocal != null) {
+            code.releaseLocal(enclosingLocal);
+        }
+    }
+
+    private static void addOwnerChain(List<TypeInstance> result, TypeInstance type) {
+        TypeInstance owner = type.owner();
+        if (owner != null) {
+            addOwnerChain(result, owner);
+        }
+
+        result.add(type);
     }
 
     private void emitInvokeValueOf(BytecodeEmitContext context) {
@@ -463,7 +545,13 @@ public class EmitObjectNode extends ReferenceableNode {
     @Override
     public void acceptChildren(Visitor visitor) {
         super.acceptChildren(visitor);
+
         type = (ResolvedTypeNode)type.accept(visitor);
+
+        if (enclosingInstance != null) {
+            enclosingInstance = (ValueEmitterNode)enclosingInstance.accept(visitor);
+        }
+
         acceptChildren(arguments, visitor, ValueNode.class);
         acceptChildren(children, visitor, Node.class);
     }
@@ -475,6 +563,7 @@ public class EmitObjectNode extends ReferenceableNode {
             getId(),
             type.getTypeInstance(),
             constructorOrFactoryMethod,
+            enclosingInstance != null ? enclosingInstance.deepClone() : null,
             deepClone(arguments),
             deepClone(children),
             createKind,
@@ -488,6 +577,7 @@ public class EmitObjectNode extends ReferenceableNode {
         EmitObjectNode that = (EmitObjectNode)o;
         return Objects.equals(getId(), that.getId()) &&
             Objects.equals(constructorOrFactoryMethod, that.constructorOrFactoryMethod) &&
+            Objects.equals(enclosingInstance, that.enclosingInstance) &&
             arguments.equals(that.arguments) &&
             children.equals(that.children) &&
             createKind == that.createKind &&
@@ -497,6 +587,6 @@ public class EmitObjectNode extends ReferenceableNode {
     @Override
     public int hashCode() {
         return Objects.hash(
-            getId(), constructorOrFactoryMethod, arguments, children, createKind, type);
+            getId(), constructorOrFactoryMethod, enclosingInstance, arguments, children, createKind, type);
     }
 }
