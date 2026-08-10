@@ -72,6 +72,22 @@ public class MemberClassConstructionTest extends CompilerTestBase {
             return "integer:" + value;
         }
 
+        Object AccessibleConstructor(String value) {
+            return "method:" + value;
+        }
+
+        public Object InaccessibleConstructor(String value) {
+            return "method:" + value;
+        }
+
+        public String pick(Object value) {
+            return "object:" + value;
+        }
+
+        String pick(String value) {
+            return "string:" + value;
+        }
+
         public String orderedArgument() {
             argumentCalls++;
             order.append('a');
@@ -153,6 +169,22 @@ public class MemberClassConstructionTest extends CompilerTestBase {
     public static class MethodSetWins {
         public final Object value;
         public MethodSetWins(Object value) { this.value = value; }
+    }
+
+    public static class AccessibleConstructor {
+        public final String value;
+        public AccessibleConstructor(String value) { this.value = value; }
+    }
+
+    public static class InaccessibleConstructor {
+        public final String value;
+        InaccessibleConstructor(String value) { this.value = value; }
+    }
+
+    public static class SameCategoryConstructor {
+        public final String selected;
+        public SameCategoryConstructor(Object value) { selected = "object:" + value; }
+        SameCategoryConstructor(String value) { selected = "string:" + value; }
     }
 
     public static class Outer<X> {
@@ -743,6 +775,47 @@ public class MemberClassConstructionTest extends CompilerTestBase {
         """, "MethodPreferredCall", null);
 
         assertEquals("method:value", methodPreferred.resultProperty().get());
+    }
+
+    @Test
+    public void Inaccessible_Callables_Are_Excluded_From_Joint_Overload_Resolution() {
+        TestPane constructorSelected = compileAndRun("""
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                      result="$AccessibleConstructor('value')"/>
+        """, "AccessibleConstructorCall", null);
+
+        AccessibleConstructor constructed = assertInstanceOf(
+            AccessibleConstructor.class, constructorSelected.resultProperty().get());
+        assertEquals("value", constructed.value);
+
+        TestPane methodSelected = compileAndRun("""
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                      result="$InaccessibleConstructor('value')"/>
+        """, "InaccessibleConstructorCall", null);
+
+        assertEquals("method:value", methodSelected.resultProperty().get());
+    }
+
+    @Test
+    public void Accessible_Method_Overload_Is_Preserved_During_Emission() {
+        TestPane root = compileAndRun("""
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                      result="$pick('value')"/>
+        """, "AccessibleMethodOverload", null);
+
+        assertEquals("object:value", root.resultProperty().get());
+    }
+
+    @Test
+    public void Accessible_Constructor_Overload_Is_Preserved_During_Emission() {
+        TestPane root = compileAndRun("""
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                      result="$SameCategoryConstructor('value')"/>
+        """, "AccessibleConstructorOverload", null);
+
+        SameCategoryConstructor result = assertInstanceOf(
+            SameCategoryConstructor.class, root.resultProperty().get());
+        assertEquals("object:value", result.selected);
     }
 
     @Test

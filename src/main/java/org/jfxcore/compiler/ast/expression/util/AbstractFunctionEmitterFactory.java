@@ -80,15 +80,24 @@ abstract class AbstractFunctionEmitterFactory {
 
     protected InvocationInfo createInvocation(
             FunctionExpressionNode functionExpression, boolean bidirectional, boolean preferObservable) {
-        return createInvocation(functionExpression, bidirectional, preferObservable, targetType);
+        return createInvocation(functionExpression, bidirectional, preferObservable, targetType, null);
+    }
+
+    protected InvocationInfo createInvocation(
+            FunctionExpressionNode functionExpression,
+            boolean bidirectional,
+            boolean preferObservable,
+            MethodFinder.ResolvedCandidate selected) {
+        return createInvocation(functionExpression, bidirectional, preferObservable, targetType, selected);
     }
 
     private InvocationInfo createInvocation(
             FunctionExpressionNode functionExpression,
             boolean bidirectional,
             boolean preferObservable,
-            @Nullable TypeInstance targetType) {
-        var key = new InvocationInfoKey(functionExpression, bidirectional, preferObservable, targetType);
+            @Nullable TypeInstance targetType,
+            @Nullable MethodFinder.ResolvedCandidate selected) {
+        var key = new InvocationInfoKey(functionExpression, bidirectional, preferObservable, targetType, selected);
         var cachedInvocationInfo = invocationCache.get(key);
         if (cachedInvocationInfo != null) {
             return cachedInvocationInfo;
@@ -103,12 +112,23 @@ abstract class AbstractFunctionEmitterFactory {
             .toList();
 
         List<Node> methodArguments = functionExpression.getArguments();
-        Callable function = findMethod(methodPath, targetType, witnesses, methodArguments, preferObservable);
-        Callable inverseFunction = null;
+        Callable function;
+        TypeInstance[] paramTypes;
+        TypeInstance returnType;
 
-        TypeInvoker invoker = new TypeInvoker(functionExpression.getSourceInfo());
-        TypeInstance[] paramTypes = invoker.invokeParameterTypes(function.getBehavior(), function.getInvocationContext(), witnesses);
-        TypeInstance returnType = invoker.invokeReturnType(function.getBehavior(), function.getInvocationContext(), witnesses);
+        if (selected != null) {
+            function = createSelectedMethodCallable(methodPath, selected, preferObservable);
+            paramTypes = selected.parameterTypes().toArray(TypeInstance[]::new);
+            returnType = selected.resultType();
+        } else {
+            function = findMethod(methodPath, targetType, witnesses, methodArguments, preferObservable);
+
+            TypeInvoker invoker = new TypeInvoker(functionExpression.getSourceInfo());
+            paramTypes = invoker.invokeParameterTypes(function.getBehavior(), function.getInvocationContext(), witnesses);
+            returnType = invoker.invokeReturnType(function.getBehavior(), function.getInvocationContext(), witnesses);
+        }
+
+        Callable inverseFunction = null;
 
         PreparedArguments preparedArguments = prepareArguments(
             function.getBehavior(), paramTypes, methodArguments, bidirectional, preferObservable,
@@ -161,7 +181,16 @@ abstract class AbstractFunctionEmitterFactory {
             ConstructorExpressionNode expression,
             boolean preferObservable,
             boolean bidirectional) {
-        var key = new ConstructionInvocationInfoKey(expression, preferObservable, bidirectional);
+        return createConstructorInvocation(expression, preferObservable, bidirectional, null);
+    }
+
+    protected InvocationInfo createConstructorInvocation(
+            ConstructorExpressionNode expression,
+            boolean preferObservable,
+            boolean bidirectional,
+            @Nullable MethodFinder.ResolvedCandidate selected) {
+        var key = new ConstructionInvocationInfoKey(
+            expression, preferObservable, bidirectional, selected);
         InvocationInfo cached = constructionInvocationCache.get(key);
         if (cached != null) {
             return cached;
@@ -230,21 +259,34 @@ abstract class AbstractFunctionEmitterFactory {
             .map(Node::getSourceInfo)
             .toList();
 
-        List<DiagnosticInfo> diagnostics = new ArrayList<>();
+        ConstructorDeclaration constructor;
+        TypeInstance[] parameterTypes;
 
-        ConstructorDeclaration constructor = new MethodFinder(invocationContext, constructedClass).findConstructor(
-            witnesses, argumentTypes, argumentSourceInfo, diagnostics, expression.getSourceInfo());
+        if (selected != null) {
+            constructor = (ConstructorDeclaration)selected.candidate().behavior();
+            invocationContext = selected.candidate().invocationContext();
+            parameterTypes = selected.parameterTypes().toArray(TypeInstance[]::new);
+        } else {
+            List<DiagnosticInfo> diagnostics = new ArrayList<>();
 
-        if (constructor == null) {
-            if (!diagnostics.isEmpty()) {
-                throw ObjectInitializationErrors.constructorNotFound(
-                    expression.getSourceInfo(),
-                    constructedClass,
-                    diagnostics.stream().map(DiagnosticInfo::getDiagnostic).toArray(Diagnostic[]::new));
+            constructor = new MethodFinder(invocationContext, constructedClass).findConstructor(
+                witnesses, argumentTypes, argumentSourceInfo, diagnostics, expression.getSourceInfo());
+
+            if (constructor == null) {
+                if (!diagnostics.isEmpty()) {
+                    throw ObjectInitializationErrors.constructorNotFound(
+                        expression.getSourceInfo(),
+                        constructedClass,
+                        diagnostics.stream().map(DiagnosticInfo::getDiagnostic).toArray(Diagnostic[]::new));
+                }
+
+                throw ObjectInitializationErrors.constructorNotFound(expression.getSourceInfo(), constructedClass);
             }
 
-            throw ObjectInitializationErrors.constructorNotFound(expression.getSourceInfo(), constructedClass);
+            parameterTypes = invoker.invokeSourceParameterTypes(constructor, invocationContext, witnesses);
         }
+
+        TypeInstance invocationType = selected != null ? selected.resultType() : constructedType;
 
         AccessVerifier.verifyAccessible(constructor, expression.getInvocationContext(), expression.getSourceInfo());
 
@@ -255,8 +297,6 @@ abstract class AbstractFunctionEmitterFactory {
         Callable callable = new Callable(
             invocationContext, qualifierInfo != null ? List.of(qualifierInfo.getValue()) : List.of(),
             receiverDependencyKind, constructor, expression.getSourceInfo());
-
-        TypeInstance[] parameterTypes = invoker.invokeSourceParameterTypes(constructor, invocationContext, witnesses);
 
         PreparedArguments preparedArguments = prepareArguments(
             constructor, parameterTypes, expression.getArguments(), bidirectional, preferObservable,
@@ -277,7 +317,7 @@ abstract class AbstractFunctionEmitterFactory {
             PathExpressionNode inversePath = expression.getInversePath();
             if (inversePath != null) {
                 class ReturnValueNode extends AbstractNode implements ValueEmitterNode {
-                    final ResolvedTypeNode type = new ResolvedTypeNode(constructedType, typeSourceInfo);
+                    final ResolvedTypeNode type = new ResolvedTypeNode(invocationType, typeSourceInfo);
                     ReturnValueNode() { super(typeSourceInfo); }
                     @Override public void emit(BytecodeEmitContext context) {}
                     @Override public ValueEmitterNode deepClone() { return null; }
@@ -301,13 +341,13 @@ abstract class AbstractFunctionEmitterFactory {
                 inverseFunction = findInverseFunctionViaAnnotation(
                     callable,
                     parameterTypes[0],
-                    constructedType,
+                    invocationType,
                     typeSourceInfo);
             }
         }
 
         InvocationInfo result = new InvocationInfo(
-            preparedArguments.observable(), constructedType, callable,
+            preparedArguments.observable(), invocationType, callable,
             inverseFunction, preparedArguments.values());
 
         constructionInvocationCache.put(key, result);
@@ -436,7 +476,9 @@ abstract class AbstractFunctionEmitterFactory {
             EmitterFactory factory;
 
             if (argument instanceof FunctionExpressionNode funcExpressionArg) {
-                InvocationInfo invocationInfo = createInvocation(funcExpressionArg, false, preferObservable, paramType);
+                InvocationInfo invocationInfo = createInvocation(
+                    funcExpressionArg, false, preferObservable, paramType, null);
+
                 if (invocationInfo.observable()) {
                     factory = new ObservableFunctionEmitterFactory(funcExpressionArg, invokingType, paramType);
                 } else {
@@ -511,6 +553,27 @@ abstract class AbstractFunctionEmitterFactory {
         return findCallable(
             pathExpression, returnType, typeWitnesses, arguments,
             preferObservable, true, false);
+    }
+
+    private Callable createSelectedMethodCallable(
+            PathExpressionNode pathExpression,
+            MethodFinder.ResolvedCandidate selected,
+            boolean preferObservable) {
+        MethodDeclaration method = (MethodDeclaration)selected.candidate().behavior();
+        ResolvedPath resolvedPath = null;
+
+        if (!selected.candidate().staticInvocation() && pathExpression.getSegments().size() > 1) {
+            resolvedPath = pathExpression.resolvePath(preferObservable, pathExpression.getSegments().size() - 1);
+        }
+
+        ReceiverInfo receiverInfo = getMethodReceiverInfo(pathExpression, resolvedPath, method, preferObservable);
+
+        return new Callable(
+            selected.candidate().invocationContext(),
+            receiverInfo.emitters(),
+            receiverInfo.dependencyKind(),
+            method,
+            pathExpression.getSourceInfo());
     }
 
     protected final Callable findInverseCallable(
@@ -684,7 +747,7 @@ abstract class AbstractFunctionEmitterFactory {
 
     protected final TypeInstance getArgumentType(Node argument, boolean preferObservable) {
         if (argument instanceof FunctionExpressionNode funcExpressionArg) {
-            return createInvocation(funcExpressionArg, false, preferObservable, null).type();
+            return createInvocation(funcExpressionArg, false, preferObservable, null, null).type();
         } else if (argument instanceof PathExpressionNode pathExpressionArg) {
             BindingOperator operator = pathExpressionArg.getOperator();
             if (operator == BindingOperator.NOT || operator == BindingOperator.BOOLIFY) {
@@ -813,12 +876,14 @@ abstract class AbstractFunctionEmitterFactory {
         FunctionExpressionNode functionExpression,
         boolean bidirectional,
         boolean preferObservable,
-        @Nullable TypeInstance targetType) {}
+        @Nullable TypeInstance targetType,
+        @Nullable MethodFinder.ResolvedCandidate selected) {}
 
     private record ConstructionInvocationInfoKey(
         ConstructorExpressionNode expression,
         boolean preferObservable,
-        boolean bidirectional) {}
+        boolean bidirectional,
+        @Nullable MethodFinder.ResolvedCandidate selected) {}
 
     private record ReceiverInfo(
         List<ValueEmitterNode> emitters,

@@ -1737,6 +1737,22 @@ public class FunctionBindingTest extends CompilerTestBase {
     }
 
     @Test
+    public void Bind_Bidirectional_To_Parenthesized_Method_With_InverseMethod() {
+        BidirectionalTestPane root = compileAndRun("""
+            <BidirectionalTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                                   id="#{(doubleToString(doubleProp))}"/>
+        """);
+
+        assertEquals("1.0", root.getId());
+
+        root.setId("2");
+        assertEquals(2, root.doubleProp.get(), 0.001);
+
+        root.doubleProp.set(3);
+        assertEquals("3.0", root.getId());
+    }
+
+    @Test
     public void Bind_Bidirectional_To_Static_Method_With_InverseMethod() {
         BidirectionalTestPane root = compileAndRun("""
             <BidirectionalTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"

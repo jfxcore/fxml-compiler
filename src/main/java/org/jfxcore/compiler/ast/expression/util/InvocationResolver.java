@@ -49,8 +49,6 @@ import java.util.stream.Collectors;
  */
 final class InvocationResolver extends AbstractFunctionEmitterFactory {
 
-    private enum Category { METHOD, CONSTRUCTION }
-
     record ResolvedInvocation(InvocationInfo invocation, boolean construction) {}
 
     private record Alternative(
@@ -77,23 +75,24 @@ final class InvocationResolver extends AbstractFunctionEmitterFactory {
     }
 
     ResolvedInvocation resolve(boolean bidirectional, boolean preferObservable) {
-        Category category = resolveCategory(preferObservable);
+        MethodFinder.ResolvedCandidate selected = resolveCandidate(preferObservable);
 
-        if (category == Category.METHOD) {
-            Alternative method = createMethodAlternative(bidirectional, preferObservable);
+        if (selected != null && selected.candidate().behavior() instanceof MethodDeclaration) {
+            Alternative method = createMethodAlternative(bidirectional, preferObservable, selected);
             return new ResolvedInvocation(method.invocation(), false);
         }
 
-        if (category == Category.CONSTRUCTION) {
+        if (selected != null && selected.candidate().behavior() instanceof ConstructorDeclaration) {
             ConstructorExpressionNode constructorExpression = createConstructorExpression(preferObservable);
-            InvocationInfo invocation = createConstructorInvocation(constructorExpression, preferObservable, bidirectional);
+            InvocationInfo invocation = createConstructorInvocation(
+                constructorExpression, preferObservable, bidirectional, selected);
             return new ResolvedInvocation(invocation, true);
         }
 
         return resolveFailure(bidirectional, preferObservable);
     }
 
-    private @Nullable Category resolveCategory(boolean preferObservable) {
+    private @Nullable MethodFinder.ResolvedCandidate resolveCandidate(boolean preferObservable) {
         List<MethodFinder.InvocationCandidate> methodCandidates;
         List<MethodFinder.InvocationCandidate> constructorCandidates;
 
@@ -152,7 +151,31 @@ final class InvocationResolver extends AbstractFunctionEmitterFactory {
                     .toArray(BehaviorDeclaration[]::new));
         }
 
-        return hasConstructor ? Category.CONSTRUCTION : Category.METHOD;
+        if (selected.size() > 1) {
+            BehaviorDeclaration behavior = selected.get(0).candidate().behavior();
+
+            Diagnostic diagnostic = Diagnostic.newDiagnosticCauses(
+                ErrorCode.AMBIGUOUS_METHOD_CALL,
+                selected.stream()
+                    .map(candidate -> candidate.candidate().behavior().longName())
+                    .toArray(String[]::new),
+                behavior.name());
+
+            if (hasConstructor) {
+                throw ObjectInitializationErrors.constructorNotFound(
+                    expression.getSourceInfo(),
+                    selected.get(0).resultType().declaration(),
+                    new Diagnostic[] { diagnostic });
+            }
+
+            throw new MarkupException(
+                expression.getPathTarget() != null
+                    ? expression.getPathTarget().getSourceInfo()
+                    : expression.getSourceInfo(),
+                diagnostic);
+        }
+
+        return selected.get(0);
     }
 
     private List<MethodFinder.InvocationCandidate> createMethodCandidates(boolean preferObservable) {
@@ -216,8 +239,10 @@ final class InvocationResolver extends AbstractFunctionEmitterFactory {
         List<MethodFinder.InvocationCandidate> result = new ArrayList<>();
 
         for (MethodDeclaration method : declaringType.methods(expression.getTerminalSegment().getText())) {
-            result.add(new MethodFinder.InvocationCandidate(
-                method, invocationContext, witnesses, staticInvocation, null));
+            if (AccessVerifier.isAccessible(method, expression.getInvocationContext())) {
+                result.add(new MethodFinder.InvocationCandidate(
+                    method, invocationContext, witnesses, staticInvocation, null));
+            }
         }
 
         return result;
@@ -286,6 +311,7 @@ final class InvocationResolver extends AbstractFunctionEmitterFactory {
             .toList();
 
         return constructedClass.constructors().stream()
+            .filter(constructor -> AccessVerifier.isAccessible(constructor, expression.getInvocationContext()))
             .map(constructor -> new MethodFinder.InvocationCandidate(
                 constructor, invocationContext, witnesses, false, constructedType))
             .collect(Collectors.toList());
@@ -355,6 +381,13 @@ final class InvocationResolver extends AbstractFunctionEmitterFactory {
     }
 
     private Alternative createMethodAlternative(boolean bidirectional, boolean preferObservable) {
+        return createMethodAlternative(bidirectional, preferObservable, null);
+    }
+
+    private Alternative createMethodAlternative(
+            boolean bidirectional,
+            boolean preferObservable,
+            @Nullable MethodFinder.ResolvedCandidate selected) {
         InvocationInfo invocation;
 
         if (expression.getPathTarget() != null) {
@@ -365,67 +398,84 @@ final class InvocationResolver extends AbstractFunctionEmitterFactory {
                 expression.getInversePath(),
                 expression.getSourceInfo());
 
-            invocation = createInvocation(function, bidirectional, preferObservable);
+            invocation = selected != null
+                ? createInvocation(function, bidirectional, preferObservable, selected)
+                : createInvocation(function, bidirectional, preferObservable);
         } else {
-            invocation = createSelectedMethodInvocation(bidirectional, preferObservable);
+            invocation = createSelectedMethodInvocation(bidirectional, preferObservable, selected);
         }
 
         return new Alternative(invocation, false);
     }
 
-    private InvocationInfo createSelectedMethodInvocation(boolean bidirectional, boolean preferObservable) {
+    private InvocationInfo createSelectedMethodInvocation(
+            boolean bidirectional,
+            boolean preferObservable,
+            @Nullable MethodFinder.ResolvedCandidate selected) {
         BindingEmitterInfo receiverInfo = expression.getReceiver().toEmitter(
             preferObservable ? BindingMode.UNIDIRECTIONAL : BindingMode.ONCE,
             getInvokingType(), null);
 
         TypeInstance receiverType = receiverInfo.getValueType();
-
         TextSegmentNode target = expression.getSelectedTarget();
+        MethodDeclaration method;
+        List<TypeInstance> invocationContext;
+        TypeInstance[] parameterTypes;
+        TypeInstance returnType;
 
-        List<TypeInstance> witnesses = target.getTypeArguments().stream()
-            .map(PathNode::resolve)
-            .toList();
+        if (selected != null) {
+            method = (MethodDeclaration)selected.candidate().behavior();
+            invocationContext = selected.candidate().invocationContext();
+            parameterTypes = selected.parameterTypes().toArray(TypeInstance[]::new);
+            returnType = selected.resultType();
+        } else {
+            List<TypeInstance> witnesses = target.getTypeArguments().stream()
+                .map(PathNode::resolve)
+                .toList();
 
-        List<TypeInstance> argumentTypes = expression.getArguments().stream()
-            .map(argument -> getArgumentType(argument, preferObservable))
-            .toList();
+            List<TypeInstance> argumentTypes = expression.getArguments().stream()
+                .map(argument -> getArgumentType(argument, preferObservable))
+                .toList();
 
-        List<SourceInfo> argumentSources = expression.getArguments().stream()
-            .map(Node::getSourceInfo)
-            .toList();
+            List<SourceInfo> argumentSources = expression.getArguments().stream()
+                .map(Node::getSourceInfo)
+                .toList();
 
-        List<TypeInstance> invocationContext = List.of(receiverType);
-
-        List<DiagnosticInfo> diagnostics = new ArrayList<>();
-
-        MethodFinder finder = new MethodFinder(invocationContext, receiverType.declaration());
-
-        MethodDeclaration method = finder.findMethod(
-            target.getText(), false, getTargetType(), witnesses,
-            argumentTypes, argumentSources, diagnostics, expression.getSourceInfo());
-
-        if (method == null && getTargetType() != null && expression.getOperator().isBoolean()) {
-            diagnostics.clear();
+            invocationContext = List.of(receiverType);
+            List<DiagnosticInfo> diagnostics = new ArrayList<>();
+            MethodFinder finder = new MethodFinder(invocationContext, receiverType.declaration());
 
             method = finder.findMethod(
-                target.getText(), false, null, witnesses,
+                target.getText(), false, getTargetType(), witnesses,
                 argumentTypes, argumentSources, diagnostics, expression.getSourceInfo());
-        }
 
-        if (method == null) {
-            if (diagnostics.size() == 1) {
-                DiagnosticInfo diagnostic = diagnostics.get(0);
-                throw new MarkupException(diagnostic.getSourceInfo(), diagnostic.getDiagnostic());
+            if (method == null && getTargetType() != null && expression.getOperator().isBoolean()) {
+                diagnostics.clear();
+
+                method = finder.findMethod(
+                    target.getText(), false, null, witnesses,
+                    argumentTypes, argumentSources, diagnostics, expression.getSourceInfo());
             }
 
-            if (!diagnostics.isEmpty()) {
-                throw BindingSourceErrors.cannotBindFunction(
-                    expression.getSourceInfo(), diagnostics.stream()
-                        .map(DiagnosticInfo::getDiagnostic).toArray(Diagnostic[]::new));
+            if (method == null) {
+                if (diagnostics.size() == 1) {
+                    DiagnosticInfo diagnostic = diagnostics.get(0);
+                    throw new MarkupException(diagnostic.getSourceInfo(), diagnostic.getDiagnostic());
+                }
+
+                if (!diagnostics.isEmpty()) {
+                    throw BindingSourceErrors.cannotBindFunction(
+                        expression.getSourceInfo(), diagnostics.stream()
+                            .map(DiagnosticInfo::getDiagnostic).toArray(Diagnostic[]::new));
+                }
+
+                throw SymbolResolutionErrors.memberNotFound(
+                    target.getSourceInfo(), receiverType.declaration(), target.getText());
             }
 
-            throw SymbolResolutionErrors.memberNotFound(
-                target.getSourceInfo(), receiverType.declaration(), target.getText());
+            TypeInvoker invoker = new TypeInvoker(expression.getSourceInfo());
+            parameterTypes = invoker.invokeParameterTypes(method, invocationContext, witnesses);
+            returnType = invoker.invokeReturnType(method, invocationContext, witnesses);
         }
 
         AccessVerifier.verifyAccessible(method, expression.getInvocationContext(), target.getSourceInfo());
@@ -438,10 +488,6 @@ final class InvocationResolver extends AbstractFunctionEmitterFactory {
             receiverDependency,
             method,
             expression.getSourceInfo());
-
-        TypeInvoker invoker = new TypeInvoker(expression.getSourceInfo());
-        TypeInstance[] parameterTypes = invoker.invokeParameterTypes(method, invocationContext, witnesses);
-        TypeInstance returnType = invoker.invokeReturnType(method, invocationContext, witnesses);
 
         PreparedArguments prepared = prepareArguments(
             method, parameterTypes, expression.getArguments(), bidirectional,

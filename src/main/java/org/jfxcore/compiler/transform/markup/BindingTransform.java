@@ -133,6 +133,8 @@ public class BindingTransform implements Transform {
             return null;
         }
 
+        value = unwrapGroups(value);
+
         if (value instanceof CompositeNode compositeNode) {
             return parseCompositeNode(context, compositeNode, bindingMode, allowOperator);
         }
