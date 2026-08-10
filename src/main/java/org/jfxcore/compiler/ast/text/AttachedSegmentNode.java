@@ -83,7 +83,7 @@ public class AttachedSegmentNode extends PathSegmentNode {
     }
 
     @Override
-    public List<PathNode> getWitnesses() {
+    public List<PathNode> getTypeArguments() {
         return List.of();
     }
 

@@ -15,7 +15,7 @@ Text assignment is target-typed, so the text `"true"` has no intrinsic boolean t
 regardless of the assignment target.
 
 As a method argument, the unquoted keyword `true` is a boolean literal. Quote it as `'true'` to pass a
-string, or qualify it as a path such as `:self.true` to refer to a property named `true`.
+string, or qualify it as a path such as `:element.true` to refer to a property named `true`.
 
 ## Usage
 

@@ -142,7 +142,7 @@ public class AccessibleTests extends CompilerTestBase {
         """));
 
         assertEquals(ErrorCode.MEMBER_NOT_ACCESSIBLE, ex.getDiagnostic().getCode());
-        assertCodeHighlight("Nested.staticProtectedMethod", ex);
+        assertCodeHighlight("staticProtectedMethod", ex);
     }
 
     @Test
@@ -186,7 +186,7 @@ public class AccessibleTests extends CompilerTestBase {
         PublicTestPane root = compileAndRun("""
             <?import org.jfxcore.compiler.accesstest.*?>
             <PublicTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                            result="${this.new ProtectedMember(prefWidth)}"/>
+                            result="${:context.ProtectedMember(prefWidth)}"/>
         """);
 
         root.setPrefWidth(5);

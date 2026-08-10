@@ -13,8 +13,9 @@ For other use cases, alternative evaluation contexts can be specified:
 | Selector | Evaluates against |
 |:-|:-|
 | (no notation) | root element, or [`fx:context`](../../reference/context.html) if set |
+| `:context` | explicit selector for the no-notation default context |
 | `:root` | root element, regardless of `fx:context` |
-| `:self` | current element |
+| `:element` | current element |
 | `:parent` or `:parent(0)` | immediate parent of the current element |
 | `:parent(N)` | parent at zero-based depth `N` |
 | `:parent(MyType)` | nearest ancestor assignable to `MyType` |
@@ -22,17 +23,19 @@ For other use cases, alternative evaluation contexts can be specified:
 
 Context selectors are specified as part of the expression path:
 ```xml
-<Rectangle height="${:self.width}"/>
+<Rectangle height="${:element.width}"/>
 ```
 
-A context selector is also a complete expression primary. For example:
-* `:parent` returns the immediate parent object
+A context selector is a complete expression primary. For example:
+* `:context` returns the default evaluation context object
+* `:element` returns the current element
+* `:parent` returns the immediate parent element
 * `:parent === owner` is an identity comparison with another object
 * `:parent < value` is an ordinary relation when the static types of `:parent` and `value` are compatible
 
 {: .warning }
-> Using [`fx:Evaluate`](../../reference/evaluate.html) with `:self` or `:parent` selectors may lead to unexpected results,
-> since the evaluated value may depend on the order of element initialization.
+> Using [`fx:Evaluate`](../../reference/evaluate.html) with `:element` or `:parent` selectors may lead to unexpected
+> results, since the evaluated value may depend on the order of element initialization.
 >
 > Consider the following example:
 >

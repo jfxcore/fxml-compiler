@@ -16,19 +16,50 @@ import org.jfxcore.compiler.type.TypeDeclaration;
 import org.jfxcore.compiler.type.TypeInstance;
 import org.jfxcore.compiler.type.TypeInvoker;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
+import java.util.Objects;
 
-import static org.jfxcore.compiler.type.TypeInstance.*;
 import static org.jfxcore.compiler.type.TypeInstance.AssignmentContext.*;
 import static org.jfxcore.compiler.type.KnownSymbols.*;
 
 public class MethodFinder {
 
+    /**
+     * One overload candidate with the invocation metadata needed to instantiate its generic parameter and
+     * result types. Different candidates may have different invocation contexts and witness lists.
+     */
+    public record InvocationCandidate(
+            BehaviorDeclaration behavior,
+            List<TypeInstance> invocationContext,
+            List<TypeInstance> typeWitnesses,
+            boolean staticInvocation,
+            @Nullable TypeInstance resultType) {
+
+        public InvocationCandidate {
+            Objects.requireNonNull(behavior);
+            invocationContext = List.copyOf(invocationContext);
+            typeWitnesses = List.copyOf(typeWitnesses);
+        }
+    }
+
+    /**
+     * A candidate that is applicable in the selected overload phase.
+     */
+    public record ResolvedCandidate(
+            InvocationCandidate candidate,
+            List<TypeInstance> parameterTypes,
+            TypeInstance resultType,
+            int phase) {
+
+        public ResolvedCandidate {
+            Objects.requireNonNull(candidate);
+            parameterTypes = List.copyOf(parameterTypes);
+            Objects.requireNonNull(resultType);
+        }
+    }
+
     private final List<TypeInstance> invocationContext;
     private final TypeDeclaration declaringType;
-    private final Map<BehaviorDeclaration, TypeInstance[]> parameterCache = new HashMap<>();
 
     public MethodFinder(TypeInstance invokingType, TypeDeclaration declaringType) {
         this(List.of(invokingType), declaringType);
@@ -76,153 +107,140 @@ public class MethodFinder {
             sourceInfo);
     }
 
-    private <T extends BehaviorDeclaration> T resolveOverloadedMethod(
-            List<T> methods,
-            boolean staticInvocation,
-            @Nullable TypeInstance returnType,
-            List<TypeInstance> typeWitnesses,
+    /**
+     * Resolves candidates from one or more callable categories as a single overload set. The result
+     * contains every maximally-specific candidate in the first applicable phase; a single element is
+     * an unambiguous selection.
+     */
+    public static List<ResolvedCandidate> resolveInvocationCandidates(
+            List<InvocationCandidate> candidates,
+            @Nullable TypeInstance targetType,
             List<TypeInstance> argumentTypes,
             List<SourceInfo> argumentSourceInfo,
             @Nullable List<DiagnosticInfo> diagnostics,
             SourceInfo sourceInfo) {
-        List<T> applicableMethods;
+        for (int phase = 0; phase < 3; ++phase) {
+            TypeInstance.AssignmentContext assignmentContext = phase == 0 ? STRICT : LOOSE;
+            boolean allowVarargInvocation = phase == 2;
+            List<ResolvedCandidate> applicable = new ArrayList<>();
 
-        var phase1 = new InvocationContext(
-            STRICT, staticInvocation, false, returnType, typeWitnesses, argumentTypes, argumentSourceInfo);
-        applicableMethods = methods.stream().filter(method -> evaluateApplicability(method, phase1, null, sourceInfo)).toList();
-        if (!applicableMethods.isEmpty()) {
-            return findMostSpecificMethod(applicableMethods, argumentTypes, diagnostics, sourceInfo);
+            for (InvocationCandidate candidate : candidates) {
+                ResolvedCandidate resolved = evaluateInvocationCandidate(
+                    candidate, assignmentContext, allowVarargInvocation, targetType, argumentTypes,
+                    argumentSourceInfo, phase == 2 ? diagnostics : null, sourceInfo, phase);
+
+                if (resolved != null) {
+                    applicable.add(resolved);
+                }
+            }
+
+            if (!applicable.isEmpty()) {
+                return findMaximallySpecificCandidates(applicable, argumentTypes);
+            }
         }
 
-        var phase2 = new InvocationContext(
-            LOOSE, staticInvocation, false, returnType, typeWitnesses, argumentTypes, argumentSourceInfo);
-        applicableMethods = methods.stream().filter(method -> evaluateApplicability(method, phase2, null, sourceInfo)).toList();
-        if (!applicableMethods.isEmpty()) {
-            return findMostSpecificMethod(applicableMethods, argumentTypes, diagnostics, sourceInfo);
-        }
-
-        var phase3 = new InvocationContext(
-            LOOSE, staticInvocation, true, returnType, typeWitnesses, argumentTypes, argumentSourceInfo);
-        applicableMethods = methods.stream().filter(method -> evaluateApplicability(method, phase3, diagnostics, sourceInfo)).toList();
-        if (!applicableMethods.isEmpty()) {
-            return findMostSpecificMethod(applicableMethods, argumentTypes, diagnostics, sourceInfo);
-        }
-
-        return null;
+        return List.of();
     }
 
-    /**
-     * Determines whether a method is applicable for a given invocation context.
-     * If a method matches by name but is not applicable, a diagnostic is generated.
-     */
-    private boolean evaluateApplicability(
-            BehaviorDeclaration method,
-            InvocationContext context,
+    private static @Nullable ResolvedCandidate evaluateInvocationCandidate(
+            InvocationCandidate candidate,
+            TypeInstance.AssignmentContext assignmentContext,
+            boolean allowVarargInvocation,
+            @Nullable TypeInstance targetType,
+            List<TypeInstance> argumentTypes,
+            List<SourceInfo> argumentSourceInfo,
             @Nullable List<DiagnosticInfo> diagnostics,
-            SourceInfo sourceInfo) {
+            SourceInfo sourceInfo,
+            int phase) {
+        BehaviorDeclaration behavior = candidate.behavior();
+
         try {
             TypeInvoker invoker = new TypeInvoker(sourceInfo);
-            TypeInstance[] paramTypes = invokeApplicableParameterTypes(invoker, method, context.typeWitnesses());
+            TypeInstance[] parameterTypes = behavior instanceof ConstructorDeclaration
+                ? invoker.invokeSourceParameterTypes(behavior, candidate.invocationContext(), candidate.typeWitnesses())
+                : invoker.invokeParameterTypes(behavior, candidate.invocationContext(), candidate.typeWitnesses());
 
-            if (!method.isStatic() && context.staticInvocation()) {
+            if (!behavior.isStatic() && candidate.staticInvocation()) {
                 if (diagnostics != null) {
                     diagnostics.add(new DiagnosticInfo(
                         Diagnostic.newDiagnostic(
                             ErrorCode.METHOD_NOT_STATIC,
-                            NameHelper.getDisplaySignature(method, paramTypes)),
+                            NameHelper.getDisplaySignature(behavior, parameterTypes)),
                         sourceInfo));
                 }
 
-                return false;
+                return null;
             }
 
-            int numParams = paramTypes.length;
-            int numArgs = context.arguments().size();
-            boolean isVarArgs = context.allowVarargInvocation() && method.isVarArgs();
+            int numParams = parameterTypes.length;
+            int numArgs = argumentTypes.size();
+            boolean varargs = allowVarargInvocation && behavior.isVarArgs();
 
-            if (((numParams > numArgs) && !(isVarArgs && numParams == 1)) || (numParams < numArgs && !isVarArgs)) {
+            if (numParams > numArgs && !(varargs && numParams == 1) || numParams < numArgs && !varargs) {
                 if (diagnostics != null) {
                     diagnostics.add(new DiagnosticInfo(
                         Diagnostic.newDiagnostic(
                             ErrorCode.NUM_FUNCTION_ARGUMENTS_MISMATCH,
-                            NameHelper.getDisplaySignature(method, paramTypes),
+                            NameHelper.getDisplaySignature(behavior, parameterTypes),
                             numParams, numArgs),
                         sourceInfo));
                 }
 
-                return false;
+                return null;
             }
 
-            for (int i = 0; i < numParams; ++i) {
-                if (isVarArgs && numArgs == 0) {
-                    break;
+            int fixedCount = varargs ? Math.max(0, numParams - 1) : numParams;
+
+            for (int i = 0; i < fixedCount; ++i) {
+                if (!parameterTypes[i].isAssignableFrom(argumentTypes.get(i), assignmentContext)) {
+                    addArgumentDiagnostic(
+                        diagnostics, behavior, parameterTypes, argumentTypes,
+                        argumentSourceInfo, i, sourceInfo);
+                    return null;
                 }
+            }
 
-                SourceInfo argSourceInfo = context.argumentSourceInfo().get(i);
-                TypeInstance argumentType = context.arguments().get(i);
-                TypeInstance parameterType = paramTypes[i];
+            if (varargs && numParams > 0) {
+                int varargIndex = numParams - 1;
+                TypeInstance arrayType = parameterTypes[varargIndex];
+                boolean fixedArityArray = numArgs == numParams
+                    && arrayType.isAssignableFrom(argumentTypes.get(varargIndex), assignmentContext);
 
-                if (!parameterType.isAssignableFrom(argumentType, context.assignmentContext())) {
-                    boolean valid = true;
+                if (!fixedArityArray) {
+                    if (!arrayType.isArray()) {
+                        return null;
+                    }
 
-                    if (i < numParams - 1 || !isVarArgs) {
-                        valid = false;
-                    } else {
-                        if (!paramTypes[i].isArray()) {
-                            valid = false;
-                        } else {
-                            TypeInstance componentType = paramTypes[i].componentType();
-
-                            for (int j = i; j < numArgs; ++j) {
-                                if (!componentType.isAssignableFrom(
-                                        context.arguments().get(j), context.assignmentContext())) {
-                                    valid = false;
-                                    break;
-                                }
-                            }
+                    TypeInstance componentType = arrayType.componentType();
+                    for (int i = varargIndex; i < numArgs; ++i) {
+                        if (!componentType.isAssignableFrom(argumentTypes.get(i), assignmentContext)) {
+                            addArgumentDiagnostic(
+                                diagnostics, behavior, parameterTypes, argumentTypes,
+                                argumentSourceInfo, i, sourceInfo);
+                            return null;
                         }
                     }
-
-                    if (!valid) {
-                        if (diagnostics != null) {
-                            String argName = argumentType.javaName();
-                            TypeDeclaration paramType = method.parameters().get(i).type();
-
-                            if (parameterType.equals(paramType)) {
-                                diagnostics.add(new DiagnosticInfo(Diagnostic.newDiagnostic(
-                                    ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT,
-                                    NameHelper.getDisplaySignature(method, paramTypes),
-                                    i + 1, argName), argSourceInfo));
-                            } else {
-                                diagnostics.add(new DiagnosticInfo(Diagnostic.newDiagnosticVariant(
-                                    ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT, "expected",
-                                    NameHelper.getDisplaySignature(method, paramTypes),
-                                    i + 1, argName, parameterType.javaName()), argSourceInfo));
-                            }
-                        }
-
-                        return false;
-                    }
                 }
             }
 
-            if (context.returnType() != null) {
-                TypeInstance returnType = invoker.invokeReturnType(method, invocationContext, context.typeWitnesses());
-                if (!context.returnType().isAssignableFrom(returnType)) {
-                    if (diagnostics != null) {
-                        diagnostics.add(new DiagnosticInfo(
-                            Diagnostic.newDiagnostic(
-                                ErrorCode.INCOMPATIBLE_RETURN_VALUE,
-                                NameHelper.getDisplaySignature(method, paramTypes),
-                                context.returnType().javaName()),
-                            sourceInfo));
-                    }
+            TypeInstance resultType = candidate.resultType() != null
+                ? candidate.resultType()
+                : invoker.invokeReturnType(behavior, candidate.invocationContext(), candidate.typeWitnesses());
 
-                    return false;
+            if (targetType != null && !targetType.isAssignableFrom(resultType)) {
+                if (diagnostics != null) {
+                    diagnostics.add(new DiagnosticInfo(
+                        Diagnostic.newDiagnostic(
+                            ErrorCode.INCOMPATIBLE_RETURN_VALUE,
+                            NameHelper.getDisplaySignature(behavior, parameterTypes),
+                            targetType.javaName()),
+                        sourceInfo));
                 }
+
+                return null;
             }
 
-            return true;
+            return new ResolvedCandidate(candidate, List.of(parameterTypes), resultType, phase);
         } catch (MarkupException ex) {
             if (diagnostics != null) {
                 diagnostics.add(new DiagnosticInfo(ex.getDiagnostic(), ex.getSourceInfo()));
@@ -230,161 +248,179 @@ public class MethodFinder {
         } catch (RuntimeException ignored) {
         }
 
-        return false;
+        return null;
     }
 
-    /**
-     * The most specific method of a set of applicable methods is the single maximally specific method.
-     *
-     * A method is maximally specific if there are no other applicable methods in the set that are more specific.
-     * It is possible that a set of applicable methods contains more than one maximally specific method; in this
-     * case the method call is ambiguous.
-     */
-    private <T extends BehaviorDeclaration> T findMostSpecificMethod(
-            List<T> methods, List<TypeInstance> argumentTypes, List<DiagnosticInfo> diagnostics, SourceInfo sourceInfo) {
-        List<T> maximallySpecificMethods = new ArrayList<>();
+    private static void addArgumentDiagnostic(
+            @Nullable List<DiagnosticInfo> diagnostics,
+            BehaviorDeclaration behavior,
+            TypeInstance[] parameterTypes,
+            List<TypeInstance> argumentTypes,
+            List<SourceInfo> argumentSourceInfo,
+            int argumentIndex,
+            SourceInfo sourceInfo) {
+        if (diagnostics == null) {
+            return;
+        }
 
-        for (int i = 0; i < methods.size(); ++i) {
-            T currentMethod = methods.get(i);
-            boolean maximallySpecific = true;
+        int parameterIndex = Math.min(argumentIndex, parameterTypes.length - 1);
+        TypeInstance parameterType = parameterTypes[parameterIndex];
 
-            for (int j = 0; j < methods.size(); ++j) {
-                if (j == i) {
-                    continue;
-                }
+        if (behavior.isVarArgs() && parameterIndex == parameterTypes.length - 1 && parameterType.isArray()) {
+            parameterType = parameterType.componentType();
+        }
 
-                if (isMethodMoreSpecific(methods.get(j), currentMethod, argumentTypes)) {
-                    maximallySpecific = false;
+        String argumentName = argumentTypes.get(argumentIndex).javaName();
+        TypeDeclaration declaredParameterType = behavior.parameters().get(parameterIndex).type();
+
+        Diagnostic diagnostic = parameterType.equals(declaredParameterType)
+            ? Diagnostic.newDiagnostic(
+                ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT,
+                NameHelper.getDisplaySignature(behavior, parameterTypes),
+                argumentIndex + 1,
+                argumentName)
+            : Diagnostic.newDiagnosticVariant(
+                ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT,
+                "expected",
+                NameHelper.getDisplaySignature(behavior, parameterTypes),
+                argumentIndex + 1,
+                argumentName,
+                parameterType.javaName());
+
+        diagnostics.add(new DiagnosticInfo(
+            diagnostic,
+            argumentIndex < argumentSourceInfo.size()
+                ? argumentSourceInfo.get(argumentIndex) : sourceInfo));
+    }
+
+    private static List<ResolvedCandidate> findMaximallySpecificCandidates(
+            List<ResolvedCandidate> candidates,
+            List<TypeInstance> argumentTypes) {
+        List<ResolvedCandidate> result = new ArrayList<>();
+
+        for (int i = 0; i < candidates.size(); ++i) {
+            boolean maximal = true;
+
+            for (int j = 0; j < candidates.size(); ++j) {
+                if (i != j && isMoreSpecific(candidates.get(j), candidates.get(i), argumentTypes)) {
+                    maximal = false;
                     break;
                 }
             }
 
-            if (maximallySpecific) {
-                maximallySpecificMethods.add(currentMethod);
+            if (maximal) {
+                result.add(candidates.get(i));
             }
         }
 
-        if (maximallySpecificMethods.size() == 1) {
-            return maximallySpecificMethods.get(0);
-        }
-
-        if (diagnostics != null) {
-            diagnostics.clear();
-            diagnostics.add(new DiagnosticInfo(Diagnostic.newDiagnosticCauses(
-                ErrorCode.AMBIGUOUS_METHOD_CALL,
-                maximallySpecificMethods.stream().map(BehaviorDeclaration::longName).toArray(String[]::new),
-                methods.get(0).name()), sourceInfo));
-        }
-
-        return null;
+        return result;
     }
 
-    /**
-     * A method m1(a1_0..a1_n) is more specific than m2(a2_0..a2_n) if
-     *   1. there is at least one pair (a1_i, a2_i) for which a1_i is more specific than a2_i, and
-     *   2. there is no pair (a1_i, a2_i) for which a2_i is more specific than a1_i.
-     */
-    private boolean isMethodMoreSpecific(BehaviorDeclaration m1, BehaviorDeclaration m2, List<TypeInstance> argumentTypes) {
-        TypeInvoker invoker = new TypeInvoker(SourceInfo.none());
+    private static boolean isMoreSpecific(
+            ResolvedCandidate first,
+            ResolvedCandidate second,
+            List<TypeInstance> argumentTypes) {
+        boolean moreSpecific = false;
+        int comparisons = argumentTypes.isEmpty()
+            ? Math.max(first.parameterTypes().size(), second.parameterTypes().size())
+            : argumentTypes.size();
 
-        TypeInstance[] params1 = parameterCache.get(m1);
-        if (params1 == null) {
-            parameterCache.put(m1, params1 = invokeApplicableParameterTypes(invoker, m1, List.of()));
-        }
+        for (int i = 0; i < comparisons; ++i) {
+            TypeInstance argumentType = argumentTypes.isEmpty() ? null : argumentTypes.get(i);
+            TypeInstance firstType = effectiveParameterType(first, i, argumentType);
+            TypeInstance secondType = effectiveParameterType(second, i, argumentType);
 
-        TypeInstance[] params2 = parameterCache.get(m2);
-        if (params2 == null) {
-            parameterCache.put(m2, params2 = invokeApplicableParameterTypes(invoker, m2, List.of()));
-        }
+            if (firstType == null || secondType == null) {
+                return false;
+            }
 
-        if (params1.length != params2.length) {
-            throw new IllegalArgumentException();
-        }
-
-        Boolean m1IsMoreSpecific = null;
-
-        for (int i = 0; i < params1.length; ++i) {
-            if (params1[i].equals(params2[i])) {
+            if (firstType.equals(secondType)) {
                 continue;
             }
 
-            TypeInstance m1Type = params1[i].isAssignableFrom(argumentTypes.get(i)) ?
-                params1[i] : (params1[i].isArray() ? params1[i].componentType() : null);
-
-            TypeInstance m2Type = params2[i].isAssignableFrom(argumentTypes.get(i)) ?
-                params2[i] : (params2[i].isArray() ? params2[i].componentType() : null);
-
-            if (m1Type == null || m2Type == null) {
+            if (!isInvocationTypeMoreSpecific(firstType, secondType, argumentType)) {
                 return false;
             }
 
-            if (m1IsMoreSpecific == null) {
-                m1IsMoreSpecific = isTypeMoreSpecific(m1Type, m2Type, argumentTypes.get(i));
-            } else if (m1IsMoreSpecific && isTypeMoreSpecific(m2Type, m1Type, argumentTypes.get(i))) {
-                return false;
-            }
+            moreSpecific = true;
         }
 
-        return m1IsMoreSpecific != null && m1IsMoreSpecific;
+        return moreSpecific;
     }
 
-    private boolean isTypeMoreSpecific(TypeInstance t1, TypeInstance t2, TypeInstance e) {
-        if (t1.subtypeOf(t2)) {
+    private static @Nullable TypeInstance effectiveParameterType(
+            ResolvedCandidate candidate,
+            int argumentIndex,
+            @Nullable TypeInstance argumentType) {
+        List<TypeInstance> parameters = candidate.parameterTypes();
+        if (parameters.isEmpty()) {
+            return null;
+        }
+
+        int index = Math.min(argumentIndex, parameters.size() - 1);
+        TypeInstance result = parameters.get(index);
+        boolean expandedVarargs = candidate.phase() == 2
+            && candidate.candidate().behavior().isVarArgs()
+            && index == parameters.size() - 1;
+
+        if (expandedVarargs && result.isArray()
+                && (argumentIndex >= parameters.size()
+                    || argumentType == null
+                    || !result.isAssignableFrom(argumentType, LOOSE))) {
+            result = result.componentType();
+        }
+
+        return result;
+    }
+
+    private static boolean isInvocationTypeMoreSpecific(
+            TypeInstance first, TypeInstance second, @Nullable TypeInstance argumentType) {
+        if (first.subtypeOf(second)) {
             return true;
         }
 
-        if (t2.subtypeOf(t1)) {
+        if (second.subtypeOf(first)) {
             return false;
         }
 
-        if (e.subtypeOf(t1)) {
-            return true;
-        }
-
-        boolean t1Assignable = t1.isAssignableFrom(e, STRICT);
-        boolean t2Assignable = t2.isAssignableFrom(e, STRICT);
-
-        if (t1Assignable && !t2Assignable) {
-            return true;
-        }
-
-        if (!t1Assignable && t2Assignable) {
+        if (argumentType == null) {
             return false;
         }
 
-        if (e.declaration().isIntegralPrimitive()) {
-            if (t1.declaration().isIntegralPrimitive()) {
-                if (!t2.declaration().isIntegralPrimitive()) {
+        boolean firstAssignable = first.isAssignableFrom(argumentType, STRICT);
+        boolean secondAssignable = second.isAssignableFrom(argumentType, STRICT);
+
+        if (firstAssignable != secondAssignable) {
+            return firstAssignable;
+        }
+
+        TypeDeclaration argumentDeclaration = argumentType.declaration();
+        if (argumentDeclaration.isIntegralPrimitive()) {
+            if (first.declaration().isIntegralPrimitive()) {
+                if (!second.declaration().isIntegralPrimitive()) {
                     return true;
                 }
 
-                return maxWideningConversions(e, t1) < maxWideningConversions(e, t2);
-            } else if (t1.equals(floatDecl()) && t2.equals(doubleDecl())) {
+                return maxWideningConversions(argumentType, first) < maxWideningConversions(argumentType, second);
+            }
+
+            if (first.equals(floatDecl()) && second.equals(doubleDecl())) {
                 return true;
             }
         }
 
-        if (e.declaration().isFloatingPointPrimitive() && t1.declaration().isFloatingPointPrimitive()) {
-            if (!t2.declaration().isFloatingPointPrimitive()) {
+        if (argumentDeclaration.isFloatingPointPrimitive() && first.declaration().isFloatingPointPrimitive()) {
+            if (!second.declaration().isFloatingPointPrimitive()) {
                 return true;
             }
 
-            return maxWideningConversions(e, t1) < maxWideningConversions(e, t2);
+            return maxWideningConversions(argumentType, first) < maxWideningConversions(argumentType, second);
         }
 
         return false;
     }
 
-    private TypeInstance[] invokeApplicableParameterTypes(
-            TypeInvoker invoker,
-            BehaviorDeclaration behavior,
-            List<TypeInstance> typeWitnesses) {
-        return behavior instanceof ConstructorDeclaration
-            ? invoker.invokeSourceParameterTypes(behavior, invocationContext, typeWitnesses)
-            : invoker.invokeParameterTypes(behavior, invocationContext, typeWitnesses);
-    }
-
-    private int maxWideningConversions(TypeInstance from, TypeInstance to) {
+    private static int maxWideningConversions(TypeInstance from, TypeInstance to) {
         TypeDeclaration fromType = from.declaration();
         TypeDeclaration toType = to.declaration();
 
@@ -397,23 +433,53 @@ public class MethodFinder {
             if (fromType.equals(shortDecl())) return 1;
             if (fromType.equals(charDecl())) return 2;
             if (fromType.equals(byteDecl())) return 2;
-            return 0;
         } else if (toType.equals(shortDecl())) {
             if (fromType.equals(charDecl())) return 1;
             if (fromType.equals(byteDecl())) return 1;
-        } else if (toType.equals(doubleDecl())) {
-            if (fromType.equals(floatDecl())) return 1;
+        } else if (toType.equals(doubleDecl()) && fromType.equals(floatDecl())) {
+            return 1;
         }
 
         return 0;
     }
 
-    private record InvocationContext(
-        AssignmentContext assignmentContext,
-        boolean staticInvocation,
-        boolean allowVarargInvocation,
-        @Nullable TypeInstance returnType,
-        List<TypeInstance> typeWitnesses,
-        List<TypeInstance> arguments,
-        List<SourceInfo> argumentSourceInfo) {}
+    private <T extends BehaviorDeclaration> T resolveOverloadedMethod(
+            List<T> methods,
+            boolean staticInvocation,
+            @Nullable TypeInstance returnType,
+            List<TypeInstance> typeWitnesses,
+            List<TypeInstance> argumentTypes,
+            List<SourceInfo> argumentSourceInfo,
+            @Nullable List<DiagnosticInfo> diagnostics,
+            SourceInfo sourceInfo) {
+        TypeInstance constructorResult = !methods.isEmpty() && methods.get(0) instanceof ConstructorDeclaration
+            ? invocationContext.get(invocationContext.size() - 1)
+            : null;
+
+        List<InvocationCandidate> candidates = methods.stream()
+            .map(method -> new InvocationCandidate(
+                method, invocationContext, typeWitnesses, staticInvocation, constructorResult))
+            .toList();
+
+        List<ResolvedCandidate> resolved = resolveInvocationCandidates(
+            candidates, returnType, argumentTypes, argumentSourceInfo, diagnostics, sourceInfo);
+
+        if (resolved.size() == 1) {
+            @SuppressWarnings("unchecked")
+            T result = (T)resolved.get(0).candidate().behavior();
+            return result;
+        }
+
+        if (resolved.size() > 1 && diagnostics != null) {
+            diagnostics.clear();
+            diagnostics.add(new DiagnosticInfo(Diagnostic.newDiagnosticCauses(
+                ErrorCode.AMBIGUOUS_METHOD_CALL,
+                resolved.stream()
+                    .map(candidate -> candidate.candidate().behavior().longName())
+                    .toArray(String[]::new),
+                methods.get(0).name()), sourceInfo));
+        }
+
+        return null;
+    }
 }

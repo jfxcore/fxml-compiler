@@ -52,6 +52,23 @@ public class PathTest extends TestBase {
         return new PathNode(null, segments(segments), List.of(), SourceInfo.none());
     }
 
+    @Test
+    public void Binding_Context_Explicitness_Survives_Cloning_And_Affects_Identity() {
+        BindingContextNode implicit = new BindingContextNode(
+            BindingContextSelector.ROOT, TypeInstance.ObjectType(), 0, false, SourceInfo.none());
+        BindingContextNode explicit = new BindingContextNode(
+            BindingContextSelector.ROOT, TypeInstance.ObjectType(), 0, true, SourceInfo.none());
+
+        assertTrue(implicit.mayResolveAgainstImports());
+        assertFalse(explicit.mayResolveAgainstImports());
+        assertNotEquals(implicit, explicit);
+
+        BindingContextNode clone = explicit.deepClone();
+        assertEquals(explicit, clone);
+        assertEquals(explicit.hashCode(), clone.hashCode());
+        assertTrue(clone.isExplicitReceiver());
+    }
+
     public static class Baz1<T> {
         public T quxField;
         public T quxGetter() { return null; }
@@ -96,6 +113,7 @@ public class PathTest extends TestBase {
     }
 
     public static class ThisRoot {
+        public ThisChild getThis() { return null; }
         public ThisChild getChild() { return null; }
     }
 
@@ -104,13 +122,17 @@ public class PathTest extends TestBase {
     }
 
     @Test
-    public void Root_Only_And_Explicit_This_Paths_Are_Valid_While_Selected_This_Is_Ordinary() {
+    public void This_Is_Resolved_As_An_Ordinary_Property() {
         Resolver resolver = new Resolver(SourceInfo.none());
         Segment root = new ParentSegment(TypeInstance.of(resolver.resolveClass(ThisRoot.class.getName())), 0);
         assertEquals(1, ResolvedPath.parse(root, List.of(), false, SourceInfo.none()).size());
-        assertEquals(1, ResolvedPath.parse(root, segments("this"), false, SourceInfo.none()).size());
 
-        ResolvedPath selectedThis = ResolvedPath.parse(root, segments("this", "child", "this"), false, SourceInfo.none());
+        ResolvedPath firstThis = ResolvedPath.parse(root, segments("this"), false, SourceInfo.none());
+        assertEquals(2, firstThis.size());
+        assertEquals(ThisChild.class.getName(), firstThis.getValueTypeInstance().name());
+        assertEquals("getThis", firstThis.get(firstThis.size() - 1).getDisplayName());
+
+        ResolvedPath selectedThis = ResolvedPath.parse(root, segments("child", "this"), false, SourceInfo.none());
         assertEquals(String.class.getName(), selectedThis.getValueTypeInstance().name());
         assertEquals("getThis", selectedThis.get(selectedThis.size() - 1).getDisplayName());
     }

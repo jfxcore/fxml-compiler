@@ -365,8 +365,8 @@ public class ComparisonOperatorTest extends CompilerTestBase {
     public void Evaluate_Observable_Selection_Identity_Compares_Wrappers() {
         TestPane root = compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                      result0="$this::firstInteger === this::firstInteger"
-                      result1="$this::firstInteger !== this::secondInteger"/>
+                      result0="$::firstInteger === ::firstInteger"
+                      result1="$::firstInteger !== ::secondInteger"/>
         """);
 
         assertTrue(root.isResult0());

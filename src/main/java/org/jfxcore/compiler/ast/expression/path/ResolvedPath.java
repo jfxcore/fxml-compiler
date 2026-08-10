@@ -22,7 +22,9 @@ import org.jfxcore.compiler.ast.emit.ValueEmitterNode;
 import org.jfxcore.compiler.ast.text.AttachedSegmentNode;
 import org.jfxcore.compiler.ast.text.PathNode;
 import org.jfxcore.compiler.ast.text.PathSegmentNode;
+import org.jfxcore.compiler.diagnostic.MarkupException;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
+import org.jfxcore.compiler.diagnostic.errors.GeneralErrors;
 import org.jfxcore.compiler.diagnostic.errors.SymbolResolutionErrors;
 import org.jfxcore.compiler.type.AccessModifier;
 import org.jfxcore.compiler.type.AnnotationDeclaration;
@@ -80,14 +82,6 @@ public class ResolvedPath {
         this.sourceInfo = sourceInfo;
         this.segments = new ArrayList<>(path.size() + 1);
         this.segments.add(firstSegment);
-
-        if (!path.isEmpty() && path.get(0).equals("this")) {
-            if (path.size() == 1) {
-                return;
-            }
-
-            path = path.stream().skip(1).toList();
-        }
 
         if (path.isEmpty()) {
             return;
@@ -288,10 +282,11 @@ public class ResolvedPath {
             resolver = new Resolver(attachedSegment.getPropertyName().getSourceInfo());
         }
 
-        List<TypeInstance> providedArguments = segment.getWitnesses().stream().map(PathNode::resolve).toList();
+        List<TypeInstance> providedArguments = segment.getTypeArguments().stream().map(PathNode::resolve).toList();
         boolean selectObservable = segment.isObservableSelector() && !suppressObservableSelector;
         String propertyNameUpper = Character.toUpperCase(propertyName.charAt(0)) + propertyName.substring(1);
         SegmentMap segments = new SegmentMap();
+        List<MarkupException> applicabilityErrors = new ArrayList<>();
 
         for (ResolveSegmentMethod method : methods) {
             String[] names = new String[] {
@@ -304,7 +299,7 @@ public class ResolvedPath {
             for (int i = 0; i < names.length; ++i) {
                 SegmentInfo segmentInfo = method.resolve(
                     resolver, invoker, names[i], declaringClass, receiverClass, staticContext,
-                    attachedProperty, selectObservable, providedArguments);
+                    attachedProperty, selectObservable, providedArguments, applicabilityErrors);
 
                 segments.tryAdd(segmentInfo, i, preferObservable && i < 2, selectObservable);
             }
@@ -327,6 +322,10 @@ public class ResolvedPath {
                 segment.getSourceInfo(), inaccessibleSegment.declaration());
         }
 
+        if (!applicabilityErrors.isEmpty()) {
+            throw applicabilityErrors.get(0);
+        }
+
         return null;
     }
 
@@ -342,13 +341,20 @@ public class ResolvedPath {
             boolean staticContext,
             boolean attachedProperty,
             boolean selectObservable,
-            List<TypeInstance> providedArguments) {
+            List<TypeInstance> providedArguments,
+            List<MarkupException> applicabilityErrors) {
         if (attachedProperty) {
             return null;
         }
 
         FieldDeclaration fieldDeclaration = resolver.tryResolveField(declaringClass, propertyName);
         if (fieldDeclaration == null) {
+            return null;
+        }
+
+        if (!providedArguments.isEmpty()) {
+            applicabilityErrors.add(GeneralErrors.numTypeArgumentsMismatch(
+                sourceInfo, declaringClass, 0, providedArguments.size()));
             return null;
         }
 
@@ -396,7 +402,8 @@ public class ResolvedPath {
             boolean staticContext,
             boolean attachedProperty,
             boolean selectObservable,
-            List<TypeInstance> providedArguments) {
+            List<TypeInstance> providedArguments,
+            List<MarkupException> applicabilityErrors) {
         MethodDeclaration getterDeclaration = attachedProperty ?
             resolver.tryResolveStaticGetter(declaringClass, receiverClass, propertyName, true) :
             resolver.tryResolveGetter(declaringClass, propertyName, true, null);
@@ -424,7 +431,14 @@ public class ResolvedPath {
             return null;
         }
 
-        TypeInstance type = invoker.invokeReturnType(getterDeclaration, invocationContext, providedArguments);
+        TypeInstance type;
+
+        try {
+            type = invoker.invokeReturnType(getterDeclaration, invocationContext, providedArguments);
+        } catch (MarkupException ex) {
+            applicabilityErrors.add(ex);
+            return null;
+        }
 
         if (selectObservable) {
             return new SegmentInfo(
@@ -455,7 +469,8 @@ public class ResolvedPath {
             boolean staticContext,
             boolean attachedProperty,
             boolean selectObservable,
-            List<TypeInstance> providedArguments) {
+            List<TypeInstance> providedArguments,
+            List<MarkupException> applicabilityErrors) {
         if (attachedProperty) {
             return null;
         }
@@ -488,7 +503,15 @@ public class ResolvedPath {
             valueSourceType = valueSourceType.toReadOnly();
         }
 
-        TypeInstance valueType = invoker.invokeReturnType(delegateInfo.getter, invocationContext, providedArguments);
+        TypeInstance valueType;
+
+        try {
+            valueType = invoker.invokeReturnType(delegateInfo.getter, invocationContext, providedArguments);
+        } catch (MarkupException ex) {
+            applicabilityErrors.add(ex);
+            return null;
+        }
+
         TypeInstance type = invoker.invokeType(fieldType);
         TypeInstance argument = resolver.tryFindObservableArgument(type);
         TypeDeclaration returnType = delegateInfo.getter.returnType();
@@ -626,7 +649,8 @@ public class ResolvedPath {
             boolean staticContext,
             boolean attachedProperty,
             boolean selectObservable,
-            List<TypeInstance> providedArguments);
+            List<TypeInstance> providedArguments,
+            List<MarkupException> applicabilityErrors);
     }
 
     private static class SegmentMap extends TreeMap<Integer, SegmentInfo> {

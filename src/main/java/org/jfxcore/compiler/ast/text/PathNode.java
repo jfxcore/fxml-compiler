@@ -130,6 +130,9 @@ public class PathNode extends DerivedTextNode {
         for (PathSegmentNode segment : segments) {
             if (firstSegment) {
                 firstSegment = false;
+                if (segment.isObservableSelector()) {
+                    text.append("::");
+                }
             } else {
                 text.append(segment.isObservableSelector() ? "::" : ".");
             }

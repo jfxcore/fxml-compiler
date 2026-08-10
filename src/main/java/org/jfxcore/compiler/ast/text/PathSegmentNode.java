@@ -27,7 +27,7 @@ public abstract class PathSegmentNode extends DerivedTextNode {
         return selectorSourceInfo;
     }
 
-    public abstract List<PathNode> getWitnesses();
+    public abstract List<PathNode> getTypeArguments();
 
     /**
      * If this path segment refers to an {@code ObservableValue}, determines whether the segment

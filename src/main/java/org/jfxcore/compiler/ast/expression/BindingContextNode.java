@@ -27,6 +27,7 @@ public class BindingContextNode extends AbstractNode {
     private final TypeInstance valueType;
     private final TypeInstance observableType;
     private final int bindingDistance;
+    private final boolean explicitReceiver;
     private ResolvedTypeNode typeNode;
 
     public BindingContextNode(
@@ -34,7 +35,16 @@ public class BindingContextNode extends AbstractNode {
             TypeInstance type,
             int bindingDistance,
             SourceInfo sourceInfo) {
-        this(selector, type, type, null, null, bindingDistance, sourceInfo);
+        this(selector, type, type, null, null, bindingDistance, false, sourceInfo);
+    }
+
+    public BindingContextNode(
+            BindingContextSelector selector,
+            TypeInstance type,
+            int bindingDistance,
+            boolean explicitReceiver,
+            SourceInfo sourceInfo) {
+        this(selector, type, type, null, null, bindingDistance, explicitReceiver, sourceInfo);
     }
 
     public BindingContextNode(
@@ -44,6 +54,7 @@ public class BindingContextNode extends AbstractNode {
             @Nullable TypeInstance observableType,
             @Nullable FieldDeclaration contextField,
             int bindingDistance,
+            boolean explicitReceiver,
             SourceInfo sourceInfo) {
         super(sourceInfo);
         this.typeNode = new ResolvedTypeNode(checkNotNull(type), sourceInfo);
@@ -53,6 +64,7 @@ public class BindingContextNode extends AbstractNode {
         this.contextField = contextField;
         this.selector = checkNotNull(selector);
         this.bindingDistance = bindingDistance;
+        this.explicitReceiver = explicitReceiver;
 
         if (selector == BindingContextSelector.CONTEXT) {
             Objects.requireNonNull(contextField, "contextField");
@@ -67,8 +79,24 @@ public class BindingContextNode extends AbstractNode {
         return typeNode;
     }
 
+    public TypeInstance getValueType() {
+        return valueType;
+    }
+
+    public boolean isExplicitReceiver() {
+        return explicitReceiver;
+    }
+
+    public boolean mayResolveAgainstImports() {
+        return !explicitReceiver
+            && (selector == BindingContextSelector.CONTEXT
+                || selector == BindingContextSelector.ROOT
+                || selector == BindingContextSelector.TEMPLATED_ITEM);
+    }
+
     /**
-     * Gets the distance to the referenced parent, where self == 0, first parent == 1, etc.
+     * Gets the distance to the referenced parent, where the current element == 0,
+     * first parent == 1, etc.
      */
     public int getBindingDistance() {
         return bindingDistance;
@@ -78,7 +106,7 @@ public class BindingContextNode extends AbstractNode {
         return switch (selector) {
             case STATIC -> new NopSegment(type);
             case ROOT -> new RootSegment(type, type, ValueSourceKind.NONE, ObservableDependencyKind.NONE, null);
-            case SELF -> new ParentSegment(type, 0);
+            case ELEMENT -> new ParentSegment(type, 0);
             case PARENT -> new ParentSegment(type, bindingDistance);
             case TEMPLATED_ITEM -> new ParamSegment(type);
             case CONTEXT -> new RootSegment(
@@ -98,7 +126,8 @@ public class BindingContextNode extends AbstractNode {
     @Override
     public BindingContextNode deepClone() {
         return new BindingContextNode(
-            selector, type, valueType, observableType, contextField, bindingDistance, getSourceInfo()).copy(this);
+            selector, type, valueType, observableType, contextField, bindingDistance,
+            explicitReceiver, getSourceInfo()).copy(this);
     }
 
     @Override
@@ -108,6 +137,7 @@ public class BindingContextNode extends AbstractNode {
         BindingContextNode that = (BindingContextNode)o;
         return selector == that.selector &&
             bindingDistance == that.bindingDistance &&
+            explicitReceiver == that.explicitReceiver &&
             Objects.equals(contextField, that.contextField) &&
             type.equals(that.type) &&
             valueType.equals(that.valueType) &&
@@ -116,6 +146,7 @@ public class BindingContextNode extends AbstractNode {
 
     @Override
     public int hashCode() {
-        return Objects.hash(selector, bindingDistance, contextField, type, valueType, observableType);
+        return Objects.hash(
+            selector, bindingDistance, explicitReceiver, contextField, type, valueType, observableType);
     }
 }

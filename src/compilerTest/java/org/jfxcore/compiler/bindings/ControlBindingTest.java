@@ -78,7 +78,7 @@ public class ControlBindingTest extends CompilerTestBase {
             <?import javafx.scene.shape.*?>
             <?import javafx.scene.layout.*?>
             <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
-                <Rectangle fill="red" stroke="$:self.fill"/>
+                <Rectangle fill="red" stroke="$:element.fill"/>
             </Pane>
         """);
 
@@ -100,7 +100,7 @@ public class ControlBindingTest extends CompilerTestBase {
             <?import javafx.scene.layout.*?>
             <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <properties>
-                    <NonNode fx:id="prop" prop1="123.0" prop2="$:self.prop1"/>
+                    <NonNode fx:id="prop" prop1="123.0" prop2="$:element.prop1"/>
                 </properties>
             </Pane>
         """);
@@ -125,12 +125,12 @@ public class ControlBindingTest extends CompilerTestBase {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.scene.layout.*?>
             <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
-                <NodeUnderInitialization arg1="$:self.test"/>
+                <NodeUnderInitialization arg1="$:element.test"/>
             </Pane>
         """));
 
         assertEquals(ErrorCode.CANNOT_REFERENCE_NODE_UNDER_INITIALIZATION, ex.getDiagnostic().getCode());
-        assertCodeHighlight("$:self.test", ex);
+        assertCodeHighlight("$:element.test", ex);
     }
 
     @Test
@@ -138,12 +138,12 @@ public class ControlBindingTest extends CompilerTestBase {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.scene.layout.*?>
             <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
-                <NodeUnderInitialization arg1="$NodeUnderInitialization.function(:self.test)"/>
+                <NodeUnderInitialization arg1="$NodeUnderInitialization.function(:element.test)"/>
             </Pane>
         """));
 
         assertEquals(ErrorCode.CANNOT_REFERENCE_NODE_UNDER_INITIALIZATION, ex.getDiagnostic().getCode());
-        assertCodeHighlight("$NodeUnderInitialization.function(:self.test)", ex);
+        assertCodeHighlight("$NodeUnderInitialization.function(:element.test)", ex);
     }
 
     @Test

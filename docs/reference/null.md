@@ -11,7 +11,7 @@ The text `"null"` has no intrinsic null value in an ordinary assignment. In part
 an `Object` property produces the string `"null"`; use `{fx:Null}` when the assigned value must be null.
 
 As a method argument, the unquoted keyword `null` is the null literal. Quote it as `'null'` to pass a string,
-or qualify it as a path such as `:self.null` to refer to a property named `null`.
+or qualify it as a path such as `:element.null` to refer to a property named `null`.
 
 ## Usage
 

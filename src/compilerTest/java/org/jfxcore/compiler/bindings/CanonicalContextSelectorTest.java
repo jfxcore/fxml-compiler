@@ -19,6 +19,29 @@ import static org.junit.jupiter.api.Assertions.*;
 @ExtendWith(TestExtension.class)
 public class CanonicalContextSelectorTest extends CompilerTestBase {
 
+    public static class ContextValue {
+        public final String value;
+        private final StringProperty observableValue =
+            new SimpleStringProperty(this, "observableValue");
+
+        public ContextValue(String value) {
+            this.value = value;
+            this.observableValue.set(value);
+        }
+
+        public StringProperty observableValueProperty() {
+            return observableValue;
+        }
+
+        public String getObservableValue() {
+            return observableValue.get();
+        }
+
+        public String append(String suffix) {
+            return value + suffix;
+        }
+    }
+
     @SuppressWarnings("unused")
     public static class ContextPane extends Pane {
         public final String root = "root";
@@ -29,6 +52,9 @@ public class CanonicalContextSelectorTest extends CompilerTestBase {
         private final ObjectProperty<Object> secondResult = new SimpleObjectProperty<>();
         private final ObjectProperty<Object> thirdResult = new SimpleObjectProperty<>();
         private final ObjectProperty<Object> fourthResult = new SimpleObjectProperty<>();
+        private final StringProperty textResult = new SimpleStringProperty(this, "textResult");
+        private final StringProperty secondTextResult = new SimpleStringProperty(this, "secondTextResult");
+        private final ObjectProperty<ContextValue> context = new SimpleObjectProperty<>(this, "context", new ContextValue("context-1"));
         private final StringProperty value = new SimpleStringProperty(this, "value");
 
         public ObjectProperty<Object> resultProperty() {
@@ -45,6 +71,26 @@ public class CanonicalContextSelectorTest extends CompilerTestBase {
 
         public ObjectProperty<Object> fourthResultProperty() {
             return fourthResult;
+        }
+
+        public StringProperty textResultProperty() {
+            return textResult;
+        }
+
+        public StringProperty secondTextResultProperty() {
+            return secondTextResult;
+        }
+
+        public ObjectProperty<ContextValue> contextProperty() {
+            return context;
+        }
+
+        public ContextValue getContext() {
+            return context.get();
+        }
+
+        public String getThis() {
+            return "ordinary-this";
         }
 
         public StringProperty valueProperty() {
@@ -64,9 +110,9 @@ public class CanonicalContextSelectorTest extends CompilerTestBase {
     public void Terminal_Contexts_Produce_Their_Context_Objects() {
         ContextPane root = compileAndRun("""
             <ContextPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                         result="$:self">
+                         result="$:element">
                 <ContextPane result="$:parent" secondResult="$:root"
-                             thirdResult="$:parent(0)"/>
+                             thirdResult="$:parent(0)" fourthResult="$:context"/>
             </ContextPane>
         """);
 
@@ -75,6 +121,110 @@ public class CanonicalContextSelectorTest extends CompilerTestBase {
         assertSame(root, child.resultProperty().get());
         assertSame(root, child.secondResultProperty().get());
         assertSame(child.resultProperty().get(), child.thirdResultProperty().get());
+        assertSame(root, child.fourthResultProperty().get());
+    }
+
+    @Test
+    public void Explicit_And_Implicit_Default_Context_Agree_On_Root_Fallback() {
+        ContextPane root = compileAndRun("""
+            <ContextPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                         textResult="${value}"
+                         secondTextResult="${:context.value}"
+                         result="$::value"
+                         secondResult="$:context::value"/>
+        """);
+
+        root.setValue("root-value");
+        assertEquals("root-value", root.textResultProperty().get());
+        assertEquals("root-value", root.secondTextResultProperty().get());
+        assertSame(root.valueProperty(), root.resultProperty().get());
+        assertSame(root.valueProperty(), root.secondResultProperty().get());
+    }
+
+    @Test
+    public void Explicit_And_Implicit_Default_Context_Reselect_Together() {
+        ContextPane root = compileAndRun("""
+            <ContextPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                         fx:context="${context}">
+                <ContextPane textResult="${value}"
+                             secondTextResult="${:context.value}"
+                             thirdResult="${::observableValue}"
+                             fourthResult="${:context::observableValue}"/>
+            </ContextPane>
+        """);
+
+        ContextPane child = (ContextPane)root.getChildren().get(0);
+        ContextValue first = root.getContext();
+        assertEquals("context-1", child.textResultProperty().get());
+        assertEquals("context-1", child.secondTextResultProperty().get());
+        assertSame(first.observableValueProperty(), child.thirdResultProperty().get());
+        assertSame(first.observableValueProperty(), child.fourthResultProperty().get());
+
+        ContextValue second = new ContextValue("context-2");
+        root.contextProperty().set(second);
+        assertEquals("context-2", child.textResultProperty().get());
+        assertEquals("context-2", child.secondTextResultProperty().get());
+        assertSame(second.observableValueProperty(), child.thirdResultProperty().get());
+        assertSame(second.observableValueProperty(), child.fourthResultProperty().get());
+    }
+
+    @Test
+    public void Explicit_And_Implicit_Methods_Use_The_Current_Observable_Context_Value() {
+        ContextPane root = compileAndRun("""
+            <ContextPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                         fx:context="${context}">
+                <ContextPane textResult="${append('!')}"
+                             secondTextResult="${:context.append('?')}"/>
+            </ContextPane>
+        """);
+
+        ContextPane child = (ContextPane)root.getChildren().get(0);
+        assertEquals("context-1!", child.textResultProperty().get());
+        assertEquals("context-1?", child.secondTextResultProperty().get());
+
+        root.contextProperty().set(new ContextValue("context-2"));
+        assertEquals("context-2!", child.textResultProperty().get());
+        assertEquals("context-2?", child.secondTextResultProperty().get());
+    }
+
+    @Test
+    public void Root_Context_And_Element_Are_Distinct_When_Context_Is_Replaced() {
+        ContextPane root = compileAndRun("""
+            <ContextPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                         fx:context="${context}">
+                <ContextPane result="$:context"
+                             secondResult="$:root"
+                             thirdResult="$:element"/>
+            </ContextPane>
+        """);
+
+        ContextPane child = (ContextPane)root.getChildren().get(0);
+        assertSame(root.getContext(), child.resultProperty().get());
+        assertSame(root, child.secondResultProperty().get());
+        assertSame(child, child.thirdResultProperty().get());
+    }
+
+    @Test
+    public void Context_Selector_In_FxContext_Value_Uses_Root_Fallback() {
+        ContextPane root = compileAndRun("""
+            <ContextPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                         fx:context="$:context.context">
+                <ContextPane result="$:context"/>
+            </ContextPane>
+        """);
+
+        ContextPane child = (ContextPane)root.getChildren().get(0);
+        assertSame(root.getContext(), child.resultProperty().get());
+    }
+
+    @Test
+    public void This_Is_Resolved_As_An_Ordinary_Property() {
+        ContextPane root = compileAndRun("""
+            <ContextPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                         result="$this"/>
+        """);
+
+        assertEquals("ordinary-this", root.resultProperty().get());
     }
 
     @Test
@@ -86,7 +236,7 @@ public class CanonicalContextSelectorTest extends CompilerTestBase {
                     <ContextPane value="self-value"
                                  result="${:root.value}"
                                  secondResult="${:parent.value}"
-                                 thirdResult="${:self.value}"/>
+                                 thirdResult="${:element.value}"/>
                 </ContextPane>
             </ContextPane>
         """);

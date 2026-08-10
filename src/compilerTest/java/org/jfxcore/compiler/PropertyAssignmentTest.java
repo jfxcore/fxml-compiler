@@ -1176,7 +1176,7 @@ public class PropertyAssignmentTest {
         public void Class_Literal_In_Function_Is_Interpreted_As_Path_And_Fails() {
             MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
                 <ClassLiteralPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                                  fx:typeArguments="String" classLiteral="$this.<String>func(String)"/>
+                                  fx:typeArguments="String" classLiteral="$func<String>(String)"/>
             """));
 
             assertEquals(ErrorCode.MEMBER_NOT_FOUND, ex.getDiagnostic().getCode());

@@ -74,12 +74,9 @@ expression `${user.addresses.name}` would not work the same way, because `user.a
 This distinction is useful whenever the observable object exposes members that are different from the members of its
 current value, or when you need to pass the observable instance to another expression instead of its contained value.
 
-Like the member selection operator, the observable selection operator always has a receiver. Use the explicit default
-receiver `this` when the observable is the first member of the default [evaluation context](context.html):
-
-```xml
-<Label text="${this::addresses.size}"/>
-```
+{: .note }
+Unlike the member selection operator, the observable selection operator can also be placed in front of the first
+path segment. For example, `${::addresses.size}` is a valid expression if `addresses` is an `ObservableValue`.
 
 ## Content selection operator `..`
 When the path is prefixed with the content selection operator `..`, the expression does not operate on a single
@@ -138,15 +135,17 @@ The qualified attached property name consists of the name of the declaring class
 </VBox>
 ```
 
-## Method type witness
-When a generic method is selected, an explicit type witness can preserve type information. The witness occurs between
-the selection operator and the method name:
+## Generic type arguments
+
+When a generic method is selected, explicit type arguments can preserve type information.
+Type arguments are specified after the path segment:
 
 ```xml
-<MyControl value="${model.<String>genericGetter()}"/>
+<MyControl value="${model.item<String>}"/>
 ```
 
-Generic type inference is not supported.
+Note that in this example, `item` may only refer to a Java Beans-style accessor or a JavaFX Beans-style accessor;
+field access cannot be parameterized. Generic type inference is not supported.
 
 {: .note }
 In XML files, the `<` character can only be used as a markup delimiter, and must be escaped using `&lt;` in

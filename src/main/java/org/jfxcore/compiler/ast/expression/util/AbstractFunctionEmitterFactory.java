@@ -70,6 +70,14 @@ abstract class AbstractFunctionEmitterFactory {
         this.targetType = targetType;
     }
 
+    protected final TypeInstance getInvokingType() {
+        return invokingType;
+    }
+
+    protected final @Nullable TypeInstance getTargetType() {
+        return targetType;
+    }
+
     protected InvocationInfo createInvocation(
             FunctionExpressionNode functionExpression, boolean bidirectional, boolean preferObservable) {
         return createInvocation(functionExpression, bidirectional, preferObservable, targetType);
@@ -89,7 +97,7 @@ abstract class AbstractFunctionEmitterFactory {
         PathExpressionNode methodPath = functionExpression.getPath();
         List<TypeInstance> witnesses = methodPath.getSegments()
             .get(methodPath.getSegments().size() - 1)
-            .getWitnesses()
+            .getTypeArguments()
             .stream()
             .map(PathNode::resolve)
             .toList();
@@ -278,7 +286,7 @@ abstract class AbstractFunctionEmitterFactory {
 
                 List<TypeInstance> inverseWitnesses = inversePath.getSegments()
                     .get(inversePath.getSegments().size() - 1)
-                    .getWitnesses()
+                    .getTypeArguments()
                     .stream()
                     .map(PathNode::resolve)
                     .toList();
@@ -307,7 +315,7 @@ abstract class AbstractFunctionEmitterFactory {
         return result;
     }
 
-    private PreparedArguments prepareArguments(
+    protected final PreparedArguments prepareArguments(
             BehaviorDeclaration behavior,
             TypeInstance[] parameterTypes,
             Collection<? extends Node> sourceArguments,
@@ -505,7 +513,7 @@ abstract class AbstractFunctionEmitterFactory {
             preferObservable, true, false);
     }
 
-    private Callable findInverseCallable(
+    protected final Callable findInverseCallable(
             PathExpressionNode pathExpression,
             @Nullable TypeInstance returnType,
             List<TypeInstance> typeWitnesses,
@@ -553,7 +561,7 @@ abstract class AbstractFunctionEmitterFactory {
                 // If we don't have a valid path expression, the only other possible interpretation would be
                 // a static method call. Since a static method call is not resolved by a path expression, we
                 // check that only the default binding context selector is used.
-                if (!pathExpression.getBindingContext().getSelector().isDefault()) {
+                if (!pathExpression.getBindingContext().mayResolveAgainstImports()) {
                     throw BindingSourceErrors.bindingContextNotApplicable(pathExpression.getBindingContext().getSourceInfo());
                 }
             }
@@ -578,9 +586,10 @@ abstract class AbstractFunctionEmitterFactory {
                     methodName);
             }
         } else {
-            methodName = pathExpression.getSimplePath();
-            declaringClass = pathExpression.getBindingContext().getType().getTypeDeclaration();
-            invocationContext = List.of(pathExpression.getBindingContext().getType().getTypeInstance());
+            methodName = pathExpression.getSegments().get(0).getText();
+            TypeInstance contextType = pathExpression.getBindingContext().getValueType();
+            declaringClass = contextType.declaration();
+            invocationContext = List.of(contextType);
         }
 
         List<TypeInstance> argumentTypes = arguments.stream()
@@ -626,7 +635,7 @@ abstract class AbstractFunctionEmitterFactory {
         }
 
         // Only inverseMethod has constructor-name semantics. Ordinary calls never enter this branch.
-        if (allowConstructor) {
+        if (allowConstructor && pathExpression.getBindingContext().mayResolveAgainstImports()) {
             var resolver = new Resolver(pathExpression.getSourceInfo());
             TypeDeclaration ctorClass = resolver.tryResolveClass(pathExpression.getSimplePath());
             if (ctorClass == null) {
@@ -673,7 +682,7 @@ abstract class AbstractFunctionEmitterFactory {
         throw SymbolResolutionErrors.memberNotFound(pathExpression.getSourceInfo(), declaringClass, methodName);
     }
 
-    private TypeInstance getArgumentType(Node argument, boolean preferObservable) {
+    protected final TypeInstance getArgumentType(Node argument, boolean preferObservable) {
         if (argument instanceof FunctionExpressionNode funcExpressionArg) {
             return createInvocation(funcExpressionArg, false, preferObservable, null).type();
         } else if (argument instanceof PathExpressionNode pathExpressionArg) {
@@ -744,7 +753,7 @@ abstract class AbstractFunctionEmitterFactory {
         return new ReceiverInfo(List.of(), ObservableDependencyKind.NONE);
     }
 
-    private Callable findInverseFunctionViaAnnotation(
+    protected final Callable findInverseFunctionViaAnnotation(
             Callable method, TypeInstance argumentType, TypeInstance returnType, SourceInfo sourceInfo) {
         AnnotationDeclaration annotation = method.getBehavior()
             .annotation(Markup.InverseMethodAnnotationName)
@@ -780,7 +789,7 @@ abstract class AbstractFunctionEmitterFactory {
             sourceInfo);
     }
 
-    private ObservableDependencyKind getArgumentDependencyKind(BindingEmitterInfo emitterInfo) {
+    protected final ObservableDependencyKind getArgumentDependencyKind(BindingEmitterInfo emitterInfo) {
         if (emitterInfo.getObservableDependencyKind() != ObservableDependencyKind.NONE) {
             return emitterInfo.getObservableDependencyKind();
         }
@@ -815,7 +824,7 @@ abstract class AbstractFunctionEmitterFactory {
         List<ValueEmitterNode> emitters,
         ObservableDependencyKind dependencyKind) {}
 
-    private record PreparedArguments(
+    protected record PreparedArguments(
         List<EmitMethodArgumentNode> values,
         boolean observable) {}
 

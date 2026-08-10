@@ -17,13 +17,14 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import static org.jfxcore.compiler.util.MoreAssertions.*;
 import static org.junit.jupiter.api.Assertions.*;
 
-@SuppressWarnings({"HttpUrlsUsage", "unused"})
+@SuppressWarnings({"HttpUrlsUsage", "ClassCanBeRecord", "InnerClassMayBeStatic", "unused"})
 @ExtendWith(TestExtension.class)
 public class MemberClassConstructionTest extends CompilerTestBase {
 
     public static class TestPane extends Pane {
         static int argumentCalls;
         static int innerConstructions;
+        static int identityCalls;
 
         public final StringBuilder order = new StringBuilder();
         public final Outer<String> outer = new Outer<>(this, "outer");
@@ -42,10 +43,45 @@ public class MemberClassConstructionTest extends CompilerTestBase {
             return outer;
         }
 
+        public Outer<String> observableIdentity(Outer<String> value) {
+            identityCalls++;
+            return value;
+        }
+
+        public Object Collision(String value) {
+            return "method:" + value;
+        }
+
+        public Object ReceiverCollision(String value) {
+            return "method:" + value;
+        }
+
+        public Object ConstructorPreferred(Object value) {
+            return "method:" + value;
+        }
+
+        public Object MethodPreferred(String value) {
+            return "method:" + value;
+        }
+
+        public Object MethodSetWins(String value) {
+            return "string:" + value;
+        }
+
+        public Object MethodSetWins(Integer value) {
+            return "integer:" + value;
+        }
+
         public String orderedArgument() {
             argumentCalls++;
             order.append('a');
             return "argument";
+        }
+
+        public int orderedIntegerArgument() {
+            argumentCalls++;
+            order.append('a');
+            return 7;
         }
 
         public double memberBoxToDouble(MemberBox value) {
@@ -53,8 +89,14 @@ public class MemberClassConstructionTest extends CompilerTestBase {
         }
 
         public class MemberBox {
+            public final TestPane owner = TestPane.this;
             public final double value;
             public MemberBox(double value) { this.value = value; }
+        }
+
+        public class ReceiverCollision {
+            public final String value;
+            public ReceiverCollision(String value) { this.value = value; }
         }
     }
 
@@ -93,13 +135,48 @@ public class MemberClassConstructionTest extends CompilerTestBase {
         public VarargsBox(String... values) { this.values = values; }
     }
 
+    public static class Collision {
+        public final String value;
+        public Collision(String value) { this.value = value; }
+    }
+
+    public static class ConstructorPreferred {
+        public final String value;
+        public ConstructorPreferred(String value) { this.value = value; }
+    }
+
+    public static class MethodPreferred {
+        public final Object value;
+        public MethodPreferred(Object value) { this.value = value; }
+    }
+
+    public static class MethodSetWins {
+        public final Object value;
+        public MethodSetWins(Object value) { this.value = value; }
+    }
+
     public static class Outer<X> {
         public final TestPane host;
         public final X outerValue;
+        public final String fieldOnly = "field";
+        public final String genericValue = "field";
 
         public Outer(TestPane host, X outerValue) {
             this.host = host;
             this.outerValue = outerValue;
+        }
+
+        public String getPropertyOnly() {
+            return "property:" + outerValue;
+        }
+
+        public String exactOnly() {
+            return "exact:" + outerValue;
+        }
+
+        @SuppressWarnings("unchecked")
+        public <T> T getGenericValue() {
+            return (T)("generic:" + outerValue);
         }
 
         public class PlainInner {
@@ -175,13 +252,14 @@ public class MemberClassConstructionTest extends CompilerTestBase {
     public void resetCounters() {
         TestPane.argumentCalls = 0;
         TestPane.innerConstructions = 0;
+        TestPane.identityCalls = 0;
     }
 
     @Test
     public void Leading_Construction_Separates_Class_Arguments_And_Constructor_Witnesses() {
         TestPane root = compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                      result="$new <Integer> GenericConstructor<String>('foo', 7)"/>
+                      result="$GenericConstructor<String, Integer>('foo', 7)"/>
         """);
 
         GenericConstructor<?> result = assertInstanceOf(GenericConstructor.class, root.resultProperty().get());
@@ -193,7 +271,7 @@ public class MemberClassConstructionTest extends CompilerTestBase {
     public void Xml_Entity_Decoded_Generic_Construction_Compiles_Semantically() {
         TestPane leading = compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                      result="$new &lt;Integer> GenericConstructor&lt;String>('foo', 7)"/>
+                      result="$GenericConstructor&lt;String, Integer>('foo', 7)"/>
         """, "Leading", null);
 
         GenericConstructor<?> leadingResult = assertInstanceOf(GenericConstructor.class, leading.resultProperty().get());
@@ -202,7 +280,7 @@ public class MemberClassConstructionTest extends CompilerTestBase {
 
         TestPane qualified = compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                      result="$outer.new &lt;Long> WitnessInner&lt;Integer>(7, 8L)"/>
+                      result="$outer.WitnessInner&lt;Integer, Long>(7, 8L)"/>
         """, "Qualified", null);
 
         Outer<?>.WitnessInner<?> qualifiedResult = assertInstanceOf(Outer.WitnessInner.class, qualified.resultProperty().get());
@@ -215,7 +293,7 @@ public class MemberClassConstructionTest extends CompilerTestBase {
     public void Leading_Construction_Accepts_Static_Nested_And_Rejects_Member_Class() {
         TestPane root = compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                      result="$new Outer.StaticNested<String>('foo')"/>
+                      result="$Outer.StaticNested<String>('foo')"/>
         """);
 
         Outer.StaticNested<?> result = assertInstanceOf(Outer.StaticNested.class, root.resultProperty().get());
@@ -223,7 +301,7 @@ public class MemberClassConstructionTest extends CompilerTestBase {
 
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                      result="$new Outer.Inner<String>('foo')"/>
+                      result="$Outer.Inner<String>('foo')"/>
         """));
         assertEquals(ErrorCode.CONSTRUCTOR_NOT_FOUND, ex.getDiagnostic().getCode());
     }
@@ -232,7 +310,7 @@ public class MemberClassConstructionTest extends CompilerTestBase {
     public void Qualified_Construction_Preserves_The_Parameterized_Owner() {
         TestPane root = compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                      result="$outer.new Inner<Integer>(7)"/>
+                      result="$outer.Inner<Integer>(7)"/>
         """);
 
         Outer<?>.Inner<?> result = assertInstanceOf(Outer.Inner.class, root.resultProperty().get());
@@ -245,13 +323,13 @@ public class MemberClassConstructionTest extends CompilerTestBase {
     public void Qualified_Construction_Substitutes_Owner_Type_Arguments_In_Constructor_Parameters() {
         TestPane root = compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                      result="$outer.new OwnerValueInner('value')"/>
+                      result="$outer.OwnerValueInner('value')"/>
         """);
 
         Outer<?>.OwnerValueInner result = assertInstanceOf(Outer.OwnerValueInner.class, root.resultProperty().get());
         assertEquals("value", result.value);
 
-        MarkupException exception = assertConstructionFails("outer.new OwnerValueInner(7)", "OwnerParameterMismatch");
+        MarkupException exception = assertConstructionFails("outer.OwnerValueInner(7)", "OwnerParameterMismatch");
         assertEquals(ErrorCode.CONSTRUCTOR_NOT_FOUND, exception.getDiagnostic().getCode());
     }
 
@@ -259,7 +337,7 @@ public class MemberClassConstructionTest extends CompilerTestBase {
     public void Qualified_Construction_Resolves_An_Inherited_Member_Class() {
         TestPane root = compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                      result="$derivedOuter.new PlainInner('foo')"/>
+                      result="$derivedOuter.PlainInner('foo')"/>
         """);
 
         Outer<?>.PlainInner result = assertInstanceOf(Outer.PlainInner.class, root.resultProperty().get());
@@ -271,17 +349,17 @@ public class MemberClassConstructionTest extends CompilerTestBase {
     public void Qualified_Construction_Rejects_A_Static_Nested_Class() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                      result="$outer.new StaticNested<String>('foo')"/>
+                      result="$outer.StaticNested<String>('foo')"/>
         """));
 
-        assertEquals(ErrorCode.CONSTRUCTOR_NOT_FOUND, ex.getDiagnostic().getCode());
+        assertEquals(ErrorCode.MEMBER_NOT_FOUND, ex.getDiagnostic().getCode());
     }
 
     @Test
     public void Qualified_Construction_Separates_Class_Arguments_And_Constructor_Witnesses() {
         TestPane root = compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                      result="$outer.new <Long> WitnessInner<Integer>(7, 8L)"/>
+                      result="$outer.WitnessInner<Integer, Long>(7, 8L)"/>
         """);
 
         Outer<?>.WitnessInner<?> result = assertInstanceOf(Outer.WitnessInner.class, root.resultProperty().get());
@@ -292,40 +370,39 @@ public class MemberClassConstructionTest extends CompilerTestBase {
 
     @Test
     public void Constructed_Class_Arguments_Are_Validated_At_The_Class_Position() {
-        MarkupException arity = assertConstructionFails("new GenericBox<String, Integer>('foo')", "ClassArity");
-        assertEquals(ErrorCode.NUM_TYPE_ARGUMENTS_MISMATCH, arity.getDiagnostic().getCode());
-        assertCodeHighlight("GenericBox", arity);
+        MarkupException arity = assertConstructionFails("GenericBox<String, Integer>('foo')", "ClassArity");
+        assertEquals(ErrorCode.CONSTRUCTOR_NOT_FOUND, arity.getDiagnostic().getCode());
 
-        MarkupException bounds = assertConstructionFails("new NumberBox<String>('foo')", "ClassBounds");
+        MarkupException bounds = assertConstructionFails("NumberBox<String>('foo')", "ClassBounds");
         assertEquals(ErrorCode.TYPE_ARGUMENT_OUT_OF_BOUND, bounds.getDiagnostic().getCode());
         assertCodeHighlight("NumberBox", bounds);
 
-        MarkupException primitive = assertConstructionFails("new GenericBox<int>(1)", "ClassPrimitive");
+        MarkupException primitive = assertConstructionFails("GenericBox<int>(1)", "ClassPrimitive");
         assertEquals(ErrorCode.TYPE_ARGUMENT_NOT_REFERENCE, primitive.getDiagnostic().getCode());
         assertCodeHighlight("GenericBox", primitive);
     }
 
     @Test
     public void Constructor_Witnesses_Are_Validated_At_The_Invocation_Position() {
-        String aritySource = "new <Integer, Long> GenericConstructor<String>('foo', 7)";
+        String aritySource = "GenericConstructor<String, Integer, Long>('foo', 7)";
         MarkupException arity = assertConstructionFails(aritySource, "WitnessArity");
         assertEquals(ErrorCode.CONSTRUCTOR_NOT_FOUND, arity.getDiagnostic().getCode());
         assertEquals(ErrorCode.NUM_TYPE_ARGUMENTS_MISMATCH, arity.getDiagnostic().getCauses()[0].getCode());
         assertCodeHighlight(aritySource, arity);
 
-        String boundsSource = "new <String> GenericConstructor<String>('foo', 'bar')";
+        String boundsSource = "GenericConstructor<String, String>('foo', 'bar')";
         MarkupException bounds = assertConstructionFails(boundsSource, "WitnessBounds");
         assertEquals(ErrorCode.CONSTRUCTOR_NOT_FOUND, bounds.getDiagnostic().getCode());
         assertEquals(ErrorCode.TYPE_ARGUMENT_OUT_OF_BOUND, bounds.getDiagnostic().getCauses()[0].getCode());
         assertCodeHighlight(boundsSource, bounds);
 
-        String primitiveSource = "new <int> GenericConstructor<String>('foo', 7)";
+        String primitiveSource = "GenericConstructor<String, int>('foo', 7)";
         MarkupException primitive = assertConstructionFails(primitiveSource, "WitnessPrimitive");
         assertEquals(ErrorCode.CONSTRUCTOR_NOT_FOUND, primitive.getDiagnostic().getCode());
         assertEquals(ErrorCode.TYPE_ARGUMENT_NOT_REFERENCE, primitive.getDiagnostic().getCauses()[0].getCode());
         assertCodeHighlight(primitiveSource, primitive);
 
-        String omittedSource = "new GenericConstructor<String>('foo', 7)";
+        String omittedSource = "GenericConstructor<String>('foo', 7)";
         MarkupException omitted = assertConstructionFails(omittedSource, "WitnessOmitted");
         assertEquals(ErrorCode.CONSTRUCTOR_NOT_FOUND, omitted.getDiagnostic().getCode());
         assertEquals(ErrorCode.NUM_TYPE_ARGUMENTS_MISMATCH, omitted.getDiagnostic().getCauses()[0].getCode());
@@ -335,48 +412,82 @@ public class MemberClassConstructionTest extends CompilerTestBase {
 
     @Test
     public void Construction_Rejects_Nonconstructible_Target_Kinds() {
-        for (String source : new String[] {"new InterfaceBox()", "new AbstractBox()"}) {
+        for (String source : new String[] {"InterfaceBox()", "AbstractBox()"}) {
             MarkupException ex = assertConstructionFails(source, source.replaceAll("\\W", ""));
             assertEquals(ErrorCode.CONSTRUCTOR_NOT_FOUND, ex.getDiagnostic().getCode());
         }
 
-        MarkupException primitive = assertConstructionFails("new int()", "PrimitiveTarget");
-        assertEquals(ErrorCode.EXPECTED_IDENTIFIER, primitive.getDiagnostic().getCode());
+        MarkupException primitive = assertConstructionFails("int()", "PrimitiveTarget");
+        assertEquals(ErrorCode.UNEXPECTED_TOKEN, primitive.getDiagnostic().getCode());
         assertCodeHighlight("int", primitive);
 
-        MarkupException inaccessible = assertConstructionFails("new InaccessibleBox()", "Inaccessible");
+        MarkupException inaccessible = assertConstructionFails("InaccessibleBox()", "Inaccessible");
         assertEquals(ErrorCode.CLASS_NOT_ACCESSIBLE, inaccessible.getDiagnostic().getCode());
         assertCodeHighlight("InaccessibleBox", inaccessible);
     }
 
     @Test
     public void Qualified_Construction_Requires_A_Matching_Enclosing_Type() {
-        MarkupException ex = assertConstructionFails("outer.new OtherInner()", "IncompatibleOwner");
+        MarkupException ex = assertConstructionFails("outer.OtherInner()", "IncompatibleOwner");
 
         assertEquals(ErrorCode.MEMBER_NOT_FOUND, ex.getDiagnostic().getCode());
-        assertCodeHighlight("OtherInner", ex);
+        assertCodeHighlight("outer.OtherInner", ex);
     }
 
     @Test
-    public void This_Context_And_Grouped_Qualifiers_Reach_Construction_Resolution() {
-        TestPane thisQualifier = compileAndRun("""
-            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                      result="$this.new MemberBox(6)"/>
-        """, "ThisQualifier", null);
-
-        assertEquals(6, assertInstanceOf(TestPane.MemberBox.class, thisQualifier.resultProperty().get()).value);
-
+    public void Context_Element_And_Grouped_Qualifiers_Reach_Construction_Resolution() {
         TestPane contextQualifier = compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                      result="$:self.outer.new PlainInner('context')"/>
+                      result="$:context.MemberBox(6)"/>
         """, "ContextQualifier", null);
 
-        Outer<?>.PlainInner contextResult = assertInstanceOf(Outer.PlainInner.class, contextQualifier.resultProperty().get());
-        assertSame(contextQualifier.outer, contextResult.owner);
+        TestPane.MemberBox contextMember = assertInstanceOf(
+            TestPane.MemberBox.class, contextQualifier.resultProperty().get());
+        assertSame(contextQualifier, contextMember.owner);
+        assertEquals(6, contextMember.value);
+
+        TestPane directElementQualifier = compileAndRun("""
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                      result="$:element.MemberBox(7)"/>
+        """, "DirectElementQualifier", null);
+
+        TestPane.MemberBox elementMember = assertInstanceOf(
+            TestPane.MemberBox.class, directElementQualifier.resultProperty().get());
+        assertSame(directElementQualifier, elementMember.owner);
+
+        TestPane rootQualifier = compileAndRun("""
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
+                <TestPane result="$:root.MemberBox(8)"/>
+            </TestPane>
+        """, "RootQualifier", null);
+
+        TestPane rootChild = (TestPane)rootQualifier.getChildren().get(0);
+        TestPane.MemberBox rootMember = assertInstanceOf(
+            TestPane.MemberBox.class, rootChild.resultProperty().get());
+        assertSame(rootQualifier, rootMember.owner);
+
+        TestPane parentQualifier = compileAndRun("""
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
+                <TestPane result="$:parent.MemberBox(9)"/>
+            </TestPane>
+        """, "ParentQualifier", null);
+
+        TestPane parentChild = (TestPane)parentQualifier.getChildren().get(0);
+        TestPane.MemberBox parentMember = assertInstanceOf(
+            TestPane.MemberBox.class, parentChild.resultProperty().get());
+        assertSame(parentQualifier, parentMember.owner);
+
+        TestPane elementQualifier = compileAndRun("""
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                      result="$:element.outer.PlainInner('element')"/>
+        """, "ElementQualifier", null);
+
+        Outer<?>.PlainInner elementResult = assertInstanceOf(Outer.PlainInner.class, elementQualifier.resultProperty().get());
+        assertSame(elementQualifier.outer, elementResult.owner);
 
         TestPane groupedQualifier = compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                      result="$(outer).new PlainInner('grouped')"/>
+                      result="$(outer).PlainInner('grouped')"/>
         """, "GroupedQualifier", null);
 
         Outer<?>.PlainInner groupedResult = assertInstanceOf(Outer.PlainInner.class, groupedQualifier.resultProperty().get());
@@ -387,7 +498,7 @@ public class MemberClassConstructionTest extends CompilerTestBase {
     public void Generic_Construction_Without_Class_Arguments_Uses_Raw_Type_Behavior() {
         TestPane root = compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                      result="$outer.new Inner(7)"/>
+                      result="$outer.Inner(7)"/>
         """);
 
         Outer<?>.Inner<?> result = assertInstanceOf(Outer.Inner.class, root.resultProperty().get());
@@ -399,7 +510,7 @@ public class MemberClassConstructionTest extends CompilerTestBase {
     public void Leading_Construction_Emits_Empty_Varargs() {
         TestPane root = compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                      result="$new VarargsBox()"/>
+                      result="$VarargsBox()"/>
         """);
 
         VarargsBox box = assertInstanceOf(VarargsBox.class, root.resultProperty().get());
@@ -410,7 +521,7 @@ public class MemberClassConstructionTest extends CompilerTestBase {
     public void Qualified_Construction_Emits_Explicit_Varargs_Without_The_Hidden_Outer_Parameter() {
         TestPane root = compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                      result="$outer.new VarargsInner('first', 'second')"/>
+                      result="$outer.VarargsInner('first', 'second')"/>
         """);
 
         Outer<?>.VarargsInner inner = assertInstanceOf(Outer.VarargsInner.class, root.resultProperty().get());
@@ -421,7 +532,7 @@ public class MemberClassConstructionTest extends CompilerTestBase {
     public void Qualified_Construction_Normalizes_A_NonGeneric_Constructor_Descriptor() {
         TestPane root = compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                      result="$outer.new PlainInner('foo')"/>
+                      result="$outer.PlainInner('foo')"/>
         """);
 
         Outer<?>.PlainInner result = assertInstanceOf(Outer.PlainInner.class, root.resultProperty().get());
@@ -433,7 +544,7 @@ public class MemberClassConstructionTest extends CompilerTestBase {
     public void Qualified_Construction_Can_Repeat() {
         TestPane root = compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                      result="$outer.new Inner<Integer>(7).new Deep<String>('foo')"/>
+                      result="$outer.Inner<Integer>(7).Deep<String>('foo')"/>
         """);
 
         Outer<?>.Inner<?>.Deep<?> result = assertInstanceOf(Outer.Inner.Deep.class, root.resultProperty().get());
@@ -446,7 +557,7 @@ public class MemberClassConstructionTest extends CompilerTestBase {
     public void Qualified_Construction_Evaluates_Qualifier_Before_Arguments() {
         TestPane root = compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                      result="$orderedOuter().new PlainInner(orderedArgument())"/>
+                      result="$orderedOuter().PlainInner(orderedArgument())"/>
         """);
 
         assertEquals("qac", root.order.toString());
@@ -454,10 +565,91 @@ public class MemberClassConstructionTest extends CompilerTestBase {
     }
 
     @Test
+    public void Computed_Receiver_Supports_Property_Selection_And_Exact_Invocation() {
+        TestPane property = compileAndRun("""
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                      result="$orderedOuter().propertyOnly"/>
+        """, "ComputedProperty", null);
+
+        assertEquals("property:outer", property.resultProperty().get());
+        assertEquals("q", property.order.toString());
+
+        TestPane invocation = compileAndRun("""
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                      result="$orderedOuter().exactOnly()"/>
+        """, "ComputedInvocation", null);
+
+        assertEquals("exact:outer", invocation.resultProperty().get());
+        assertEquals("q", invocation.order.toString());
+
+        MarkupException ex = assertConstructionFails(
+            "orderedOuter().propertyOnly()", "ComputedExactName");
+        assertEquals(ErrorCode.MEMBER_NOT_FOUND, ex.getDiagnostic().getCode());
+        assertCodeHighlight("propertyOnly", ex);
+    }
+
+    @Test
+    public void Computed_Receiver_Supports_Witnessed_Property_Selection() {
+        TestPane root = compileAndRun("""
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                      result="$orderedOuter().genericValue<String>"/>
+        """);
+
+        assertEquals("generic:outer", root.resultProperty().get());
+        assertEquals("q", root.order.toString());
+    }
+
+    @Test
+    public void Witnessed_Property_Selection_Rejects_A_Field_That_Cannot_Consume_The_List() {
+        MarkupException ex = assertConstructionFails(
+            "orderedOuter().fieldOnly<String>", "WitnessedField");
+
+        assertEquals(ErrorCode.NUM_TYPE_ARGUMENTS_MISMATCH, ex.getDiagnostic().getCode());
+    }
+
+    @Test
+    public void Mixed_Selected_Member_Chain_Preserves_Receiver_Order() {
+        TestPane root = compileAndRun("""
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                      result="$orderedOuter().Inner<Integer>(7).owner.outerValue"/>
+        """);
+
+        assertEquals("outer", root.resultProperty().get());
+        assertEquals("q", root.order.toString());
+    }
+
+    @Test
+    public void Observable_Computed_Receiver_Reselects_From_Current_Value() {
+        TestPane root = compileAndRun("""
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                      result="${observableIdentity(observableOuter).outerValue}"/>
+        """);
+
+        assertEquals("first", root.resultProperty().get());
+        int callsAfterFirstRead = TestPane.identityCalls;
+        assertTrue(callsAfterFirstRead > 0);
+
+        root.observableOuter.set(new Outer<>(root, "second"));
+        assertEquals(callsAfterFirstRead, TestPane.identityCalls);
+        assertEquals("second", root.resultProperty().get());
+        assertEquals(callsAfterFirstRead + 1, TestPane.identityCalls);
+    }
+
+    @Test
+    public void Grouped_Null_Receiver_Short_Circuits_Selected_Member() {
+        TestPane root = compileAndRun("""
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                      result="$(nullOuter).outerValue"/>
+        """);
+
+        assertNull(root.resultProperty().get());
+    }
+
+    @Test
     public void Null_Qualifier_Suppresses_Explicit_Argument_Evaluation() {
         assertThrows(NullPointerException.class, () -> compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                      result="$nullOuter.new PlainInner(orderedArgument())"/>
+                      result="$nullOuter.PlainInner(orderedArgument())"/>
         """));
 
         assertEquals(0, TestPane.argumentCalls);
@@ -467,7 +659,7 @@ public class MemberClassConstructionTest extends CompilerTestBase {
     public void Observable_Qualifier_Reconstructs_With_The_Current_Enclosing_Instance() {
         TestPane root = compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                      result="${observableOuter.new Inner<Integer>(7)}"/>
+                      result="${observableOuter.Inner<Integer>(7)}"/>
         """);
 
         Outer<?>.Inner<?> first = assertInstanceOf(Outer.Inner.class, root.resultProperty().get());
@@ -491,19 +683,105 @@ public class MemberClassConstructionTest extends CompilerTestBase {
     }
 
     @Test
-    public void Ordinary_Function_Syntax_Does_Not_Fall_Back_To_Construction() {
+    public void Observable_FxContext_Reconstructs_Direct_Member_Class_From_Current_Context() {
+        TestPane root = compileAndRun("""
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                      fx:context="${observableOuter}"
+                      result="${:context.Inner<Integer>(host.orderedIntegerArgument())}"/>
+        """, "ObservableFxContextQualifier", null);
+
+        Outer<?>.Inner<?> first = assertInstanceOf(Outer.Inner.class, root.resultProperty().get());
+        assertSame(root.observableOuter.get(), first.owner);
+        assertEquals(1, TestPane.argumentCalls);
+
+        Outer<String> secondOwner = new Outer<>(root, "second");
+        root.observableOuter.set(secondOwner);
+        Outer<?>.Inner<?> second = assertInstanceOf(Outer.Inner.class, root.resultProperty().get());
+        assertSame(secondOwner, second.owner);
+        assertEquals(2, TestPane.argumentCalls);
+
+        root.observableOuter.set(null);
+        assertNull(root.resultProperty().get());
+        assertEquals(2, TestPane.argumentCalls);
+    }
+
+    @Test
+    public void Neutral_Invocation_Syntax_Resolves_Construction() {
+        TestPane root = compileAndRun("""
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                      result="$GenericBox<String>('foo')"/>
+        """);
+
+        GenericBox<?> result = assertInstanceOf(GenericBox.class, root.resultProperty().get());
+        assertEquals("foo", result.value);
+
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                      result="$GenericBox('foo')"/>
+                      result="$:context.GenericBox<String>('foo')"/>
         """));
-
         assertEquals(ErrorCode.MEMBER_NOT_FOUND, ex.getDiagnostic().getCode());
+    }
 
-        ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+    @Test
+    public void Method_And_Constructor_Candidates_Are_Selected_Together() {
+        MarkupException ambiguous = assertConstructionFails("Collision('value')", "AmbiguousCall");
+        assertEquals(ErrorCode.AMBIGUOUS_METHOD_OR_CONSTRUCTOR_CALL, ambiguous.getDiagnostic().getCode());
+        assertCodeHighlight("Collision", ambiguous);
+
+        TestPane constructorPreferred = compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                      result="$this.<String>GenericBox('foo')"/>
-        """));
+                      result="$ConstructorPreferred('value')"/>
+        """, "ConstructorPreferredCall", null);
+
+        ConstructorPreferred constructed = assertInstanceOf(
+            ConstructorPreferred.class, constructorPreferred.resultProperty().get());
+        assertEquals("value", constructed.value);
+
+        TestPane methodPreferred = compileAndRun("""
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                      result="$MethodPreferred('value')"/>
+        """, "MethodPreferredCall", null);
+
+        assertEquals("method:value", methodPreferred.resultProperty().get());
+    }
+
+    @Test
+    public void Explicit_Context_And_Observable_Terminal_Exclude_Imported_Construction() {
+        TestPane explicit = compileAndRun("""
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                      result="$:context.Collision('value')"/>
+        """, "ExplicitContextMethod", null);
+        assertEquals("method:value", explicit.resultProperty().get());
+
+        TestPane observableTerminal = compileAndRun("""
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                      result="$::Collision('value')"/>
+        """, "ObservableTerminalMethod", null);
+        assertEquals("method:value", observableTerminal.resultProperty().get());
+
+        MarkupException sameReceiverCollision = assertConstructionFails(
+            ":context.ReceiverCollision('value')", "SameReceiverCollision");
+        assertEquals(
+            ErrorCode.AMBIGUOUS_METHOD_OR_CONSTRUCTOR_CALL,
+            sameReceiverCollision.getDiagnostic().getCode());
+        assertCodeHighlight("ReceiverCollision", sameReceiverCollision);
+    }
+
+    @Test
+    public void Dominated_Constructor_Does_Not_Replace_An_Ambiguous_Method_Set() {
+        MarkupException ex = assertConstructionFails("MethodSetWins(null)", "MethodSetWinsCall");
+
+        assertEquals(ErrorCode.AMBIGUOUS_METHOD_CALL, ex.getDiagnostic().getCode());
+        assertCodeHighlight("MethodSetWins", ex);
+    }
+
+    @Test
+    public void Observable_Selection_Does_Not_Resolve_A_Constructor() {
+        MarkupException ex = assertConstructionFails(
+            "outer::PlainInner('value')", "ObservableConstruction");
+
         assertEquals(ErrorCode.MEMBER_NOT_FOUND, ex.getDiagnostic().getCode());
+        assertCodeHighlight("outer::PlainInner", ex);
     }
 
     @Test
@@ -533,7 +811,7 @@ public class MemberClassConstructionTest extends CompilerTestBase {
     public void Hidden_Enclosing_Parameter_Is_Not_Counted_In_Source_Arity() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                      result="$outer.new PlainInner()"/>
+                      result="$outer.PlainInner()"/>
         """));
 
         assertEquals(ErrorCode.CONSTRUCTOR_NOT_FOUND, ex.getDiagnostic().getCode());
@@ -545,7 +823,7 @@ public class MemberClassConstructionTest extends CompilerTestBase {
     @Test
     public void Generic_Signature_Also_Excludes_The_Hidden_Enclosing_Parameter() {
         MarkupException ex = assertConstructionFails(
-            "outer.new <Long> WitnessInner<Integer>()", "GenericHiddenArity");
+            "outer.WitnessInner<Integer, Long>()", "GenericHiddenArity");
 
         assertEquals(ErrorCode.CONSTRUCTOR_NOT_FOUND, ex.getDiagnostic().getCode());
         assertEquals(ErrorCode.NUM_FUNCTION_ARGUMENTS_MISMATCH,

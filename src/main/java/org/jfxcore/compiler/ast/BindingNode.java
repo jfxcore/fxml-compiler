@@ -78,7 +78,7 @@ public class BindingNode extends AbstractNode {
 
     /**
      * Gets the smallest binding distance within the binding expression,
-     * where bind to self == 0, bind to first parent == 1, etc.
+     * where binding to the current element == 0, binding to the first parent == 1, etc.
      */
     public int getBindingDistance() {
         return path.getBindingDistance();

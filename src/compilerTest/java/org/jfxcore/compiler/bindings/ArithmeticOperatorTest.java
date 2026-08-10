@@ -492,7 +492,7 @@ public class ArithmeticOperatorTest extends CompilerTestBase {
     public void Qualified_Keyword_Names_Remain_Path_Operands() {
         TestPane root = compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                      intResult="$:self.true + :self.null"/>
+                      intResult="$:element.true + :element.null"/>
         """);
 
         assertEquals(41, root.getIntResult());

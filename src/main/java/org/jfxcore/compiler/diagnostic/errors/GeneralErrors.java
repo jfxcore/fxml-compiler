@@ -11,6 +11,7 @@ import org.jfxcore.compiler.type.BehaviorDeclaration;
 import org.jfxcore.compiler.type.TypeDeclaration;
 import org.jfxcore.compiler.type.TypeInstance;
 import org.jfxcore.compiler.util.PropertyInfo;
+import java.util.Arrays;
 
 import static org.jfxcore.compiler.util.NameHelper.*;
 
@@ -155,6 +156,16 @@ public class GeneralErrors {
         return new MarkupException(sourceInfo, allowAssignment ?
             Diagnostic.newDiagnosticVariant(ErrorCode.EXPRESSION_NOT_APPLICABLE, "assign") :
             Diagnostic.newDiagnostic(ErrorCode.EXPRESSION_NOT_APPLICABLE));
+    }
+
+    public static MarkupException ambiguousMethodOrConstructorCall(
+            SourceInfo sourceInfo, String name, BehaviorDeclaration... candidates) {
+        return new MarkupException(sourceInfo, Diagnostic.newDiagnosticCauses(
+            ErrorCode.AMBIGUOUS_METHOD_OR_CONSTRUCTOR_CALL,
+            Arrays.stream(candidates)
+                .map(BehaviorDeclaration::longName)
+                .toArray(String[]::new),
+            name));
     }
 
     public static MarkupException invalidOperand(SourceInfo sourceInfo, String operator, String operandType) {

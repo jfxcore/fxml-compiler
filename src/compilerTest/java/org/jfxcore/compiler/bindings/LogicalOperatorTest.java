@@ -130,7 +130,7 @@ public class LogicalOperatorTest extends CompilerTestBase {
     public void Xml_Entity_Decoded_Logical_Operator_Compiles_Semantically() {
         TestPane root = compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                      result0="${ready &amp;&amp; other}"/>
+                      result0="${ready && other}"/>
         """);
 
         assertFalse(root.isResult0());

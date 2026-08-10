@@ -371,7 +371,7 @@ public class BindingSourceTest extends CompilerTestBase {
                 <?import javafx.scene.layout.*?>
                 <?import javafx.scene.control.*?>
                 <BindingContextTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                                        fx:context="$this::button"/>
+                                        fx:context="$::button"/>
             """));
 
             assertEquals(ErrorCode.INVALID_INVARIANT_REFERENCE, ex.getDiagnostic().getCode());
@@ -383,7 +383,7 @@ public class BindingSourceTest extends CompilerTestBase {
             Pane root = compileAndRun("""
                 <?import javafx.scene.layout.*?>
                 <BindingContextTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                                        fx:context="$this::obsButton">
+                                        fx:context="$::obsButton">
                     <Pane id="${Boolean.toString(isNull)}"/>
                     <Pane id="${Boolean.toString(isNotNull)}"/>
                 </BindingContextTestPane>
@@ -660,11 +660,11 @@ public class BindingSourceTest extends CompilerTestBase {
         }
 
         @Test
-        public void Bind_To_Property_With_Self_Selector() {
+        public void Bind_To_Property_With_Element_Selector() {
             Pane root = compileAndRun("""
                 <?import javafx.scene.layout.*?>
                 <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
-                    <Pane prefWidth="123" prefHeight="${:self.prefWidth}"/>
+                    <Pane prefWidth="123" prefHeight="${:element.prefWidth}"/>
                 </Pane>
             """);
 
@@ -674,11 +674,11 @@ public class BindingSourceTest extends CompilerTestBase {
         }
 
         @Test
-        public void Self_Selector_Cannot_Be_Used_With_SearchLevel() {
+        public void Element_Selector_Cannot_Be_Used_With_SearchLevel() {
             MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
                 <?import javafx.scene.layout.*?>
                 <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
-                    <Pane prefWidth="123" prefHeight="${:self(2).prefWidth}"/>
+                    <Pane prefWidth="123" prefHeight="${:element(2).prefWidth}"/>
                 </Pane>
             """));
 

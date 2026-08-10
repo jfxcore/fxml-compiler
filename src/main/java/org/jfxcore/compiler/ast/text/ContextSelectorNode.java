@@ -13,18 +13,20 @@ import java.util.Objects;
 public class ContextSelectorNode extends DerivedTextNode {
 
     private final @Nullable SourceInfo colonSourceInfo;
+    private final SourceInfo selectorSourceInfo;
     private final @Nullable SourceInfo openParenSourceInfo;
     private final @Nullable SourceInfo commaSourceInfo;
     private final @Nullable SourceInfo closeParenSourceInfo;
-    private TextNode selector;
+    private final ContextSelector selector;
     private TextNode searchType;
     private NumberNode level;
 
     public ContextSelectorNode(
-            TextNode selector,
+            ContextSelector selector,
             @Nullable TextNode searchType,
             @Nullable NumberNode level,
             @Nullable SourceInfo colonSourceInfo,
+            SourceInfo selectorSourceInfo,
             @Nullable SourceInfo openParenSourceInfo,
             @Nullable SourceInfo commaSourceInfo,
             @Nullable SourceInfo closeParenSourceInfo,
@@ -34,16 +36,18 @@ public class ContextSelectorNode extends DerivedTextNode {
         this.searchType = searchType;
         this.level = level;
         this.colonSourceInfo = colonSourceInfo;
+        this.selectorSourceInfo = checkNotNull(selectorSourceInfo);
         this.openParenSourceInfo = openParenSourceInfo;
         this.commaSourceInfo = commaSourceInfo;
         this.closeParenSourceInfo = closeParenSourceInfo;
     }
 
     private ContextSelectorNode(
-            TextNode selector,
+            ContextSelector selector,
             @Nullable TextNode searchType,
             @Nullable NumberNode level,
             @Nullable SourceInfo colonSourceInfo,
+            SourceInfo selectorSourceInfo,
             @Nullable SourceInfo openParenSourceInfo,
             @Nullable SourceInfo commaSourceInfo,
             @Nullable SourceInfo closeParenSourceInfo,
@@ -54,13 +58,18 @@ public class ContextSelectorNode extends DerivedTextNode {
         this.searchType = searchType;
         this.level = level;
         this.colonSourceInfo = colonSourceInfo;
+        this.selectorSourceInfo = checkNotNull(selectorSourceInfo);
         this.openParenSourceInfo = openParenSourceInfo;
         this.commaSourceInfo = commaSourceInfo;
         this.closeParenSourceInfo = closeParenSourceInfo;
     }
 
-    public TextNode getSelector() {
+    public ContextSelector getSelector() {
         return selector;
+    }
+
+    public SourceInfo getSelectorSourceInfo() {
+        return selectorSourceInfo;
     }
 
     public @Nullable TextNode getSearchType() {
@@ -96,8 +105,6 @@ public class ContextSelectorNode extends DerivedTextNode {
     public void acceptChildren(Visitor visitor) {
         super.acceptChildren(visitor);
 
-        selector = (TextNode)selector.accept(visitor);
-
         if (searchType != null) {
             searchType = (TextNode)searchType.accept(visitor);
         }
@@ -110,10 +117,11 @@ public class ContextSelectorNode extends DerivedTextNode {
     @Override
     public ContextSelectorNode deepClone() {
         return new ContextSelectorNode(
-            selector.deepClone(),
+            selector,
             searchType != null ? searchType.deepClone() : null,
             level != null ? level.deepClone() : null,
             colonSourceInfo,
+            selectorSourceInfo,
             openParenSourceInfo,
             commaSourceInfo,
             closeParenSourceInfo,
@@ -126,7 +134,7 @@ public class ContextSelectorNode extends DerivedTextNode {
         if (o == null || getClass() != o.getClass()) return false;
         if (!super.equals(o)) return false;
         ContextSelectorNode that = (ContextSelectorNode) o;
-        return Objects.equals(selector, that.selector)
+        return selector == that.selector
             && Objects.equals(searchType, that.searchType)
             && Objects.equals(level, that.level);
     }
@@ -136,12 +144,13 @@ public class ContextSelectorNode extends DerivedTextNode {
         return Objects.hash(super.hashCode(), selector, searchType, level);
     }
 
-    private static String formatText(TextNode selector, @Nullable TextNode typeName, @Nullable NumberNode depth) {
+    private static String formatText(
+            ContextSelector selector, @Nullable TextNode typeName, @Nullable NumberNode depth) {
         if (typeName == null && depth == null) {
-            return selector.formatText();
+            return selector.getText();
         }
 
-        var builder = new StringBuilder(selector.formatText()).append('(');
+        var builder = new StringBuilder(selector.getText()).append('(');
 
         if (typeName != null) {
             builder.append(typeName.formatText());

@@ -10,15 +10,16 @@ import org.jfxcore.compiler.ast.text.AttachedSegmentNode;
 import org.jfxcore.compiler.ast.text.BinaryOperator;
 import org.jfxcore.compiler.ast.text.BinaryOperatorNode;
 import org.jfxcore.compiler.ast.text.CompositeNode;
-import org.jfxcore.compiler.ast.text.ConstructorNode;
+import org.jfxcore.compiler.ast.text.ContextSelector;
 import org.jfxcore.compiler.ast.text.ContextSelectorNode;
-import org.jfxcore.compiler.ast.text.FunctionNode;
+import org.jfxcore.compiler.ast.text.InvocationNode;
 import org.jfxcore.compiler.ast.text.ListNode;
 import org.jfxcore.compiler.ast.text.LiteralKeywordNode;
 import org.jfxcore.compiler.ast.ObjectNode;
 import org.jfxcore.compiler.ast.text.NumberNode;
 import org.jfxcore.compiler.ast.text.ParenthesizedNode;
 import org.jfxcore.compiler.ast.text.PathNode;
+import org.jfxcore.compiler.ast.text.SelectedMemberNode;
 import org.jfxcore.compiler.ast.text.StringLiteralNode;
 import org.jfxcore.compiler.ast.text.TextNode;
 import org.jfxcore.compiler.ast.text.TextSegmentNode;
@@ -123,8 +124,8 @@ public class InlineParserTest extends TestBase {
         assertEquals("foo bar", ((TextNode)(list.getValues().get(0))).getText());
         assertEquals("baz(123,5.0,\"qux quux\")", ((TextNode)(list.getValues().get(1))).getText());
 
-        FunctionNode funcNode = (FunctionNode)list.getValues().get(1);
-        assertEquals("baz", funcNode.getPath().getText());
+        InvocationNode funcNode = (InvocationNode)list.getValues().get(1);
+        assertEquals("baz", invocationPath(funcNode).getText());
         assertEquals(3, funcNode.getArguments().size());
         assertEquals("123", ((TextNode)funcNode.getArguments().get(0)).getText());
         assertEquals("5.0", ((TextNode)funcNode.getArguments().get(1)).getText());
@@ -201,7 +202,7 @@ public class InlineParserTest extends TestBase {
 
         var objectNode = new InlineParser(markup, "fx").parseObject();
         assertEquals(1, objectNode.getChildren().size());
-        var functionNode = (FunctionNode)objectNode.getChildren().get(0);
+        var functionNode = (InvocationNode)objectNode.getChildren().get(0);
         assertEquals(2, functionNode.getArguments().size());
         assertEquals("baz", ((PathNode)functionNode.getArguments().get(0)).getText());
         assertEquals("qux", ((PathNode)functionNode.getArguments().get(1)).getText());
@@ -339,7 +340,7 @@ public class InlineParserTest extends TestBase {
         PropertyNode prefWidth = ((ObjectNode)root.getChildren().get(0)).findProperty("prefWidth");
         PathNode path = assertInstanceOf(
             PathNode.class, ((ObjectNode)prefWidth.getValues().get(0)).getChildren().get(0));
-        assertEquals("parent", path.getContextSelector().getSelector().getText());
+        assertSame(ContextSelector.PARENT, path.getContextSelector().getSelector());
         assertEquals("GridPane", path.getContextSelector().getSearchType().getText());
         assertEquals("1", path.getContextSelector().getLevel().getText());
         assertEquals("prefWidth", path.getSegments().get(0).getText());
@@ -347,15 +348,17 @@ public class InlineParserTest extends TestBase {
 
     @Test
     public void Canonical_Context_Selectors_Are_Terminal_Or_Selected_Primaries() {
-        for (String source : new String[] {":root", ":self", ":parent"}) {
+        for (ContextSelector selector : ContextSelector.values()) {
+            String source = ":" + selector.getText();
             PathNode path = assertInstanceOf(PathNode.class, new InlineParser(source, "fx").parseExpression());
             ContextSelectorNode context = path.getContextSelector();
 
             assertNotNull(context);
             assertTrue(path.getSegments().isEmpty());
             assertEquals(source, path.getText());
-            assertEquals(source.substring(1), context.getSelector().getText());
+            assertSame(selector, context.getSelector());
             assertEquals(new SourceInfo(0, 0, 0, 1), context.getColonSourceInfo());
+            assertEquals(new SourceInfo(0, 1, 0, source.length()), context.getSelectorSourceInfo());
             assertEquals(new SourceInfo(0, 0, 0, source.length()), context.getSourceInfo());
             assertEquals(context.getSourceInfo(), path.getSourceInfo());
         }
@@ -364,9 +367,44 @@ public class InlineParserTest extends TestBase {
         assertEquals("width", normal.getSegments().get(0).getText());
         assertFalse(normal.getSegments().get(0).isObservableSelector());
 
-        PathNode observable = assertInstanceOf(PathNode.class, new InlineParser(":self::value", "fx").parseExpression());
+        PathNode observable = assertInstanceOf(PathNode.class, new InlineParser(":element::value", "fx").parseExpression());
         assertEquals("value", observable.getSegments().get(0).getText());
         assertTrue(observable.getSegments().get(0).isObservableSelector());
+    }
+
+    @Test
+    public void Leading_Observable_Selector_Uses_The_Implicit_Context() {
+        PathNode path = assertInstanceOf(PathNode.class,
+            new InlineParser("::foo<T>::bar", "fx").parseExpression());
+
+        assertNull(path.getContextSelector());
+        assertEquals("::foo<T>::bar", path.getText());
+        assertEquals(2, path.getSegments().size());
+        assertTrue(path.getSegments().get(0).isObservableSelector());
+        assertEquals(new SourceInfo(0, 0, 0, 2), path.getSegments().get(0).getSelectorSourceInfo());
+        assertEquals("T", path.getSegments().get(0).getTypeArguments().get(0).getText());
+        assertTrue(path.getSegments().get(1).isObservableSelector());
+
+        PathNode ordinarySuffix = assertInstanceOf(PathNode.class,
+            new InlineParser("::foo.bar", "fx").parseExpression());
+        assertTrue(ordinarySuffix.getSegments().get(0).isObservableSelector());
+        assertFalse(ordinarySuffix.getSegments().get(1).isObservableSelector());
+
+        InvocationNode invocation = assertInstanceOf(InvocationNode.class,
+            new InlineParser("::foo<T>()", "fx").parseExpression());
+        assertEquals("::foo<T>()", invocation.getText());
+
+        PathNode attached = assertInstanceOf(PathNode.class,
+            new InlineParser("::(Owner.property)", "fx").parseExpression());
+        assertNull(attached.getContextSelector());
+        assertTrue(assertInstanceOf(
+            AttachedSegmentNode.class, attached.getSegments().get(0)).isObservableSelector());
+        assertEquals("::(Owner.property)", attached.getText());
+
+        PathNode contextAttached = assertInstanceOf(PathNode.class,
+            new InlineParser(":context.(Owner.property)", "fx").parseExpression());
+        assertSame(ContextSelector.CONTEXT, contextAttached.getContextSelector().getSelector());
+        assertFalse(contextAttached.getSegments().get(0).isObservableSelector());
     }
 
     @Test
@@ -409,14 +447,19 @@ public class InlineParserTest extends TestBase {
     @Test
     public void Invalid_Or_Unsupported_Context_Forms_Are_Rejected_Locally() {
         for (String source : new String[] {
+                ":self",
+                ":context(1)",
+                ":element(1)",
                 ":root(1)",
-                ":self(1).width",
                 ":parent()",
                 ":parent(1, Pane)",
                 ":parent(Pane,)",
                 ":parent(Pane, 1, 2)",
                 ":parent(1.5)",
-                "::member"}) {
+                "::",
+                ":::foo",
+                "::()",
+                ".foo"}) {
             assertThrows(MarkupException.class, () -> new InlineParser(source, "fx").parseExpression(), source);
         }
     }
@@ -428,7 +471,9 @@ public class InlineParserTest extends TestBase {
         assertExpressionError(":parent(1, Pane)", ErrorCode.EXPECTED_TOKEN, 9, 10);
         assertExpressionError(":parent(Pane, 1, 2)", ErrorCode.EXPECTED_TOKEN, 15, 16);
         assertExpressionError(":parent(1.5)", ErrorCode.UNEXPECTED_TOKEN, 8, 11);
-        assertExpressionError("::member", ErrorCode.EXPECTED_IDENTIFIER, 1, 2);
+        assertExpressionError(":::member", ErrorCode.EXPECTED_IDENTIFIER, 2, 3);
+        assertExpressionError(":context()", ErrorCode.UNEXPECTED_TOKEN, 8, 9);
+        assertExpressionError(":element()", ErrorCode.UNEXPECTED_TOKEN, 8, 9);
         assertExpressionError(":root()", ErrorCode.UNEXPECTED_TOKEN, 5, 6);
         assertExpressionError("pane.(GridPane.rowIndex)()", ErrorCode.UNEXPECTED_TOKEN, 24, 25);
     }
@@ -442,27 +487,27 @@ public class InlineParserTest extends TestBase {
         assertTrue(parent.getSegments().isEmpty());
         assertEquals("Pane", parent.getContextSelector().getSearchType().getText());
 
-        ConstructorNode construction = assertInstanceOf(ConstructorNode.class,
-            new InlineParser(":parent.new Inner(value)", "fx").parseExpression());
-        PathNode qualifier = assertInstanceOf(PathNode.class, construction.getQualifier());
-        assertTrue(qualifier.getSegments().isEmpty());
-        assertEquals("parent", qualifier.getContextSelector().getSelector().getText());
+        InvocationNode construction = assertInstanceOf(InvocationNode.class,
+            new InlineParser(":parent.Inner(value)", "fx").parseExpression());
+        PathNode constructionTarget = invocationPath(construction);
+        assertSame(ContextSelector.PARENT, constructionTarget.getContextSelector().getSelector());
+        assertEquals("Inner", constructionTarget.getSegments().get(0).getText());
 
-        FunctionNode method = assertInstanceOf(FunctionNode.class,
-            new InlineParser(":parent.<T>method(value)", "fx").parseExpression());
-        assertEquals("T", method.getPath().getSegments().get(0).getWitnesses().get(0).getText());
+        InvocationNode method = assertInstanceOf(InvocationNode.class,
+            new InlineParser(":parent.method<T>(value)", "fx").parseExpression());
+        assertEquals("T", invocationPath(method).getSegments().get(0).getTypeArguments().get(0).getText());
     }
 
     @Test
-    public void This_Is_The_Explicit_Default_Receiver_And_Context_Names_Remain_Ordinary() {
-        PathNode explicitThis = assertInstanceOf(PathNode.class, new InlineParser("this", "fx").parseExpression());
-        assertNull(explicitThis.getContextSelector());
-        assertEquals("this", explicitThis.getText());
+    public void This_And_Context_Names_Are_Ordinary_Identifiers() {
+        PathNode ordinaryThis = assertInstanceOf(PathNode.class, new InlineParser("this", "fx").parseExpression());
+        assertNull(ordinaryThis.getContextSelector());
+        assertEquals("this", ordinaryThis.getText());
 
         PathNode observable = assertInstanceOf(PathNode.class, new InlineParser("this::value", "fx").parseExpression());
         assertTrue(observable.getSegments().get(1).isObservableSelector());
 
-        for (String name : new String[] {"root", "self", "parent", "item"}) {
+        for (String name : new String[] {"context", "element", "root", "self", "parent", "item"}) {
             PathNode ordinary = assertInstanceOf(PathNode.class, new InlineParser(name + ".value", "fx").parseExpression());
             assertNull(ordinary.getContextSelector(), name);
             assertEquals(name, ordinary.getSegments().get(0).getText(), name);
@@ -470,7 +515,7 @@ public class InlineParserTest extends TestBase {
 
         PathNode selectedThis = assertInstanceOf(PathNode.class, new InlineParser("model.this", "fx").parseExpression());
         assertEquals("this", selectedThis.getSegments().get(1).getText());
-        assertThrows(MarkupException.class, () -> new InlineParser("this()", "fx").parseExpression());
+        assertInstanceOf(InvocationNode.class, new InlineParser("this()", "fx").parseExpression());
     }
 
     @Test
@@ -491,9 +536,9 @@ public class InlineParserTest extends TestBase {
             AttachedSegmentNode.class,
             observablePath.getSegments().get(1)).isObservableSelector());
 
-        FunctionNode function = assertInstanceOf(FunctionNode.class,
+        InvocationNode function = assertInstanceOf(InvocationNode.class,
             new InlineParser("pane.(Owner.value).method()", "fx").parseExpression());
-        assertInstanceOf(AttachedSegmentNode.class, function.getPath().getSegments().get(1));
+        assertInstanceOf(AttachedSegmentNode.class, invocationPath(function).getSegments().get(1));
 
         assertThrows(MarkupException.class,
             () -> new InlineParser("pane.(GridPane)", "fx").parseExpression());
@@ -548,24 +593,24 @@ public class InlineParserTest extends TestBase {
 
     @Test
     public void TypeWitness_Is_Parsed_Correctly() {
-        ObjectNode root = new InlineParser("$this.<String>foo()", null).parseObject();
-        PathNode path = ((FunctionNode)root.getChildren().get(0)).getPath();
-        var segment = (TextSegmentNode)path.getSegments().get(1);
-        assertEquals(1, segment.getWitnesses().size());
-        assertEquals("String", segment.getWitnesses().get(0).getText());
+        ObjectNode root = new InlineParser("$foo<String>()", null).parseObject();
+        PathNode path = invocationPath((InvocationNode)root.getChildren().get(0));
+        var segment = (TextSegmentNode)path.getSegments().get(0);
+        assertEquals(1, segment.getTypeArguments().size());
+        assertEquals("String", segment.getTypeArguments().get(0).getText());
         assertEquals("foo", segment.getValue().getText());
     }
 
     @Test
     public void TypeWitnessList_Is_Parsed_Correctly() {
-        ObjectNode root = new InlineParser("$this.<j.l.String, Integer, j.l.Comparable<j.l.Double>>foo()", null).parseObject();
-        PathNode path = ((FunctionNode)root.getChildren().get(0)).getPath();
-        assertEquals("foo", path.getSegments().get(1).getText());
-        TextSegmentNode segment = (TextSegmentNode)path.getSegments().get(1);
-        assertEquals(3, segment.getWitnesses().size());
-        assertEquals("j.l.String", segment.getWitnesses().get(0).getText());
-        assertEquals("Integer", segment.getWitnesses().get(1).getText());
-        PathNode witnessPath = segment.getWitnesses().get(2);
+        ObjectNode root = new InlineParser("$foo<j.l.String, Integer, j.l.Comparable<j.l.Double>>()", null).parseObject();
+        PathNode path = invocationPath((InvocationNode)root.getChildren().get(0));
+        assertEquals("foo", path.getSegments().get(0).getText());
+        TextSegmentNode segment = (TextSegmentNode)path.getSegments().get(0);
+        assertEquals(3, segment.getTypeArguments().size());
+        assertEquals("j.l.String", segment.getTypeArguments().get(0).getText());
+        assertEquals("Integer", segment.getTypeArguments().get(1).getText());
+        PathNode witnessPath = segment.getTypeArguments().get(2);
         assertEquals(3, witnessPath.getSegments().size());
         assertEquals("j", witnessPath.getSegments().get(0).getText());
         assertEquals("l", witnessPath.getSegments().get(1).getText());
@@ -580,24 +625,24 @@ public class InlineParserTest extends TestBase {
 
     @Test
     public void MultiSegment_Path_With_TypeWitnesses_Is_Parsed_Correctly() {
-        ObjectNode root = new InlineParser("$this.<Foo>foo.<Bar>bar::<Baz<Double>>baz()", null).parseObject();
-        var segments = ((FunctionNode)root.getChildren().get(0)).getPath().getSegments();
-        assertEquals(4, segments.size());
-        var segment1 = (TextSegmentNode)segments.get(1);
-        assertEquals(1, segment1.getWitnesses().size());
-        assertEquals("Foo", segment1.getWitnesses().get(0).getText());
+        ObjectNode root = new InlineParser("$foo<Foo>.bar<Bar>::baz<Baz<Double>>()", null).parseObject();
+        var segments = invocationPath((InvocationNode)root.getChildren().get(0)).getSegments();
+        assertEquals(3, segments.size());
+        var segment1 = (TextSegmentNode)segments.get(0);
+        assertEquals(1, segment1.getTypeArguments().size());
+        assertEquals("Foo", segment1.getTypeArguments().get(0).getText());
         assertEquals("foo", segment1.getValue().getText());
         assertFalse(segment1.isObservableSelector());
-        var segment2 = (TextSegmentNode)segments.get(2);
-        assertEquals(1, segment2.getWitnesses().size());
-        assertEquals("Bar", segment2.getWitnesses().get(0).getText());
+        var segment2 = (TextSegmentNode)segments.get(1);
+        assertEquals(1, segment2.getTypeArguments().size());
+        assertEquals("Bar", segment2.getTypeArguments().get(0).getText());
         assertEquals("bar", segment2.getValue().getText());
         assertFalse(segment2.isObservableSelector());
-        var segment3 = (TextSegmentNode)segments.get(3);
-        assertEquals(1, segment3.getWitnesses().size());
-        assertEquals("Baz<Double>", segment3.getWitnesses().get(0).getText());
-        assertEquals(1, segment3.getWitnesses().get(0).getArguments().size());
-        assertEquals("Double", segment3.getWitnesses().get(0).getArguments().get(0).getText());
+        var segment3 = (TextSegmentNode)segments.get(2);
+        assertEquals(1, segment3.getTypeArguments().size());
+        assertEquals("Baz<Double>", segment3.getTypeArguments().get(0).getText());
+        assertEquals(1, segment3.getTypeArguments().get(0).getArguments().size());
+        assertEquals("Double", segment3.getTypeArguments().get(0).getArguments().get(0).getText());
         assertEquals("baz", segment3.getValue().getText());
         assertTrue(segment3.isObservableSelector());
     }
@@ -605,9 +650,8 @@ public class InlineParserTest extends TestBase {
     @Test
     public void Missing_Close_Angle_Bracket_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () ->
-            new InlineParser("$this.<String", null).parseObject());
-        assertEquals(ErrorCode.EXPECTED_TOKEN, ex.getDiagnostic().getCode());
-        assertTrue(ex.getDiagnostic().getMessage().contains(">"));
+            new InlineParser("$value<String,>()", null).parseObject());
+        assertEquals(ErrorCode.EXPECTED_IDENTIFIER, ex.getDiagnostic().getCode());
     }
 
     @Test
@@ -637,10 +681,10 @@ public class InlineParserTest extends TestBase {
             assertEquals("value", assertInstanceOf(PathNode.class, object.getChildren().get(0)).getText(), source);
         }
 
-        ObjectNode witnessedContent = new InlineParser("{MyExt this.<T>value}", "fx").parseObject();
+        ObjectNode witnessedContent = new InlineParser("{MyExt value<T>}", "fx").parseObject();
         assertNull(witnessedContent.findIntrinsicProperty(Intrinsics.TYPE_ARGUMENTS));
         PathNode path = assertInstanceOf(PathNode.class, witnessedContent.getChildren().get(0));
-        assertEquals("T", path.getSegments().get(1).getWitnesses().get(0).getText());
+        assertEquals("T", path.getSegments().get(0).getTypeArguments().get(0).getText());
     }
 
     @Test
@@ -706,15 +750,29 @@ public class InlineParserTest extends TestBase {
 
     @ParameterizedTest
     @CsvSource({
-        "$this::foo::bar::baz,Evaluate",
-        "${this::foo::bar::baz},Observe",
-        "#{this::foo::bar::baz},Synchronize"
+        "$::foo::bar::baz,Evaluate",
+        "${::foo::bar::baz},Observe",
+        ">{::foo::bar::baz},Push",
+        "#{::foo::bar::baz},Synchronize"
     })
     public void Compact_Syntax_With_ObservableSelector_Is_Expanded(String compactIntrinsic, String intrinsicName) {
         ObjectNode objectNode = new InlineParser(compactIntrinsic, "fx").parseObject();
         assertEquals(intrinsicName, objectNode.getType().getName());
         assertTrue(objectNode.getChildren().get(0) instanceof PathNode n
-            && n.getText().equals("this::foo::bar::baz"));
+            && n.getText().equals("::foo::bar::baz"));
+    }
+
+    @Test
+    public void Long_Form_Intrinsics_Accept_A_Leading_Observable_Selector() {
+        for (String intrinsic : new String[] {"Evaluate", "Observe", "Push", "Synchronize"}) {
+            ObjectNode objectNode = new InlineParser(
+                "{fx:" + intrinsic + " ::foo}", "fx").parseObject();
+
+            assertEquals(intrinsic, objectNode.getType().getName());
+            PathNode path = assertInstanceOf(PathNode.class, objectNode.getChildren().get(0));
+            assertEquals("::foo", path.getText());
+            assertTrue(path.getSegments().get(0).isObservableSelector());
+        }
     }
 
     @ParameterizedTest
@@ -747,7 +805,7 @@ public class InlineParserTest extends TestBase {
         assertEquals("foo", pathNode.getSegments().get(0).getText());
         assertEquals("bar", pathNode.getSegments().get(1).getText());
         assertEquals("baz", pathNode.getSegments().get(2).getText());
-        assertEquals("parent", pathNode.getContextSelector().getSelector().getText());
+        assertSame(ContextSelector.PARENT, pathNode.getContextSelector().getSelector());
         assertEquals("Pane", pathNode.getContextSelector().getSearchType().getText());
         assertEquals("1", pathNode.getContextSelector().getLevel().getText());
     }
@@ -772,7 +830,7 @@ public class InlineParserTest extends TestBase {
         assertEquals("foo", pathNode.getSegments().get(0).getText());
         assertEquals("bar", pathNode.getSegments().get(1).getText());
         assertEquals("baz", pathNode.getSegments().get(2).getText());
-        assertEquals("parent", pathNode.getContextSelector().getSelector().getText());
+        assertSame(ContextSelector.PARENT, pathNode.getContextSelector().getSelector());
         assertEquals("Pane", pathNode.getContextSelector().getSearchType().getText());
         assertEquals("1", pathNode.getContextSelector().getLevel().getText());
     }
@@ -860,8 +918,8 @@ public class InlineParserTest extends TestBase {
         PropertyNode property = new InlineParser(input, "fx").parseObject().getProperties().get(0);
         assertEquals("qux", property.getName());
         assertEquals(1, property.getValues().size());
-        FunctionNode functionNode = (FunctionNode)property.getValues().get(0);
-        assertEquals("func", functionNode.getPath().getText());
+        InvocationNode functionNode = (InvocationNode)property.getValues().get(0);
+        assertEquals("func", invocationPath(functionNode).getText());
         assertEquals(2, functionNode.getArguments().size());
         ObjectNode objectNode = (ObjectNode)functionNode.getArguments().get(0);
         assertEquals(intrinsicName, objectNode.getType().getName());
@@ -880,8 +938,8 @@ public class InlineParserTest extends TestBase {
         PropertyNode property = new InlineParser(input, "fx").parseObject().getProperties().get(0);
         assertEquals("qux", property.getName());
         assertEquals(1, property.getValues().size());
-        FunctionNode functionNode = (FunctionNode)property.getValues().get(0);
-        assertEquals("func", functionNode.getPath().getText());
+        InvocationNode functionNode = (InvocationNode)property.getValues().get(0);
+        assertEquals("func", invocationPath(functionNode).getText());
         assertEquals(2, functionNode.getArguments().size());
         assertTrue(functionNode.getArguments().get(1) instanceof TextNode n && n.getText().equals("quux"));
         ObjectNode objectNode = (ObjectNode)functionNode.getArguments().get(0);
@@ -1026,43 +1084,45 @@ public class InlineParserTest extends TestBase {
     }
 
     @Test
-    public void Method_Witness_Is_Receiver_Anchored_And_Leaves_Comparison_Tokens() {
+    public void Method_Type_Arguments_Are_Target_Anchored_And_Leave_Comparison_Tokens() {
         BinaryOperatorNode equality = assertBinary(
-            new InlineParser("model.<T>method()==x", "fx").parseExpression(),
+            new InlineParser("model.method<T>()==x", "fx").parseExpression(),
             BinaryOperator.VALUE_EQUAL);
-        FunctionNode function = assertInstanceOf(FunctionNode.class, equality.getLeft());
+        InvocationNode function = assertInstanceOf(InvocationNode.class, equality.getLeft());
         TextSegmentNode method = assertInstanceOf(
-            TextSegmentNode.class, function.getPath().getSegments().get(1));
+            TextSegmentNode.class, invocationPath(function).getSegments().get(1));
 
         assertEquals("method", method.getText());
-        assertEquals("T", method.getWitnesses().get(0).getText());
+        assertEquals("T", method.getTypeArguments().get(0).getText());
         assertEquals(new SourceInfo(0, 5, 0, 6), method.getSelectorSourceInfo());
         assertEquals(new SourceInfo(0, 6, 0, 15), method.getSourceInfo());
         assertEquals(new SourceInfo(0, 17, 0, 19), equality.getOperatorSourceInfo());
 
         BinaryOperatorNode greater = assertBinary(
-            new InlineParser("model::<T>method(x)>=limit", "fx").parseExpression(),
+            new InlineParser("model::method<T>(x)>=limit", "fx").parseExpression(),
             BinaryOperator.GREATER_THAN_OR_EQUAL);
-        FunctionNode observableFunction = assertInstanceOf(FunctionNode.class, greater.getLeft());
+        InvocationNode observableFunction = assertInstanceOf(InvocationNode.class, greater.getLeft());
         TextSegmentNode observableMethod = assertInstanceOf(
-            TextSegmentNode.class, observableFunction.getPath().getSegments().get(1));
+            TextSegmentNode.class, invocationPath(observableFunction).getSegments().get(1));
         assertTrue(observableMethod.isObservableSelector());
-        assertEquals("T", observableMethod.getWitnesses().get(0).getText());
+        assertEquals("T", observableMethod.getTypeArguments().get(0).getText());
     }
 
     @Test
-    public void Method_Witness_Commits_Locally_And_Old_Positions_Are_Rejected() {
+    public void Method_Type_Arguments_Commit_Locally_And_Prefix_Positions_Are_Rejected() {
         MarkupException malformed = assertThrows(MarkupException.class,
-            () -> new InlineParser("model.<T,>method(x)", "fx").parseExpression());
+            () -> new InlineParser("model.method<T,>(x)", "fx").parseExpression());
         assertEquals(ErrorCode.EXPECTED_IDENTIFIER, malformed.getDiagnostic().getCode());
-        assertEquals(new SourceInfo(0, 9, 0, 10), malformed.getSourceInfo());
+        assertEquals(new SourceInfo(0, 15, 0, 16), malformed.getSourceInfo());
 
-        assertThrows(MarkupException.class,
-            () -> new InlineParser("method<T>()", "fx").parseExpression());
+        assertInstanceOf(InvocationNode.class,
+            new InlineParser("method<T>()", "fx").parseExpression());
         assertThrows(MarkupException.class,
             () -> new InlineParser("<T>method()", "fx").parseExpression());
         assertThrows(MarkupException.class,
-            () -> new InlineParser("::method()", "fx").parseExpression());
+            () -> new InlineParser("model.<T>method()", "fx").parseExpression());
+        assertInstanceOf(InvocationNode.class,
+            new InlineParser("::method()", "fx").parseExpression());
     }
 
     @Test
@@ -1110,7 +1170,7 @@ public class InlineParserTest extends TestBase {
 
     @Test
     public void Arithmetic_Expression_Is_Accepted_In_Function_Arguments() {
-        FunctionNode function = assertInstanceOf(FunctionNode.class,
+        InvocationNode function = assertInstanceOf(InvocationNode.class,
             new InlineParser("f(a * 2, b + 1)", "fx").parseExpression());
 
         assertEquals(2, function.getArguments().size());
@@ -1123,118 +1183,116 @@ public class InlineParserTest extends TestBase {
     }
 
     @Test
-    public void Leading_Construction_Retains_Separate_Generic_Positions_And_Spans() {
-        ConstructorNode constructor = assertInstanceOf(ConstructorNode.class,
-            new InlineParser("new<W>java.lang.Type<T>(x,y+1)", "fx").parseExpression());
+    public void Invocation_Retains_One_Generic_Position_And_Punctuation_Spans() {
+        InvocationNode invocation = assertInstanceOf(InvocationNode.class,
+            new InlineParser("java.lang.Type<T,W>(x,y+1)", "fx").parseExpression());
 
-        assertNull(constructor.getQualifier());
-        assertEquals("W", constructor.getConstructorWitnesses().get(0).getText());
-        assertEquals("java.lang.Type", constructor.getConstructedType().getText());
-        assertEquals("T", constructor.getClassArguments().get(0).getText());
-        assertEquals(2, constructor.getArguments().size());
-        assertBinary(constructor.getArguments().get(1), BinaryOperator.ADD);
-        assertEquals(new SourceInfo(0, 0, 0, 3), constructor.getNewSourceInfo());
-        assertEquals(new SourceInfo(0, 3, 0, 6), constructor.getConstructorWitnessSourceInfo());
-        assertEquals(new SourceInfo(0, 20, 0, 23), constructor.getClassArgumentsSourceInfo());
-        assertEquals(new SourceInfo(0, 23, 0, 24), constructor.getOpenParenSourceInfo());
-        assertEquals(new SourceInfo(0, 29, 0, 30), constructor.getCloseParenSourceInfo());
-        assertEquals(new SourceInfo(0, 0, 0, 30), constructor.getSourceInfo());
-        assertEquals("new <W> java.lang.Type<T>(x,y+1)", constructor.getText());
+        PathNode target = invocationPath(invocation);
+        TextSegmentNode terminal = assertInstanceOf(TextSegmentNode.class, target.getSegments().get(2));
+
+        assertEquals("java.lang.Type<T,W>", target.getText());
+        assertEquals("T", terminal.getTypeArguments().get(0).getText());
+        assertEquals("W", terminal.getTypeArguments().get(1).getText());
+        assertEquals(2, invocation.getArguments().size());
+        assertBinary(invocation.getArguments().get(1), BinaryOperator.ADD);
+        assertEquals(new SourceInfo(0, 14, 0, 19), terminal.getTypeArgumentsSourceInfo());
+        assertEquals(new SourceInfo(0, 19, 0, 20), invocation.getOpenParenSourceInfo());
+        assertEquals(new SourceInfo(0, 25, 0, 26), invocation.getCloseParenSourceInfo());
+        assertEquals(new SourceInfo(0, 0, 0, 26), invocation.getSourceInfo());
+        assertEquals("java.lang.Type<T,W>(x,y+1)", invocation.getText());
     }
 
     @Test
-    public void Qualified_Construction_Retains_The_Real_Qualifier() {
-        ConstructorNode constructor = assertInstanceOf(ConstructorNode.class,
-            new InlineParser("outer.new<W>Inner<T>(x)", "fx").parseExpression());
+    public void Qualified_Invocation_Retains_The_Receiver_Path() {
+        InvocationNode invocation = assertInstanceOf(InvocationNode.class,
+            new InlineParser("outer.Inner<T,W>(x)", "fx").parseExpression());
 
-        assertEquals("outer", assertInstanceOf(PathNode.class, constructor.getQualifier()).getText());
-        assertEquals("W", constructor.getConstructorWitnesses().get(0).getText());
-        assertEquals("Inner", constructor.getConstructedType().getText());
-        assertEquals("T", constructor.getClassArguments().get(0).getText());
-        assertEquals(new SourceInfo(0, 5, 0, 6), constructor.getQualifierSeparatorSourceInfo());
-        assertEquals(new SourceInfo(0, 6, 0, 9), constructor.getNewSourceInfo());
-        assertEquals(new SourceInfo(0, 0, 0, 23), constructor.getSourceInfo());
-        assertEquals("outer.new <W> Inner<T>(x)", constructor.getText());
+        PathNode target = invocationPath(invocation);
+        TextSegmentNode terminal = assertInstanceOf(TextSegmentNode.class, target.getSegments().get(1));
+
+        assertEquals("outer", target.getSegments().get(0).getText());
+        assertEquals("Inner", terminal.getText());
+        assertEquals("T", terminal.getTypeArguments().get(0).getText());
+        assertEquals("W", terminal.getTypeArguments().get(1).getText());
+        assertEquals(new SourceInfo(0, 5, 0, 6), terminal.getSelectorSourceInfo());
+        assertEquals(new SourceInfo(0, 0, 0, 19), invocation.getSourceInfo());
+        assertEquals("outer.Inner<T,W>(x)", invocation.getText());
     }
 
     @Test
-    public void Qualified_Construction_Is_Repeatable_Postfix() {
-        ConstructorNode nested = assertInstanceOf(ConstructorNode.class,
-            new InlineParser("factory().new Inner().new Nested(value)", "fx").parseExpression());
-        assertEquals("Nested", nested.getConstructedType().getText());
+    public void Selected_Invocation_Is_Repeatable_Postfix() {
+        InvocationNode nested = assertInstanceOf(InvocationNode.class,
+            new InlineParser("factory().Inner().Nested(value)", "fx").parseExpression());
 
-        ConstructorNode inner = assertInstanceOf(ConstructorNode.class, nested.getQualifier());
-        assertEquals("Inner", inner.getConstructedType().getText());
-        assertInstanceOf(FunctionNode.class, inner.getQualifier());
+        SelectedMemberNode nestedTarget = assertInstanceOf(SelectedMemberNode.class, nested.getTarget());
+        assertEquals("Nested", nestedTarget.getMember().getText());
 
-        ConstructorNode grouped = assertInstanceOf(ConstructorNode.class,
-            new InlineParser("(outer).new Inner()", "fx").parseExpression());
-        assertInstanceOf(ParenthesizedNode.class, grouped.getQualifier());
+        InvocationNode inner = assertInstanceOf(InvocationNode.class, nestedTarget.getReceiver());
+        SelectedMemberNode innerTarget = assertInstanceOf(SelectedMemberNode.class, inner.getTarget());
+        assertEquals("Inner", innerTarget.getMember().getText());
+        assertInstanceOf(InvocationNode.class, innerTarget.getReceiver());
 
-        ConstructorNode afterConstruction = assertInstanceOf(ConstructorNode.class,
-            new InlineParser("new Outer().new Inner()", "fx").parseExpression());
-        assertInstanceOf(ConstructorNode.class, afterConstruction.getQualifier());
+        InvocationNode grouped = assertInstanceOf(InvocationNode.class,
+            new InlineParser("(outer).Inner()", "fx").parseExpression());
+        assertInstanceOf(ParenthesizedNode.class,
+            assertInstanceOf(SelectedMemberNode.class, grouped.getTarget()).getReceiver());
+
+        InvocationNode afterInvocation = assertInstanceOf(InvocationNode.class,
+            new InlineParser("Outer().Inner()", "fx").parseExpression());
+        assertInstanceOf(InvocationNode.class,
+            assertInstanceOf(SelectedMemberNode.class, afterInvocation.getTarget()).getReceiver());
     }
 
     @Test
-    public void Constructions_Participate_In_Operator_Trees() {
+    public void Invocations_Participate_In_Operator_Trees() {
         BinaryOperatorNode equality = assertBinary(
-            new InlineParser("new Box<T>(x)==outer.new Inner(y)", "fx").parseExpression(),
+            new InlineParser("Box<T>(x)==outer.Inner(y)", "fx").parseExpression(),
             BinaryOperator.VALUE_EQUAL);
-        ConstructorNode leading = assertInstanceOf(ConstructorNode.class, equality.getLeft());
-        ConstructorNode qualified = assertInstanceOf(ConstructorNode.class, equality.getRight());
+        InvocationNode leading = assertInstanceOf(InvocationNode.class, equality.getLeft());
+        InvocationNode qualified = assertInstanceOf(InvocationNode.class, equality.getRight());
 
-        assertNull(leading.getQualifier());
-        assertNotNull(qualified.getQualifier());
-        assertEquals("T", leading.getClassArguments().get(0).getText());
+        assertEquals("T", ((TextSegmentNode)invocationPath(leading)
+            .getSegments().get(0)).getTypeArguments().get(0).getText());
+        assertEquals("outer.Inner", invocationPath(qualified).getText());
     }
 
     @Test
-    public void Construction_Diamond_And_Malformed_Generic_Lists_Are_Rejected() {
-        ConstructorNode primitiveArgument = assertInstanceOf(ConstructorNode.class,
-            new InlineParser("new Type<int>(x)", "fx").parseExpression());
-        assertEquals("int", primitiveArgument.getClassArguments().get(0).getText());
+    public void Primitive_And_Malformed_Generic_Lists_Are_Handled_Locally() {
+        InvocationNode primitiveArgument = assertInstanceOf(InvocationNode.class,
+            new InlineParser("Type<int>(x)", "fx").parseExpression());
 
-        ConstructorNode primitiveWitness = assertInstanceOf(ConstructorNode.class,
-            new InlineParser("new <long> Type(x)", "fx").parseExpression());
-        assertEquals("long", primitiveWitness.getConstructorWitnesses().get(0).getText());
+        assertEquals("int", invocationPath(primitiveArgument).getSegments().get(0).getTypeArguments().get(0).getText());
 
         for (String expression : new String[] {
-                "new Type<>(x)",
-                "outer.new Inner<>(x)",
-                "new <W,> Type<T>(x)",
-                "outer.new <W,> Inner<T>(x)",
-                "new Type<T,>(x)",
-                "outer.new Inner<T,>(x)"}) {
+                "Type<>(x)",
+                "outer.Inner<>(x)",
+                "Type<W,>(x)",
+                "outer.Inner<T,>(x)"}) {
             assertThrows(MarkupException.class,
                 () -> new InlineParser(expression, "fx").parseExpression(), expression);
         }
     }
 
     @Test
-    public void Malformed_Construction_Forms_Report_Local_Spans() {
-        assertExpressionError("new Type<>(x)", ErrorCode.EXPECTED_IDENTIFIER, 9, 10);
-        assertExpressionError("outer.new Inner<>(x)", ErrorCode.EXPECTED_IDENTIFIER, 16, 17);
-        assertExpressionError("new <W,> Type<T>(x)", ErrorCode.EXPECTED_IDENTIFIER, 7, 8);
-        assertExpressionError(
-            "outer.new <W,> Inner<T>(x)", ErrorCode.EXPECTED_IDENTIFIER, 13, 14);
-        assertExpressionError("new Type<T,>(x)", ErrorCode.EXPECTED_IDENTIFIER, 11, 12);
-        assertExpressionError(
-            "outer.new Inner<T,>(x)", ErrorCode.EXPECTED_IDENTIFIER, 18, 19);
-        assertExpressionError("new", ErrorCode.EXPECTED_IDENTIFIER, 3, 3);
-        assertExpressionError("new Type", ErrorCode.EXPECTED_TOKEN, 8, 8);
-        assertExpressionError("outer.new", ErrorCode.EXPECTED_IDENTIFIER, 9, 9);
-        assertExpressionError(
-            "outer.new foo.Inner()", ErrorCode.EXPECTED_TOKEN, 13, 14);
+    public void Malformed_Invocation_Forms_Report_Local_Spans() {
+        assertExpressionError("Type<>(x)", ErrorCode.EXPECTED_IDENTIFIER, 5, 6);
+        assertExpressionError("outer.Inner<>(x)", ErrorCode.EXPECTED_IDENTIFIER, 12, 13);
+        assertExpressionError("Type<W,>(x)", ErrorCode.EXPECTED_IDENTIFIER, 7, 8);
+        assertExpressionError("outer.Inner<T,>(x)", ErrorCode.EXPECTED_IDENTIFIER, 14, 15);
+
+        assertThrows(MarkupException.class, () -> new InlineParser("new Type()", "fx").parseExpression());
+        assertThrows(MarkupException.class, () -> new InlineParser("outer.new Inner()", "fx").parseExpression());
     }
 
     @Test
-    public void Ordinary_Call_Syntax_Does_Not_Become_Construction() {
-        assertInstanceOf(FunctionNode.class,
-            new InlineParser("Type(x)", "fx").parseExpression());
-        FunctionNode witnessedMethod = assertInstanceOf(FunctionNode.class,
-            new InlineParser("this.<T>Type(x)", "fx").parseExpression());
-        assertEquals("T", witnessedMethod.getPath().getSegments().get(1).getWitnesses().get(0).getText());
+    public void Call_Syntax_Remains_Neutral() {
+        assertInstanceOf(InvocationNode.class, new InlineParser("Type(x)", "fx").parseExpression());
+
+        InvocationNode genericInvocation = assertInstanceOf(InvocationNode.class,
+            new InlineParser(":context.Type<T>(x)", "fx").parseExpression());
+
+        assertEquals("T", invocationPath(genericInvocation).getSegments().get(0).getTypeArguments().get(0).getText());
+        assertInstanceOf(PathNode.class, new InlineParser("Type<T>", "fx").parseExpression());
 
         assertThrows(MarkupException.class,
             () -> new InlineParser("outer.new", "fx").parseExpression());
@@ -1244,13 +1302,13 @@ public class InlineParserTest extends TestBase {
 
     @Test
     public void Invocation_Arguments_Accept_Full_Expressions_Or_One_Whole_Object() {
-        FunctionNode function = assertInstanceOf(FunctionNode.class,
-            new InlineParser("f(a || b && c, {Ext value=x}, new Type(y))", "fx").parseExpression());
+        InvocationNode function = assertInstanceOf(InvocationNode.class,
+            new InlineParser("f(a || b && c, {Ext value=x}, Type(y))", "fx").parseExpression());
 
         assertEquals(3, function.getArguments().size());
         assertBinary(function.getArguments().get(0), BinaryOperator.LOGICAL_OR);
         assertInstanceOf(ObjectNode.class, function.getArguments().get(1));
-        assertInstanceOf(ConstructorNode.class, function.getArguments().get(2));
+        assertInstanceOf(InvocationNode.class, function.getArguments().get(2));
 
         MarkupException objectOperator = assertThrows(MarkupException.class,
             () -> new InlineParser("f({Ext} + value)", "fx").parseExpression());
@@ -1263,15 +1321,14 @@ public class InlineParserTest extends TestBase {
     }
 
     @Test
-    public void Construction_Commits_Inside_Ordinary_Markup_Content() {
-        ObjectNode object = new InlineParser("{MyExt new<W>Type<T>(value)}", "fx").parseObject();
-        ConstructorNode leading = assertInstanceOf(ConstructorNode.class, object.getChildren().get(0));
-        assertEquals("W", leading.getConstructorWitnesses().get(0).getText());
-        assertEquals("T", leading.getClassArguments().get(0).getText());
+    public void Invocation_Commits_Inside_Ordinary_Markup_Content() {
+        ObjectNode object = new InlineParser("{MyExt Type<T,W>(value)}", "fx").parseObject();
+        InvocationNode leading = assertInstanceOf(InvocationNode.class, object.getChildren().get(0));
+        assertEquals(2, invocationPath(leading).getSegments().get(0).getTypeArguments().size());
 
-        object = new InlineParser("{MyExt outer.new<W>Inner<T>(value)}", "fx").parseObject();
-        ConstructorNode qualified = assertInstanceOf(ConstructorNode.class, object.getChildren().get(0));
-        assertEquals("outer", assertInstanceOf(PathNode.class, qualified.getQualifier()).getText());
+        object = new InlineParser("{MyExt outer.Inner<T,W>(value)}", "fx").parseObject();
+        InvocationNode qualified = assertInstanceOf(InvocationNode.class, object.getChildren().get(0));
+        assertEquals("outer", invocationPath(qualified).getSegments().get(0).getText());
     }
 
     @Test
@@ -1286,8 +1343,8 @@ public class InlineParserTest extends TestBase {
 
     @Test
     public void Compiled_Keyword_Literals_Are_Distinct_From_Text_And_Paths() {
-        FunctionNode function = assertInstanceOf(FunctionNode.class,
-            new InlineParser("f(true, false, null, 'true', :self.true)", "fx").parseExpression());
+        InvocationNode function = assertInstanceOf(InvocationNode.class,
+            new InlineParser("f(true, false, null, 'true', :element.true)", "fx").parseExpression());
 
         assertEquals(LiteralKeywordNode.Kind.TRUE, assertInstanceOf(
             LiteralKeywordNode.class, function.getArguments().get(0)).getKind());
@@ -1301,7 +1358,7 @@ public class InlineParserTest extends TestBase {
         assertEquals("true", assertInstanceOf(TextNode.class, function.getArguments().get(3)).getText());
 
         PathNode path = assertInstanceOf(PathNode.class, function.getArguments().get(4));
-        assertEquals("self", path.getContextSelector().getSelector().getText());
+        assertSame(ContextSelector.ELEMENT, path.getContextSelector().getSelector());
         assertEquals("true", path.getSegments().get(0).getText());
     }
 
@@ -1310,8 +1367,8 @@ public class InlineParserTest extends TestBase {
         BinaryOperatorNode add = assertInstanceOf(BinaryOperatorNode.class,
             new InlineParser("next() + next()", "fx").parseExpression());
 
-        assertTrue(assertInstanceOf(FunctionNode.class, add.getLeft()).getArguments().isEmpty());
-        assertTrue(assertInstanceOf(FunctionNode.class, add.getRight()).getArguments().isEmpty());
+        assertTrue(assertInstanceOf(InvocationNode.class, add.getLeft()).getArguments().isEmpty());
+        assertTrue(assertInstanceOf(InvocationNode.class, add.getRight()).getArguments().isEmpty());
     }
 
     @Test
@@ -1360,6 +1417,10 @@ public class InlineParserTest extends TestBase {
         BinaryOperatorNode binary = assertInstanceOf(BinaryOperatorNode.class, value);
         assertEquals(operator, binary.getOperator());
         return binary;
+    }
+
+    private PathNode invocationPath(InvocationNode invocation) {
+        return assertInstanceOf(PathNode.class, invocation.getTarget());
     }
 
     private void assertExpressionError(

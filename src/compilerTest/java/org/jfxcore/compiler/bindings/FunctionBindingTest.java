@@ -439,7 +439,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     public void Bind_Once_To_Constructor() {
         TestPane root = compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                      id="$new String('foo')"/>
+                      id="$String('foo')"/>
         """);
 
         assertNewFunctionExpr(root, 0);
@@ -451,7 +451,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     public void Bind_Once_To_Fully_Qualified_Constructor() {
         TestPane root = compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                      id="$new java.lang.String('foo')"/>
+                      id="$java.lang.String('foo')"/>
         """);
 
         assertNewFunctionExpr(root, 0);
@@ -463,7 +463,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     public void Bind_Once_To_Varargs_Constructor() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                      objProp="$new Stringifier(97, 98, 99)"/>
+                      objProp="$Stringifier(97, 98, 99)"/>
         """));
 
         assertEquals(ErrorCode.CONSTRUCTOR_NOT_FOUND, ex.getDiagnostic().getCode());
@@ -471,14 +471,14 @@ public class FunctionBindingTest extends CompilerTestBase {
         assertEquals(ErrorCode.NUM_FUNCTION_ARGUMENTS_MISMATCH, ex.getDiagnostic().getCauses()[0].getCode());
         assertEquals(ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT, ex.getDiagnostic().getCauses()[1].getCode());
         assertEquals(ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT, ex.getDiagnostic().getCauses()[2].getCode());
-        assertCodeHighlight("new Stringifier(97, 98, 99)", ex);
+        assertCodeHighlight("Stringifier(97, 98, 99)", ex);
     }
 
     @Test
     public void Bind_Once_To_Constructor_With_More_Specific_Argument() {
         TestPane root = compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                      objProp="$new Stringifier('foo')"/>
+                      objProp="$Stringifier('foo')"/>
         """);
 
         assertNewFunctionExpr(root, 0);
@@ -544,6 +544,29 @@ public class FunctionBindingTest extends CompilerTestBase {
 
         assertEquals(ErrorCode.BINDING_CONTEXT_NOT_APPLICABLE, ex.getDiagnostic().getCode());
         assertCodeHighlight(":parent", ex);
+    }
+
+    @Test
+    public void Explicit_Context_Receivers_Do_Not_Fall_Back_To_Static_Types() {
+        for (String selector : new String[] {"context", "root", "element", "parent"}) {
+            String body = selector.equals("parent")
+                ? "<Pane id=\"$:parent.String.format('%s', 2)\"/>"
+                : "";
+
+            String rootAttribute = selector.equals("parent")
+                ? ""
+                : " id=\"$:" + selector + ".String.format('%s', 2)\"";
+
+            MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+                <?import javafx.scene.layout.Pane?>
+                <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"%s>
+                    %s
+                </TestPane>
+            """.formatted(rootAttribute, body), "Pinned" + selector, null), selector);
+
+            assertEquals(ErrorCode.BINDING_CONTEXT_NOT_APPLICABLE, ex.getDiagnostic().getCode(), selector);
+            assertCodeHighlight(":" + selector, ex);
+        }
     }
 
     @Test
@@ -645,7 +668,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     public void Qualified_Keyword_Names_Remain_Path_Arguments() {
         TestPane root = compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                      id="$formatMethod('%s/%s', :self.true, :self.null)"/>
+                      id="$formatMethod('%s/%s', :element.true, :element.null)"/>
         """);
 
         assertEquals("path-true/path-null", root.getId());
@@ -676,7 +699,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     public void Bind_Once_To_List_Get_With_Nested_Generic_Method_TypeWitness() {
         TestPane root = compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                      id="$items.get(this.<Integer>identity(1))"/>
+                      id="$items.get(identity<Integer>(1))"/>
         """);
 
         assertEquals("bar", root.getId());
@@ -869,7 +892,7 @@ public class FunctionBindingTest extends CompilerTestBase {
         Pane root = compileAndRun("""
             <?import javafx.scene.control.*?>
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
-                <Label text="${fmt.format(:self.prefWidth)}" prefWidth="7"/>
+                <Label text="${fmt.format(:element.prefWidth)}" prefWidth="7"/>
             </TestPane>
         """);
 
@@ -885,7 +908,7 @@ public class FunctionBindingTest extends CompilerTestBase {
         Pane root = compileAndRun("""
             <?import javafx.scene.control.*?>
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
-                <Label text="${c1.c2.fmt.format(:self.prefWidth)}" prefWidth="7"/>
+                <Label text="${c1.c2.fmt.format(:element.prefWidth)}" prefWidth="7"/>
             </TestPane>
         """);
 
@@ -985,18 +1008,18 @@ public class FunctionBindingTest extends CompilerTestBase {
     public void Bind_Unidirectional_To_Constructor_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                      id="${new String('foo')}"/>
+                      id="${String('foo')}"/>
         """));
 
         assertEquals(ErrorCode.INVALID_UNIDIRECTIONAL_BINDING_SOURCE, ex.getDiagnostic().getCode());
-        assertCodeHighlight("new String('foo')", ex);
+        assertCodeHighlight("String('foo')", ex);
     }
 
     @Test
     public void Bind_Unidirectional_To_Varargs_Constructor() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                      objProp="${new Stringifier('foo', 97, 98, 99)}"/>
+                      objProp="${Stringifier('foo', 97, 98, 99)}"/>
         """));
 
         assertEquals(ErrorCode.CONSTRUCTOR_NOT_FOUND, ex.getDiagnostic().getCode());
@@ -1004,29 +1027,29 @@ public class FunctionBindingTest extends CompilerTestBase {
         assertEquals(ErrorCode.NUM_FUNCTION_ARGUMENTS_MISMATCH, ex.getDiagnostic().getCauses()[0].getCode());
         assertEquals(ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT, ex.getDiagnostic().getCauses()[1].getCode());
         assertEquals(ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT, ex.getDiagnostic().getCauses()[2].getCode());
-        assertCodeHighlight("new Stringifier('foo', 97, 98, 99)", ex);
+        assertCodeHighlight("Stringifier('foo', 97, 98, 99)", ex);
     }
 
     @Test
     public void Bind_Unidirectional_To_Constructor_With_More_Specific_Argument_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                      objProp="${new Stringifier('foo')}"/>
+                      objProp="${Stringifier('foo')}"/>
         """));
 
         assertEquals(ErrorCode.INVALID_UNIDIRECTIONAL_BINDING_SOURCE, ex.getDiagnostic().getCode());
-        assertCodeHighlight("new Stringifier('foo')", ex);
+        assertCodeHighlight("Stringifier('foo')", ex);
     }
 
     @Test
     public void Bind_Unidirectional_To_Varargs_Constructor_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                      id="${new String(0, 1, 'foo')}"/>
+                      id="${String(0, 1, 'foo')}"/>
         """));
 
         assertEquals(ErrorCode.CONSTRUCTOR_NOT_FOUND, ex.getDiagnostic().getCode());
-        assertCodeHighlight("new String(0, 1, 'foo')", ex);
+        assertCodeHighlight("String(0, 1, 'foo')", ex);
     }
 
     @Test
@@ -1051,13 +1074,13 @@ public class FunctionBindingTest extends CompilerTestBase {
             <?import javafx.scene.layout.*?>
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <VBox>
-                    <Pane id="${String.format('foo-%s', this)}"/>
+                    <Pane id="${String.format('foo-%s', :context)}"/>
                 </VBox>
             </TestPane>
         """));
 
         assertEquals(ErrorCode.INVALID_UNIDIRECTIONAL_BINDING_SOURCE, ex.getDiagnostic().getCode());
-        assertCodeHighlight("String.format('foo-%s', this)", ex);
+        assertCodeHighlight("String.format('foo-%s', :context)", ex);
     }
 
     @Test
@@ -1257,7 +1280,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     public void Bind_Unidirectional_To_List_Get_With_Nested_Generic_Method_TypeWitness() {
         TestPane root = compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                      id="${items.get(this.<Integer>identity(selectedIndex))}"/>
+                      id="${items.get(identity<Integer>(selectedIndex))}"/>
         """);
 
         assertNewFunctionExpr(root, 1);
@@ -1330,7 +1353,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     public void Bind_Unidirectional_To_Nested_Generic_Method_With_Object_Return_Updates_Correctly() {
         TestPane root = compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                      id="${String.format('foo-%s', this.<String>identity(stringProp))}"/>
+                      id="${String.format('foo-%s', identity<String>(stringProp))}"/>
         """);
 
         assertNewFunctionExpr(root, 1);
@@ -1810,7 +1833,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     public void Bind_Bidirectional_To_Constructor_With_InverseMethod() {
         BidirectionalTestPane root = compileAndRun("""
             <BidirectionalTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                                   doubleContainer="#{new DoubleContainer(doubleProp); inverseMethod=doubleContainerToDouble}"/>
+                                   doubleContainer="#{DoubleContainer(doubleProp); inverseMethod=doubleContainerToDouble}"/>
         """);
 
         assertNewFunctionExpr(root, 1);
@@ -1828,7 +1851,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     public void Bind_Bidirectional_To_Constructor_With_Qualified_InverseMethod() {
         BidirectionalTestPane root = compileAndRun("""
             <BidirectionalTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                                   doubleContainer="#{new DoubleContainer(doubleProp); inverseMethod=DoubleContainer.doubleContainerToDouble}"/>
+                                   doubleContainer="#{DoubleContainer(doubleProp); inverseMethod=DoubleContainer.doubleContainerToDouble}"/>
         """);
 
         assertNewFunctionExpr(root, 1);
@@ -2066,7 +2089,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     public void Generic_Method_Is_Not_Callable_With_Incompatible_TypeWitness() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
                 <GenericTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                                 id="${this.<String>m2(prefWidth)}"/>
+                                 id="${m2<String>(prefWidth)}"/>
             """));
 
         assertEquals(ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT, ex.getDiagnostic().getCode());
@@ -2079,11 +2102,11 @@ public class FunctionBindingTest extends CompilerTestBase {
     public void Generic_Method_Is_Not_Assignable_With_Incompatible_TypeWitness() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
                 <GenericTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                                 id="${this.<Double>m2(prefWidth)}"/>
+                                 id="${m2<Double>(prefWidth)}"/>
             """));
 
         assertEquals(ErrorCode.INCOMPATIBLE_RETURN_VALUE, ex.getDiagnostic().getCode());
-        assertCodeHighlight("this.<Double>m2", ex);
+        assertCodeHighlight("m2<Double>", ex);
         assertTrue(ex.getDiagnostic().getMessage().endsWith(
             "GenericTestPane.m2(java.lang.Double): return value cannot be converted to java.lang.String"));
     }
@@ -2092,11 +2115,11 @@ public class FunctionBindingTest extends CompilerTestBase {
     public void Generic_Method_Wrong_Number_Of_TypeWitnesses() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
                 <GenericTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                                 id="${this.<Object, String>m2(prefWidth)}"/>
+                                 id="${m2<Object, String>(prefWidth)}"/>
             """));
 
         assertEquals(ErrorCode.NUM_TYPE_ARGUMENTS_MISMATCH, ex.getDiagnostic().getCode());
-        assertCodeHighlight("this.<Object, String>m2", ex);
+        assertCodeHighlight("m2<Object, String>", ex);
         assertTrue(ex.getDiagnostic().getMessage().endsWith(
             "GenericTestPane.m2: required 1 type argument(s), but 2 were provided"));
     }
@@ -2105,7 +2128,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     public void Bind_Once_To_Overloaded_Generic_Method() {
         GenericTestPane<?> root = compileAndRun("""
                 <GenericTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                                 prefWidth="$this.<Double>m3_overloaded(123d)"
+                                 prefWidth="$m3_overloaded<Double>(123d)"
                                  id="$m3_overloaded('foo')"/>
             """);
 
@@ -2117,7 +2140,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     public void Bind_Unidirectional_To_Overloaded_Generic_Method_Fails() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
                 <GenericTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                                 prefWidth="${this.<Double>m3_overloaded(123d)}"
+                                 prefWidth="${m3_overloaded<Double>(123d)}"
                                  id="${m3_overloaded('foo')}"/>
             """));
 

@@ -11,7 +11,6 @@ import org.jfxcore.compiler.ast.Node;
 import org.jfxcore.compiler.ast.NodeDataKey;
 import org.jfxcore.compiler.ast.ObjectNode;
 import org.jfxcore.compiler.ast.PropertyNode;
-import org.jfxcore.compiler.ast.TemplateContentNode;
 import org.jfxcore.compiler.ast.ValueNode;
 import org.jfxcore.compiler.ast.expression.AnalyzedExpressionNode;
 import org.jfxcore.compiler.ast.expression.BindingContextNode;
@@ -19,26 +18,27 @@ import org.jfxcore.compiler.ast.expression.BindingContextSelector;
 import org.jfxcore.compiler.ast.expression.ArithmeticExpressionNode;
 import org.jfxcore.compiler.ast.expression.CompiledExpressionNode;
 import org.jfxcore.compiler.ast.expression.ComparisonExpressionNode;
-import org.jfxcore.compiler.ast.expression.ConstructorExpressionNode;
 import org.jfxcore.compiler.ast.expression.ExpressionNode;
 import org.jfxcore.compiler.ast.expression.ExternalExpressionNode;
-import org.jfxcore.compiler.ast.expression.FunctionExpressionNode;
 import org.jfxcore.compiler.ast.expression.GroupExpressionNode;
+import org.jfxcore.compiler.ast.expression.InvocationExpressionNode;
 import org.jfxcore.compiler.ast.expression.LiteralExpressionNode;
 import org.jfxcore.compiler.ast.expression.LogicalExpressionNode;
+import org.jfxcore.compiler.ast.expression.MemberAccessExpressionNode;
 import org.jfxcore.compiler.ast.expression.BindingOperator;
 import org.jfxcore.compiler.ast.expression.PathExpressionNode;
 import org.jfxcore.compiler.ast.intrinsic.Intrinsics;
 import org.jfxcore.compiler.ast.text.BinaryOperatorNode;
 import org.jfxcore.compiler.ast.text.CompositeNode;
+import org.jfxcore.compiler.ast.text.ContextSelector;
 import org.jfxcore.compiler.ast.text.ContextSelectorNode;
-import org.jfxcore.compiler.ast.text.ConstructorNode;
-import org.jfxcore.compiler.ast.text.FunctionNode;
+import org.jfxcore.compiler.ast.text.InvocationNode;
 import org.jfxcore.compiler.ast.text.ListNode;
 import org.jfxcore.compiler.ast.text.LiteralKeywordNode;
 import org.jfxcore.compiler.ast.text.NumberNode;
 import org.jfxcore.compiler.ast.text.ParenthesizedNode;
 import org.jfxcore.compiler.ast.text.PathNode;
+import org.jfxcore.compiler.ast.text.SelectedMemberNode;
 import org.jfxcore.compiler.ast.text.StringLiteralNode;
 import org.jfxcore.compiler.ast.text.TextNode;
 import org.jfxcore.compiler.ast.text.UnaryOperator;
@@ -58,10 +58,10 @@ import java.util.List;
 
 public class BindingTransform implements Transform {
 
-    private final boolean allowContextSelector;
+    private final boolean allowContextLookup;
 
-    public BindingTransform(boolean allowContextSelector) {
-        this.allowContextSelector = allowContextSelector;
+    public BindingTransform(boolean allowContextLookup) {
+        this.allowContextLookup = allowContextLookup;
     }
 
     @Override
@@ -141,13 +141,12 @@ public class BindingTransform implements Transform {
             return parsePathNode(context, BindingOperator.IDENTITY, pathNode);
         }
 
-        if (value instanceof FunctionNode functionNode) {
-            return parseFunctionNode(context, BindingOperator.IDENTITY, functionNode, bindingMode, inverseMethodNode);
+        if (value instanceof InvocationNode node) {
+            return parseInvocationNode(context, BindingOperator.IDENTITY, node, bindingMode, inverseMethodNode);
         }
 
-        if (value instanceof ConstructorNode constructorNode) {
-            return parseConstructionNode(
-                context, constructorNode, bindingMode, inverseMethodNode);
+        if (value instanceof SelectedMemberNode node) {
+            return parseSelectedMemberNode(context, BindingOperator.IDENTITY, node, bindingMode);
         }
 
         ExpressionNode directBooleanExpression = tryParseDirectBooleanExpression(
@@ -177,41 +176,12 @@ public class BindingTransform implements Transform {
             pathNode.getSourceInfo());
     }
 
-    private FunctionExpressionNode parseFunctionNode(
+    private InvocationExpressionNode parseInvocationNode(
             TransformContext context,
             BindingOperator operator,
-            FunctionNode functionNode,
+            InvocationNode invocationNode,
             BindingMode bindingMode,
             @Nullable ValueNode inverseMethodNode) {
-        ExpressionNode expression = tryParseExpression(context, inverseMethodNode, BindingMode.ONCE, true, null);
-        if (expression != null && !(expression instanceof PathExpressionNode)) {
-            throw GeneralErrors.expressionNotApplicable(expression.getSourceInfo(), false);
-        }
-
-        return new FunctionExpressionNode(
-            context.getMarkupClass(),
-            parsePathNode(context, operator, functionNode.getPath()),
-            functionNode.getArguments().stream()
-                .map(arg -> parseFunctionArgumentNode(context, arg, bindingMode))
-                .toList(),
-            (PathExpressionNode)expression,
-            functionNode.getSourceInfo());
-    }
-
-    private ConstructorExpressionNode parseConstructionNode(
-            TransformContext context,
-            ConstructorNode constructorNode,
-            BindingMode bindingMode,
-            @Nullable ValueNode inverseMethodNode) {
-        ExpressionNode qualifier = null;
-
-        if (constructorNode.getQualifier() != null) {
-            qualifier = tryParseExpression(context, constructorNode.getQualifier(), bindingMode, true, null);
-            if (qualifier == null) {
-                throw ParserErrors.unexpectedExpression(constructorNode.getQualifier().getSourceInfo());
-            }
-        }
-
         ExpressionNode inverseExpression = tryParseExpression(
             context, inverseMethodNode, BindingMode.ONCE, true, null);
 
@@ -219,17 +189,48 @@ public class BindingTransform implements Transform {
             throw GeneralErrors.expressionNotApplicable(inverseExpression.getSourceInfo(), false);
         }
 
-        return new ConstructorExpressionNode(
+        List<Node> arguments = invocationNode.getArguments().stream()
+            .map(argument -> parseFunctionArgumentNode(context, argument, bindingMode))
+            .toList();
+
+        if (invocationNode.getTarget() instanceof PathNode path) {
+            return new InvocationExpressionNode(
+                context.getMarkupClass(),
+                operator,
+                parsePathNode(context, operator, path),
+                arguments,
+                (PathExpressionNode)inverseExpression,
+                invocationNode.getSourceInfo());
+        }
+
+        SelectedMemberNode selected = (SelectedMemberNode)invocationNode.getTarget();
+        ExpressionNode receiver = tryParseExpression(context, selected.getReceiver(), bindingMode, true, null);
+        if (receiver == null) {
+            throw ParserErrors.unexpectedExpression(selected.getReceiver().getSourceInfo());
+        }
+
+        return new InvocationExpressionNode(
             context.getMarkupClass(),
-            qualifier,
+            operator,
+            receiver,
+            selected.getMember(),
+            arguments,
             (PathExpressionNode)inverseExpression,
-            constructorNode.getConstructorWitnesses(),
-            constructorNode.getConstructedType(),
-            constructorNode.getClassArguments(),
-            constructorNode.getArguments().stream()
-                .map(argument -> parseFunctionArgumentNode(context, argument, bindingMode))
-                .toList(),
-            constructorNode.getSourceInfo());
+            invocationNode.getSourceInfo());
+    }
+
+    private MemberAccessExpressionNode parseSelectedMemberNode(
+            TransformContext context,
+            BindingOperator operator,
+            SelectedMemberNode selected,
+            BindingMode bindingMode) {
+        ExpressionNode receiver = tryParseExpression(context, selected.getReceiver(), bindingMode, true, null);
+        if (receiver == null) {
+            throw ParserErrors.unexpectedExpression(selected.getReceiver().getSourceInfo());
+        }
+
+        return new MemberAccessExpressionNode(
+            operator, receiver, List.of(selected.getMember()), selected.getSourceInfo());
     }
 
     private Node parseFunctionArgumentNode(TransformContext context, ValueNode value, BindingMode bindingMode) {
@@ -290,8 +291,10 @@ public class BindingTransform implements Transform {
 
         if (values.get(1) instanceof PathNode pathNode) {
             return parsePathNode(context, operator, pathNode);
-        } else if (values.get(1) instanceof FunctionNode functionNode) {
-            return parseFunctionNode(context, operator, functionNode, bindingMode, null);
+        } else if (values.get(1) instanceof InvocationNode invocationNode) {
+            return parseInvocationNode(context, operator, invocationNode, bindingMode, null);
+        } else if (values.get(1) instanceof SelectedMemberNode selectedMemberNode) {
+            return parseSelectedMemberNode(context, operator, selectedMemberNode, bindingMode);
         } else {
             throw ParserErrors.unexpectedExpression(values.get(1).getSourceInfo());
         }
@@ -324,8 +327,12 @@ public class BindingTransform implements Transform {
             return parsePathNode(context, operator, path);
         }
 
-        if (operand instanceof FunctionNode function) {
-            return parseFunctionNode(context, operator, function, bindingMode, inverseMethodNode);
+        if (operand instanceof InvocationNode invocation) {
+            return parseInvocationNode(context, operator, invocation, bindingMode, inverseMethodNode);
+        }
+
+        if (operand instanceof SelectedMemberNode selected) {
+            return parseSelectedMemberNode(context, operator, selected, bindingMode);
         }
 
         return null;
@@ -440,16 +447,16 @@ public class BindingTransform implements Transform {
                 parsePathNode(context, BindingOperator.IDENTITY, path), path.getSourceInfo());
         }
 
-        if (value instanceof FunctionNode function) {
+        if (value instanceof InvocationNode invocation) {
             return new ExternalExpressionNode(
-                parseFunctionNode(context, BindingOperator.IDENTITY, function, bindingMode, null),
-                function.getSourceInfo());
+                parseInvocationNode(context, BindingOperator.IDENTITY, invocation, bindingMode, null),
+                invocation.getSourceInfo());
         }
 
-        if (value instanceof ConstructorNode constructor) {
+        if (value instanceof SelectedMemberNode selected) {
             return new ExternalExpressionNode(
-                parseConstructionNode(context, constructor, bindingMode, null),
-                constructor.getSourceInfo());
+                parseSelectedMemberNode(context, BindingOperator.IDENTITY, selected, bindingMode),
+                selected.getSourceInfo());
         }
 
         if (value instanceof ObjectNode object) {
@@ -497,33 +504,12 @@ public class BindingTransform implements Transform {
 
     private BindingContextNode parseBindingContext(TransformContext context, PathNode pathNode) {
         ContextSelectorNode contextSelectorNode = pathNode.getContextSelector();
-        if (contextSelectorNode == null && allowContextSelector) {
-            List<Node> parents = context.getParents().stream()
-                .filter(node -> node instanceof ObjectNode)
-                .toList();
 
-            for (int i = parents.size() - 1; i >= 0; --i) {
-                for (PropertyNode propertyNode : ((ObjectNode)parents.get(i)).getProperties()) {
-                    if (propertyNode.isIntrinsic(Intrinsics.CONTEXT)
-                            && propertyNode.getSingleValue(context) instanceof ContextNode contextNode) {
-                        return new BindingContextNode(
-                            BindingContextSelector.CONTEXT,
-                            contextNode.getType().getTypeInstance(),
-                            contextNode.getValueType(),
-                            contextNode.getObservableType(),
-                            contextNode.getField(),
-                            parents.size() - i - 1,
-                            pathNode.getSourceInfo());
-                    }
-                }
-            }
+        if (contextSelectorNode == null) {
+            return parseDefaultBindingContext(context, pathNode.getSourceInfo(), false);
         }
 
-        BindingContextSelector bindingContextSelector = contextSelectorNode != null
-            ? parseBindingContextSelector(contextSelectorNode.getSelector())
-            : BindingContextSelector.ROOT;
-
-        if (contextSelectorNode != null && bindingContextSelector != BindingContextSelector.PARENT) {
+        if (contextSelectorNode.getSelector() != ContextSelector.PARENT) {
             if (contextSelectorNode.getLevel() != null) {
                 throw ParserErrors.unexpectedExpression(contextSelectorNode.getLevel().getSourceInfo());
             }
@@ -533,42 +519,26 @@ public class BindingTransform implements Transform {
             }
         }
 
-        return switch (bindingContextSelector) {
-            case STATIC, CONTEXT -> throw new IllegalArgumentException();
+        return switch (contextSelectorNode.getSelector()) {
+            case CONTEXT -> parseDefaultBindingContext(
+                context, contextSelectorNode.getSourceInfo(), true);
 
-            case ROOT -> {
-                List<Node> parents = context.getParents().stream()
-                    .filter(node -> node instanceof ObjectNode)
-                    .toList();
+            case ROOT -> createRootBindingContext(
+                context, contextSelectorNode.getSourceInfo(), true);
 
-                for (int i = parents.size() - 1; i >= 0; --i) {
-                    TypeInstance type = TypeHelper.getTypeInstance(parents.get(i));
-                    if (type.subtypeOf(context.getCodeBehindOrMarkupClass())) {
-                        yield new BindingContextNode(
-                            BindingContextSelector.ROOT, type,
-                            parents.size() - i - 1, pathNode.getSourceInfo());
-                    }
-                }
-
-                throw ParserErrors.invalidExpression(pathNode.getSourceInfo());
-            }
-
-            case SELF -> {
-                List<Node> parents = context.getParents().stream()
-                    .filter(node -> node instanceof ObjectNode)
-                    .toList();
+            case ELEMENT -> {
+                List<Node> parents = getObjectParents(context);
 
                 yield new BindingContextNode(
-                    bindingContextSelector,
+                    BindingContextSelector.ELEMENT,
                     TypeHelper.getTypeInstance(parents.get(parents.size() - 1)),
                     0,
+                    true,
                     contextSelectorNode.getSourceInfo());
             }
 
             case PARENT -> {
-                List<Node> parents = context.getParents().stream()
-                    .filter(node -> node instanceof ObjectNode)
-                    .toList();
+                List<Node> parents = getObjectParents(context);
 
                 Integer level = null;
                 TypeDeclaration searchType = null;
@@ -585,33 +555,64 @@ public class BindingTransform implements Transform {
                 ParentInfo parentInfo = findParent(parents, searchType, level, contextSelectorNode.getSourceInfo());
 
                 yield new BindingContextNode(
-                    bindingContextSelector,
+                    BindingContextSelector.PARENT,
                     parentInfo.type(),
                     parents.size() - parentInfo.parentStackIndex() - 1,
+                    true,
                     contextSelectorNode.getSourceInfo());
-            }
-
-            case TEMPLATED_ITEM -> {
-                TemplateContentNode templateContentNode = context.tryFindParent(TemplateContentNode.class);
-                if (templateContentNode != null) {
-                    yield new BindingContextNode(
-                        BindingContextSelector.TEMPLATED_ITEM,
-                        templateContentNode.getItemType(),
-                        0,
-                        contextSelectorNode.getSourceInfo());
-                }
-
-                throw BindingSourceErrors.bindingContextNotApplicable(contextSelectorNode.getSourceInfo());
             }
         };
     }
 
-    private BindingContextSelector parseBindingContextSelector(TextNode value) {
-        try {
-            return BindingContextSelector.parse(value.getText());
-        } catch (IllegalArgumentException ignored) {
-            throw ParserErrors.unexpectedExpression(value.getSourceInfo());
+    private BindingContextNode parseDefaultBindingContext(
+            TransformContext context, SourceInfo sourceInfo, boolean explicitReceiver) {
+        List<Node> parents = getObjectParents(context);
+
+        if (allowContextLookup) {
+            for (int i = parents.size() - 1; i >= 0; --i) {
+                for (PropertyNode propertyNode : ((ObjectNode)parents.get(i)).getProperties()) {
+                    if (propertyNode.isIntrinsic(Intrinsics.CONTEXT)
+                            && propertyNode.getSingleValue(context) instanceof ContextNode contextNode) {
+                        return new BindingContextNode(
+                            BindingContextSelector.CONTEXT,
+                            contextNode.getType().getTypeInstance(),
+                            contextNode.getValueType(),
+                            contextNode.getObservableType(),
+                            contextNode.getField(),
+                            parents.size() - i - 1,
+                            explicitReceiver,
+                            sourceInfo);
+                    }
+                }
+            }
         }
+
+        return createRootBindingContext(context, sourceInfo, explicitReceiver);
+    }
+
+    private BindingContextNode createRootBindingContext(
+            TransformContext context, SourceInfo sourceInfo, boolean explicitReceiver) {
+        List<Node> parents = getObjectParents(context);
+
+        for (int i = parents.size() - 1; i >= 0; --i) {
+            TypeInstance type = TypeHelper.getTypeInstance(parents.get(i));
+            if (type.subtypeOf(context.getCodeBehindOrMarkupClass())) {
+                return new BindingContextNode(
+                    BindingContextSelector.ROOT,
+                    type,
+                    parents.size() - i - 1,
+                    explicitReceiver,
+                    sourceInfo);
+            }
+        }
+
+        throw ParserErrors.invalidExpression(sourceInfo);
+    }
+
+    private List<Node> getObjectParents(TransformContext context) {
+        return context.getParents().stream()
+            .filter(node -> node instanceof ObjectNode)
+            .toList();
     }
 
     private Integer parseParentLevel(NumberNode value) {

@@ -15,7 +15,7 @@ Text assignment is target-typed, so the text `"false"` has no intrinsic boolean 
 regardless of the assignment target.
 
 As a method argument, the unquoted keyword `false` is a boolean literal. Quote it as `'false'` to pass a
-string, or qualify it as a path such as `:self.false` to refer to a property named `false`.
+string, or qualify it as a path such as `:element.false` to refer to a property named `false`.
 
 ## Usage
 

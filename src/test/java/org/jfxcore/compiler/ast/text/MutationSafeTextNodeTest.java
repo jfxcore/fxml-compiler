@@ -17,7 +17,7 @@ public class MutationSafeTextNodeTest {
 
     @Test
     public void StringLiteral_Retains_Decoded_Value_Lexeme_And_SourceSpan() {
-        FunctionNode function = assertInstanceOf(FunctionNode.class,
+        InvocationNode function = assertInstanceOf(InvocationNode.class,
             new InlineParser("format('line\\n',\"x\")", null).parseExpression());
 
         StringLiteralNode first = assertInstanceOf(StringLiteralNode.class, function.getArguments().get(0));
@@ -35,7 +35,7 @@ public class MutationSafeTextNodeTest {
         StringLiteralNode alternateLexeme = new StringLiteralNode("line\n", "\"line\\n\"", first.getSourceInfo());
         assertNotEquals(first, alternateLexeme);
 
-        FunctionNode clone = function.deepClone();
+        InvocationNode clone = function.deepClone();
         assertEquals(function, clone);
         assertEquals(function.hashCode(), clone.hashCode());
         assertNotSame(function.getType(), clone.getType());
@@ -94,32 +94,34 @@ public class MutationSafeTextNodeTest {
     }
 
     @Test
-    public void Function_Text_Follows_Path_And_Argument_List_Mutations() {
-        FunctionNode function = assertInstanceOf(FunctionNode.class, new InlineParser("foo(a,b)", null).parseExpression());
+    public void Invocation_Text_Follows_Target_And_Argument_List_Mutations() {
+        InvocationNode function = assertInstanceOf(
+            InvocationNode.class, new InlineParser("foo(a,b)", null).parseExpression());
         Node firstArgument = function.getArguments().get(0);
         Node secondArgument = function.getArguments().get(1);
 
-        replace(function, function.getPath(), path("bar", span(0, 3)));
+        replace(function, function.getTarget(), path("bar", span(0, 3)));
         replace(function, firstArgument, path("c", span(4, 5)));
         remove(function, secondArgument);
 
         assertEquals("bar(c)", function.getText());
         assertEquals(1, function.getArguments().size());
 
-        FunctionNode clone = function.deepClone();
+        InvocationNode clone = function.deepClone();
         assertEquals(function, clone);
         assertEquals(function.hashCode(), clone.hashCode());
-        assertNotSame(function.getPath(), clone.getPath());
+        assertNotSame(function.getTarget(), clone.getTarget());
         assertNotSame(function.getArguments().get(0), clone.getArguments().get(0));
     }
 
     @Test
     public void Path_Text_Follows_Context_Segment_Witness_And_TypeArgument_Mutations() {
         ContextSelectorNode context = new ContextSelectorNode(
-            new TextNode("parent", span(1, 7)),
+            ContextSelector.PARENT,
             new TextNode("Pane", span(8, 12)),
             new NumberNode("1", span(14, 15)),
             span(0, 1),
+            span(1, 7),
             span(7, 8),
             span(12, 13),
             span(15, 16),
@@ -160,7 +162,7 @@ public class MutationSafeTextNodeTest {
 
         replace(witnessedPath, simpleWitness, path("Q", span(7, 10)));
         replace(witnessedPath, comparable.getArguments().get(0), path("Long", span(22, 28)));
-        assertEquals("model.<Q,Comparable<Long>>method", witnessedPath.getText());
+        assertEquals("model.method<Q,Comparable<Long>>", witnessedPath.getText());
 
         PathNode selectedPath = assertInstanceOf(PathNode.class, new InlineParser("foo::bar", null).parseExpression());
         TextSegmentNode first = assertInstanceOf(TextSegmentNode.class, selectedPath.getSegments().get(0));
@@ -173,67 +175,62 @@ public class MutationSafeTextNodeTest {
         assertEquals(selectedPath.hashCode(), clone.hashCode());
         assertNotSame(selectedPath.getSegments().get(1), clone.getSegments().get(1));
         assertEquals(selected.getSelectorSourceInfo(), clone.getSegments().get(1).getSelectorSourceInfo());
+
+        PathNode implicitObservable = assertInstanceOf(
+            PathNode.class, new InlineParser("::foo<T>", null).parseExpression());
+        PathNode implicitObservableClone = implicitObservable.deepClone();
+        assertEquals("::foo<T>", implicitObservable.getText());
+        assertEquals(implicitObservable, implicitObservableClone);
+        assertEquals(
+            new SourceInfo(0, 0, 0, 2),
+            implicitObservableClone.getSegments().get(0).getSelectorSourceInfo());
+
         ContextSelectorNode contextClone = contextualPath.deepClone().getContextSelector();
         assertNotSame(contextualPath.getContextSelector(), contextClone);
+        assertSame(ContextSelector.PARENT, contextClone.getSelector());
         assertEquals(span(0, 1), contextClone.getColonSourceInfo());
+        assertEquals(span(1, 7), contextClone.getSelectorSourceInfo());
         assertEquals(span(7, 8), contextClone.getOpenParenSourceInfo());
         assertEquals(span(12, 13), contextClone.getCommaSourceInfo());
         assertEquals(span(15, 16), contextClone.getCloseParenSourceInfo());
     }
 
     @Test
-    public void Constructor_Text_Follows_Qualifier_Generic_And_Argument_Mutations() {
-        SourceInfo qualifierSeparator = span(5, 6);
-        SourceInfo newKeyword = span(6, 9);
-        SourceInfo constructorWitnesses = span(10, 13);
-        SourceInfo classArguments = span(19, 22);
-        SourceInfo openParen = span(22, 23);
-        SourceInfo closeParen = span(36, 37);
-        PathNode qualifier = path("outer", span(0, 5));
-        PathNode witness = path("W", span(11, 12));
-        PathNode constructedType = path("Inner", span(14, 19));
-        PathNode classArgument = path("T", span(20, 21));
-        PathNode value = path("value", span(23, 28));
-        PathNode discarded = path("discard", span(29, 36));
-        ConstructorNode constructor = new ConstructorNode(
-            qualifier,
-            List.of(witness),
-            constructedType,
-            List.of(classArgument),
-            List.of(value, discarded),
-            qualifierSeparator,
-            newKeyword,
-            constructorWitnesses,
-            classArguments,
-            openParen,
-            closeParen,
-            span(0, 37));
+    public void Selected_Invocation_Text_Follows_Target_Generic_And_Argument_Mutations() {
+        InvocationNode invocation = assertInstanceOf(InvocationNode.class,
+            new InlineParser("(outer).Inner<W,T>(value,discard)", null).parseExpression());
+        SelectedMemberNode target = assertInstanceOf(SelectedMemberNode.class, invocation.getTarget());
+        ParenthesizedNode receiver = assertInstanceOf(ParenthesizedNode.class, target.getReceiver());
+        PathNode qualifier = assertInstanceOf(PathNode.class, receiver.getOperand());
+        TextSegmentNode member = target.getMember();
+        PathNode firstTypeArgument = member.getTypeArguments().get(0);
+        PathNode secondTypeArgument = member.getTypeArguments().get(1);
+        Node value = invocation.getArguments().get(0);
+        Node discarded = invocation.getArguments().get(1);
 
-        assertEquals("outer.new <W> Inner<T>(value,discard)", constructor.getText());
-        replace(constructor, qualifier, path("owner", span(0, 5)));
-        replace(constructor, witness, path("X", span(11, 12)));
-        replace(constructor, constructedType, path("Nested", span(14, 19)));
-        replace(constructor, classArgument, path("U", span(20, 21)));
-        replace(constructor, value, path("arg", span(23, 28)));
-        remove(constructor, discarded);
-        assertEquals("owner.new <X> Nested<U>(arg)", constructor.getText());
+        assertEquals("(outer).Inner<W,T>(value,discard)", invocation.getText());
+        replace(invocation, qualifier, path("owner", span(1, 6)));
+        replace(invocation, firstTypeArgument, path("X", span(14, 15)));
+        replace(invocation, member.getValue(), new TextNode("Nested", span(8, 13)));
+        replace(invocation, secondTypeArgument, path("U", span(16, 17)));
+        replace(invocation, value, path("arg", span(19, 24)));
+        remove(invocation, discarded);
+        assertEquals("(owner).Nested<X,U>(arg)", invocation.getText());
 
-        ConstructorNode clone = constructor.deepClone();
-        assertEquals(constructor, clone);
-        assertEquals(constructor.hashCode(), clone.hashCode());
-        assertNotSame(constructor.getQualifier(), clone.getQualifier());
-        assertNotSame(constructor.getConstructorWitnesses().get(0), clone.getConstructorWitnesses().get(0));
-        assertNotSame(constructor.getConstructedType(), clone.getConstructedType());
-        assertNotSame(constructor.getClassArguments().get(0), clone.getClassArguments().get(0));
-        assertNotSame(constructor.getArguments().get(0), clone.getArguments().get(0));
-        assertNotSame(constructor.getType(), clone.getType());
-        assertEquals(qualifierSeparator, clone.getQualifierSeparatorSourceInfo());
-        assertEquals(newKeyword, clone.getNewSourceInfo());
-        assertEquals(constructorWitnesses, clone.getConstructorWitnessSourceInfo());
-        assertEquals(classArguments, clone.getClassArgumentsSourceInfo());
-        assertEquals(openParen, clone.getOpenParenSourceInfo());
-        assertEquals(closeParen, clone.getCloseParenSourceInfo());
-        assertEquals(constructor.getSourceInfo(), clone.getSourceInfo());
+        InvocationNode clone = invocation.deepClone();
+        SelectedMemberNode cloneTarget = assertInstanceOf(SelectedMemberNode.class, clone.getTarget());
+        assertEquals(invocation, clone);
+        assertEquals(invocation.hashCode(), clone.hashCode());
+        assertNotSame(target.getReceiver(), cloneTarget.getReceiver());
+        assertNotSame(member, cloneTarget.getMember());
+        assertNotSame(member.getTypeArguments().get(0), cloneTarget.getMember().getTypeArguments().get(0));
+        assertNotSame(invocation.getArguments().get(0), clone.getArguments().get(0));
+        assertNotSame(invocation.getType(), clone.getType());
+        assertEquals(span(7, 8), cloneTarget.getMember().getSelectorSourceInfo());
+        assertEquals(span(13, 18), cloneTarget.getMember().getTypeArgumentsSourceInfo());
+        assertEquals(span(18, 19), clone.getOpenParenSourceInfo());
+        assertEquals(span(32, 33), clone.getCloseParenSourceInfo());
+        assertEquals(invocation.getSourceInfo(), clone.getSourceInfo());
     }
 
     @Test

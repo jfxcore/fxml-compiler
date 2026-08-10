@@ -631,13 +631,16 @@ public class ObservableFunctionGenerator extends ClassGenerator {
                         function.getReceiverDependencyKind());
                 }
 
-                code.store(receiverType, receiverLocal)
+                Label receiverIsNonNull = code
+                    .store(receiverType, receiverLocal)
                     .load(receiverType, receiverLocal)
-                    .ldc("The enclosing instance must not be null")
-                    .invoke(ObjectsDecl().requireDeclaredMethod(
-                        "requireNonNull", ObjectDecl(), StringDecl()))
-                    .checkcast(receiverType)
-                    .store(receiverType, receiverLocal);
+                    .ifnonnull();
+
+                code.defaultconst(returnType)
+                    .store(returnType, valueLocal);
+
+                endLabel = code.goto_label();
+                receiverIsNonNull.resume();
             }
 
             code.anew(constructorDeclaration.declaringType())

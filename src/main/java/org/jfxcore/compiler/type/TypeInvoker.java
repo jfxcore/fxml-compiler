@@ -40,6 +40,15 @@ public final class TypeInvoker {
         this.cacheEnabled = cacheEnabled;
     }
 
+    public int getTypeParameterCount(TypeDeclaration type) {
+        try {
+            SignatureAttribute.ClassSignature signature = getGenericClassSignature(type);
+            return signature != null ? signature.getParameters().length : 0;
+        } catch (BadBytecode ex) {
+            throw ExceptionHelper.unchecked(ex);
+        }
+    }
+
     public TypeInstance invokeType(TypeDeclaration clazz) {
         CacheKey key = new CacheKey("invokeType", clazz);
         CacheEntry entry = getCache().get(key);

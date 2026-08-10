@@ -7,7 +7,7 @@ import org.jfxcore.compiler.ast.Node;
 import org.jfxcore.compiler.ast.ObjectNode;
 import org.jfxcore.compiler.ast.PropertyNode;
 import org.jfxcore.compiler.ast.emit.EmitLiteralNode;
-import org.jfxcore.compiler.ast.expression.FunctionExpressionNode;
+import org.jfxcore.compiler.ast.expression.InvocationExpressionNode;
 import org.jfxcore.compiler.ast.intrinsic.Intrinsics;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.diagnostic.errors.GeneralErrors;
@@ -35,7 +35,7 @@ public class LiteralIntrinsicsTransform implements Transform {
 
         ObjectNode objectNode = (ObjectNode)node;
         Node parentNode = context.getParent();
-        if (!(parentNode instanceof PropertyNode) && !(parentNode instanceof FunctionExpressionNode)) {
+        if (!(parentNode instanceof PropertyNode) && !(parentNode instanceof InvocationExpressionNode)) {
             throw GeneralErrors.unexpectedIntrinsic(node.getSourceInfo(), objectNode.getType().getMarkupName());
         }
 

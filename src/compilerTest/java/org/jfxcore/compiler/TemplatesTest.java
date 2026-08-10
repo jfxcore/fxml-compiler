@@ -55,7 +55,7 @@ public class TemplatesTest extends CompilerTestBase {
                     <cellFactory>
                         <TemplatedListCellFactory fx:typeArguments="java.lang.Double">
                             <Template fx:typeArguments="java.lang.Double">
-                                <Label text="$this.toString"/>
+                                <Label text="$toString"/>
                             </Template>
                         </TemplatedListCellFactory>
                     </cellFactory>
@@ -88,7 +88,7 @@ public class TemplatesTest extends CompilerTestBase {
                     <cellFactory>
                         <TemplatedListCellFactory fx:typeArguments="java.lang.Double">
                             <Template fx:typeArguments="java.lang.Double">
-                                <Label text="$java.lang.String.format('%s', this)"/>
+                                <Label text="$java.lang.String.format('%s', :context)"/>
                             </Template>
                         </TemplatedListCellFactory>
                     </cellFactory>
@@ -124,7 +124,7 @@ public class TemplatesTest extends CompilerTestBase {
                                 <cellFactory>
                                     <TemplatedListCellFactory fx:typeArguments="String">
                                         <Template fx:typeArguments="String">
-                                            <Label text="$this"/>
+                                            <Label text="$:context"/>
                                         </Template>
                                     </TemplatedListCellFactory>
                                 </cellFactory>
@@ -277,7 +277,7 @@ public class TemplatesTest extends CompilerTestBase {
                     <cellFactory>
                         <TemplatedListCellFactory fx:typeArguments="String">
                             <Template fx:typeArguments="java.lang.String">
-                                <Label text="$this"/>
+                                <Label text="$:context"/>
                             </Template>
                         </TemplatedListCellFactory>
                     </cellFactory>
@@ -310,7 +310,7 @@ public class TemplatesTest extends CompilerTestBase {
                     <cellFactory>
                         <TemplatedListCellFactory fx:typeArguments="java.lang.String">
                             <Template fx:typeArguments="java.lang.String">
-                                <Label text="#{this}"/>
+                                <Label text="#{:context}"/>
                             </Template>
                         </TemplatedListCellFactory>
                     </cellFactory>

@@ -13,15 +13,16 @@ import org.jfxcore.compiler.ast.text.AttachedSegmentNode;
 import org.jfxcore.compiler.ast.text.BinaryOperator;
 import org.jfxcore.compiler.ast.text.BinaryOperatorNode;
 import org.jfxcore.compiler.ast.text.CompositeNode;
-import org.jfxcore.compiler.ast.text.ConstructorNode;
+import org.jfxcore.compiler.ast.text.ContextSelector;
 import org.jfxcore.compiler.ast.text.ContextSelectorNode;
-import org.jfxcore.compiler.ast.text.FunctionNode;
+import org.jfxcore.compiler.ast.text.InvocationNode;
 import org.jfxcore.compiler.ast.text.ListNode;
 import org.jfxcore.compiler.ast.text.LiteralKeywordNode;
 import org.jfxcore.compiler.ast.text.NumberNode;
 import org.jfxcore.compiler.ast.text.ParenthesizedNode;
 import org.jfxcore.compiler.ast.text.PathNode;
 import org.jfxcore.compiler.ast.text.PathSegmentNode;
+import org.jfxcore.compiler.ast.text.SelectedMemberNode;
 import org.jfxcore.compiler.ast.text.StringLiteralNode;
 import org.jfxcore.compiler.ast.text.TextSegmentNode;
 import org.jfxcore.compiler.ast.text.TextNode;
@@ -103,9 +104,8 @@ public class InlineParser {
 
     public ValueNode parsePath() {
         InlineTokenizer tokenizer = new InlineTokenizer(input);
-        PathNode pathNode = parsePath(tokenizer, true, true, false);
-        return !tokenizer.isEmpty() && tokenizer.peekNotNull().getType() == OPEN_PAREN ?
-            parseFunctionExpression(tokenizer, pathNode, ParseMode.EXPRESSION) : pathNode;
+        return parseSelectedMemberSuffixes(
+            tokenizer, parsePathOrInvocation(tokenizer, ParseMode.EXPRESSION), ParseMode.EXPRESSION);
     }
 
     public ValueNode parseExpression() {
@@ -213,14 +213,7 @@ public class InlineParser {
 
             case IDENTIFIER, COLON -> parsePathPrimary(tokenizer, ParseMode.VALUE);
 
-            case KEYWORD -> {
-                InlineToken keyword = tokenizer.peekNotNull();
-                if (!"new".equals(keyword.getValue())) {
-                    throw ParserErrors.unexpectedToken(keyword);
-                }
-
-                yield parseUnqualifiedConstruction(tokenizer);
-            }
+            case KEYWORD -> throw ParserErrors.unexpectedToken(tokenizer.peekNotNull());
 
             case OPEN_CURLY -> parseObjectExpression(tokenizer, null);
 
@@ -228,7 +221,7 @@ public class InlineParser {
                 if (tokenizer.containsAhead(COLON, COLON)) {
                     PathNode path = parsePath(tokenizer, true, true, false);
                     yield tokenizer.peek(OPEN_PAREN) != null
-                        ? parseFunctionExpression(tokenizer, path, ParseMode.VALUE)
+                        ? parseInvocationExpression(tokenizer, path, ParseMode.VALUE)
                         : path;
                 }
 
@@ -368,15 +361,8 @@ public class InlineParser {
             SourceInfo.span(propertyName.getSourceInfo(), value.getSourceInfo()));
     }
 
-    private FunctionNode parseFunctionExpression(InlineTokenizer tokenizer, PathNode functionName, ParseMode mode) {
-        List<PathSegmentNode> segments = functionName.getSegments();
-        boolean terminalThis = functionName.getContextSelector() == null
-            && segments.size() == 1
-            && segments.get(0).equals("this");
-
-        if (segments.isEmpty()
-                || terminalThis
-                || !(segments.get(segments.size() - 1) instanceof TextSegmentNode)) {
+    private InvocationNode parseInvocationExpression(InlineTokenizer tokenizer, ValueNode target, ParseMode mode) {
+        if (!isCallableTarget(target)) {
             throw ParserErrors.unexpectedToken(tokenizer.peekNotNull());
         }
 
@@ -384,10 +370,26 @@ public class InlineParser {
             ? parseExpressionInvocationArguments(tokenizer)
             : parseValueInvocationArguments(tokenizer);
 
-        return new FunctionNode(
-            functionName,
+        return new InvocationNode(
+            target,
             invocation.arguments(),
-            SourceInfo.span(functionName.getSourceInfo(), invocation.closeParenSourceInfo()));
+            invocation.openParenSourceInfo(),
+            invocation.closeParenSourceInfo(),
+            SourceInfo.span(target.getSourceInfo(), invocation.closeParenSourceInfo()));
+    }
+
+    private boolean isCallableTarget(ValueNode target) {
+        if (target instanceof SelectedMemberNode) {
+            return true;
+        }
+
+        if (!(target instanceof PathNode path)) {
+            return false;
+        }
+
+        List<PathSegmentNode> segments = path.getSegments();
+        return !segments.isEmpty()
+            && segments.get(segments.size() - 1) instanceof TextSegmentNode;
     }
 
     private InvocationInfo parseExpressionInvocationArguments(InlineTokenizer tokenizer) {
@@ -459,27 +461,23 @@ public class InlineParser {
 
     private PathNode parsePath(InlineTokenizer tokenizer,
                                boolean allowContextSelector,
-                               boolean allowTypeWitnesses,
+                               boolean allowPostfixTypeArguments,
                                boolean allowTypeArguments) {
         var segments = new ArrayList<PathSegmentNode>();
         SourceInfo startSourceInfo = tokenizer.peekNotNull().getSourceInfo();
         ContextSelectorNode bindingContextSelector = null;
 
-        if (allowContextSelector && tokenizer.peek(COLON) != null) {
+        if (allowContextSelector && tokenizer.containsAhead(COLON, COLON)) {
+            SourceInfo selectorSourceInfo = parseObservableSelector(tokenizer);
+            segments.add(parsePathSegment(
+                tokenizer, true, selectorSourceInfo, allowPostfixTypeArguments));
+        } else if (allowContextSelector && tokenizer.peek(COLON) != null) {
             bindingContextSelector = parseContextSelector(tokenizer);
         } else {
-            InlineToken identifier = tokenizer.remove(IDENTIFIER);
-
-            segments.add(new TextSegmentNode(
-                false,
-                new TextNode(identifier.getValue(), identifier.getSourceInfo()),
-                List.of(),
-                null,
-                identifier.getSourceInfo()));
+            segments.add(parsePathSegment(tokenizer, false, null, allowPostfixTypeArguments));
         }
 
-        while (tokenizer.containsAhead(COLON, COLON)
-                || tokenizer.peek(DOT) != null && !isQualifiedConstructionAhead(tokenizer)) {
+        while (tokenizer.containsAhead(COLON, COLON) || tokenizer.peek(DOT) != null) {
             boolean observableSelector;
             SourceInfo selectorSourceInfo;
             InlineToken firstColon = tokenizer.poll(COLON);
@@ -493,21 +491,8 @@ public class InlineParser {
                 selectorSourceInfo = tokenizer.remove(DOT).getSourceInfo();
             }
 
-            if (tokenizer.peek(OPEN_PAREN) != null) {
-                segments.add(parseAttachedSegment(tokenizer, observableSelector, selectorSourceInfo));
-                continue;
-            }
-
-            PathInfo typeWitnesses = allowTypeWitnesses ? parseAngleBracketPath(tokenizer) : null;
-            InlineToken identifier = tokenizer.remove(IDENTIFIER);
-            SourceInfo segmentStart = typeWitnesses != null ? typeWitnesses.sourceInfo() : identifier.getSourceInfo();
-
-            segments.add(new TextSegmentNode(
-                observableSelector,
-                new TextNode(identifier.getValue(), identifier.getSourceInfo()),
-                typeWitnesses != null ? typeWitnesses.paths() : List.of(),
-                selectorSourceInfo,
-                SourceInfo.span(segmentStart, identifier.getSourceInfo())));
+            segments.add(parsePathSegment(
+                tokenizer, observableSelector, selectorSourceInfo, allowPostfixTypeArguments));
         }
 
         PathInfo typeArguments = allowTypeArguments ? parseAngleBracketPath(tokenizer) : null;
@@ -523,6 +508,36 @@ public class InlineParser {
             segments,
             typeArguments != null ? typeArguments.paths() : List.of(),
             SourceInfo.span(startSourceInfo, endSourceInfo));
+    }
+
+    private SourceInfo parseObservableSelector(InlineTokenizer tokenizer) {
+        InlineToken firstColon = tokenizer.remove(COLON);
+        InlineToken secondColon = tokenizer.remove(COLON);
+        return SourceInfo.span(firstColon.getSourceInfo(), secondColon.getSourceInfo());
+    }
+
+    private PathSegmentNode parsePathSegment(
+            InlineTokenizer tokenizer,
+            boolean observableSelector,
+            @Nullable SourceInfo selectorSourceInfo,
+            boolean allowPostfixTypeArguments) {
+        if (tokenizer.peek(OPEN_PAREN) != null) {
+            return parseAttachedSegment(tokenizer, observableSelector, selectorSourceInfo);
+        }
+
+        InlineToken identifier = tokenizer.remove(IDENTIFIER);
+        PathInfo typeArguments = allowPostfixTypeArguments
+            ? tryParsePostfixTypeArguments(tokenizer) : null;
+
+        return new TextSegmentNode(
+            observableSelector,
+            new TextNode(identifier.getValue(), identifier.getSourceInfo()),
+            typeArguments != null ? typeArguments.paths() : List.of(),
+            selectorSourceInfo,
+            typeArguments != null ? typeArguments.sourceInfo() : null,
+            typeArguments != null
+                ? SourceInfo.span(identifier.getSourceInfo(), typeArguments.sourceInfo())
+                : identifier.getSourceInfo());
     }
 
     private AttachedSegmentNode parseAttachedSegment(
@@ -565,22 +580,55 @@ public class InlineParser {
     }
 
     private ValueNode parsePathPrimary(InlineTokenizer tokenizer, ParseMode mode) {
-        return parseQualifiedConstructionSuffixes(tokenizer, parsePathOrFunction(tokenizer, mode));
+        return parseSelectedMemberSuffixes(
+            tokenizer, parsePathOrInvocation(tokenizer, mode), mode);
     }
 
-    private ValueNode parsePathOrFunction(InlineTokenizer tokenizer, ParseMode mode) {
+    private ValueNode parsePathOrInvocation(InlineTokenizer tokenizer, ParseMode mode) {
         PathNode path = parsePath(tokenizer, true, true, false);
         return tokenizer.peek(OPEN_PAREN) != null
-            ? parseFunctionExpression(tokenizer, path, mode)
+            ? parseInvocationExpression(tokenizer, path, mode)
             : path;
     }
 
-    private boolean isQualifiedConstructionAhead(InlineTokenizer tokenizer) {
-        InlineToken[] tokens = tokenizer.peekAhead(2);
-        return tokens != null
-            && tokens[0].getType() == DOT
-            && tokens[1].getType() == KEYWORD
-            && "new".equals(tokens[1].getValue());
+    private ValueNode parseSelectedMemberSuffixes(InlineTokenizer tokenizer, ValueNode receiver, ParseMode mode) {
+        while (tokenizer.peek(DOT) != null || tokenizer.containsAhead(COLON, COLON)) {
+            boolean observableSelector;
+            SourceInfo selectorSourceInfo;
+            InlineToken firstColon = tokenizer.poll(COLON);
+
+            if (firstColon != null) {
+                InlineToken secondColon = tokenizer.remove(COLON);
+                observableSelector = true;
+                selectorSourceInfo = SourceInfo.span(firstColon.getSourceInfo(), secondColon.getSourceInfo());
+            } else {
+                observableSelector = false;
+                selectorSourceInfo = tokenizer.remove(DOT).getSourceInfo();
+            }
+
+            InlineToken identifier = tokenizer.remove(IDENTIFIER);
+            PathInfo typeArguments = tryParsePostfixTypeArguments(tokenizer);
+            SourceInfo memberSourceInfo = typeArguments != null
+                ? SourceInfo.span(identifier.getSourceInfo(), typeArguments.sourceInfo())
+                : identifier.getSourceInfo();
+
+            TextSegmentNode member = new TextSegmentNode(
+                observableSelector,
+                new TextNode(identifier.getValue(), identifier.getSourceInfo()),
+                typeArguments != null ? typeArguments.paths() : List.of(),
+                selectorSourceInfo,
+                typeArguments != null ? typeArguments.sourceInfo() : null,
+                memberSourceInfo);
+
+            receiver = new SelectedMemberNode(
+                receiver, member, SourceInfo.span(receiver.getSourceInfo(), memberSourceInfo));
+
+            if (tokenizer.peek(OPEN_PAREN) != null) {
+                receiver = parseInvocationExpression(tokenizer, receiver, mode);
+            }
+        }
+
+        return receiver;
     }
 
     private record PathInfo(List<PathNode> paths, SourceInfo sourceInfo) {}
@@ -599,6 +647,104 @@ public class InlineParser {
         }
 
         return null;
+    }
+
+    /**
+     * Tentatively parses an expression-segment type list. A complete list wins over
+     * relational syntax only when the following token can legally follow a postfix expression.
+     */
+    private PathInfo tryParsePostfixTypeArguments(InlineTokenizer tokenizer) {
+        if (tokenizer.peek(OPEN_ANGLE) == null) {
+            return null;
+        }
+
+        InlineToken[] candidateTokens = tokenizer.peekAhead(tokenizer.size());
+        tokenizer.mark();
+
+        try {
+            PathInfo result = parseAngleBracketPath(tokenizer);
+            if (isPostfixFollower(tokenizer)) {
+                tokenizer.forgetMark();
+                return result;
+            }
+
+            tokenizer.resetToMark();
+            return null;
+        } catch (MarkupException ex) {
+            if (hasCompletedMalformedPostfixTypeArguments(candidateTokens)) {
+                tokenizer.forgetMark();
+                throw ex;
+            }
+
+            tokenizer.resetToMark();
+            return null;
+        }
+    }
+
+    private boolean hasCompletedMalformedPostfixTypeArguments(InlineToken[] tokens) {
+        if (tokens == null || tokens.length == 0) {
+            return false;
+        }
+
+        int depth = 0;
+
+        for (int i = 0; i < tokens.length; ++i) {
+            switch (tokens[i].getType()) {
+                case OPEN_ANGLE -> ++depth;
+                case CLOSE_ANGLE -> {
+                    if (--depth == 0) {
+                        InlineToken follower = i + 1 < tokens.length ? tokens[i + 1] : null;
+                        return isPostfixFollower(follower, i + 2 < tokens.length ? tokens[i + 2] : null);
+                    }
+
+                    if (depth < 0) {
+                        return false;
+                    }
+                }
+
+                case IDENTIFIER, DOT, COMMA -> {
+                    if (depth == 0) {
+                        return false;
+                    }
+                }
+
+                case KEYWORD -> {
+                    if (depth == 0 || !isPrimitiveTypeKeyword(tokens[i].getValue())) {
+                        return false;
+                    }
+                }
+
+                default -> {
+                    return false;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    private boolean isPostfixFollower(InlineTokenizer tokenizer) {
+        InlineToken first = tokenizer.peek();
+        InlineToken[] tokens = tokenizer.peekAhead(2);
+        InlineToken second = tokens != null ? tokens[1] : null;
+        return isPostfixFollower(first, second);
+    }
+
+    private boolean isPostfixFollower(@Nullable InlineToken first, @Nullable InlineToken second) {
+        if (first == null) {
+            return true;
+        }
+
+        return switch (first.getType()) {
+            case OPEN_PAREN, DOT,
+                 CLOSE_PAREN, CLOSE_CURLY, CLOSE_BRACKET, COMMA, SEMICOLON, NEWLINE,
+                 PLUS, MINUS, STAR, SLASH,
+                 OPEN_ANGLE, CLOSE_ANGLE, LESS_THAN_OR_EQUAL, GREATER_THAN_OR_EQUAL,
+                 VALUE_EQUALITY, VALUE_INEQUALITY, IDENTITY_EQUALITY, IDENTITY_INEQUALITY,
+                 LOGICAL_AND, LOGICAL_OR -> true;
+            case COLON -> second != null && second.getType() == COLON;
+            default -> false;
+        };
     }
 
     private PathNode parseTypePath(InlineTokenizer tokenizer) {
@@ -658,13 +804,11 @@ public class InlineParser {
 
     private ContextSelectorNode parseContextSelector(InlineTokenizer tokenizer) {
         SourceInfo colonSourceInfo = tokenizer.remove(COLON).getSourceInfo();
-        InlineToken selector = tokenizer.remove(IDENTIFIER);
-        String selectorName = selector.getValue();
+        InlineToken selectorToken = tokenizer.remove(IDENTIFIER);
+        ContextSelector selector = ContextSelector.tryParse(selectorToken.getValue());
 
-        if (!"root".equals(selectorName)
-                && !"self".equals(selectorName)
-                && !"parent".equals(selectorName)) {
-            throw ParserErrors.unexpectedToken(selector);
+        if (selector == null) {
+            throw ParserErrors.unexpectedToken(selectorToken);
         }
 
         TextNode searchType = null;
@@ -674,7 +818,7 @@ public class InlineParser {
         SourceInfo closeParenSourceInfo = null;
 
         if (tokenizer.peek(OPEN_PAREN) != null) {
-            if (!"parent".equals(selectorName)) {
+            if (selector != ContextSelector.PARENT) {
                 throw ParserErrors.unexpectedToken(tokenizer.peekNotNull());
             }
 
@@ -699,13 +843,14 @@ public class InlineParser {
 
         SourceInfo sourceInfo = SourceInfo.span(
             colonSourceInfo,
-            closeParenSourceInfo != null ? closeParenSourceInfo : selector.getSourceInfo());
+            closeParenSourceInfo != null ? closeParenSourceInfo : selectorToken.getSourceInfo());
 
         return new ContextSelectorNode(
-            new TextNode(selectorName, selector.getSourceInfo()),
+            selector,
             searchType,
             level,
             colonSourceInfo,
+            selectorToken.getSourceInfo(),
             openParenSourceInfo,
             commaSourceInfo,
             closeParenSourceInfo,
@@ -841,7 +986,8 @@ public class InlineParser {
     }
 
     private ValueNode parsePostfixExpression(InlineTokenizer tokenizer) {
-        return parseQualifiedConstructionSuffixes(tokenizer, parsePrimaryExpression(tokenizer));
+        return parseSelectedMemberSuffixes(
+            tokenizer, parsePrimaryExpression(tokenizer), ParseMode.EXPRESSION);
     }
 
     private ValueNode parsePrimaryExpression(InlineTokenizer tokenizer) {
@@ -859,7 +1005,7 @@ public class InlineParser {
 
         if (token.getType() == IDENTIFIER || token.getType() == COLON) {
             if (token.getType() == COLON) {
-                return parsePathOrFunction(tokenizer, ParseMode.EXPRESSION);
+                return parsePathOrInvocation(tokenizer, ParseMode.EXPRESSION);
             }
 
             LiteralKeywordNode literal = LiteralKeywordNode.tryCreate(token.getValue(), token.getSourceInfo());
@@ -868,11 +1014,7 @@ public class InlineParser {
                 return literal;
             }
 
-            return parsePathOrFunction(tokenizer, ParseMode.EXPRESSION);
-        }
-
-        if (token.getType() == KEYWORD && "new".equals(token.getValue())) {
-            return parseUnqualifiedConstruction(tokenizer);
+            return parsePathOrInvocation(tokenizer, ParseMode.EXPRESSION);
         }
 
         if (token.getType() == OPEN_PAREN) {
@@ -922,95 +1064,6 @@ public class InlineParser {
                  LOGICAL_AND, LOGICAL_OR, COLON -> true;
             default -> false;
         };
-    }
-
-    private ConstructorNode parseUnqualifiedConstruction(InlineTokenizer tokenizer) {
-        InlineToken newToken = removeNewKeyword(tokenizer);
-        PathInfo constructorWitnesses = parseAngleBracketPath(tokenizer);
-        PathNode constructedType = parseConstructedType(tokenizer, true);
-        PathInfo classArguments = parseAngleBracketPath(tokenizer);
-        InvocationInfo invocation = parseExpressionInvocationArguments(tokenizer);
-
-        return new ConstructorNode(
-            null,
-            constructorWitnesses != null ? constructorWitnesses.paths() : List.of(),
-            constructedType,
-            classArguments != null ? classArguments.paths() : List.of(),
-            invocation.arguments(),
-            null,
-            newToken.getSourceInfo(),
-            constructorWitnesses != null ? constructorWitnesses.sourceInfo() : null,
-            classArguments != null ? classArguments.sourceInfo() : null,
-            invocation.openParenSourceInfo(),
-            invocation.closeParenSourceInfo(),
-            SourceInfo.span(newToken.getSourceInfo(), invocation.closeParenSourceInfo()));
-    }
-
-    private ValueNode parseQualifiedConstructionSuffixes(
-            InlineTokenizer tokenizer, ValueNode qualifier) {
-        while (isQualifiedConstructionAhead(tokenizer)) {
-            SourceInfo separatorSourceInfo = tokenizer.remove(DOT).getSourceInfo();
-            InlineToken newToken = removeNewKeyword(tokenizer);
-            PathInfo constructorWitnesses = parseAngleBracketPath(tokenizer);
-            PathNode constructedType = parseConstructedType(tokenizer, false);
-            PathInfo classArguments = parseAngleBracketPath(tokenizer);
-            InvocationInfo invocation = parseExpressionInvocationArguments(tokenizer);
-
-            qualifier = new ConstructorNode(
-                qualifier,
-                constructorWitnesses != null ? constructorWitnesses.paths() : List.of(),
-                constructedType,
-                classArguments != null ? classArguments.paths() : List.of(),
-                invocation.arguments(),
-                separatorSourceInfo,
-                newToken.getSourceInfo(),
-                constructorWitnesses != null ? constructorWitnesses.sourceInfo() : null,
-                classArguments != null ? classArguments.sourceInfo() : null,
-                invocation.openParenSourceInfo(),
-                invocation.closeParenSourceInfo(),
-                SourceInfo.span(qualifier.getSourceInfo(), invocation.closeParenSourceInfo()));
-        }
-
-        return qualifier;
-    }
-
-    private PathNode parseConstructedType(InlineTokenizer tokenizer, boolean allowQualifiedName) {
-        InlineToken identifier = tokenizer.remove(IDENTIFIER);
-        List<PathSegmentNode> segments = new ArrayList<>();
-        segments.add(new TextSegmentNode(
-            false,
-            new TextNode(identifier.getValue(), identifier.getSourceInfo()),
-            List.of(),
-            null,
-            identifier.getSourceInfo()));
-
-        while (allowQualifiedName && tokenizer.containsAhead(DOT, IDENTIFIER)) {
-            SourceInfo separatorSourceInfo = tokenizer.remove(DOT).getSourceInfo();
-            identifier = tokenizer.remove(IDENTIFIER);
-            segments.add(new TextSegmentNode(
-                false,
-                new TextNode(identifier.getValue(), identifier.getSourceInfo()),
-                List.of(),
-                separatorSourceInfo,
-                identifier.getSourceInfo()));
-        }
-
-        return new PathNode(
-            null,
-            segments,
-            List.of(),
-            SourceInfo.span(
-                segments.get(0).getSourceInfo(),
-                segments.get(segments.size() - 1).getSourceInfo()));
-    }
-
-    private InlineToken removeNewKeyword(InlineTokenizer tokenizer) {
-        InlineToken token = tokenizer.remove(KEYWORD);
-        if (!"new".equals(token.getValue())) {
-            throw ParserErrors.unexpectedToken(token);
-        }
-
-        return token;
     }
 
     private ValueNode parseSignedLiteral(InlineTokenizer tokenizer) {

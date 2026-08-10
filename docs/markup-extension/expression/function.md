@@ -10,7 +10,7 @@ Methods and constructors can be used in binding expressions to process a value, 
 different type. In the following example, the `String.format` method is used to convert the width of a button to text:
 
 ```xml
-<Button text="${String.format('Width: %.0f', :self.width)}"/>
+<Button text="${String.format('Width: %.0f', :element.width)}"/>
 ```
 
 If the method or constructor is used in a [`{fx:Observe}`](../../reference/observe.html) or
@@ -30,10 +30,10 @@ Methods and constructors in binding expressions can be used with the following m
 ## Method invocation
 
 A method path is resolved against the [evaluation context](context.html) like other expressions. Both static and
-instance methods can be selected. Use `this` as the explicit receiver if the first method has a type witness:
+instance methods can be selected. Generic type arguments are specified after the method name:
 
 ```xml
-<MyControl value="${this.<String>convert(value)}"/>
+<MyControl value="${convert<String>(value)}"/>
 <MyControl value="${:parent.compute(value)}"/>
 ```
 
@@ -47,8 +47,8 @@ After resolving the method path, a method is selected with the following rules:
 
 ## Method arguments
 Method arguments can be any of the following:
-* Paths, method invocations, constructions, groups, and operator expressions, for example
-  `:parent(Label).text`, `width * 0.7`, or `new Box(value)`
+* Paths, method invocations, constructors, groups, and operator expressions, for example
+  `:parent(Label).text`, `width * 0.7`, or `Box(value)`
 * String literals: `'text'`
 * Number literals: `1` (int), `1L` (long), `1F` (float), `1D`/`1.0` (double)
 * Boolean literals: `true`, `false`
@@ -58,33 +58,31 @@ Method arguments can be any of the following:
 * [Value-supplier markup extensions](../../markup-extension.html#where-markup-extensions-can-be-used)
 
 The unquoted words `true`, `false`, and `null` are literals only when they occur as expression primaries.
-Quoted forms such as `'true'` are strings. A qualified form such as `:self.true`, `this.true`, or `model.true`
-is a path, which allows a property or field with the same name as a literal keyword to be referenced explicitly.
+Quoted forms such as `'true'` are strings. A qualified form such as `:element.true`, `:context.true`, or `model.true`
+is a path, which allows a property with the same name as a literal keyword to be referenced explicitly.
 
 ## Constructor invocation
-Constructor invocations use a leading `new`:
+A constructor uses the same invocation syntax as a method. Top-level and static nested classes are named directly:
 
 ```xml
-<Button textFill="$new Color(red, green, blue, 1)"/>
-<MyControl value="$new Box<String>('value')"/>
-<MyControl value="$new Outer.Nested<String>('value')"/>
+<Button textFill="$Color(red, green, blue, 1)"/>
+<MyControl value="$Box<String>('value')"/>
+<MyControl value="$Outer.Nested<String>('value')"/>
 ```
 
 A non-static member class requires an enclosing-instance qualifier:
 
 ```xml
-<MyControl value="$outer.new Inner<String>('value')"/>
+<MyControl value="$outer.Inner<String>('value')"/>
+<MyControl value="$:context.Inner<String>('value')"/>
 ```
 
-A generic constructor can have two distinct generic positions:
+Constructor type arguments are specified after class type arguments. If `Box<T>` declares a constructor
+`<W extends Number> Box(T value, W witness)`, its invocation is:
 
 ```xml
-<MyControl value="$new <Long> Box<String>('value', 1L)"/>
-<MyControl value="$outer.new <Long> Inner<String>('value', 1L)"/>
+<MyControl value="$Box<String, Long>('value', 1L)"/>
 ```
-
-The type parameter list immediately after `new` is the constructor's type witness, while the list after the type name
-parameterizes the constructed class. Generic type inference is not supported.
 
 ## Bidirectional function binding with inverse method
 A method that is used in a [`{fx:Synchronize}`](../../reference/synchronize.html) expression must have exactly

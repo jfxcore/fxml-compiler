@@ -724,7 +724,7 @@ public class InstantiationTest extends CompilerTestBase {
             GridPane root = compileAndRun("""
                 <?import javafx.scene.layout.*?>
                 <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
-                    <id><String fx:value="$new String('foo')"/></id>
+                    <id><String fx:value="$String('foo')"/></id>
                 </GridPane>
             """);
 
@@ -737,7 +737,7 @@ public class InstantiationTest extends CompilerTestBase {
             GridPane root = compileAndRun("""
                 <?import javafx.scene.layout.*?>
                 <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
-                    <id><String fx:value="$new Double(123)"/></id>
+                    <id><String fx:value="$Double(123)"/></id>
                 </GridPane>
             """);
 
@@ -750,12 +750,12 @@ public class InstantiationTest extends CompilerTestBase {
             MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
                 <?import javafx.scene.layout.*?>
                 <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
-                    <id><String fx:value="${new String('foo')}"/></id>
+                    <id><String fx:value="${String('foo')}"/></id>
                 </GridPane>
             """));
 
             assertEquals(ErrorCode.EXPRESSION_NOT_APPLICABLE, ex.getDiagnostic().getCode());
-            assertCodeHighlight("${new String('foo')}".trim(), ex);
+            assertCodeHighlight("${String('foo')}".trim(), ex);
         }
 
         @Test
@@ -763,12 +763,12 @@ public class InstantiationTest extends CompilerTestBase {
             MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
                 <?import javafx.scene.layout.*?>
                 <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
-                    <id><String fx:value="#{new String('foo')}"/></id>
+                    <id><String fx:value="#{String('foo')}"/></id>
                 </GridPane>
             """));
 
             assertEquals(ErrorCode.EXPRESSION_NOT_APPLICABLE, ex.getDiagnostic().getCode());
-            assertCodeHighlight("#{new String('foo')}".trim(), ex);
+            assertCodeHighlight("#{String('foo')}".trim(), ex);
         }
 
         @Test
