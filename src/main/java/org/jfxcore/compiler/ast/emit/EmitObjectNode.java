@@ -463,7 +463,7 @@ public class EmitObjectNode extends ReferenceableNode {
 
             context.emit(enclosingInstance);
 
-            code.ldc("The enclosing instance must not be null")
+            code.ldc("Enclosing instance must not be null")
                 .invoke(ObjectsDecl().requireDeclaredMethod("requireNonNull", ObjectDecl(), StringDecl()))
                 .checkcast(enclosingType)
                 .astore(enclosingLocal);
