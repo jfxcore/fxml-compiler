@@ -331,7 +331,7 @@ public class InlineParserTest extends TestBase {
         String markup = """
             {GridPane
                 {VBox
-                    prefWidth=${:parent(GridPane, 1).prefWidth}
+                    prefWidth=${:parent<GridPane>(1).prefWidth}
                 }
             }
         """;
@@ -409,39 +409,44 @@ public class InlineParserTest extends TestBase {
 
     @Test
     public void Parent_Arguments_Retain_Their_Distinct_Children_And_Punctuation() {
-        String source = ":parent(javafx.scene.layout.Pane, -12).width";
+        String source = ":parent<javafx.scene.layout.Pane>(-12).width";
         PathNode path = assertInstanceOf(PathNode.class, new InlineParser(source, "fx").parseExpression());
         ContextSelectorNode context = path.getContextSelector();
-        int comma = source.indexOf(',');
+        int openAngle = source.indexOf('<');
+        int closeAngle = source.indexOf('>');
+        int openParen = source.indexOf('(');
         int closeParen = source.indexOf(')');
 
         assertNotNull(context);
         assertEquals("javafx.scene.layout.Pane", context.getSearchType().getText());
         assertEquals("-12", context.getLevel().getText());
-        assertEquals(new SourceInfo(0, 7, 0, 8), context.getOpenParenSourceInfo());
-        assertEquals(new SourceInfo(0, comma, 0, comma + 1), context.getCommaSourceInfo());
+        assertEquals(new SourceInfo(0, openAngle, 0, openAngle + 1), context.getOpenAngleSourceInfo());
+        assertEquals(new SourceInfo(0, closeAngle, 0, closeAngle + 1), context.getCloseAngleSourceInfo());
+        assertEquals(new SourceInfo(0, openParen, 0, openParen + 1), context.getOpenParenSourceInfo());
         assertEquals(new SourceInfo(0, closeParen, 0, closeParen + 1), context.getCloseParenSourceInfo());
-        assertEquals(":parent(javafx.scene.layout.Pane, -12).width", path.getText());
+        assertEquals(":parent<javafx.scene.layout.Pane>(-12).width", path.getText());
 
         ContextSelectorNode depthOnly = assertInstanceOf(PathNode.class,
             new InlineParser(":parent(2)", "fx").parseExpression()).getContextSelector();
         assertNotNull(depthOnly);
         assertNull(depthOnly.getSearchType());
         assertEquals("2", depthOnly.getLevel().getText());
-        assertNull(depthOnly.getCommaSourceInfo());
+        assertNull(depthOnly.getOpenAngleSourceInfo());
+        assertNull(depthOnly.getCloseAngleSourceInfo());
 
         ContextSelectorNode typeOnly = assertInstanceOf(PathNode.class,
-            new InlineParser(":parent(Pane)", "fx").parseExpression()).getContextSelector();
+            new InlineParser(":parent<Pane>", "fx").parseExpression()).getContextSelector();
         assertNotNull(typeOnly);
         assertEquals("Pane", typeOnly.getSearchType().getText());
         assertNull(typeOnly.getLevel());
-        assertNull(typeOnly.getCommaSourceInfo());
+        assertNull(typeOnly.getOpenParenSourceInfo());
+        assertNull(typeOnly.getCloseParenSourceInfo());
 
         ContextSelectorNode typedDepth = assertInstanceOf(PathNode.class,
-            new InlineParser(":parent(Pane,+3)", "fx").parseExpression()).getContextSelector();
+            new InlineParser(":parent<Pane>(+3)", "fx").parseExpression()).getContextSelector();
         assertNotNull(typedDepth);
         assertEquals("+3", typedDepth.getLevel().getText());
-        assertEquals("parent(Pane, +3)", typedDepth.getText());
+        assertEquals("parent<Pane>(+3)", typedDepth.getText());
     }
 
     @Test
@@ -452,9 +457,13 @@ public class InlineParserTest extends TestBase {
                 ":element(1)",
                 ":root(1)",
                 ":parent()",
+                ":parent(Pane)",
+                ":parent(Pane, 1)",
                 ":parent(1, Pane)",
-                ":parent(Pane,)",
-                ":parent(Pane, 1, 2)",
+                ":parent<>",
+                ":parent<Pane, VBox>",
+                ":parent<Pane>()",
+                ":parent<Pane>(1, 2)",
                 ":parent(1.5)",
                 "::",
                 ":::foo",
@@ -466,10 +475,14 @@ public class InlineParserTest extends TestBase {
 
     @Test
     public void Malformed_Context_And_Callable_Forms_Report_Local_Spans() {
-        assertExpressionError(":parent()", ErrorCode.EXPECTED_IDENTIFIER, 8, 9);
-        assertExpressionError(":parent(Pane,)", ErrorCode.UNEXPECTED_TOKEN, 13, 14);
+        assertExpressionError(":parent()", ErrorCode.UNEXPECTED_TOKEN, 8, 9);
+        assertExpressionError(":parent(Pane)", ErrorCode.UNEXPECTED_TOKEN, 8, 12);
+        assertExpressionError(":parent(Pane, 1)", ErrorCode.UNEXPECTED_TOKEN, 8, 12);
         assertExpressionError(":parent(1, Pane)", ErrorCode.EXPECTED_TOKEN, 9, 10);
-        assertExpressionError(":parent(Pane, 1, 2)", ErrorCode.EXPECTED_TOKEN, 15, 16);
+        assertExpressionError(":parent<>", ErrorCode.EXPECTED_IDENTIFIER, 8, 9);
+        assertExpressionError(":parent<Pane, VBox>", ErrorCode.EXPECTED_TOKEN, 12, 13);
+        assertExpressionError(":parent<Pane>()", ErrorCode.UNEXPECTED_TOKEN, 14, 15);
+        assertExpressionError(":parent<Pane>(1, 2)", ErrorCode.EXPECTED_TOKEN, 15, 16);
         assertExpressionError(":parent(1.5)", ErrorCode.UNEXPECTED_TOKEN, 8, 11);
         assertExpressionError(":::member", ErrorCode.EXPECTED_IDENTIFIER, 2, 3);
         assertExpressionError(":context()", ErrorCode.UNEXPECTED_TOKEN, 8, 9);
@@ -480,8 +493,15 @@ public class InlineParserTest extends TestBase {
 
     @Test
     public void Context_Primaries_Participate_In_Relations_And_Qualified_Construction() {
+        BinaryOperatorNode bareRelation = assertBinary(
+            new InlineParser("(:parent) < owner", "fx").parseExpression(),
+            BinaryOperator.LESS_THAN);
+        ParenthesizedNode groupedParent = assertInstanceOf(ParenthesizedNode.class, bareRelation.getLeft());
+        assertNull(assertInstanceOf(
+            PathNode.class, groupedParent.getOperand()).getContextSelector().getSearchType());
+
         BinaryOperatorNode relation = assertBinary(
-            new InlineParser(":parent(Pane) < owner", "fx").parseExpression(),
+            new InlineParser(":parent<Pane> < owner", "fx").parseExpression(),
             BinaryOperator.LESS_THAN);
         PathNode parent = assertInstanceOf(PathNode.class, relation.getLeft());
         assertTrue(parent.getSegments().isEmpty());
@@ -793,9 +813,9 @@ public class InlineParserTest extends TestBase {
 
     @ParameterizedTest
     @CsvSource({
-        "'$:parent(Pane, 1).foo.bar.baz',Evaluate",
-        "'${:parent(Pane, 1).foo.bar.baz}',Observe",
-        "'#{:parent(Pane, 1).foo.bar.baz}',Synchronize"
+        "'$:parent<Pane>(1).foo.bar.baz',Evaluate",
+        "'${:parent<Pane>(1).foo.bar.baz}',Observe",
+        "'#{:parent<Pane>(1).foo.bar.baz}',Synchronize"
     })
     public void Compact_Syntax_With_ContextSelector_Is_Expanded(String compactIntrinsic, String intrinsicName) {
         ObjectNode objectNode = new InlineParser(compactIntrinsic, "fx").parseObject();
@@ -812,9 +832,9 @@ public class InlineParserTest extends TestBase {
 
     @ParameterizedTest
     @CsvSource({
-        "'$[..:parent(Pane, 1).foo.bar.baz]',Evaluate",
-        "'${[..:parent(Pane, 1).foo.bar.baz]}',Observe",
-        "'#{[..:parent(Pane, 1).foo.bar.baz]}',Synchronize"
+        "'$[..:parent<Pane>(1).foo.bar.baz]',Evaluate",
+        "'${[..:parent<Pane>(1).foo.bar.baz]}',Observe",
+        "'#{[..:parent<Pane>(1).foo.bar.baz]}',Synchronize"
     })
     public void Compact_Content_Syntax_With_ContextSelector_Is_Expanded(String compactIntrinsic, String intrinsicName) {
         ObjectNode objectNode = new InlineParser(compactIntrinsic, "fx").parseObject();

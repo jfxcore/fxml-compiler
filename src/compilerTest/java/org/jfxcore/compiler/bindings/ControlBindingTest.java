@@ -153,14 +153,14 @@ public class ControlBindingTest extends CompilerTestBase {
             <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <NodeUnderInitialization>
                     <arg2>
-                        <NodeUnderInitialization arg1="$:parent(0).test"/>
+                        <NodeUnderInitialization arg1="$:parent(1).test"/>
                     </arg2>
                 </NodeUnderInitialization>
             </Pane>
         """));
 
         assertEquals(ErrorCode.CANNOT_REFERENCE_NODE_UNDER_INITIALIZATION, ex.getDiagnostic().getCode());
-        assertCodeHighlight("$:parent(0).test", ex);
+        assertCodeHighlight("$:parent(1).test", ex);
     }
 
     @Test
@@ -172,7 +172,7 @@ public class ControlBindingTest extends CompilerTestBase {
                     <arg2>
                         <NodeUnderInitialization>
                             <arg2>
-                                <NodeUnderInitialization arg1="$:parent(1).test"/>
+                                <NodeUnderInitialization arg1="$:parent(2).test"/>
                             </arg2>
                         </NodeUnderInitialization>
                     </arg2>
@@ -181,7 +181,7 @@ public class ControlBindingTest extends CompilerTestBase {
         """));
 
         assertEquals(ErrorCode.CANNOT_REFERENCE_NODE_UNDER_INITIALIZATION, ex.getDiagnostic().getCode());
-        assertCodeHighlight("$:parent(1).test", ex);
+        assertCodeHighlight("$:parent(2).test", ex);
     }
 
     @Test
@@ -191,14 +191,14 @@ public class ControlBindingTest extends CompilerTestBase {
             <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <NodeUnderInitialization>
                     <arg2>
-                        <Pane prefWidth="$:parent(0).test"/>
+                        <Pane prefWidth="$:parent(1).test"/>
                     </arg2>
                 </NodeUnderInitialization>
             </Pane>
         """));
 
         assertEquals(ErrorCode.CANNOT_REFERENCE_NODE_UNDER_INITIALIZATION, ex.getDiagnostic().getCode());
-        assertCodeHighlight("prefWidth=\"$:parent(0).test\"", ex);
+        assertCodeHighlight("prefWidth=\"$:parent(1).test\"", ex);
     }
 
     @Test
@@ -209,7 +209,7 @@ public class ControlBindingTest extends CompilerTestBase {
                 <NodeUnderInitialization>
                     <arg2>
                         <NodeUnderInitialization arg1="123">
-                            <Pane fx:id="testNode" prefWidth="${:parent(0).test}"/>
+                            <Pane fx:id="testNode" prefWidth="${:parent(1).test}"/>
                         </NodeUnderInitialization>
                     </arg2>
                 </NodeUnderInitialization>
@@ -236,7 +236,7 @@ public class ControlBindingTest extends CompilerTestBase {
             <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <NodeUnderInitializationWithAlternativeProperty>
                     <content>
-                        <Pane prefWidth="${:parent(0).prefHeight}"/>
+                        <Pane prefWidth="${:parent(1).prefHeight}"/>
                     </content>
                 </NodeUnderInitializationWithAlternativeProperty>
             </Pane>

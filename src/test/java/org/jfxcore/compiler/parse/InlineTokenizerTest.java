@@ -242,13 +242,14 @@ public class InlineTokenizerTest {
     @Test
     public void Namespace_Context_And_Colon_Boundaries_Remain_Positional() {
         assertTokens(
-            "fx:name :parent(Pane,1) this::foo :foo ::foo $:parent",
+            "fx:name :parent<Pane>(1) this::foo :foo ::foo $:parent",
             token(CurlyTokenType.IDENTIFIER, "fx:name"),
             token(CurlyTokenType.COLON, ":"),
             token(CurlyTokenType.IDENTIFIER, "parent"),
-            token(CurlyTokenType.OPEN_PAREN, "("),
+            token(CurlyTokenType.OPEN_ANGLE, "<"),
             token(CurlyTokenType.IDENTIFIER, "Pane"),
-            token(CurlyTokenType.COMMA, ","),
+            token(CurlyTokenType.CLOSE_ANGLE, ">"),
+            token(CurlyTokenType.OPEN_PAREN, "("),
             token(CurlyTokenType.NUMBER, "1"),
             token(CurlyTokenType.CLOSE_PAREN, ")"),
             token(CurlyTokenType.IDENTIFIER, "this"),

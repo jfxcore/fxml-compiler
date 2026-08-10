@@ -16,10 +16,12 @@ For other use cases, alternative evaluation contexts can be specified:
 | `:context` | explicit selector for the no-notation default context |
 | `:root` | root element, regardless of `fx:context` |
 | `:element` | current element |
-| `:parent` or `:parent(0)` | immediate parent of the current element |
-| `:parent(N)` | parent at zero-based depth `N` |
-| `:parent(MyType)` | nearest ancestor assignable to `MyType` |
-| `:parent(MyType, N)` | ancestor at zero-based depth `N` among ancestors assignable to `MyType` |
+| `:parent(0)` | current element, equivalent to `:element` |
+| `:parent` or `:parent(1)` | immediate parent of the current element |
+| `:parent(N)` | element `N` levels above the current element |
+| `:parent<MyType>` | nearest ancestor assignable to `MyType` |
+| `:parent<MyType>(0)` | current element, provided it is assignable to `MyType` |
+| `:parent<MyType>(N)` | `N`th matching ancestor, where the nearest matching ancestor is `1` |
 
 Context selectors are specified as part of the expression path:
 ```xml
@@ -31,7 +33,10 @@ A context selector is a complete expression primary. For example:
 * `:element` returns the current element
 * `:parent` returns the immediate parent element
 * `:parent === owner` is an identity comparison with another object
-* `:parent < value` is an ordinary relation when the static types of `:parent` and `value` are compatible
+
+The type qualifier and depth can be used independently or together: `:parent<Pane>` selects the nearest `Pane`
+ancestor, while `:parent<Pane>(2)` selects the second matching `Pane` ancestor. A depth of `0` always denotes the
+current element and succeeds for a typed selector only when the current element has the requested type.
 
 {: .warning }
 > Using [`fx:Evaluate`](../../reference/evaluate.html) with `:element` or `:parent` selectors may lead to unexpected

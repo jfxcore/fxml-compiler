@@ -404,8 +404,8 @@ public class BindingSourceTest extends CompilerTestBase {
                 <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                       prefHeight="123">
                     <Pane fx:id="pane" prefWidth="234">
-                        <Pane prefWidth="$:parent(0).prefWidth"
-                              prefHeight="$:parent(1).prefHeight"/>
+                        <Pane prefWidth="$:parent(1).prefWidth"
+                              prefHeight="$:parent(2).prefHeight"/>
                     </Pane>
                 </Pane>
             """);
@@ -424,7 +424,7 @@ public class BindingSourceTest extends CompilerTestBase {
                 <?import javafx.scene.layout.*?>
                 <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                           prefWidth="123">
-                    <Pane prefWidth="$:parent(Pane).prefWidth"/>
+                    <Pane prefWidth="$:parent<Pane>.prefWidth"/>
                 </Pane>
             """);
 
@@ -439,8 +439,8 @@ public class BindingSourceTest extends CompilerTestBase {
                 <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                       prefHeight="123">
                     <Pane fx:id="pane" prefWidth="234">
-                        <Pane prefWidth="${:parent(0).prefWidth}"
-                              prefHeight="${:parent(1).prefHeight}"/>
+                        <Pane prefWidth="${:parent(1).prefWidth}"
+                              prefHeight="${:parent(2).prefHeight}"/>
                     </Pane>
                 </Pane>
             """);
@@ -474,7 +474,7 @@ public class BindingSourceTest extends CompilerTestBase {
                 <?import javafx.scene.layout.*?>
                 <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                     <Pane fx:id="pane" prefWidth="123">
-                        <Pane prefWidth="${:parent(1).pane.prefWidth}"/>
+                        <Pane prefWidth="${:parent(2).pane.prefWidth}"/>
                     </Pane>
                 </Pane>
             """);
@@ -490,8 +490,8 @@ public class BindingSourceTest extends CompilerTestBase {
                 <StackPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                            prefHeight="123">
                     <Pane prefWidth="234">
-                        <Pane prefWidth="${:parent(Pane).prefWidth}"
-                              prefHeight="${:parent(StackPane).prefHeight}"/>
+                        <Pane prefWidth="${:parent<Pane>.prefWidth}"
+                              prefHeight="${:parent<StackPane>.prefHeight}"/>
                     </Pane>
                 </StackPane>
             """);
@@ -508,8 +508,8 @@ public class BindingSourceTest extends CompilerTestBase {
                 <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                            prefHeight="123">
                     <Pane prefWidth="234">
-                        <Pane prefWidth="${:parent(Pane, 0).prefWidth}"
-                              prefHeight="${:parent(Pane, 1).prefHeight}"/>
+                        <Pane prefWidth="${:parent<Pane>(1).prefWidth}"
+                              prefHeight="${:parent<Pane>(2).prefHeight}"/>
                     </Pane>
                 </Pane>
             """);
@@ -540,12 +540,27 @@ public class BindingSourceTest extends CompilerTestBase {
                 <?import org.jfxcore.compiler.bindings.BindingPathTest.TestPane?>
                 <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                           prefWidth="123">
-                    <Label prefWidth="$:parent(Button).prefWidth"/>
+                    <Label prefWidth="$:parent<Button>.prefWidth"/>
                 </TestPane>
             """));
 
             assertEquals(ErrorCode.PARENT_TYPE_NOT_FOUND, ex.getDiagnostic().getCode());
-            assertCodeHighlight(":parent(Button)", ex);
+            assertCodeHighlight(":parent<Button>", ex);
+        }
+
+        @Test
+        public void Bind_To_Typed_Parent_At_Depth_Zero_When_Current_Element_Does_Not_Match_Fails() {
+            MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+                <?import javafx.scene.control.*?>
+                <?import javafx.scene.layout.Pane?>
+                <?import org.jfxcore.compiler.bindings.BindingPathTest.TestPane?>
+                <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
+                    <Label prefWidth="$:parent<Pane>(0).prefWidth"/>
+                </TestPane>
+            """));
+
+            assertEquals(ErrorCode.PARENT_TYPE_NOT_FOUND, ex.getDiagnostic().getCode());
+            assertCodeHighlight(":parent<Pane>(0)", ex);
         }
 
         @Test
@@ -568,7 +583,7 @@ public class BindingSourceTest extends CompilerTestBase {
                 <?import javafx.scene.control.*?>
                 <?import org.jfxcore.compiler.bindings.BindingPathTest.TestPane?>
                 <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
-                    <Label prefWidth="$:parent(Pane, Button).prefWidth"/>
+                    <Label prefWidth="$:parent<Pane>(Button).prefWidth"/>
                 </TestPane>
             """));
 
@@ -596,12 +611,12 @@ public class BindingSourceTest extends CompilerTestBase {
                 <?import javafx.scene.control.*?>
                 <?import org.jfxcore.compiler.bindings.BindingPathTest.TestPane?>
                 <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
-                    <Label prefWidth="${:parent(1).prefWidth}"/>
+                    <Label prefWidth="${:parent(2).prefWidth}"/>
                 </TestPane>
             """));
 
             assertEquals(ErrorCode.PARENT_INDEX_OUT_OF_BOUNDS, ex.getDiagnostic().getCode());
-            assertCodeHighlight(":parent(1)", ex);
+            assertCodeHighlight(":parent(2)", ex);
         }
 
         @Test

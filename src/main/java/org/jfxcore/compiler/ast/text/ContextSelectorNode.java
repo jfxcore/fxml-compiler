@@ -14,8 +14,9 @@ public class ContextSelectorNode extends DerivedTextNode {
 
     private final @Nullable SourceInfo colonSourceInfo;
     private final SourceInfo selectorSourceInfo;
+    private final @Nullable SourceInfo openAngleSourceInfo;
+    private final @Nullable SourceInfo closeAngleSourceInfo;
     private final @Nullable SourceInfo openParenSourceInfo;
-    private final @Nullable SourceInfo commaSourceInfo;
     private final @Nullable SourceInfo closeParenSourceInfo;
     private final ContextSelector selector;
     private TextNode searchType;
@@ -27,8 +28,9 @@ public class ContextSelectorNode extends DerivedTextNode {
             @Nullable NumberNode level,
             @Nullable SourceInfo colonSourceInfo,
             SourceInfo selectorSourceInfo,
+            @Nullable SourceInfo openAngleSourceInfo,
+            @Nullable SourceInfo closeAngleSourceInfo,
             @Nullable SourceInfo openParenSourceInfo,
-            @Nullable SourceInfo commaSourceInfo,
             @Nullable SourceInfo closeParenSourceInfo,
             SourceInfo sourceInfo) {
         super(sourceInfo);
@@ -37,8 +39,9 @@ public class ContextSelectorNode extends DerivedTextNode {
         this.level = level;
         this.colonSourceInfo = colonSourceInfo;
         this.selectorSourceInfo = checkNotNull(selectorSourceInfo);
+        this.openAngleSourceInfo = openAngleSourceInfo;
+        this.closeAngleSourceInfo = closeAngleSourceInfo;
         this.openParenSourceInfo = openParenSourceInfo;
-        this.commaSourceInfo = commaSourceInfo;
         this.closeParenSourceInfo = closeParenSourceInfo;
     }
 
@@ -48,8 +51,9 @@ public class ContextSelectorNode extends DerivedTextNode {
             @Nullable NumberNode level,
             @Nullable SourceInfo colonSourceInfo,
             SourceInfo selectorSourceInfo,
+            @Nullable SourceInfo openAngleSourceInfo,
+            @Nullable SourceInfo closeAngleSourceInfo,
             @Nullable SourceInfo openParenSourceInfo,
-            @Nullable SourceInfo commaSourceInfo,
             @Nullable SourceInfo closeParenSourceInfo,
             TypeNode type,
             SourceInfo sourceInfo) {
@@ -59,8 +63,9 @@ public class ContextSelectorNode extends DerivedTextNode {
         this.level = level;
         this.colonSourceInfo = colonSourceInfo;
         this.selectorSourceInfo = checkNotNull(selectorSourceInfo);
+        this.openAngleSourceInfo = openAngleSourceInfo;
+        this.closeAngleSourceInfo = closeAngleSourceInfo;
         this.openParenSourceInfo = openParenSourceInfo;
-        this.commaSourceInfo = commaSourceInfo;
         this.closeParenSourceInfo = closeParenSourceInfo;
     }
 
@@ -84,12 +89,16 @@ public class ContextSelectorNode extends DerivedTextNode {
         return colonSourceInfo;
     }
 
-    public @Nullable SourceInfo getOpenParenSourceInfo() {
-        return openParenSourceInfo;
+    public @Nullable SourceInfo getOpenAngleSourceInfo() {
+        return openAngleSourceInfo;
     }
 
-    public @Nullable SourceInfo getCommaSourceInfo() {
-        return commaSourceInfo;
+    public @Nullable SourceInfo getCloseAngleSourceInfo() {
+        return closeAngleSourceInfo;
+    }
+
+    public @Nullable SourceInfo getOpenParenSourceInfo() {
+        return openParenSourceInfo;
     }
 
     public @Nullable SourceInfo getCloseParenSourceInfo() {
@@ -122,8 +131,9 @@ public class ContextSelectorNode extends DerivedTextNode {
             level != null ? level.deepClone() : null,
             colonSourceInfo,
             selectorSourceInfo,
+            openAngleSourceInfo,
+            closeAngleSourceInfo,
             openParenSourceInfo,
-            commaSourceInfo,
             closeParenSourceInfo,
             getType().deepClone(), getSourceInfo()).copy(this);
     }
@@ -150,20 +160,16 @@ public class ContextSelectorNode extends DerivedTextNode {
             return selector.getText();
         }
 
-        var builder = new StringBuilder(selector.getText()).append('(');
+        var builder = new StringBuilder(selector.getText());
 
         if (typeName != null) {
-            builder.append(typeName.formatText());
-            if (depth != null) {
-                builder.append(", ");
-            }
+            builder.append('<').append(typeName.formatText()).append('>');
         }
 
         if (depth != null) {
-            builder.append(depth.formatText());
+            builder.append('(').append(depth.formatText()).append(')');
         }
 
-        builder.append(')');
         return builder.toString();
     }
 }

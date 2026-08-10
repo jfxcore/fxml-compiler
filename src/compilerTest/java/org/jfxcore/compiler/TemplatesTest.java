@@ -212,7 +212,7 @@ public class TemplatesTest extends CompilerTestBase {
                 <fx:define>
                     <Template fx:typeArguments="java.lang.String">
                         <ScrollPane>
-                            <Button prefWidth="${:parent(2).prefHeight}"/>
+                            <Button prefWidth="${:parent(3).prefHeight}"/>
                         </ScrollPane>
                     </Template>
                 </fx:define>
@@ -232,7 +232,7 @@ public class TemplatesTest extends CompilerTestBase {
                 <fx:define>
                     <Template fx:typeArguments="java.lang.String">
                         <ScrollPane>
-                            <Button prefWidth="${:parent(Pane).prefHeight}"/>
+                            <Button prefWidth="${:parent<Pane>.prefHeight}"/>
                         </ScrollPane>
                     </Template>
                 </fx:define>

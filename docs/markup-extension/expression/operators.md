@@ -55,7 +55,7 @@ runtime `null` on either side returns `false`.
 
 ```xml
 <Label visible="${name < 'N'}"/>
-<Label visible="${:parent(Pane).selectedItem != null && width < maxWidth}"/>
+<Label visible="${:parent<Pane>.selectedItem != null && width < maxWidth}"/>
 ```
 
 ## Equality operators
@@ -110,4 +110,3 @@ or NaN remains true because truthiness does not depend on the runtime class, but
 | [`fx:Push`](../../reference/push.html) | not supported |
 | [`fx:Synchronize`](../../reference/synchronize.html) | only a direct `!` or `!!` if the binding source implements `WritableValue<Boolean>` |
 | content variants | not supported |
-

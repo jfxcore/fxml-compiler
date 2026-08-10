@@ -124,6 +124,7 @@ public class MutationSafeTextNodeTest {
             span(1, 7),
             span(7, 8),
             span(12, 13),
+            span(13, 14),
             span(15, 16),
             span(1, 16));
 
@@ -131,11 +132,11 @@ public class MutationSafeTextNodeTest {
         TextSegmentNode width = new TextSegmentNode(false, widthName, List.of(), span(16, 17), span(17, 22));
         PathNode contextualPath = new PathNode(context, List.of(width), List.of(), span(0, 22));
 
-        assertEquals(":parent(Pane, 1).width", contextualPath.getText());
+        assertEquals(":parent<Pane>(1).width", contextualPath.getText());
         replace(contextualPath, context.getSearchType(), new TextNode("VBox", span(8, 12)));
         replace(contextualPath, context.getLevel(), new NumberNode("2", span(14, 15)));
         replace(contextualPath, width.getValue(), new TextNode("height", span(17, 22)));
-        assertEquals(":parent(VBox, 2).height", contextualPath.getText());
+        assertEquals(":parent<VBox>(2).height", contextualPath.getText());
 
         PathNode simpleWitness = path("Foo", span(7, 10));
         PathNode comparable = new PathNode(
@@ -190,8 +191,9 @@ public class MutationSafeTextNodeTest {
         assertSame(ContextSelector.PARENT, contextClone.getSelector());
         assertEquals(span(0, 1), contextClone.getColonSourceInfo());
         assertEquals(span(1, 7), contextClone.getSelectorSourceInfo());
-        assertEquals(span(7, 8), contextClone.getOpenParenSourceInfo());
-        assertEquals(span(12, 13), contextClone.getCommaSourceInfo());
+        assertEquals(span(7, 8), contextClone.getOpenAngleSourceInfo());
+        assertEquals(span(12, 13), contextClone.getCloseAngleSourceInfo());
+        assertEquals(span(13, 14), contextClone.getOpenParenSourceInfo());
         assertEquals(span(15, 16), contextClone.getCloseParenSourceInfo());
     }
 

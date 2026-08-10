@@ -813,9 +813,16 @@ public class InlineParser {
 
         TextNode searchType = null;
         NumberNode level = null;
+        SourceInfo openAngleSourceInfo = null;
+        SourceInfo closeAngleSourceInfo = null;
         SourceInfo openParenSourceInfo = null;
-        SourceInfo commaSourceInfo = null;
         SourceInfo closeParenSourceInfo = null;
+
+        if (selector == ContextSelector.PARENT && tokenizer.peek(OPEN_ANGLE) != null) {
+            openAngleSourceInfo = tokenizer.remove(OPEN_ANGLE).getSourceInfo();
+            searchType = parseIdentifier(tokenizer);
+            closeAngleSourceInfo = tokenizer.remove(CLOSE_ANGLE).getSourceInfo();
+        }
 
         if (tokenizer.peek(OPEN_PAREN) != null) {
             if (selector != ContextSelector.PARENT) {
@@ -823,27 +830,17 @@ public class InlineParser {
             }
 
             openParenSourceInfo = tokenizer.remove(OPEN_PAREN).getSourceInfo();
-
-            if (tokenizer.peek(PLUS) != null
-                    || tokenizer.peek(MINUS) != null
-                    || tokenizer.peek(NUMBER) != null) {
-                level = parseSignedInteger(tokenizer);
-            } else {
-                searchType = parseIdentifier(tokenizer);
-
-                InlineToken comma = tokenizer.poll(COMMA);
-                if (comma != null) {
-                    commaSourceInfo = comma.getSourceInfo();
-                    level = parseSignedInteger(tokenizer);
-                }
-            }
-
+            level = parseSignedInteger(tokenizer);
             closeParenSourceInfo = tokenizer.remove(CLOSE_PAREN).getSourceInfo();
         }
 
         SourceInfo sourceInfo = SourceInfo.span(
             colonSourceInfo,
-            closeParenSourceInfo != null ? closeParenSourceInfo : selectorToken.getSourceInfo());
+            closeParenSourceInfo != null
+                ? closeParenSourceInfo
+                : closeAngleSourceInfo != null
+                    ? closeAngleSourceInfo
+                    : selectorToken.getSourceInfo());
 
         return new ContextSelectorNode(
             selector,
@@ -851,8 +848,9 @@ public class InlineParser {
             level,
             colonSourceInfo,
             selectorToken.getSourceInfo(),
+            openAngleSourceInfo,
+            closeAngleSourceInfo,
             openParenSourceInfo,
-            commaSourceInfo,
             closeParenSourceInfo,
             sourceInfo);
     }

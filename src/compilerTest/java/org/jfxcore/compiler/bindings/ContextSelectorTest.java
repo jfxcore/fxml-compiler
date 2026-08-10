@@ -17,7 +17,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 @SuppressWarnings("HttpUrlsUsage")
 @ExtendWith(TestExtension.class)
-public class CanonicalContextSelectorTest extends CompilerTestBase {
+public class ContextSelectorTest extends CompilerTestBase {
 
     public static class ContextValue {
         public final String value;
@@ -112,7 +112,7 @@ public class CanonicalContextSelectorTest extends CompilerTestBase {
             <ContextPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                          result="$:element">
                 <ContextPane result="$:parent" secondResult="$:root"
-                             thirdResult="$:parent(0)" fourthResult="$:context"/>
+                             thirdResult="$:parent(0)" fourthResult="$:parent(1)"/>
             </ContextPane>
         """);
 
@@ -120,8 +120,8 @@ public class CanonicalContextSelectorTest extends CompilerTestBase {
         assertSame(root, root.resultProperty().get());
         assertSame(root, child.resultProperty().get());
         assertSame(root, child.secondResultProperty().get());
-        assertSame(child.resultProperty().get(), child.thirdResultProperty().get());
-        assertSame(root, child.fourthResultProperty().get());
+        assertSame(child, child.thirdResultProperty().get());
+        assertSame(child.resultProperty().get(), child.fourthResultProperty().get());
     }
 
     @Test
@@ -262,8 +262,9 @@ public class CanonicalContextSelectorTest extends CompilerTestBase {
             <ContextPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <ContextPane>
                     <Pane>
-                        <ContextPane result="$:parent(1)"
-                                     secondResult="$:parent(ContextPane, 1)"/>
+                        <ContextPane result="$:parent(2)"
+                                     secondResult="$:parent<ContextPane>(2)"
+                                     thirdResult="$:parent<ContextPane>(0)"/>
                     </Pane>
                 </ContextPane>
             </ContextPane>
@@ -274,6 +275,7 @@ public class CanonicalContextSelectorTest extends CompilerTestBase {
         ContextPane leaf = (ContextPane)intermediate.getChildren().get(0);
         assertSame(first, leaf.resultProperty().get());
         assertSame(root, leaf.secondResultProperty().get());
+        assertSame(leaf, leaf.thirdResultProperty().get());
     }
 
     @Test

@@ -491,7 +491,7 @@ public class FunctionBindingTest extends CompilerTestBase {
             <?import javafx.scene.layout.*?>
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <Pane>
-                    <Pane id="$String.format('foo-%s', :parent(1).invariantDoubleVal)"/>
+                    <Pane id="$String.format('foo-%s', :parent(2).invariantDoubleVal)"/>
                 </Pane>
             </TestPane>
         """);
@@ -508,7 +508,7 @@ public class FunctionBindingTest extends CompilerTestBase {
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                       prefHeight="1">
                 <Pane fx:id="pane" prefWidth="2">
-                    <Pane prefWidth="$:parent(1).add(prefHeight, :parent(1).pane.prefWidth)"/>
+                    <Pane prefWidth="$:parent(2).add(prefHeight, :parent(2).pane.prefWidth)"/>
                 </Pane>
             </TestPane>
         """);
@@ -524,13 +524,13 @@ public class FunctionBindingTest extends CompilerTestBase {
             <?import javafx.scene.layout.*?>
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <Pane>
-                    <Pane prefWidth="$:parent(0).add(1, 2)"/>
+                    <Pane prefWidth="$:parent(1).add(1, 2)"/>
                 </Pane>
             </TestPane>
         """));
 
         assertEquals(ErrorCode.MEMBER_NOT_FOUND, ex.getDiagnostic().getCode());
-        assertCodeHighlight(":parent(0).add", ex);
+        assertCodeHighlight(":parent(1).add", ex);
     }
 
     @Test
@@ -1058,7 +1058,7 @@ public class FunctionBindingTest extends CompilerTestBase {
             <?import javafx.scene.layout.*?>
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <Pane prefWidth="123">
-                    <Pane id="${String.format('foo-%s-%s', :parent.prefWidth, :parent(1).invariantDoubleVal)}"/>
+                    <Pane id="${String.format('foo-%s-%s', :parent.prefWidth, :parent(2).invariantDoubleVal)}"/>
                 </Pane>
             </TestPane>
         """);
@@ -1104,13 +1104,13 @@ public class FunctionBindingTest extends CompilerTestBase {
             <?import javafx.scene.layout.*?>
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <Pane>
-                    <Pane prefWidth="${:parent(1).add(1, 2)}"/>
+                    <Pane prefWidth="${:parent(2).add(1, 2)}"/>
                 </Pane>
             </TestPane>
         """));
 
         assertEquals(ErrorCode.INVALID_UNIDIRECTIONAL_BINDING_SOURCE, ex.getDiagnostic().getCode());
-        assertCodeHighlight(":parent(1).add(1, 2)", ex);
+        assertCodeHighlight(":parent(2).add(1, 2)", ex);
     }
 
     @Test
@@ -1120,7 +1120,7 @@ public class FunctionBindingTest extends CompilerTestBase {
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                       prefHeight="1">
                 <Pane fx:id="pane" prefWidth="2">
-                    <Pane prefWidth="${:parent(1).add(prefHeight, :parent(1).pane.prefWidth)}"/>
+                    <Pane prefWidth="${:parent(2).add(prefHeight, :parent(2).pane.prefWidth)}"/>
                 </Pane>
             </TestPane>
         """);
@@ -1136,13 +1136,13 @@ public class FunctionBindingTest extends CompilerTestBase {
             <?import javafx.scene.layout.*?>
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <Pane>
-                    <Pane prefWidth="${:parent(0).add(1, 2)}"/>
+                    <Pane prefWidth="${:parent(1).add(1, 2)}"/>
                 </Pane>
             </TestPane>
         """));
 
         assertEquals(ErrorCode.MEMBER_NOT_FOUND, ex.getDiagnostic().getCode());
-        assertCodeHighlight(":parent(0).add", ex);
+        assertCodeHighlight(":parent(1).add", ex);
     }
 
     @Test

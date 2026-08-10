@@ -634,25 +634,29 @@ public class BindingTransform implements Transform {
             SourceInfo sourceInfo) {
         int parentIndex = -1;
         TypeInstance parentType = null;
+        int effectiveLevel = level != null ? level : 1;
 
-        if (level != null && (level < 0 || level > parents.size() - 2)) {
+        if (effectiveLevel < 0
+                || ((level != null || searchType == null) && effectiveLevel > parents.size() - 1)) {
             throw BindingSourceErrors.parentIndexOutOfBounds(sourceInfo);
         }
 
         if (searchType == null) {
-            parentIndex = parents.size() - (level != null ? level : 0) - 2;
+            parentIndex = parents.size() - effectiveLevel - 1;
             parentType = TypeHelper.getTypeInstance(parents.get(parentIndex));
         } else {
-            for (int i = parents.size() - 2, match = 0; i >= 0; --i) {
+            if (effectiveLevel == 0) {
+                parentType = TypeHelper.getTypeInstance(parents.get(parents.size() - 1));
+                if (parentType.subtypeOf(searchType)) {
+                    parentIndex = parents.size() - 1;
+                }
+            }
+
+            for (int i = parents.size() - 2, match = 1; parentIndex == -1 && i >= 0; --i) {
                 parentType = TypeHelper.getTypeInstance(parents.get(i));
 
                 if (parentType.subtypeOf(searchType)) {
-                    if (level != null) {
-                        if (match++ == level) {
-                            parentIndex = i;
-                            break;
-                        }
-                    } else {
+                    if (match++ == effectiveLevel) {
                         parentIndex = i;
                         break;
                     }

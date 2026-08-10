@@ -48,7 +48,7 @@ After resolving the method path, a method is selected with the following rules:
 ## Method arguments
 Method arguments can be any of the following:
 * Paths, method invocations, constructors, groups, and operator expressions, for example
-  `:parent(Label).text`, `width * 0.7`, or `Box(value)`
+  `:parent<Label>.text`, `width * 0.7`, or `Box(value)`
 * String literals: `'text'`
 * Number literals: `1` (int), `1L` (long), `1F` (float), `1D`/`1.0` (double)
 * Boolean literals: `true`, `false`
