@@ -10,18 +10,18 @@ nav_order: 5
 Operators can be used in expressions to perform calculations or evaluate conditions.
 FXML/2 supports the following operators, ordered from highest to lowest precedence:
 
-| Category | Operators |
-|:-|:-|
-| Unary | `+value`, `-value`, `!value`, `!!value` |
-| Multiplicative | `*`, `/` |
-| Additive | `+`, `-` |
-| Relational | `<`, `<=`, `>`, `>=` |
-| Equality | `==`, `!=`, `===`, `!==` |
-| Conditional AND | `&&` |
-| Conditional OR | `||` |
+| Precedence | Operators | Example |
+|---|---|---|
+| 1 | member selection | `model.value`, `method().value` |
+| 2 | `+`, `-`, `!`, `!!` as unary operators | `!value` |
+| 3 | `*`, `/` | `a + b * c` means `a + (b * c)` |
+| 4 | `+`, `-` as binary operators | `a * b + c` means `(a * b) + c` |
+| 5 | `<`, `<=`, `>`, `>=` | `a + b < c` means `(a + b) < c` |
+| 6 | `==`, `!=`, `===`, `!==` | `a < b == ready` means `(a < b) == ready` |
+| 7 | `&&` | `a == b && ready` means `(a == b) && ready` |
+| 8 | `||` | `ready || valid && visible` means `ready || (valid && visible)` |
 
-Binary operators associate from left to right, and parentheses override precedence. A relational chain such as
-`a < b < c` is therefore parsed as `(a < b) < c` and rejected because the first relation produces a boolean value.
+Binary operators associate from left to right, and parentheses override precedence.
 
 ## Arithmetic operators
 Arithmetic operators support numeric primitives and their boxed counterparts. Java unary and binary numeric promotion

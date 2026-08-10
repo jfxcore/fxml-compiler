@@ -33,8 +33,8 @@ A method path is resolved against the [evaluation context](context.html) like ot
 instance methods can be selected. Generic type arguments are specified after the method name:
 
 ```xml
-<MyControl value="${convert<String>(value)}"/>
-<MyControl value="${:parent.compute(value)}"/>
+<MyControl value="${convert<String>(arg)}"/>
+<MyControl value="${:parent.compute(arg)}"/>
 ```
 
 {: .note }
