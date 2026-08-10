@@ -17,7 +17,9 @@ import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 
-/** Per-plan analysis state for one mutable compiled-expression tree. */
+/**
+ * Per-plan analysis state for one mutable compiled-expression tree.
+ */
 public final class ExpressionAnalysisContext {
 
     public static final class Input {

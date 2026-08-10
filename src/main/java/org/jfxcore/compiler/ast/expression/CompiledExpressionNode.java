@@ -25,7 +25,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-/** Owns analysis and one ordered-input helper for a complete compiled-expression island. */
+/**
+ * Owns analysis and one ordered-input helper for a complete compiled-expression island.
+ */
 public final class CompiledExpressionNode extends AbstractNode implements ExpressionNode {
 
     private static final String EVAL_HELPER_NAME = "eval";

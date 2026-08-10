@@ -94,5 +94,4 @@ public class BinaryOperatorNode extends DerivedTextNode {
     public int hashCode() {
         return Objects.hash(super.hashCode(), operator, left, right, operatorSourceInfo);
     }
-
 }
