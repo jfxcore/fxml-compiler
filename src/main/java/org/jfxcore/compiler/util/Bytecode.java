@@ -101,6 +101,11 @@ public final class Bytecode {
         return this;
     }
 
+    public Bytecode dcmpg() {
+        bytecode.addOpcode(Opcode.DCMPG);
+        return this;
+    }
+
     public Bytecode dconst(double d) {
         bytecode.addDconst(d);
         return this;
@@ -169,6 +174,11 @@ public final class Bytecode {
         return this;
     }
 
+    public Bytecode fcmpg() {
+        bytecode.addOpcode(Opcode.FCMPG);
+        return this;
+    }
+
     public Bytecode fconst(float f) {
         bytecode.addFconst(f);
         return this;
@@ -231,6 +241,26 @@ public final class Bytecode {
     public Label goto_label() {
         bytecode.addOpcode(Opcode.GOTO);
         return new Label(this, false);
+    }
+
+    public Bytecode add(TypeDeclaration type) {
+        return arithmeticOp(type, Opcode.IADD, Opcode.LADD, Opcode.FADD, Opcode.DADD);
+    }
+
+    public Bytecode sub(TypeDeclaration type) {
+        return arithmeticOp(type, Opcode.ISUB, Opcode.LSUB, Opcode.FSUB, Opcode.DSUB);
+    }
+
+    public Bytecode mul(TypeDeclaration type) {
+        return arithmeticOp(type, Opcode.IMUL, Opcode.LMUL, Opcode.FMUL, Opcode.DMUL);
+    }
+
+    public Bytecode div(TypeDeclaration type) {
+        return arithmeticOp(type, Opcode.IDIV, Opcode.LDIV, Opcode.FDIV, Opcode.DDIV);
+    }
+
+    public Bytecode neg(TypeDeclaration type) {
+        return arithmeticOp(type, Opcode.INEG, Opcode.LNEG, Opcode.FNEG, Opcode.DNEG);
     }
 
     public Bytecode iadd() {
@@ -315,6 +345,42 @@ public final class Bytecode {
         return thenElse(if_icmpne(), then, else_);
     }
 
+    public Label if_icmplt() {
+        bytecode.addOpcode(Opcode.IF_ICMPLT);
+        return new Label(this, false);
+    }
+
+    public Bytecode if_icmplt(Runnable then, Runnable else_) {
+        return thenElse(if_icmplt(), then, else_);
+    }
+
+    public Label if_icmple() {
+        bytecode.addOpcode(Opcode.IF_ICMPLE);
+        return new Label(this, false);
+    }
+
+    public Bytecode if_icmple(Runnable then, Runnable else_) {
+        return thenElse(if_icmple(), then, else_);
+    }
+
+    public Label if_icmpgt() {
+        bytecode.addOpcode(Opcode.IF_ICMPGT);
+        return new Label(this, false);
+    }
+
+    public Bytecode if_icmpgt(Runnable then, Runnable else_) {
+        return thenElse(if_icmpgt(), then, else_);
+    }
+
+    public Label if_icmpge() {
+        bytecode.addOpcode(Opcode.IF_ICMPGE);
+        return new Label(this, false);
+    }
+
+    public Bytecode if_icmpge(Runnable then, Runnable else_) {
+        return thenElse(if_icmpge(), then, else_);
+    }
+
     public Label ifeq() {
         bytecode.addOpcode(Opcode.IFEQ);
         return new Label(this, false);
@@ -339,6 +405,42 @@ public final class Bytecode {
 
     public Bytecode ifne(Runnable then, Runnable else_) {
         return thenElse(ifne(), then, else_);
+    }
+
+    public Label iflt() {
+        bytecode.addOpcode(Opcode.IFLT);
+        return new Label(this, false);
+    }
+
+    public Bytecode iflt(Runnable then, Runnable else_) {
+        return thenElse(iflt(), then, else_);
+    }
+
+    public Label ifle() {
+        bytecode.addOpcode(Opcode.IFLE);
+        return new Label(this, false);
+    }
+
+    public Bytecode ifle(Runnable then, Runnable else_) {
+        return thenElse(ifle(), then, else_);
+    }
+
+    public Label ifgt() {
+        bytecode.addOpcode(Opcode.IFGT);
+        return new Label(this, false);
+    }
+
+    public Bytecode ifgt(Runnable then, Runnable else_) {
+        return thenElse(ifgt(), then, else_);
+    }
+
+    public Label ifge() {
+        bytecode.addOpcode(Opcode.IFGE);
+        return new Label(this, false);
+    }
+
+    public Bytecode ifge(Runnable then, Runnable else_) {
+        return thenElse(ifge(), then, else_);
     }
 
     public Label ifnonnull() {
@@ -1038,6 +1140,21 @@ public final class Bytecode {
         extraStackSize += value;
     }
 
+    private Bytecode arithmeticOp(
+            TypeDeclaration type, int intOpcode, int longOpcode, int floatOpcode, int doubleOpcode) {
+        if (type.equals(intDecl())) {
+            return opcode(intOpcode);
+        } else if (type.equals(longDecl())) {
+            return opcode(longOpcode);
+        } else if (type.equals(floatDecl())) {
+            return opcode(floatOpcode);
+        } else if (type.equals(doubleDecl())) {
+            return opcode(doubleOpcode);
+        }
+
+        throw new IllegalArgumentException("Not a promoted numeric primitive type: " + type.name());
+    }
+
     private Bytecode then(Label label, Runnable then) {
         then.run();
         label.resume();
@@ -1069,6 +1186,18 @@ public final class Bytecode {
             case (byte)Opcode.IFNONNULL -> Opcode.IFNULL;
             case (byte)Opcode.IFEQ -> Opcode.IFNE;
             case (byte)Opcode.IFNE -> Opcode.IFEQ;
+            case (byte)Opcode.IFLT -> Opcode.IFGE;
+            case (byte)Opcode.IFLE -> Opcode.IFGT;
+            case (byte)Opcode.IFGT -> Opcode.IFLE;
+            case (byte)Opcode.IFGE -> Opcode.IFLT;
+            case (byte)Opcode.IF_ACMPEQ -> Opcode.IF_ACMPNE;
+            case (byte)Opcode.IF_ACMPNE -> Opcode.IF_ACMPEQ;
+            case (byte)Opcode.IF_ICMPEQ -> Opcode.IF_ICMPNE;
+            case (byte)Opcode.IF_ICMPNE -> Opcode.IF_ICMPEQ;
+            case (byte)Opcode.IF_ICMPLT -> Opcode.IF_ICMPGE;
+            case (byte)Opcode.IF_ICMPLE -> Opcode.IF_ICMPGT;
+            case (byte)Opcode.IF_ICMPGT -> Opcode.IF_ICMPLE;
+            case (byte)Opcode.IF_ICMPGE -> Opcode.IF_ICMPLT;
             default -> throw new IllegalArgumentException();
         };
     }

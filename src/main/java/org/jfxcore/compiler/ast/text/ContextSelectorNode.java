@@ -4,30 +4,77 @@
 package org.jfxcore.compiler.ast.text;
 
 import org.jetbrains.annotations.Nullable;
+import org.jfxcore.compiler.ast.TypeNode;
 import org.jfxcore.compiler.ast.Visitor;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 
 import java.util.Objects;
 
-public class ContextSelectorNode extends TextNode {
+public class ContextSelectorNode extends DerivedTextNode {
 
-    private TextNode selector;
+    private final @Nullable SourceInfo colonSourceInfo;
+    private final SourceInfo selectorSourceInfo;
+    private final @Nullable SourceInfo openAngleSourceInfo;
+    private final @Nullable SourceInfo closeAngleSourceInfo;
+    private final @Nullable SourceInfo openParenSourceInfo;
+    private final @Nullable SourceInfo closeParenSourceInfo;
+    private final ContextSelector selector;
     private TextNode searchType;
     private NumberNode level;
 
     public ContextSelectorNode(
-            TextNode selector,
+            ContextSelector selector,
             @Nullable TextNode searchType,
             @Nullable NumberNode level,
+            @Nullable SourceInfo colonSourceInfo,
+            SourceInfo selectorSourceInfo,
+            @Nullable SourceInfo openAngleSourceInfo,
+            @Nullable SourceInfo closeAngleSourceInfo,
+            @Nullable SourceInfo openParenSourceInfo,
+            @Nullable SourceInfo closeParenSourceInfo,
             SourceInfo sourceInfo) {
-        super(formatText(selector, searchType, level), sourceInfo);
-        this.selector = selector;
+        super(sourceInfo);
+        this.selector = checkNotNull(selector);
         this.searchType = searchType;
         this.level = level;
+        this.colonSourceInfo = colonSourceInfo;
+        this.selectorSourceInfo = checkNotNull(selectorSourceInfo);
+        this.openAngleSourceInfo = openAngleSourceInfo;
+        this.closeAngleSourceInfo = closeAngleSourceInfo;
+        this.openParenSourceInfo = openParenSourceInfo;
+        this.closeParenSourceInfo = closeParenSourceInfo;
     }
 
-    public TextNode getSelector() {
+    private ContextSelectorNode(
+            ContextSelector selector,
+            @Nullable TextNode searchType,
+            @Nullable NumberNode level,
+            @Nullable SourceInfo colonSourceInfo,
+            SourceInfo selectorSourceInfo,
+            @Nullable SourceInfo openAngleSourceInfo,
+            @Nullable SourceInfo closeAngleSourceInfo,
+            @Nullable SourceInfo openParenSourceInfo,
+            @Nullable SourceInfo closeParenSourceInfo,
+            TypeNode type,
+            SourceInfo sourceInfo) {
+        super(type, sourceInfo);
+        this.selector = checkNotNull(selector);
+        this.searchType = searchType;
+        this.level = level;
+        this.colonSourceInfo = colonSourceInfo;
+        this.selectorSourceInfo = checkNotNull(selectorSourceInfo);
+        this.openAngleSourceInfo = openAngleSourceInfo;
+        this.closeAngleSourceInfo = closeAngleSourceInfo;
+        this.openParenSourceInfo = openParenSourceInfo;
+        this.closeParenSourceInfo = closeParenSourceInfo;
+    }
+
+    public ContextSelector getSelector() {
         return selector;
+    }
+
+    public SourceInfo getSelectorSourceInfo() {
+        return selectorSourceInfo;
     }
 
     public @Nullable TextNode getSearchType() {
@@ -38,11 +85,34 @@ public class ContextSelectorNode extends TextNode {
         return level;
     }
 
+    public @Nullable SourceInfo getColonSourceInfo() {
+        return colonSourceInfo;
+    }
+
+    public @Nullable SourceInfo getOpenAngleSourceInfo() {
+        return openAngleSourceInfo;
+    }
+
+    public @Nullable SourceInfo getCloseAngleSourceInfo() {
+        return closeAngleSourceInfo;
+    }
+
+    public @Nullable SourceInfo getOpenParenSourceInfo() {
+        return openParenSourceInfo;
+    }
+
+    public @Nullable SourceInfo getCloseParenSourceInfo() {
+        return closeParenSourceInfo;
+    }
+
+    @Override
+    public String formatText() {
+        return formatText(selector, searchType, level);
+    }
+
     @Override
     public void acceptChildren(Visitor visitor) {
         super.acceptChildren(visitor);
-
-        selector = (TextNode)selector.accept(visitor);
 
         if (searchType != null) {
             searchType = (TextNode)searchType.accept(visitor);
@@ -56,10 +126,16 @@ public class ContextSelectorNode extends TextNode {
     @Override
     public ContextSelectorNode deepClone() {
         return new ContextSelectorNode(
-            selector.deepClone(),
+            selector,
             searchType != null ? searchType.deepClone() : null,
             level != null ? level.deepClone() : null,
-            getSourceInfo()).copy(this);
+            colonSourceInfo,
+            selectorSourceInfo,
+            openAngleSourceInfo,
+            closeAngleSourceInfo,
+            openParenSourceInfo,
+            closeParenSourceInfo,
+            getType().deepClone(), getSourceInfo()).copy(this);
     }
 
     @Override
@@ -68,7 +144,7 @@ public class ContextSelectorNode extends TextNode {
         if (o == null || getClass() != o.getClass()) return false;
         if (!super.equals(o)) return false;
         ContextSelectorNode that = (ContextSelectorNode) o;
-        return Objects.equals(selector, that.selector)
+        return selector == that.selector
             && Objects.equals(searchType, that.searchType)
             && Objects.equals(level, that.level);
     }
@@ -78,25 +154,22 @@ public class ContextSelectorNode extends TextNode {
         return Objects.hash(super.hashCode(), selector, searchType, level);
     }
 
-    private static String formatText(TextNode selector, @Nullable TextNode typeName, @Nullable NumberNode depth) {
+    private static String formatText(
+            ContextSelector selector, @Nullable TextNode typeName, @Nullable NumberNode depth) {
         if (typeName == null && depth == null) {
             return selector.getText();
         }
 
-        var builder = new StringBuilder(selector.getText()).append('[');
+        var builder = new StringBuilder(selector.getText());
 
         if (typeName != null) {
-            builder.append(typeName.getText());
-            if (depth != null) {
-                builder.append(':');
-            }
+            builder.append('<').append(typeName.formatText()).append('>');
         }
 
         if (depth != null) {
-            builder.append(depth.getText());
+            builder.append('(').append(depth.formatText()).append(')');
         }
 
-        builder.append(']');
         return builder.toString();
     }
 }

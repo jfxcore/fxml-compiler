@@ -13,6 +13,11 @@ import javafx.collections.ObservableSet;
 import org.jfxcore.compiler.TestBase;
 import org.jfxcore.compiler.ast.ObservableDependencyKind;
 import org.jfxcore.compiler.ast.ValueSourceKind;
+import org.jfxcore.compiler.ast.expression.BindingContextNode;
+import org.jfxcore.compiler.ast.expression.BindingContextSelector;
+import org.jfxcore.compiler.ast.expression.BindingOperator;
+import org.jfxcore.compiler.ast.expression.PathExpressionNode;
+import org.jfxcore.compiler.ast.text.AttachedSegmentNode;
 import org.jfxcore.compiler.ast.text.PathNode;
 import org.jfxcore.compiler.ast.text.PathSegmentNode;
 import org.jfxcore.compiler.ast.text.TextNode;
@@ -47,6 +52,23 @@ public class PathTest extends TestBase {
         return new PathNode(null, segments(segments), List.of(), SourceInfo.none());
     }
 
+    @Test
+    public void Binding_Context_Explicitness_Survives_Cloning_And_Affects_Identity() {
+        BindingContextNode implicit = new BindingContextNode(
+            BindingContextSelector.ROOT, TypeInstance.ObjectType(), 0, false, SourceInfo.none());
+        BindingContextNode explicit = new BindingContextNode(
+            BindingContextSelector.ROOT, TypeInstance.ObjectType(), 0, true, SourceInfo.none());
+
+        assertTrue(implicit.mayResolveAgainstImports());
+        assertFalse(explicit.mayResolveAgainstImports());
+        assertNotEquals(implicit, explicit);
+
+        BindingContextNode clone = explicit.deepClone();
+        assertEquals(explicit, clone);
+        assertEquals(explicit.hashCode(), clone.hashCode());
+        assertTrue(clone.isExplicitReceiver());
+    }
+
     public static class Baz1<T> {
         public T quxField;
         public T quxGetter() { return null; }
@@ -63,6 +85,86 @@ public class PathTest extends TestBase {
         public Bar1<String> barField;
         public Bar1<String> barGetter() { return null;}
         public Property<Bar1<String>> barProperty() { return null;}
+    }
+
+    public static class CacheRoot {
+        public CacheReceiver getReceiver() { return null; }
+    }
+
+    public static class CacheReceiver {
+        public String getValue() { return null; }
+    }
+
+    @Test
+    public void Limited_And_Full_Path_Resolution_Do_Not_Share_A_Cache_Entry() {
+        Resolver resolver = new Resolver(SourceInfo.none());
+        TypeInstance rootType = TypeInstance.of(resolver.resolveClass(CacheRoot.class.getName()));
+        var context = new BindingContextNode(BindingContextSelector.ROOT, rootType, 0, SourceInfo.none());
+
+        var prefixFirst = new PathExpressionNode(
+            BindingOperator.IDENTITY, context, segments("receiver", "value"), SourceInfo.none());
+        assertEquals(CacheReceiver.class.getName(), prefixFirst.resolvePath(false, 1).getValueTypeInstance().name());
+        assertEquals(String.class.getName(), prefixFirst.resolvePath(false).getValueTypeInstance().name());
+
+        var fullFirst = new PathExpressionNode(
+            BindingOperator.IDENTITY, context.deepClone(), segments("receiver", "value"), SourceInfo.none());
+        assertEquals(String.class.getName(), fullFirst.resolvePath(false).getValueTypeInstance().name());
+        assertEquals(CacheReceiver.class.getName(), fullFirst.resolvePath(false, 1).getValueTypeInstance().name());
+    }
+
+    public static class ThisRoot {
+        public ThisChild getThis() { return null; }
+        public ThisChild getChild() { return null; }
+    }
+
+    public static class ThisChild {
+        public String getThis() { return null; }
+    }
+
+    @Test
+    public void This_Is_Resolved_As_An_Ordinary_Property() {
+        Resolver resolver = new Resolver(SourceInfo.none());
+        Segment root = new ParentSegment(TypeInstance.of(resolver.resolveClass(ThisRoot.class.getName())), 0);
+        assertEquals(1, ResolvedPath.parse(root, List.of(), false, SourceInfo.none()).size());
+
+        ResolvedPath firstThis = ResolvedPath.parse(root, segments("this"), false, SourceInfo.none());
+        assertEquals(2, firstThis.size());
+        assertEquals(ThisChild.class.getName(), firstThis.getValueTypeInstance().name());
+        assertEquals("getThis", firstThis.get(firstThis.size() - 1).getDisplayName());
+
+        ResolvedPath selectedThis = ResolvedPath.parse(root, segments("child", "this"), false, SourceInfo.none());
+        assertEquals(String.class.getName(), selectedThis.getValueTypeInstance().name());
+        assertEquals("getThis", selectedThis.get(selectedThis.size() - 1).getDisplayName());
+    }
+
+    public static class AttachedReceiver {}
+
+    public static class AttachedSource {
+        public static String getValue(AttachedReceiver receiver) { return null; }
+    }
+
+    @Test
+    public void Dedicated_Attached_Property_Segment_Resolves_A_Static_Getter() {
+        Resolver resolver = new Resolver(SourceInfo.none());
+        Segment root = new ParentSegment(
+            TypeInstance.of(resolver.resolveClass(AttachedReceiver.class.getName())), 0);
+        SourceInfo declaringTypeSpan = new SourceInfo(0, 2, 0, 72);
+        SourceInfo propertySpan = new SourceInfo(0, 73, 0, 78);
+
+        var attached = new AttachedSegmentNode(
+            false,
+            new TextNode(AttachedSource.class.getName(), declaringTypeSpan),
+            new TextNode("value", propertySpan),
+            SourceInfo.none(),
+            SourceInfo.none(),
+            SourceInfo.none(),
+            SourceInfo.none(),
+            SourceInfo.span(declaringTypeSpan, propertySpan));
+
+        ResolvedPath path = ResolvedPath.parse(root, List.of(attached), false, SourceInfo.none());
+        GetterSegment getter = assertInstanceOf(GetterSegment.class, path.get(path.size() - 1));
+        assertTrue(getter.isStaticPropertyGetter());
+        assertEquals(String.class.getName(), path.getValueTypeInstance().name());
     }
 
     @Test

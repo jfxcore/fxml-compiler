@@ -48,6 +48,7 @@ public class ListBindingTest extends CompilerTestBase {
     public static class ListTestPane extends Pane {
         private final ObjectProperty<IndirectContext> indirect = new SimpleObjectProperty<>(new IndirectContext());
         public Property<IndirectContext> indirectProperty() { return indirect; }
+        public IndirectContext getIndirectExact() { return indirect.get(); }
 
         public List<Double> incompatibleList = new ArrayList<>();
 
@@ -509,6 +510,20 @@ public class ListBindingTest extends CompilerTestBase {
         root.obsList.clear();
         assertTrue(flag1[0]);
         assertEquals(0, root.targetListProp.size());
+    }
+
+    @Test
+    public void Unidirectional_ContentBinding_To_Selected_List_After_Invocation() {
+        ListTestPane root = compileAndRun("""
+            <ListTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                          targetListProp="${..getIndirectExact().obsList}"/>
+        """);
+
+        assertNotNewExpr(root, OBSERVABLE_VALUE_WRAPPER);
+        assertEquals(List.of("foo", "bar", "baz"), root.targetListProp);
+
+        root.indirect.get().obsList.clear();
+        assertTrue(root.targetListProp.isEmpty());
     }
 
     /*

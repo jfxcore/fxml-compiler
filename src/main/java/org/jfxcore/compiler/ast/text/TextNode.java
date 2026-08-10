@@ -47,9 +47,18 @@ public class TextNode extends AbstractNode implements ValueNode {
         return text;
     }
 
+    /**
+     * Returns the text used when this syntax node is embedded in a formatted compound node.
+     * Lexical nodes normally use their semantic text directly, while nodes that retain a distinct
+     * source lexeme can override this method without changing {@link #getText()}.
+     */
+    public String formatText() {
+        return text;
+    }
+
     @Override
     public String toString() {
-        return text;
+        return formatText();
     }
 
     @Override
@@ -81,5 +90,11 @@ public class TextNode extends AbstractNode implements ValueNode {
     @Override
     public int hashCode() {
         return Objects.hash(rawText, text, type);
+    }
+
+    protected static String formatValue(ValueNode node) {
+        return node instanceof TextNode textNode
+            ? textNode.formatText()
+            : node.getType().getMarkupName();
     }
 }

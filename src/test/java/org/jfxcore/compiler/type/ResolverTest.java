@@ -138,6 +138,7 @@ public class ResolverTest extends TestBase {
         assertEquals("int", paramTypes[0].toString());
         assertEquals("String", paramTypes[1].toString());
         assertEquals("Comparable", paramTypes[2].toString());
+        assertTrue(paramTypes[2].isRaw());
     }
 
     @Test

@@ -77,6 +77,7 @@ public final class KnownSymbols {
     public static TypeDeclaration CloneableDecl() { return get("java.lang.Cloneable"); }
     public static TypeDeclaration ObjectsDecl() { return get("java.util.Objects"); }
     public static TypeDeclaration ClassDecl() { return get("java.lang.Class"); }
+    public static TypeDeclaration ComparableDecl() { return get("java.lang.Comparable"); }
     public static TypeDeclaration StringDecl() { return get("java.lang.String"); }
     public static TypeDeclaration BooleanDecl() { return get("java.lang.Boolean"); }
     public static TypeDeclaration ByteDecl() { return get("java.lang.Byte"); }

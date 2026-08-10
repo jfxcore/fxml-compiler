@@ -3,11 +3,19 @@
 
 package org.jfxcore.compiler.accesstest;
 
+import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.SimpleObjectProperty;
 import javafx.scene.layout.Pane;
 import org.jfxcore.markup.InverseMethod;
 
 @SuppressWarnings("unused")
 public class PublicTestPane extends Pane {
+
+    private final ObjectProperty<Object> result = new SimpleObjectProperty<>();
+
+    public ObjectProperty<Object> resultProperty() { return result; }
+
+    public double getResultValue() { return ((ProtectedMember)result.get()).value; }
 
     @InverseMethod("protectedMethod")
     protected double protectedMethod(double d) { return d; }
@@ -15,6 +23,11 @@ public class PublicTestPane extends Pane {
     double packagePrivateMethod(double d) { return d; }
 
     private double privateMethod(double d) { return d; }
+
+    protected class ProtectedMember {
+        public final double value;
+        public ProtectedMember(double value) { this.value = value; }
+    }
 
     protected static class Nested {
 

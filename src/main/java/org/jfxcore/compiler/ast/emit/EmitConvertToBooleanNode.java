@@ -6,26 +6,23 @@ package org.jfxcore.compiler.ast.emit;
 import org.jfxcore.compiler.ast.AbstractNode;
 import org.jfxcore.compiler.ast.ResolvedTypeNode;
 import org.jfxcore.compiler.ast.Visitor;
-import org.jfxcore.compiler.ast.expression.Operator;
+import org.jfxcore.compiler.ast.expression.BindingOperator;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
-import org.jfxcore.compiler.type.TypeDeclaration;
 import org.jfxcore.compiler.type.TypeHelper;
 import org.jfxcore.compiler.type.TypeInstance;
-import org.jfxcore.compiler.util.Bytecode;
+import org.jfxcore.compiler.util.BooleanConversionHelper;
 import java.util.Objects;
 
-import static org.jfxcore.compiler.type.KnownSymbols.*;
-
 /**
- * Emits the child value, then replaces it with {@code true} or {@code false} as specified by {@link Operator}.
+ * Emits the child value, then replaces it with {@code true} or {@code false} as specified by {@link BindingOperator}.
  */
 public class EmitConvertToBooleanNode extends AbstractNode implements ValueEmitterNode {
 
-    private final Operator operator;
+    private final BindingOperator operator;
     private final ResolvedTypeNode type;
     private EmitterNode child;
 
-    public EmitConvertToBooleanNode(EmitterNode child, Operator operator, SourceInfo sourceInfo) {
+    public EmitConvertToBooleanNode(EmitterNode child, BindingOperator operator, SourceInfo sourceInfo) {
         super(sourceInfo);
         this.child = checkNotNull(child);
         this.operator = checkNotNull(operator);
@@ -41,40 +38,10 @@ public class EmitConvertToBooleanNode extends AbstractNode implements ValueEmitt
     public void emit(BytecodeEmitContext context) {
         context.emit(child);
 
-        Bytecode code = context.getOutput();
-        TypeDeclaration type = TypeHelper.getTypeDeclaration(child);
-
-        if (operator == Operator.NOT) {
-            if (type.isPrimitive()) {
-                if (type.equals(doubleDecl())) {
-                    code.dconst(0)
-                        .dcmpl();
-                } else if (type.equals(longDecl())) {
-                    code.lconst(0)
-                        .lcmp();
-                }
-
-                code.ifeq(() -> code.iconst(1), () -> code.iconst(0));
-            } else {
-                code.ifnull(() -> code.iconst(1), () -> code.iconst(0));
-            }
-        } else if (operator == Operator.BOOLIFY) {
-            if (type.isPrimitive()) {
-                if (type.equals(doubleDecl())) {
-                    code.dconst(0)
-                        .dcmpl();
-                } else if (type.equals(longDecl())) {
-                    code.lconst(0)
-                        .lcmp();
-                }
-
-                code.ifeq(() -> code.iconst(0), () -> code.iconst(1));
-            } else {
-                code.ifnull(() -> code.iconst(0), () -> code.iconst(1));
-            }
-        } else {
-            throw new IllegalArgumentException();
-        }
+        BooleanConversionHelper.emit(
+            context.getOutput(),
+            TypeHelper.getTypeDeclaration(child),
+            operator == BindingOperator.NOT);
     }
 
     @Override

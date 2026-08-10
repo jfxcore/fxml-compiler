@@ -10,7 +10,7 @@ Methods and constructors can be used in binding expressions to process a value, 
 different type. In the following example, the `String.format` method is used to convert the width of a button to text:
 
 ```xml
-<Button text="${String.format('Width: %.0f', self/width)}"/>
+<Button text="${String.format('Width: %.0f', :element.width)}"/>
 ```
 
 If the method or constructor is used in a [`{fx:Observe}`](../../reference/observe.html) or
@@ -22,14 +22,20 @@ Methods and constructors in binding expressions can be used with the following m
 
 | Markup extension | Applicable |
 |:-|:-|
-| [`fx:Evaluate`](../reference/evaluate.html) | yes |
-| [`fx:Observe`](../reference/observe.html) | yes, if the function expression depends on at least one observable receiver or argument |
-| [`fx:Push`](../reference/push.html) | no |
-| [`fx:Synchronize`](../reference/synchronize.html) | yes, if the function expression is invertible |
+| [`fx:Evaluate`](../../reference/evaluate.html) | yes |
+| [`fx:Observe`](../../reference/observe.html) | yes, if the expression depends on at least one observable receiver or argument |
+| [`fx:Push`](../../reference/push.html) | no |
+| [`fx:Synchronize`](../../reference/synchronize.html) | yes, if the expression is invertible |
 
-## Method path
-The method path is resolved against the [evaluation context](context.html) like other expressions, optionally including
-a context selector separated with a forward slash. Both static and instance methods can be selected.
+## Method invocation
+
+A method path is resolved against the [evaluation context](context.html) like other expressions. Both static and
+instance methods can be selected. Generic type arguments are specified after the method name:
+
+```xml
+<MyControl value="${convert<String>(arg)}"/>
+<MyControl value="${:parent.compute(arg)}"/>
+```
 
 {: .note }
 The method path can also be a statically reachable path, beginning with the name of a class.
@@ -39,17 +45,10 @@ After resolving the method path, a method is selected with the following rules:
 * The return type of the method must be assignable to the target type of the binding.
 * If multiple methods are applicable, overload selection follows the Java Language rules.
 
-A method path can also be the name of a constructor (i.e. the name of the type). In this case, the return type is
-simply the type of the constructed object:
-
-```xml
-<Button textFill="${Color(path.to.red, path.to.green, path.to.blue, 1)}"/>
-```
-
 ## Method arguments
 Method arguments can be any of the following:
-* Expressions resolved against the [evaluation context](context.html), including method or constructor invocations;
-  optionally also including a context selector separated with a forward slash, for example: `parent[Label]/text` 
+* Paths, method invocations, constructors, groups, and operator expressions, for example
+  `:parent<Label>.text`, `width * 0.7`, or `Box(value)`
 * String literals: `'text'`
 * Number literals: `1` (int), `1L` (long), `1F` (float), `1D`/`1.0` (double)
 * Boolean literals: `true`, `false`
@@ -58,8 +57,32 @@ Method arguments can be any of the following:
 * [Constants](../../reference/constant.html): `{Double fx:constant=POSITIVE_INFINITY}` or `Double.POSITIVE_INFINITY`
 * [Value-supplier markup extensions](../../markup-extension.html#where-markup-extensions-can-be-used)
 
-{: .note }
-Constructor invocations have the same syntax as method invocations, they do not use the `new` keyword.
+The unquoted words `true`, `false`, and `null` are literals only when they occur as expression primaries.
+Quoted forms such as `'true'` are strings. A qualified form such as `:element.true`, `:context.true`, or `model.true`
+is a path, which allows a property with the same name as a literal keyword to be referenced explicitly.
+
+## Constructor invocation
+A constructor uses the same invocation syntax as a method. Top-level and static nested classes are named directly:
+
+```xml
+<Button textFill="$Color(red, green, blue, 1)"/>
+<MyControl value="$Box<String>('value')"/>
+<MyControl value="$Outer.Nested<String>('value')"/>
+```
+
+A non-static member class requires an enclosing-instance qualifier:
+
+```xml
+<MyControl value="$outer.Inner<String>('value')"/>
+<MyControl value="$:context.Inner<String>('value')"/>
+```
+
+Constructor type arguments are specified after class type arguments. If `Box<T>` declares a constructor
+`<W extends Number> Box(T value, W witness)`, its invocation is:
+
+```xml
+<MyControl value="$Box<String, Long>('value', 1L)"/>
+```
 
 ## Bidirectional function binding with inverse method
 A method that is used in a [`{fx:Synchronize}`](../../reference/synchronize.html) expression must have exactly
@@ -75,4 +98,4 @@ Note that the inverse method is only referenced with a path expression; it has n
 The inverse method must have exactly one argument, where the argument type corresponds to the return type
 of the other method, and the return type corresponds to the argument type of the other method.
 
-The inverse method can also be a constructor invocation with a single argument.
+The inverse method can also be the name of a constructor with a single argument.

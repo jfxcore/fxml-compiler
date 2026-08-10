@@ -141,9 +141,13 @@ public class EmitObservableFunctionNode
         var sourceInfo = function.getSourceInfo();
 
         if (!AccessVerifier.isNestedAccessible(behavior, invocationContext)) {
-            if (receiver.size() == 1 && equalsInvocationContext(receiver.get(0))) {
+            ValueEmitterNode bridgeReceiver = receiver.size() == 1
+                ? asInvocationContextReceiver(receiver.get(0))
+                : null;
+
+            if (bridgeReceiver != null) {
                 function = new Callable(
-                    function.getInvocationContext(), receiver,
+                    function.getInvocationContext(), List.of(bridgeReceiver),
                     function.getReceiverDependencyKind(),
                     emitBridgeMethod(behavior), sourceInfo);
             } else {
@@ -154,22 +158,35 @@ public class EmitObservableFunctionNode
         return function;
     }
 
-    private boolean equalsInvocationContext(ValueEmitterNode node) {
+    private ValueEmitterNode asInvocationContextReceiver(ValueEmitterNode node) {
+        if (node instanceof EmitInvariantPathNode pathNode && pathNode.getChildren().size() == 1) {
+            return asInvocationContextReceiver(pathNode.getChildren().get(0));
+        }
+
         if (node instanceof EmitGetParentNode getParentNode) {
-            return getParentNode.getType().getTypeInstance().equals(invocationContext);
+            return getParentNode.getType().getTypeInstance().equals(invocationContext) ? node : null;
         }
 
         if (node instanceof EmitGetRootNode getRootNode) {
-            return getRootNode.getType().getTypeInstance().equals(invocationContext);
+            TypeInstance rootType = getRootNode.getType().getTypeInstance();
+            if (TypeInstance.of(invocationContext).subtypeOf(rootType)) {
+                return rootType.equals(invocationContext)
+                    ? node
+                    : new EmitGetRootNode(TypeInstance.of(invocationContext), node.getSourceInfo());
+            }
         }
 
-        return false;
+        return null;
     }
 
     private MethodDeclaration emitBridgeMethod(BehaviorDeclaration behavior) {
+        if (behavior instanceof ConstructorDeclaration constructor && constructor.requiresEnclosingInstance()) {
+            return emitMemberConstructorBridge(constructor);
+        }
+
         String methodName = NameHelper.getMangledMethodName("bridge$" +
             (behavior instanceof ConstructorDeclaration ctor
-                ? ctor.declaringType().simpleName()
+                ? ctor.declaringType().name().replace('.', '$')
                 : behavior.name()));
 
         return invocationContext
@@ -203,6 +220,50 @@ public class EmitObservableFunctionNode
                 }
 
                 code.invoke(behavior)
+                    .ret(returnType);
+
+                return bridgeMethod.setCode(code);
+            });
+    }
+
+    private MethodDeclaration emitMemberConstructorBridge(ConstructorDeclaration constructor) {
+        String methodName = NameHelper.getMangledMethodName(
+            "bridge$" + constructor.declaringType().name().replace('.', '$'));
+
+        List<BehaviorDeclaration.Parameter> parameters = constructor.parameters();
+        TypeDeclaration enclosingType = constructor.enclosingInstanceType().orElseThrow();
+
+        if (parameters.isEmpty() || !parameters.get(0).type().equals(enclosingType)) {
+            throw new IllegalStateException("Missing enclosing-instance constructor parameter");
+        }
+
+        List<BehaviorDeclaration.Parameter> sourceParameters = parameters.subList(1, parameters.size());
+
+        TypeDeclaration[] sourceParameterTypes = sourceParameters.stream()
+            .map(BehaviorDeclaration.Parameter::type)
+            .toArray(TypeDeclaration[]::new);
+
+        return invocationContext
+            .declaredMethod(methodName, sourceParameterTypes)
+            .orElseGet(() -> {
+                TypeDeclaration returnType = constructor.declaringType();
+                MethodDeclaration bridgeMethod = invocationContext
+                    .createMethod(methodName, returnType, sourceParameterTypes)
+                    .setModifiers(Modifier.FINAL);
+
+                var code = new Bytecode(bridgeMethod);
+
+                code.anew(returnType)
+                    .dup()
+                    .aload(0);
+
+                for (int i = 0, slots = 1;
+                        i < sourceParameters.size();
+                        slots += sourceParameters.get(i).type().slots(), ++i) {
+                    code.load(sourceParameters.get(i).type(), slots);
+                }
+
+                code.invoke(constructor)
                     .ret(returnType);
 
                 return bridgeMethod.setCode(code);

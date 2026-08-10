@@ -73,6 +73,7 @@ testing {
             targets.all {
                 testTask.configure {
                     maxParallelForks = (Runtime.getRuntime().availableProcessors() / 2).coerceAtLeast(1)
+                    exclude("**/*\$__FX\$*.class")
                     shouldRunAfter(test)
                 }
             }

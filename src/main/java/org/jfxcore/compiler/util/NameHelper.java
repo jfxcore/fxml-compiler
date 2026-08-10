@@ -140,15 +140,8 @@ public class NameHelper {
     private static final Pattern JAVA_IDENTIFIER = Pattern.compile(
         "^(\\p{javaJavaIdentifierStart}\\p{javaJavaIdentifierPart}*)$");
 
-    private static final Pattern CSS_IDENTIFIER = Pattern.compile(
-        "-?[_a-zA-Z]+[_a-zA-Z0-9-]*");
-
     public static boolean isJavaIdentifier(String value) {
         return JAVA_IDENTIFIER.matcher(value).matches();
-    }
-
-    public static boolean isCssIdentifier(String value) {
-        return CSS_IDENTIFIER.matcher(value).matches();
     }
 
     public static boolean isQualifiedIdentifier(String text) {

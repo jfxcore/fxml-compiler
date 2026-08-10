@@ -5,20 +5,11 @@ package org.jfxcore.compiler.parse;
 
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.util.NameHelper;
-import org.jfxcore.compiler.util.StringHelper;
+import org.jfxcore.compiler.util.NumberUtil;
 
 public class CurlyToken extends AbstractToken<CurlyTokenType> {
 
-    public static CurlyToken parse(String value, String line, SourceInfo sourceInfo) {
-        CurlyTokenType type = parseTokenType(value);
-        if (type == CurlyTokenType.STRING) {
-            value = StringHelper.unescape(StringHelper.unquote(value));
-        }
-
-        return new CurlyToken(type, value, line, sourceInfo);
-    }
-
-    public CurlyToken(CurlyTokenType type, String value, String line, SourceInfo sourceInfo) {
+    protected CurlyToken(CurlyTokenType type, String value, String line, SourceInfo sourceInfo) {
         super(type, value, line, sourceInfo);
     }
 
@@ -52,19 +43,43 @@ public class CurlyToken extends AbstractToken<CurlyTokenType> {
                 return CurlyTokenType.EQUALS;
             case "*":
                 return CurlyTokenType.STAR;
+            case "+":
+                return CurlyTokenType.PLUS;
+            case "-":
+                return CurlyTokenType.MINUS;
             case "/":
                 return CurlyTokenType.SLASH;
+            case "<=":
+                return CurlyTokenType.LESS_THAN_OR_EQUAL;
+            case ">=":
+                return CurlyTokenType.GREATER_THAN_OR_EQUAL;
+            case "==":
+                return CurlyTokenType.VALUE_EQUALITY;
+            case "!=":
+                return CurlyTokenType.VALUE_INEQUALITY;
+            case "===":
+                return CurlyTokenType.IDENTITY_EQUALITY;
+            case "!==":
+                return CurlyTokenType.IDENTITY_INEQUALITY;
+            case "&&":
+                return CurlyTokenType.LOGICAL_AND;
+            case "||":
+                return CurlyTokenType.LOGICAL_OR;
+            case "!":
+                return CurlyTokenType.NOT;
+            case "!!":
+                return CurlyTokenType.BOOLIFY;
             default:
                 if (token.length() > 1 && (token.startsWith("'") && token.endsWith("'")
                         || token.startsWith("\"") && token.endsWith("\""))) {
                     return CurlyTokenType.STRING;
                 }
 
-                if (isDimensionNumber(token)) {
+                if (isNumber(token)) {
                     return CurlyTokenType.NUMBER;
                 }
 
-                if (NameHelper.isJavaIdentifier(token) || NameHelper.isCssIdentifier(token)) {
+                if (NameHelper.isJavaIdentifier(token)) {
                     return CurlyTokenType.IDENTIFIER;
                 }
 
@@ -72,26 +87,9 @@ public class CurlyToken extends AbstractToken<CurlyTokenType> {
         }
     }
 
-    private static boolean isDimensionNumber(String value) {
-        int i = 0;
-        for (; i < value.length(); ++i) {
-            if (!Character.isDigit(value.charAt(i)) && value.charAt(i) != '.') {
-                break;
-            }
-        }
-
-        if (i > 0 && i < value.length()) {
-            String dim = value.substring(i);
-
-            if (!NameHelper.isJavaIdentifier(dim) && !NameHelper.isCssIdentifier(dim)) {
-                return false;
-            }
-
-            value = value.substring(0, i);
-        }
-
+    private static boolean isNumber(String value) {
         try {
-            Double.parseDouble(value);
+            NumberUtil.parse(value);
         } catch (NumberFormatException ignored) {
             return false;
         }

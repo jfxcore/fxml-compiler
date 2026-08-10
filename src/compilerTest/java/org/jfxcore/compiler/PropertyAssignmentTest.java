@@ -545,6 +545,24 @@ public class PropertyAssignmentTest {
         }
 
         @Test
+        public void Explicit_Boolean_Literal_Is_Typed_In_Object_Context() {
+            NullCoercionPane root = compileAndRun("""
+                <NullCoercionPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                                  objectProp="{fx:True}"/>
+            """);
+            assertSame(Boolean.TRUE, root.getObjectProp());
+        }
+
+        @Test
+        public void Explicit_Null_Literal_Is_Typed_In_Object_Context() {
+            NullCoercionPane root = compileAndRun("""
+                <NullCoercionPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                                  objectProp="{fx:Null}"/>
+            """);
+            assertNull(root.getObjectProp());
+        }
+
+        @Test
         public void AttributeValue_Null_Is_Not_Coerced_In_Object_Context() {
             NullCoercionPane root = compileAndRun("""
                 <NullCoercionPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"

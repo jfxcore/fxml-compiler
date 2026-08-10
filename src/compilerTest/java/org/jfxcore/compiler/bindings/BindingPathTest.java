@@ -937,6 +937,22 @@ public class BindingPathTest extends CompilerTestBase {
     }
 
     @Test
+    public void Bind_Bidirectional_To_Parenthesized_Observable_Property() {
+        TestPane root = compileAndRun("""
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                      prefWidth="#{(context.doubleVal)}"/>
+        """);
+
+        assertEquals(123.0, root.getPrefWidth(), 0.001);
+
+        root.setPrefWidth(456);
+        assertEquals(456.0, root.contextProperty().get().doubleValProperty().get(), 0.001);
+
+        root.contextProperty().get().doubleValProperty().set(789);
+        assertEquals(789.0, root.getPrefWidth(), 0.001);
+    }
+
+    @Test
     public void Bind_Bidirectional_To_Observable_Properties_Works_When_Path_Changes() {
         TestPane root = compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"

@@ -16,11 +16,11 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class LexerInputTest {
+public class SourceMappedTextTest {
 
     @Test
     public void Identity_Input_Maps_Utf16_Ranges_From_Origin() {
-        LexerInput input = LexerInput.identity("ab\uD83D\uDE00cd", new Location(3, 7));
+        SourceMappedText input = SourceMappedText.identity("ab\uD83D\uDE00cd", new Location(3, 7));
 
         assertEquals(new SourceInfo(3, 7), input.getSourceInfo(0, 0));
         assertEquals(new SourceInfo(3, 9, 3, 10), input.getSourceInfo(2, 3));
@@ -32,7 +32,7 @@ public class LexerInputTest {
     @Test
     public void Mapped_Input_Uses_Decoded_Locations_And_Projects_Entity_Ranges_Outward() {
         String raw = "ab&amp;cd&#x1F600;ef";
-        LexerInput input = LexerInput.decodedXml(raw, new Location(4, 10), XmlEntityDecoder.decode(raw));
+        SourceMappedText input = SourceMappedText.decodedXml(raw, new Location(4, 10), XmlEntityDecoder.decode(raw));
 
         assertEquals("ab&cd\uD83D\uDE00ef", input.getText());
         assertEquals(new SourceInfo(4, 12), input.getSourceInfo(2, 2));
@@ -59,7 +59,7 @@ public class LexerInputTest {
     @Test
     public void Decoded_Newline_Changes_Logical_Line_But_Projects_To_Raw_Line() {
         String raw = "a&#10;b";
-        LexerInput input = LexerInput.decodedXml(raw, new Location(2, 3), XmlEntityDecoder.decode(raw));
+        SourceMappedText input = SourceMappedText.decodedXml(raw, new Location(2, 3), XmlEntityDecoder.decode(raw));
 
         assertEquals("a\nb", input.getText());
         assertEquals(new SourceInfo(2, 4, 3, 0), input.getSourceInfo(1, 2));
@@ -70,7 +70,7 @@ public class LexerInputTest {
 
     @Test
     public void Identity_Input_Maps_Crlf_Boundaries_Once() {
-        LexerInput input = LexerInput.identity("a\r\nb", new Location(5, 4));
+        SourceMappedText input = SourceMappedText.identity("a\r\nb", new Location(5, 4));
 
         assertEquals(new SourceInfo(5, 4), input.getSourceInfo(0, 0));
         assertEquals(new SourceInfo(5, 5), input.getSourceInfo(1, 1));
@@ -82,7 +82,7 @@ public class LexerInputTest {
     @Test
     public void Identity_Input_Recognizes_All_Supported_Line_Separators() {
         for (String separator : new String[] {"\n", "\r", "\u000B", "\u000C", "\u0085", "\u2028", "\u2029"}) {
-            LexerInput input = LexerInput.identity("a" + separator + "b", new Location(8, 2));
+            SourceMappedText input = SourceMappedText.identity("a" + separator + "b", new Location(8, 2));
             int b = 1 + separator.length();
             assertEquals(new SourceInfo(9, 0, 9, 1), input.getSourceInfo(b, b + 1), separator);
         }
@@ -90,13 +90,13 @@ public class LexerInputTest {
 
     @Test
     public void Empty_And_Newline_Terminated_Input_Have_Deterministic_Eof() {
-        assertEquals(new SourceInfo(7, 9), LexerInput.identity("", new Location(7, 9)).getEndOfInput());
-        assertEquals(new SourceInfo(8, 0), LexerInput.identity("x\n", new Location(7, 9)).getEndOfInput());
+        assertEquals(new SourceInfo(7, 9), SourceMappedText.identity("", new Location(7, 9)).getEndOfInput());
+        assertEquals(new SourceInfo(8, 0), SourceMappedText.identity("x\n", new Location(7, 9)).getEndOfInput());
     }
 
     @Test
     public void Invalid_Ranges_Fail_Fast() {
-        LexerInput input = LexerInput.identity("abc", new Location(0, 0));
+        SourceMappedText input = SourceMappedText.identity("abc", new Location(0, 0));
 
         assertThrows(IndexOutOfBoundsException.class, () -> input.getSourceInfo(-1, 0));
         assertThrows(IndexOutOfBoundsException.class, () -> input.getSourceInfo(0, 4));
@@ -110,7 +110,7 @@ public class LexerInputTest {
 
         try (var ignored = new CompilationScope(context)) {
             String raw = "a&amp;b";
-            LexerInput input = LexerInput.decodedXml(raw, new Location(0, 7), XmlEntityDecoder.decode(raw));
+            SourceMappedText input = SourceMappedText.decodedXml(raw, new Location(0, 7), XmlEntityDecoder.decode(raw));
 
             SourceInfo sourceInfo = input.getSourceInfo(1, 2);
             assertEquals("&", sourceInfo.getText());
@@ -126,12 +126,12 @@ public class LexerInputTest {
         try (var ignored = new CompilationScope(context)) {
             String firstRaw = "a&amp;b";
             int firstOrigin = source.indexOf(firstRaw);
-            LexerInput first = LexerInput.decodedXml(
+            SourceMappedText first = SourceMappedText.decodedXml(
                 firstRaw, new Location(0, firstOrigin), XmlEntityDecoder.decode(firstRaw));
 
             String secondRaw = "c&#100;d";
             int secondOrigin = source.indexOf(secondRaw);
-            LexerInput second = LexerInput.decodedXml(
+            SourceMappedText second = SourceMappedText.decodedXml(
                 secondRaw, new Location(0, secondOrigin), XmlEntityDecoder.decode(secondRaw));
 
             SourceInfo span = SourceInfo.span(first.getSourceInfo(1, 2), second.getSourceInfo(1, 2));
@@ -149,7 +149,7 @@ public class LexerInputTest {
         var context = new CompilationContext(new CompilationSource.InMemory(source));
 
         try (var ignored = new CompilationScope(context)) {
-            LexerInput input = LexerInput.identity("\\${foo}", new Location(0, 7)).without(0);
+            SourceMappedText input = SourceMappedText.identity("\\${foo}", new Location(0, 7)).without(0);
             SourceInfo sourceInfo = input.getSourceInfo(0, input.getText().length());
 
             assertEquals("${foo}", sourceInfo.getText());
@@ -166,7 +166,7 @@ public class LexerInputTest {
 
         try (var ignored = new CompilationScope(context)) {
             String raw = "&#32;Foo&#32;";
-            LexerInput input = LexerInput.decodedXml(raw, new Location(0, 7), XmlEntityDecoder.decode(raw));
+            SourceMappedText input = SourceMappedText.decodedXml(raw, new Location(0, 7), XmlEntityDecoder.decode(raw));
             SourceInfo trimmed = input.getSourceInfo(0, input.getText().length()).getTrimmed();
 
             assertEquals(new SourceInfo(0, 8, 0, 11), trimmed);
@@ -183,7 +183,7 @@ public class LexerInputTest {
 
         try (var ignored = new CompilationScope(context)) {
             String raw = "a&amp;b";
-            LexerInput input = LexerInput.decodedXml(raw, new Location(0, 7), XmlEntityDecoder.decode(raw));
+            SourceMappedText input = SourceMappedText.decodedXml(raw, new Location(0, 7), XmlEntityDecoder.decode(raw));
             exception = new MarkupException(
                 input.getSourceInfo(1, 2),
                 Diagnostic.newDiagnostic(ErrorCode.INVALID_EXPRESSION));
@@ -202,7 +202,7 @@ public class LexerInputTest {
         var context = new CompilationContext(new CompilationSource.InMemory(source));
 
         try (var ignored = new CompilationScope(context)) {
-            LexerInput input = LexerInput.decodedXml(
+            SourceMappedText input = SourceMappedText.decodedXml(
                 raw, new Location(0, 7), XmlEntityDecoder.decode(raw));
             MarkupException exception = assertThrows(
                 MarkupException.class,

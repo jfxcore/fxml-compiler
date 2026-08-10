@@ -15,11 +15,13 @@ public class InlineTokenizer extends CurlyTokenizer<InlineToken> {
 
     public InlineTokenizer(String text, Location sourceOffset) {
         super(InlineToken.class, text, sourceOffset);
+        normalizeSigns();
         concatPrefixesAndIdentifiers();
     }
 
-    InlineTokenizer(LexerInput input) {
-        super(InlineToken.class, input);
+    InlineTokenizer(SourceMappedText source) {
+        super(InlineToken.class, source);
+        normalizeSigns();
         concatPrefixesAndIdentifiers();
     }
 
@@ -31,6 +33,39 @@ public class InlineTokenizer extends CurlyTokenizer<InlineToken> {
     @Override
     protected InlineToken newToken(CurlyTokenType type, String value, String line, SourceInfo sourceInfo) {
         return new InlineToken(type, value, line, sourceInfo);
+    }
+
+    private void normalizeSigns() {
+        Deque<InlineToken> newTokens = new ArrayDeque<>(size());
+
+        while (!isEmpty()) {
+            InlineToken token = remove();
+            String value = token.getValue();
+
+            boolean signedNumber = token.getType() == CurlyTokenType.NUMBER
+                && value.length() > 1
+                && (value.charAt(0) == '+' || value.charAt(0) == '-');
+
+            if (!signedNumber) {
+                newTokens.add(token);
+                continue;
+            }
+
+            SourceInfo sourceInfo = token.getSourceInfo();
+            Location start = sourceInfo.getStart();
+            Location valueStart = new Location(start.getLine(), start.getColumn() + 1);
+            SourceInfo signSourceInfo = SourceInfo.subspan(sourceInfo, start, valueStart);
+            SourceInfo valueSourceInfo = SourceInfo.subspan(sourceInfo, valueStart, sourceInfo.getEnd());
+
+            newTokens.add(new InlineToken(
+                value.charAt(0) == '+' ? CurlyTokenType.PLUS : CurlyTokenType.MINUS,
+                value.substring(0, 1), token.getLine(), signSourceInfo));
+
+            newTokens.add(new InlineToken(
+                CurlyTokenType.NUMBER, value.substring(1), token.getLine(), valueSourceInfo));
+        }
+
+        addAll(newTokens);
     }
 
     private void concatPrefixesAndIdentifiers() {
@@ -47,8 +82,11 @@ public class InlineTokenizer extends CurlyTokenizer<InlineToken> {
 
             if (tempTokens.size() == 3
                     && tempTokens.get(0).getType() == CurlyTokenType.IDENTIFIER
+                    && !"$".equals(tempTokens.get(0).getValue())
                     && tempTokens.get(1).getType() == CurlyTokenType.COLON
-                    && tempTokens.get(2).getType() == CurlyTokenType.IDENTIFIER) {
+                    && tempTokens.get(2).getType() == CurlyTokenType.IDENTIFIER
+                    && areAdjacent(tempTokens.get(0), tempTokens.get(1))
+                    && areAdjacent(tempTokens.get(1), tempTokens.get(2))) {
                 InlineToken token = new InlineToken(
                     CurlyTokenType.IDENTIFIER,
                     tempTokens.get(0).getValue() + ":" + current.getValue(),
@@ -62,5 +100,9 @@ public class InlineTokenizer extends CurlyTokenizer<InlineToken> {
 
         newTokens.addAll(tempTokens);
         addAll(newTokens);
+    }
+
+    private boolean areAdjacent(InlineToken first, InlineToken second) {
+        return first.getSourceInfo().getEnd().equals(second.getSourceInfo().getStart());
     }
 }

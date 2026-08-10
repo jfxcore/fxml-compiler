@@ -27,14 +27,14 @@ import java.util.stream.Collectors;
 
 public class PathExpressionNode extends AbstractNode implements ExpressionNode {
 
-    private final Operator operator;
+    private final BindingOperator operator;
     private final List<PathSegmentNode> segments;
     private BindingContextNode bindingContext;
     private ResolvedPath resolvedPath;
     private ResolvedPath resolvedObservablePath;
 
     public PathExpressionNode(
-            Operator operator,
+            BindingOperator operator,
             BindingContextNode bindingContext,
             Collection<? extends PathSegmentNode> segments,
             SourceInfo sourceInfo) {
@@ -44,12 +44,17 @@ public class PathExpressionNode extends AbstractNode implements ExpressionNode {
         this.segments = new ArrayList<>(checkNotNull(segments));
     }
 
-    public Operator getOperator() {
+    public BindingOperator getOperator() {
         return operator;
     }
 
     public BindingContextNode getBindingContext() {
         return bindingContext;
+    }
+
+    @Override
+    public int getBindingDistance() {
+        return bindingContext.getBindingDistance();
     }
 
     public List<PathSegmentNode> getSegments() {
@@ -85,19 +90,25 @@ public class PathExpressionNode extends AbstractNode implements ExpressionNode {
     }
 
     private ResolvedPath resolvePath(boolean preferObservable, boolean mayResolveAgainstImports, int limit) {
+        mayResolveAgainstImports &= bindingContext.mayResolveAgainstImports();
+
+        if (!mayResolveAgainstImports || limit != Integer.MAX_VALUE) {
+            return resolvePathImpl(preferObservable, mayResolveAgainstImports, limit);
+        }
+
         if (preferObservable) {
             if (resolvedObservablePath != null) {
                 return resolvedObservablePath;
             }
 
-            return resolvedObservablePath = resolvePathImpl(true, mayResolveAgainstImports, limit);
+            return resolvedObservablePath = resolvePathImpl(true, true, limit);
         }
 
         if (resolvedPath != null) {
             return resolvedPath;
         }
 
-        return resolvedPath = resolvePathImpl(false, mayResolveAgainstImports, limit);
+        return resolvedPath = resolvePathImpl(false, true, limit);
     }
 
     private ResolvedPath resolvePathImpl(boolean preferObservable, boolean mayResolveAgainstImports, int limit) {
@@ -109,15 +120,19 @@ public class PathExpressionNode extends AbstractNode implements ExpressionNode {
                 preferObservable,
                 getSourceInfo());
         } catch (MarkupException ex) {
+            if (!mayResolveAgainstImports) {
+                throw ex;
+            }
+
             // If we don't have a valid path expression, the only other possible interpretation would be
             // that the path begins with the name of a (possibly fully qualified) class.
             Resolver resolver = new Resolver(SourceInfo.none());
             StringBuilder classBuilder = new StringBuilder();
             TypeDeclaration type = null;
-            int staticLimit = 0;
+            int staticLimit = -1;
 
-            while (staticLimit < segments.size() - 1) {
-                PathSegmentNode segment = segments.get(staticLimit);
+            for (int candidateLimit = 0; candidateLimit < segments.size() - 1; ++candidateLimit) {
+                PathSegmentNode segment = segments.get(candidateLimit);
 
                 // If the path contains an observable selector, it can't be the name of a class.
                 if (segment.isObservableSelector()) {
@@ -130,17 +145,17 @@ public class PathExpressionNode extends AbstractNode implements ExpressionNode {
 
                 classBuilder.append(segment.getText());
 
-                type = resolver.tryResolveNestedClass(bindingContext.getType().getTypeDeclaration(), classBuilder.toString());
+                TypeDeclaration candidate = resolver.tryResolveNestedClass(
+                    bindingContext.getType().getTypeDeclaration(), classBuilder.toString());
 
-                if (type == null && mayResolveAgainstImports) {
-                    type = resolver.tryResolveClassAgainstImports(classBuilder.toString());
+                if (candidate == null) {
+                    candidate = resolver.tryResolveClassAgainstImports(classBuilder.toString());
                 }
 
-                if (type != null) {
-                    break;
+                if (candidate != null) {
+                    type = candidate;
+                    staticLimit = candidateLimit;
                 }
-
-                ++staticLimit;
             }
 
             // The path doesn't start with the name of a class, so let's throw the original exception.

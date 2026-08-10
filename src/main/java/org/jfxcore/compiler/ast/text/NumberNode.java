@@ -18,6 +18,6 @@ public class NumberNode extends TextNode {
 
     @Override
     public NumberNode deepClone() {
-        return new NumberNode(getText(), getType(), getSourceInfo()).copy(this);
+        return new NumberNode(getText(), getType().deepClone(), getSourceInfo()).copy(this);
     }
 }

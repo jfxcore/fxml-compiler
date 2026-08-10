@@ -400,12 +400,12 @@ public class GenericsTest extends CompilerTestBase {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.scene.layout.*?>
             <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
-                <GenericMethodsObject fx:id="obj" prop3="foo" prop2="$self/prop3"/>
+                <GenericMethodsObject fx:id="obj" prop3="foo" prop2="$:element.prop3"/>
             </GridPane>
         """));
 
         assertEquals(ErrorCode.CANNOT_CONVERT_SOURCE_TYPE, ex.getDiagnostic().getCode());
-        assertCodeHighlight("self/prop3", ex);
+        assertCodeHighlight(":element.prop3", ex);
     }
 
     @Test
@@ -413,7 +413,7 @@ public class GenericsTest extends CompilerTestBase {
         GridPane root = compileAndRun("""
             <?import javafx.scene.layout.*?>
             <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
-                <GenericMethodsObject fx:id="obj" prop3="foo" prop2="$self/prop3<String>"/>
+                <GenericMethodsObject fx:id="obj" prop3="foo" prop2="$:element.prop3<String>"/>
             </GridPane>
         """);
 
@@ -426,12 +426,12 @@ public class GenericsTest extends CompilerTestBase {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.scene.layout.*?>
             <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
-                <GenericMethodsObject fx:id="obj" prop2="foo" prop3="$self/prop2<Comparable<String>>"/>
+                <GenericMethodsObject fx:id="obj" prop2="foo" prop3="$:element.prop2<Comparable<String>>"/>
             </GridPane>
         """));
 
         assertEquals(ErrorCode.TYPE_ARGUMENT_OUT_OF_BOUND, ex.getDiagnostic().getCode());
-        assertCodeHighlight("self/prop2<Comparable<String>>", ex);
+        assertCodeHighlight(":element.prop2<Comparable<String>>", ex);
     }
 
     @Test
@@ -439,12 +439,12 @@ public class GenericsTest extends CompilerTestBase {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.scene.layout.*?>
             <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
-                <GenericMethodsObject fx:id="obj" prop3="foo" prop2="$self/prop4<String>"/>
+                <GenericMethodsObject fx:id="obj" prop3="foo" prop2="$:element.prop4<String>"/>
             </GridPane>
         """));
 
         assertEquals(ErrorCode.NUM_TYPE_ARGUMENTS_MISMATCH, ex.getDiagnostic().getCode());
-        assertCodeHighlight("self/prop4<String>", ex);
+        assertCodeHighlight(":element.prop4<String>", ex);
     }
 
     @Test

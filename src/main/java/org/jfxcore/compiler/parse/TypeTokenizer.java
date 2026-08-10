@@ -17,15 +17,15 @@ public class TypeTokenizer extends AbstractTokenizer<TypeTokenType, TypeToken> {
     private static final Pattern TOKENIZER_PATTERN = Pattern.compile(
         "\\p{javaJavaIdentifierStart}\\p{javaJavaIdentifierPart}*|\\.|<|>|\\(|\\)|\\[|]|,|\\?");
 
-    private final LexerInput input;
+    private final SourceMappedText input;
     private final int inputOffset;
     private final int inputLength;
 
     public TypeTokenizer(Location sourceOffset, String text, Class<TypeToken> typeTokenClass) {
-        this(LexerInput.identity(text, sourceOffset), 0, text, typeTokenClass);
+        this(SourceMappedText.identity(text, sourceOffset), 0, text, typeTokenClass);
     }
 
-    TypeTokenizer(LexerInput input, int inputOffset, String text, Class<TypeToken> typeTokenClass) {
+    TypeTokenizer(SourceMappedText input, int inputOffset, String text, Class<TypeToken> typeTokenClass) {
         super(text, typeTokenClass);
         this.input = input;
         this.inputOffset = inputOffset;

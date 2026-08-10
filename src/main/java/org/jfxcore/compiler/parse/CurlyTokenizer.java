@@ -10,34 +10,38 @@ import java.util.ArrayDeque;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-/**
- * Tokenizer for curly-based markup that is used in markup extensions and stylesheets.
- */
+/** Tokenizer for curly-based inline markup. */
 public abstract class CurlyTokenizer<TToken extends CurlyToken> extends AbstractTokenizer<CurlyTokenType, TToken> {
+
+    /*
+     * Greedy quantifiers implement maximal munch within each operator family. The alternatives start with
+     * distinct characters, so recognition of a complete operator does not depend on alternation order.
+     * Single ampersands and vertical bars are retained as UNKNOWN tokens for precise diagnostics.
+     */
+    private static final String OPERATOR_PATTERN =
+        "!(?:={1,2}|!)?|={1,3}|[<>]=?|&{1,2}|[|]{1,2}";
 
     private static final Pattern TOKENIZER_PATTERN = Pattern.compile(
         "\"[^\"\\\\]*(\\\\(.|\\n)[^\"\\\\]*)*\"|'[^'\\\\]*(\\\\(.|\\n)[^'\\\\]*)*'|" + // quoted strings
         "/\\*[^*]*\\*+(?:[^/*][^*]*\\*+)*/|" + // block comments
-        "(?:[+-]?\\d*\\.?\\d+(?!\\.))?(?:-?[^\\W\\d][\\w-]*)|" + // number+identifier
-        "[+-]?\\d*\\.?\\d+(?!\\.)|" + // numbers
-        "\\^|°|§|%|@|\\?|&|~|;|,|\\.|:|\\*|=|\\$|#|\\R|//|/|->|" + // other tokens
+        "[+-]?\\d*\\.?\\d+(?:[dDfFlL])?(?!\\.)|" + // numbers
+        OPERATOR_PATTERN + "|" + // operators and reserved operator characters
+        "\\^|°|§|%|@|\\?|~|;|,|\\.|:|\\+|-(?:>)?|\\*|\\$|#|\\R|/{1,2}|" + // other tokens
         "\\p{javaJavaIdentifierStart}\\p{javaJavaIdentifierPart}*|" + // Java identifiers
-        "\\{|}|\\(|\\)|<|>|\\[|]|" + // braces/brackets/parens
-        "==|!=|" + // ==/!= operator
-        "!!|!", // not/boolify operator
+        "\\{|}|\\(|\\)|\\[|]", // braces/brackets/parens
         Pattern.DOTALL
     );
 
-    private final LexerInput input;
+    private final SourceMappedText source;
 
-    protected CurlyTokenizer(Class<TToken> tokenClass, String text, Location sourceOffset) {
-        this(tokenClass, LexerInput.identity(text, sourceOffset));
+    protected CurlyTokenizer(Class<TToken> tokenClass, String source, Location sourceOffset) {
+        this(tokenClass, SourceMappedText.identity(source, sourceOffset));
     }
 
-    CurlyTokenizer(Class<TToken> tokenClass, LexerInput input) {
-        super(input.getText(), tokenClass);
-        this.input = input;
-        tokenize(input.getText());
+    CurlyTokenizer(Class<TToken> tokenClass, SourceMappedText source) {
+        super(source.getText(), tokenClass);
+        this.source = source;
+        tokenize(source.getText());
     }
 
     protected abstract TToken parseToken(String value, String line, SourceInfo sourceInfo);
@@ -51,8 +55,8 @@ public abstract class CurlyTokenizer<TToken extends CurlyToken> extends Abstract
         int fromColumn = sourceInfo.getStart().getColumn();
         int endLine = sourceInfo.getEnd().getLine();
         int endColumn = sourceInfo.getEnd().getColumn();
-        int localFromColumn = input.getLocalColumn(sourceInfo.getStart());
-        int localEndColumn = input.getLocalColumn(sourceInfo.getEnd());
+        int localFromColumn = source.getLocalColumn(sourceInfo.getStart());
+        int localEndColumn = source.getLocalColumn(sourceInfo.getEnd());
 
         if (fromLine == endLine && fromColumn == endColumn) {
             return "";
@@ -61,18 +65,18 @@ public abstract class CurlyTokenizer<TToken extends CurlyToken> extends Abstract
         builder.append(" ".repeat(fromColumn));
 
         builder.append(
-            input.getLineText(fromLine),
+            source.getLineText(fromLine),
             localFromColumn,
-            fromLine == endLine ? localEndColumn : input.getLineText(fromLine).length());
+            fromLine == endLine ? localEndColumn : source.getLineText(fromLine).length());
 
         builder.append('\n');
 
         for (int line = fromLine + 1; line < endLine; ++line) {
-            builder.append(input.getLineText(line)).append('\n');
+            builder.append(source.getLineText(line)).append('\n');
         }
 
         if (endLine > fromLine) {
-            builder.append(input.getLineText(endLine), 0, localEndColumn).append('\n');
+            builder.append(source.getLineText(endLine), 0, localEndColumn).append('\n');
         }
 
         return builder.toString();
@@ -111,7 +115,7 @@ public abstract class CurlyTokenizer<TToken extends CurlyToken> extends Abstract
                     CurlyTokenType.NEWLINE,
                     value,
                     getLines().get(decodedSourceInfo.getStart().getLine()),
-                    input.getSourceInfo(start, end));
+                    source.getSourceInfo(start, end));
 
                 tokens.add(newToken);
                 lastPosition = start + value.length();
@@ -141,14 +145,14 @@ public abstract class CurlyTokenizer<TToken extends CurlyToken> extends Abstract
 
             if (firstNonWhitespace >= 0) {
                 throw ParserErrors.unexpectedToken(
-                    input.getSourceInfo(lastPosition + firstNonWhitespace, end));
+                    source.getSourceInfo(lastPosition + firstNonWhitespace, end));
             }
 
             SourceInfo decodedSourceInfo = getSourceInfo(start, end);
             TToken newToken = parseToken(
                 value,
                 getLines().get(decodedSourceInfo.getStart().getLine()),
-                input.getSourceInfo(start, end));
+                source.getSourceInfo(start, end));
 
             tokens.add(newToken);
             lastPosition = start + value.length();
@@ -219,7 +223,7 @@ public abstract class CurlyTokenizer<TToken extends CurlyToken> extends Abstract
 
     @Override
     protected SourceInfo getEndOfInputSourceInfo() {
-        return input.getEndOfInput();
+        return source.getEndOfInput();
     }
 
     private boolean removeNewlineAfter(CurlyTokenType type) {
@@ -229,13 +233,27 @@ public abstract class CurlyTokenizer<TToken extends CurlyToken> extends Abstract
             || type == CurlyTokenType.DOT
             || type == CurlyTokenType.COLON
             || type == CurlyTokenType.COMMA
-            || type == CurlyTokenType.EQUALS;
+            || type == CurlyTokenType.EQUALS
+            || type == CurlyTokenType.NOT
+            || type == CurlyTokenType.BOOLIFY
+            || isInfixOperator(type);
     }
 
     private boolean removeNewlineBefore(CurlyTokenType type) {
         return type == CurlyTokenType.DOT
             || type == CurlyTokenType.COLON
             || type == CurlyTokenType.COMMA
-            || type == CurlyTokenType.EQUALS;
+            || type == CurlyTokenType.EQUALS
+            || isInfixOperator(type);
+    }
+
+    private boolean isInfixOperator(CurlyTokenType type) {
+        return switch (type) {
+            case PLUS, MINUS, STAR, SLASH,
+                 OPEN_ANGLE, CLOSE_ANGLE, LESS_THAN_OR_EQUAL, GREATER_THAN_OR_EQUAL,
+                 VALUE_EQUALITY, VALUE_INEQUALITY, IDENTITY_EQUALITY, IDENTITY_INEQUALITY,
+                 LOGICAL_AND, LOGICAL_OR -> true;
+            default -> false;
+        };
     }
 }

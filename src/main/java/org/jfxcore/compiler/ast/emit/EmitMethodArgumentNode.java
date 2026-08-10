@@ -99,7 +99,9 @@ public class EmitMethodArgumentNode extends AbstractNode implements ValueEmitter
     @Override
     public void emit(BytecodeEmitContext context) {
         Bytecode code = context.getOutput();
-        boolean assignable = TypeHelper.getTypeInstance(children.get(0)).subtypeOf(type.getTypeInstance());
+
+        boolean assignable = !children.isEmpty()
+            && TypeHelper.getTypeInstance(children.get(0)).subtypeOf(type.getTypeInstance());
 
         if (varargs && !(children.size() == 1 && assignable)) {
             TypeDeclaration componentType = type.getTypeInstance().componentType().declaration();

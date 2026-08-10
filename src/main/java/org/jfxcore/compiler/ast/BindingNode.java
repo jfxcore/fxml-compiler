@@ -6,8 +6,6 @@ package org.jfxcore.compiler.ast;
 import org.jetbrains.annotations.Nullable;
 import org.jfxcore.compiler.ast.expression.BindingEmitterInfo;
 import org.jfxcore.compiler.ast.expression.ExpressionNode;
-import org.jfxcore.compiler.ast.expression.FunctionExpressionNode;
-import org.jfxcore.compiler.ast.expression.PathExpressionNode;
 import org.jfxcore.compiler.ast.text.ListNode;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.type.TypeInstance;
@@ -80,29 +78,10 @@ public class BindingNode extends AbstractNode {
 
     /**
      * Gets the smallest binding distance within the binding expression,
-     * where bind to self == 0, bind to first parent == 1, etc.
+     * where binding to the current element == 0, binding to the first parent == 1, etc.
      */
     public int getBindingDistance() {
-        return getBindingDistance(path);
-    }
-
-    private int getBindingDistance(Node expression) {
-        if (expression instanceof PathExpressionNode pathExpression) {
-            return pathExpression.getBindingContext().getBindingDistance();
-        }
-
-        if (expression instanceof FunctionExpressionNode functionExpression) {
-            int min = getBindingDistance(functionExpression.getPath());
-            min = Math.min(min, getBindingDistance(functionExpression.getInversePath()));
-
-            for (var argument : functionExpression.getArguments()) {
-                min = Math.min(min, getBindingDistance(argument));
-            }
-
-            return min;
-        }
-
-        return 0;
+        return path.getBindingDistance();
     }
 
     @Override

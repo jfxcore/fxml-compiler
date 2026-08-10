@@ -38,16 +38,19 @@ public class EmitObservablePathNode
     private final transient List<ClassGenerator> generators;
     private ResolvedTypeNode type;
     private EmitInvariantPathNode invariantPath;
+    private ValueEmitterNode expressionRoot;
     private EmitValueWrapperNode leadingValueWrapper;
     private EmitValueWrapperNode constructorWrapper;
 
     public EmitObservablePathNode(ResolvedPath path, boolean bidirectional, SourceInfo sourceInfo) {
-        this(path, bidirectional, null, sourceInfo);
+        this(path, bidirectional, null, null, sourceInfo);
 
         if (leadingInvariantSegments > 0) {
             this.invariantPath = new EmitInvariantPathNode(
                 path.subPath(0, leadingInvariantSegments).toValueEmitters(sourceInfo),
                 sourceInfo);
+        } else {
+            this.expressionRoot = path.get(0).toEmitter(false, sourceInfo);
         }
     }
 
@@ -55,6 +58,7 @@ public class EmitObservablePathNode
             ResolvedPath path,
             boolean bidirectional,
             @Nullable EmitInvariantPathNode invariantPath,
+            @Nullable ValueEmitterNode expressionRoot,
             SourceInfo sourceInfo) {
         super(sourceInfo);
 
@@ -66,6 +70,7 @@ public class EmitObservablePathNode
                 path.get(leadingInvariantSegments).getObservableDependencyKind() != ObservableDependencyKind.VALUE);
 
         this.invariantPath = invariantPath;
+        this.expressionRoot = expressionRoot;
         this.bidirectional = bidirectional;
 
         if (this.useCompiledPath) {
@@ -107,6 +112,10 @@ public class EmitObservablePathNode
 
         if (invariantPath != null) {
             invariantPath = (EmitInvariantPathNode)invariantPath.accept(visitor);
+        }
+
+        if (expressionRoot != null) {
+            expressionRoot = (ValueEmitterNode)expressionRoot.accept(visitor);
         }
 
         if (leadingValueWrapper != null) {
@@ -175,8 +184,10 @@ public class EmitObservablePathNode
 
             code.releaseLocal(local);
         } else {
-            context.emit(path.get(leadingInvariantSegments)
-                             .toEmitter(requireNonNullLeadingSegment, getSourceInfo()));
+            context.emit(expressionRoot != null
+                ? expressionRoot
+                : path.get(leadingInvariantSegments)
+                      .toEmitter(requireNonNullLeadingSegment, getSourceInfo()));
         }
 
         if (useCompiledPath) {
@@ -217,7 +228,12 @@ public class EmitObservablePathNode
 
     @Override
     public EmitObservablePathNode deepClone() {
-        return new EmitObservablePathNode(path, bidirectional, invariantPath.deepClone(), getSourceInfo()).copy(this);
+        return new EmitObservablePathNode(
+            path,
+            bidirectional,
+            invariantPath != null ? invariantPath.deepClone() : null,
+            expressionRoot != null ? expressionRoot.deepClone() : null,
+            getSourceInfo()).copy(this);
     }
 
     @Override
@@ -227,11 +243,12 @@ public class EmitObservablePathNode
         EmitObservablePathNode that = (EmitObservablePathNode)o;
         return bidirectional == that.bidirectional &&
             path.equals(that.path) &&
-            Objects.equals(invariantPath, that.invariantPath);
+            Objects.equals(invariantPath, that.invariantPath) &&
+            Objects.equals(expressionRoot, that.expressionRoot);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(path, bidirectional, invariantPath);
+        return Objects.hash(path, bidirectional, invariantPath, expressionRoot);
     }
 }

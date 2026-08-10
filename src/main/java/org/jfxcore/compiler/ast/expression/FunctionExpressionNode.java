@@ -56,6 +56,21 @@ public class FunctionExpressionNode extends AbstractNode implements ExpressionNo
     }
 
     @Override
+    public int getBindingDistance() {
+        int result = path.getBindingDistance();
+
+        if (inversePath != null) {
+            result = Math.min(result, inversePath.getBindingDistance());
+        }
+
+        for (Node argument : arguments) {
+            result = Math.min(result, ExpressionNode.bindingDistance(argument));
+        }
+
+        return result;
+    }
+
+    @Override
     public BindingEmitterInfo toEmitter(BindingMode bindingMode,
                                         TypeInstance invokingType,
                                         @Nullable TypeInstance targetType) {

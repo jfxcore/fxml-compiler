@@ -135,13 +135,17 @@ The qualified attached property name consists of the name of the declaring class
 </VBox>
 ```
 
-## Generic type witness
-When a generic method is selected, it can sometimes be necessary to specify a type witness in order to preserve
-type information. A generic type witness is specified in angle brackets after the method name:
+## Generic type arguments
+
+When a generic method is selected, explicit type arguments can preserve type information.
+Type arguments are specified after the path segment:
 
 ```xml
-<MyControl value="${path.to.genericGetter<String>.value}"/>
+<MyControl value="${model.item<String>}"/>
 ```
+
+Note that in this example, `item` may only refer to a Java Beans-style accessor or a JavaFX Beans-style accessor;
+field access cannot be parameterized. Generic type inference is not supported.
 
 {: .note }
 In XML files, the `<` character can only be used as a markup delimiter, and must be escaped using `&lt;` in

@@ -4,7 +4,9 @@
 package org.jfxcore.compiler.ast.text;
 
 import org.jfxcore.compiler.ast.Visitor;
+import org.jfxcore.compiler.ast.TypeNode;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
+import org.jetbrains.annotations.Nullable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -13,21 +15,55 @@ import java.util.Objects;
 public class TextSegmentNode extends PathSegmentNode {
 
     private final boolean observableSelector;
-    private final List<PathNode> witnesses;
+    private final List<PathNode> typeArguments;
+    private final @Nullable SourceInfo typeArgumentsSourceInfo;
     private TextNode value;
 
     public TextSegmentNode(boolean observableSelector,
                            TextNode value,
-                           Collection<? extends PathNode> witnesses,
+                           Collection<? extends PathNode> typeArguments,
                            SourceInfo sourceInfo) {
-        super(value.getText(), sourceInfo);
+        this(observableSelector, value, typeArguments, null, null, sourceInfo);
+    }
+
+    public TextSegmentNode(boolean observableSelector,
+                           TextNode value,
+                           Collection<? extends PathNode> typeArguments,
+                           @Nullable SourceInfo selectorSourceInfo,
+                           SourceInfo sourceInfo) {
+        this(observableSelector, value, typeArguments, selectorSourceInfo, null, sourceInfo);
+    }
+
+    public TextSegmentNode(boolean observableSelector,
+                           TextNode value,
+                           Collection<? extends PathNode> typeArguments,
+                           @Nullable SourceInfo selectorSourceInfo,
+                           @Nullable SourceInfo typeArgumentsSourceInfo,
+                           SourceInfo sourceInfo) {
+        super(selectorSourceInfo, sourceInfo);
         this.observableSelector = observableSelector;
         this.value = checkNotNull(value);
-        this.witnesses = new ArrayList<>(checkNotNull(witnesses));
+        this.typeArguments = new ArrayList<>(checkNotNull(typeArguments));
+        this.typeArgumentsSourceInfo = typeArgumentsSourceInfo;
 
         if (value instanceof PathSegmentNode) {
             throw new IllegalArgumentException("value");
         }
+
+    }
+
+    private TextSegmentNode(boolean observableSelector,
+                            TextNode value,
+                            Collection<? extends PathNode> typeArguments,
+                            @Nullable SourceInfo selectorSourceInfo,
+                            @Nullable SourceInfo typeArgumentsSourceInfo,
+                            TypeNode type,
+                            SourceInfo sourceInfo) {
+        super(selectorSourceInfo, type, sourceInfo);
+        this.observableSelector = observableSelector;
+        this.value = checkNotNull(value);
+        this.typeArguments = new ArrayList<>(checkNotNull(typeArguments));
+        this.typeArgumentsSourceInfo = typeArgumentsSourceInfo;
     }
 
     @Override
@@ -40,21 +76,43 @@ public class TextSegmentNode extends PathSegmentNode {
     }
 
     @Override
-    public List<PathNode> getWitnesses() {
-        return witnesses;
+    public List<PathNode> getTypeArguments() {
+        return typeArguments;
+    }
+
+    public @Nullable SourceInfo getTypeArgumentsSourceInfo() {
+        return typeArgumentsSourceInfo;
+    }
+
+    @Override
+    public String getText() {
+        return value.getText();
+    }
+
+    @Override
+    public String formatText() {
+        if (typeArguments.isEmpty()) {
+            return value.formatText();
+        }
+
+        return value.formatText() + "<" + typeArguments.stream()
+            .map(PathNode::formatText)
+            .collect(java.util.stream.Collectors.joining(",")) + ">";
     }
 
     @Override
     public void acceptChildren(Visitor visitor) {
         super.acceptChildren(visitor);
         value = (TextNode)value.accept(visitor);
-        acceptChildren(witnesses, visitor, PathNode.class);
+        acceptChildren(typeArguments, visitor, PathNode.class);
     }
 
     @Override
     public TextSegmentNode deepClone() {
         return new TextSegmentNode(
-            observableSelector, value.deepClone(), deepClone(witnesses), getSourceInfo()).copy(this);
+            observableSelector, value.deepClone(), deepClone(typeArguments), getSelectorSourceInfo(),
+            typeArgumentsSourceInfo,
+            getType().deepClone(), getSourceInfo()).copy(this);
     }
 
     @Override
@@ -70,11 +128,13 @@ public class TextSegmentNode extends PathSegmentNode {
         TextSegmentNode that = (TextSegmentNode) o;
         return observableSelector == that.observableSelector
             && Objects.equals(value, that.value)
-            && witnesses.equals(that.witnesses);
+            && typeArguments.equals(that.typeArguments)
+            && Objects.equals(typeArgumentsSourceInfo, that.typeArgumentsSourceInfo);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(super.hashCode(), observableSelector, value, witnesses);
+        return Objects.hash(
+            super.hashCode(), observableSelector, value, typeArguments, typeArgumentsSourceInfo);
     }
 }
