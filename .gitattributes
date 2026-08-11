@@ -1,0 +1,22 @@
+# Normalize repository text
+* text=auto
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Binary assets
+*.class binary
+*.jar binary
+*.7z binary
+*.gz binary
+*.tar binary
+*.zip binary
+*.gif binary
+*.ico binary
+*.jpeg binary
+*.jpg binary
+*.png binary
+*.webp binary
+*.pdf binary
+*.ttf binary
+*.woff binary
+*.woff2 binary
