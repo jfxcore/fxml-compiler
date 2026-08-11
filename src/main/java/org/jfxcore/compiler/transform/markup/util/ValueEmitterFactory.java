@@ -69,29 +69,25 @@ import static org.jfxcore.compiler.type.KnownSymbols.*;
  */
 public class ValueEmitterFactory {
 
-    private static Map<Color, Field> colorFields;
+    private static final Map<Color, Field> colorFields;
 
-    private static Field findColorField(Color color) {
-        if (colorFields == null) {
-            colorFields = new HashMap<>();
+    static {
+        colorFields = new HashMap<>();
 
-            for (Field field : Color.class.getDeclaredFields()) {
-                if (!Modifier.isStatic(field.getModifiers())
-                        || !Modifier.isPublic(field.getModifiers())
-                        || !Modifier.isFinal(field.getModifiers())
-                        || !field.getType().equals(Color.class)) {
-                    continue;
-                }
+        for (Field field : Color.class.getDeclaredFields()) {
+            if (!Modifier.isStatic(field.getModifiers())
+                || !Modifier.isPublic(field.getModifiers())
+                || !Modifier.isFinal(field.getModifiers())
+                || !field.getType().equals(Color.class)) {
+                continue;
+            }
 
-                try {
-                    colorFields.put((Color)field.get(null), field);
-                } catch (IllegalAccessException e) {
-                    throw new RuntimeException(e);
-                }
+            try {
+                colorFields.put((Color)field.get(null), field);
+            } catch (IllegalAccessException e) {
+                throw new RuntimeException(e);
             }
         }
-
-        return colorFields.get(color);
     }
 
     /**
@@ -238,7 +234,7 @@ public class ValueEmitterFactory {
         if (TypeInstance.of(ColorDecl()).subtypeOf(targetType)) {
             try {
                 Color color = Color.valueOf(trimmedValue);
-                Field colorField = findColorField(color);
+                Field colorField = colorFields.get(color);
 
                 if (colorField != null) {
                     return new EmitClassConstantNode(
