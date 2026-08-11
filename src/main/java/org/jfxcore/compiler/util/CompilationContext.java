@@ -16,7 +16,7 @@ public class CompilationContext extends HashMap<Object, Object> {
 
     public static final String USE_SHARED_IMPLEMENTATION = "CompilationContext.useSharedImplementation";
 
-    private static CompilationContext current;
+    private static final ThreadLocal<CompilationContext> current = new ThreadLocal<>();
 
     private final CompilationSource compilationSource;
     private final SourceInfo.Source sourceInfoSource;
@@ -31,26 +31,25 @@ public class CompilationContext extends HashMap<Object, Object> {
     }
 
     public static boolean isCurrent() {
-        return current != null;
+        return current.get() != null;
     }
 
     public static CompilationContext getCurrent() {
-        if (current == null) {
+        CompilationContext context = current.get();
+        if (context == null) {
             throw new IllegalStateException();
         }
 
-        return current;
+        return context;
     }
 
-    static synchronized void setCurrent(CompilationContext context) {
-        if (context != null) {
-            if (current != null) {
-                throw new IllegalStateException();
-            }
-
-            current = context;
+    static void setCurrent(CompilationContext context) {
+        if (context == null) {
+            current.remove();
+        } else if (current.get() != null) {
+            throw new IllegalStateException();
         } else {
-            current = null;
+            current.set(context);
         }
     }
 

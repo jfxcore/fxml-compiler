@@ -1,12 +1,14 @@
-// Copyright (c) 2021, 2025, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.ast.emit;
 
 import org.jfxcore.compiler.ast.Node;
 import org.jfxcore.compiler.ast.Visitor;
+import org.jfxcore.compiler.util.CompilationContext;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.WeakHashMap;
 
 public class RuntimeContextHelper {
@@ -29,9 +31,8 @@ public class RuntimeContextHelper {
         return result[0];
     }
 
-    private static final WeakHashMap<Node, Boolean> needsParentStackCache = new WeakHashMap<>();
-
     public static boolean needsParentStack(Node node) {
+        Map<Node, Boolean> needsParentStackCache = getNeedsParentStackCache();
         Boolean value = needsParentStackCache.get(node);
         if (value != null) {
             return value;
@@ -68,5 +69,11 @@ public class RuntimeContextHelper {
 
         value = needsParentStackCache.get(node);
         return value != null ? value : false;
+    }
+
+    @SuppressWarnings("unchecked")
+    private static Map<Node, Boolean> getNeedsParentStackCache() {
+        return (Map<Node, Boolean>)CompilationContext.getCurrent().computeIfAbsent(
+            RuntimeContextHelper.class, key -> new WeakHashMap<Node, Boolean>());
     }
 }
