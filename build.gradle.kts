@@ -110,6 +110,7 @@ tasks.compileJava {
     dependsOn(copyVersionInfo)
     dependsOn(gradle.includedBuild("jfx").task(":sdk"))
     dependsOn(gradle.includedBuild("markup").task(":jar"))
+    options.release = 17
 }
 
 tasks.named<Jar>("sourcesJar") {

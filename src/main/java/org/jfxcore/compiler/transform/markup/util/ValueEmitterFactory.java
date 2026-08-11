@@ -215,7 +215,7 @@ public class ValueEmitterFactory {
         if (targetType.subtypeOf(ClassDecl())) {
             List<TypeInstance> types = new TypeParser(value, sourceInfo).parse();
 
-            if (types.size() > 1 || !types.getFirst().arguments().isEmpty() && !types.getFirst().isRaw()) {
+            if (types.size() > 1 || !types.get(0).arguments().isEmpty() && !types.get(0).isRaw()) {
                 throw ParserErrors.invalidExpression(sourceInfo);
             }
 
@@ -226,7 +226,7 @@ public class ValueEmitterFactory {
                     sourceInfo, sourceType.javaName(), targetType.javaName());
             }
 
-            return new EmitLiteralNode(id, targetType, types.getFirst().declaration().javaName(), sourceInfo);
+            return new EmitLiteralNode(id, targetType, types.get(0).declaration().javaName(), sourceInfo);
         }
 
         if (targetType.declaration().isEnum()) {
