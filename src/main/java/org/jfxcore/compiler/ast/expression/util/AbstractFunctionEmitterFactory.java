@@ -19,8 +19,8 @@ import org.jfxcore.compiler.ast.expression.BindingContextNode;
 import org.jfxcore.compiler.ast.expression.BindingEmitterInfo;
 import org.jfxcore.compiler.ast.expression.ConstructorExpressionNode;
 import org.jfxcore.compiler.ast.expression.ExpressionNode;
+import org.jfxcore.compiler.ast.expression.ExpressionResolution;
 import org.jfxcore.compiler.ast.expression.FunctionExpressionNode;
-import org.jfxcore.compiler.ast.expression.BindingOperator;
 import org.jfxcore.compiler.ast.expression.PathExpressionNode;
 import org.jfxcore.compiler.ast.expression.path.InconvertibleArgumentException;
 import org.jfxcore.compiler.ast.expression.path.ResolvedPath;
@@ -43,16 +43,14 @@ import org.jfxcore.compiler.type.TypeDeclaration;
 import org.jfxcore.compiler.type.TypeHelper;
 import org.jfxcore.compiler.type.TypeInstance;
 import org.jfxcore.compiler.type.TypeInvoker;
-import org.jfxcore.compiler.util.AccessVerifier;
+import org.jfxcore.compiler.util.ApplicableInvocationCandidate;
 import org.jfxcore.compiler.util.Callable;
 import org.jfxcore.compiler.util.MethodFinder;
 import org.jfxcore.compiler.util.NameHelper;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Queue;
 import java.util.stream.Collectors;
 
@@ -61,48 +59,20 @@ import static org.jfxcore.compiler.type.KnownSymbols.*;
 abstract class AbstractFunctionEmitterFactory {
 
     private final TypeInstance invokingType;
-    private final TypeInstance targetType;
-    private final Map<InvocationInfoKey, InvocationInfo> invocationCache = new HashMap<>();
-    private final Map<ConstructionInvocationInfoKey, InvocationInfo> constructionInvocationCache = new HashMap<>();
 
-    protected AbstractFunctionEmitterFactory(TypeInstance invokingType, @Nullable TypeInstance targetType) {
+    protected AbstractFunctionEmitterFactory(TypeInstance invokingType) {
         this.invokingType = invokingType;
-        this.targetType = targetType;
     }
 
     protected final TypeInstance getInvokingType() {
         return invokingType;
     }
 
-    protected final @Nullable TypeInstance getTargetType() {
-        return targetType;
-    }
-
-    protected InvocationInfo createInvocation(
-            FunctionExpressionNode functionExpression, boolean bidirectional, boolean preferObservable) {
-        return createInvocation(functionExpression, bidirectional, preferObservable, targetType, null);
-    }
-
     protected InvocationInfo createInvocation(
             FunctionExpressionNode functionExpression,
             boolean bidirectional,
             boolean preferObservable,
-            MethodFinder.ResolvedCandidate selected) {
-        return createInvocation(functionExpression, bidirectional, preferObservable, targetType, selected);
-    }
-
-    private InvocationInfo createInvocation(
-            FunctionExpressionNode functionExpression,
-            boolean bidirectional,
-            boolean preferObservable,
-            @Nullable TypeInstance targetType,
-            @Nullable MethodFinder.ResolvedCandidate selected) {
-        var key = new InvocationInfoKey(functionExpression, bidirectional, preferObservable, targetType, selected);
-        var cachedInvocationInfo = invocationCache.get(key);
-        if (cachedInvocationInfo != null) {
-            return cachedInvocationInfo;
-        }
-
+            ApplicableInvocationCandidate selected) {
         PathExpressionNode methodPath = functionExpression.getPath();
         List<TypeInstance> witnesses = methodPath.getSegments()
             .get(methodPath.getSegments().size() - 1)
@@ -112,21 +82,9 @@ abstract class AbstractFunctionEmitterFactory {
             .toList();
 
         List<Node> methodArguments = functionExpression.getArguments();
-        Callable function;
-        TypeInstance[] paramTypes;
-        TypeInstance returnType;
-
-        if (selected != null) {
-            function = createSelectedMethodCallable(methodPath, selected, preferObservable);
-            paramTypes = selected.parameterTypes().toArray(TypeInstance[]::new);
-            returnType = selected.resultType();
-        } else {
-            function = findMethod(methodPath, targetType, witnesses, methodArguments, preferObservable);
-
-            TypeInvoker invoker = new TypeInvoker(functionExpression.getSourceInfo());
-            paramTypes = invoker.invokeParameterTypes(function.getBehavior(), function.getInvocationContext(), witnesses);
-            returnType = invoker.invokeReturnType(function.getBehavior(), function.getInvocationContext(), witnesses);
-        }
+        Callable function = createSelectedMethodCallable(methodPath, selected, preferObservable);
+        TypeInstance[] paramTypes = selected.parameterTypes().toArray(TypeInstance[]::new);
+        TypeInstance returnType = selected.resultType();
 
         Callable inverseFunction = null;
 
@@ -138,15 +96,6 @@ abstract class AbstractFunctionEmitterFactory {
         boolean observableFunction = preparedArguments.observable();
 
         if (bidirectional) {
-            if (argumentValues.size() != 1) {
-                throw BindingSourceErrors.invalidBidirectionalMethodParamCount(functionExpression.getSourceInfo());
-            } else {
-                Node argNode = functionExpression.getArguments().get(0);
-                if (!(argNode instanceof PathExpressionNode)) {
-                    throw BindingSourceErrors.invalidBidirectionalMethodParamKind(argNode.getSourceInfo());
-                }
-            }
-
             var inversePath = functionExpression.getInversePath();
             if (inversePath != null) {
                 // Synthetic node to represent the value of the return type
@@ -169,126 +118,26 @@ abstract class AbstractFunctionEmitterFactory {
             }
         }
 
-        var result = new InvocationInfo(
+        return new InvocationInfo(
             observableFunction, returnType, function, inverseFunction, argumentValues);
-
-        invocationCache.put(key, result);
-
-        return result;
-    }
-
-    protected InvocationInfo createConstructorInvocation(
-            ConstructorExpressionNode expression,
-            boolean preferObservable,
-            boolean bidirectional) {
-        return createConstructorInvocation(expression, preferObservable, bidirectional, null);
     }
 
     protected InvocationInfo createConstructorInvocation(
             ConstructorExpressionNode expression,
             boolean preferObservable,
             boolean bidirectional,
-            @Nullable MethodFinder.ResolvedCandidate selected) {
-        var key = new ConstructionInvocationInfoKey(
-            expression, preferObservable, bidirectional, selected);
-        InvocationInfo cached = constructionInvocationCache.get(key);
-        if (cached != null) {
-            return cached;
-        }
-
+            ApplicableInvocationCandidate selected) {
         BindingEmitterInfo qualifierInfo = expression.getQualifier() != null
-            ? expression.getQualifier().toEmitter(
+            ? expression.getQualifier().resolve(
                 preferObservable ? BindingMode.UNIDIRECTIONAL : BindingMode.ONCE,
-                invokingType, null)
+                invokingType, null).toEmitter()
             : null;
 
-        TypeInstance owner = qualifierInfo != null ? qualifierInfo.getValueType() : null;
         SourceInfo typeSourceInfo = expression.getConstructedType().getSourceInfo();
-        Resolver resolver = new Resolver(typeSourceInfo);
-        TypeDeclaration constructedClass;
-
-        if (owner == null) {
-            constructedClass = resolver.resolveClassAgainstImports(expression.getConstructedType().formatText());
-
-            if (!constructedClass.isStatic() && constructedClass.declaringType().isPresent()) {
-                throw ObjectInitializationErrors.constructorNotFound(typeSourceInfo, constructedClass);
-            }
-        } else {
-            String memberName = expression.getConstructedType().formatText();
-            constructedClass = resolver.tryResolveNestedClass(owner.declaration(), memberName);
-
-            if (constructedClass == null) {
-                throw SymbolResolutionErrors.memberNotFound(typeSourceInfo, owner.declaration(), memberName);
-            }
-
-            if (constructedClass.isStatic() || constructedClass.declaringType().isEmpty()) {
-                throw ObjectInitializationErrors.constructorNotFound(typeSourceInfo, constructedClass);
-            }
-        }
-
-        AccessVerifier.verifyAccessible(constructedClass, expression.getInvocationContext(), typeSourceInfo);
-
-        if (constructedClass.isAbstract()
-                || constructedClass.isInterface()
-                || constructedClass.isPrimitive()
-                || constructedClass.isArray()) {
-            throw ObjectInitializationErrors.constructorNotFound(typeSourceInfo, constructedClass);
-        }
-
-        List<TypeInstance> classArguments = expression.getClassArguments().stream()
-            .map(PathNode::resolve)
-            .toList();
-
-        TypeInvoker invoker = new TypeInvoker(typeSourceInfo);
-
-        TypeInstance constructedType = owner != null
-            ? invoker.invokeType(owner, constructedClass, classArguments)
-            : invoker.invokeType(constructedClass, classArguments);
-
-        List<TypeInstance> invocationContext = getConstructionInvocationContext(constructedType);
-
-        List<TypeInstance> witnesses = expression.getConstructorWitnesses().stream()
-            .map(PathNode::resolve)
-            .toList();
-
-        List<TypeInstance> argumentTypes = expression.getArguments().stream()
-            .map(argument -> getArgumentType(argument, preferObservable))
-            .toList();
-
-        List<SourceInfo> argumentSourceInfo = expression.getArguments().stream()
-            .map(Node::getSourceInfo)
-            .toList();
-
-        ConstructorDeclaration constructor;
-        TypeInstance[] parameterTypes;
-
-        if (selected != null) {
-            constructor = (ConstructorDeclaration)selected.candidate().behavior();
-            invocationContext = selected.candidate().invocationContext();
-            parameterTypes = selected.parameterTypes().toArray(TypeInstance[]::new);
-        } else {
-            List<DiagnosticInfo> diagnostics = new ArrayList<>();
-
-            constructor = new MethodFinder(invocationContext, constructedClass).findConstructor(
-                witnesses, argumentTypes, argumentSourceInfo, diagnostics, expression.getSourceInfo());
-
-            if (constructor == null) {
-                if (!diagnostics.isEmpty()) {
-                    throw ObjectInitializationErrors.constructorNotFound(
-                        expression.getSourceInfo(),
-                        constructedClass,
-                        diagnostics.stream().map(DiagnosticInfo::getDiagnostic).toArray(Diagnostic[]::new));
-                }
-
-                throw ObjectInitializationErrors.constructorNotFound(expression.getSourceInfo(), constructedClass);
-            }
-
-            parameterTypes = invoker.invokeSourceParameterTypes(constructor, invocationContext, witnesses);
-        }
-
-        TypeInstance invocationType = selected != null ? selected.resultType() : constructedType;
-
-        AccessVerifier.verifyAccessible(constructor, expression.getInvocationContext(), expression.getSourceInfo());
+        ConstructorDeclaration constructor = (ConstructorDeclaration)selected.candidate().behavior();
+        List<TypeInstance> invocationContext = selected.candidate().invocationContext();
+        TypeInstance[] parameterTypes = selected.parameterTypes().toArray(TypeInstance[]::new);
+        TypeInstance invocationType = selected.resultType();
 
         ObservableDependencyKind receiverDependencyKind = qualifierInfo != null
             ? getArgumentDependencyKind(qualifierInfo)
@@ -305,15 +154,6 @@ abstract class AbstractFunctionEmitterFactory {
         Callable inverseFunction = null;
 
         if (bidirectional) {
-            if (preparedArguments.values().size() != 1) {
-                throw BindingSourceErrors.invalidBidirectionalMethodParamCount(expression.getSourceInfo());
-            }
-
-            Node argument = expression.getArguments().get(0);
-            if (!(argument instanceof PathExpressionNode)) {
-                throw BindingSourceErrors.invalidBidirectionalMethodParamKind(argument.getSourceInfo());
-            }
-
             PathExpressionNode inversePath = expression.getInversePath();
             if (inversePath != null) {
                 class ReturnValueNode extends AbstractNode implements ValueEmitterNode {
@@ -346,13 +186,9 @@ abstract class AbstractFunctionEmitterFactory {
             }
         }
 
-        InvocationInfo result = new InvocationInfo(
+        return new InvocationInfo(
             preparedArguments.observable(), invocationType, callable,
             inverseFunction, preparedArguments.values());
-
-        constructionInvocationCache.put(key, result);
-
-        return result;
     }
 
     protected final PreparedArguments prepareArguments(
@@ -412,21 +248,6 @@ abstract class AbstractFunctionEmitterFactory {
         return new PreparedArguments(argumentValues, observable);
     }
 
-    private static List<TypeInstance> getConstructionInvocationContext(TypeInstance constructedType) {
-        var result = new ArrayList<TypeInstance>();
-        addOwnerChain(result, constructedType);
-        return result;
-    }
-
-    private static void addOwnerChain(List<TypeInstance> result, TypeInstance type) {
-        TypeInstance owner = type.owner();
-        if (owner != null) {
-            addOwnerChain(result, owner);
-        }
-
-        result.add(type);
-    }
-
     private EmitMethodArgumentNode createVariadicFunctionArgumentValue(
             BehaviorDeclaration method, List<Node> arguments, TypeInstance paramType,
             int paramIndex, boolean bidirectional, boolean preferObservable) {
@@ -458,63 +279,19 @@ abstract class AbstractFunctionEmitterFactory {
         SourceInfo sourceInfo = argument.getSourceInfo();
 
         if (argument instanceof ExpressionNode expressionArg) {
-            if (!(argument instanceof FunctionExpressionNode) && !(argument instanceof PathExpressionNode)) {
-                try {
-                    BindingEmitterInfo emitterInfo = expressionArg.toEmitter(
-                        preferObservable ? BindingMode.UNIDIRECTIONAL : BindingMode.ONCE,
-                        invokingType,
-                        paramType);
-
-                    return EmitMethodArgumentNode.newScalar(
-                        paramType, emitterInfo.getValue(),
-                        getArgumentDependencyKind(emitterInfo), sourceInfo);
-                } catch (MarkupException ex) {
-                    throw new InconvertibleArgumentException(argument.getClass().getName(), ex);
-                }
-            }
-
-            EmitterFactory factory;
-
-            if (argument instanceof FunctionExpressionNode funcExpressionArg) {
-                InvocationInfo invocationInfo = createInvocation(
-                    funcExpressionArg, false, preferObservable, paramType, null);
-
-                if (invocationInfo.observable()) {
-                    factory = new ObservableFunctionEmitterFactory(funcExpressionArg, invokingType, paramType);
-                } else {
-                    factory = new SimpleFunctionEmitterFactory(funcExpressionArg, invokingType, paramType);
-                }
-            } else if (argument instanceof PathExpressionNode pathExpressionArg) { // always true
-                if (preferObservable && pathExpressionArg.resolvePath(true).isObservable()) {
-                    factory = new ObservablePathEmitterFactory(pathExpressionArg);
-                } else {
-                    factory = new SimplePathEmitterFactory(pathExpressionArg);
-                }
-            } else {
-                throw new AssertionError();
-            }
-
             try {
-                BindingEmitterInfo emitterInfo;
+                BindingMode mode = preferObservable
+                    ? bidirectional ? BindingMode.BIDIRECTIONAL : BindingMode.UNIDIRECTIONAL
+                    : BindingMode.ONCE;
 
-                if (factory instanceof ObservablePathEmitterFactory observablePathFactory) {
-                    emitterInfo = observablePathFactory.newInstance(bidirectional, true);
-                } else if (factory instanceof ObservableEmitterFactory observableFactory) {
-                    emitterInfo = observableFactory.newInstance(bidirectional);
-                } else {
-                    emitterInfo = factory.newInstance();
-                }
+                ExpressionResolution resolution = ExpressionResolver.resolveArgument(
+                    expressionArg, mode, invokingType, paramType);
 
-                if (emitterInfo == null) {
-                    if (argument instanceof PathExpressionNode pathExpressionArg) {
-                        emitterInfo = new SimplePathEmitterFactory(pathExpressionArg).newInstance();
-                    } else {
-                        throw new AssertionError();
-                    }
-                }
+                BindingEmitterInfo emitterInfo = resolution.toEmitter();
 
                 return EmitMethodArgumentNode.newScalar(
-                    paramType, emitterInfo.getValue(), getArgumentDependencyKind(emitterInfo), sourceInfo);
+                    paramType, emitterInfo.getValue(),
+                    resolution.getTypeInfo().argumentDependencyKind(), sourceInfo);
             } catch (MarkupException ex) {
                 throw new InconvertibleArgumentException(argument.getClass().getName(), ex);
             }
@@ -544,25 +321,14 @@ abstract class AbstractFunctionEmitterFactory {
         throw new InconvertibleArgumentException(argument.getClass().getName());
     }
 
-    private Callable findMethod(
-            PathExpressionNode pathExpression,
-            @Nullable TypeInstance returnType,
-            List<TypeInstance> typeWitnesses,
-            Collection<Node> arguments,
-            boolean preferObservable) {
-        return findCallable(
-            pathExpression, returnType, typeWitnesses, arguments,
-            preferObservable, true, false);
-    }
-
     private Callable createSelectedMethodCallable(
             PathExpressionNode pathExpression,
-            MethodFinder.ResolvedCandidate selected,
+            ApplicableInvocationCandidate selected,
             boolean preferObservable) {
         MethodDeclaration method = (MethodDeclaration)selected.candidate().behavior();
         ResolvedPath resolvedPath = null;
 
-        if (!selected.candidate().staticInvocation() && pathExpression.getSegments().size() > 1) {
+        if (!method.isStatic() && pathExpression.getSegments().size() > 1) {
             resolvedPath = pathExpression.resolvePath(preferObservable, pathExpression.getSegments().size() - 1);
         }
 
@@ -656,7 +422,7 @@ abstract class AbstractFunctionEmitterFactory {
         }
 
         List<TypeInstance> argumentTypes = arguments.stream()
-            .map(arg -> getArgumentType(arg, preferObservable))
+            .map(arg -> resolveArgumentType(arg, preferObservable))
             .collect(Collectors.toList());
 
         List<SourceInfo> argumentsSourceInfo = arguments.stream()
@@ -745,24 +511,16 @@ abstract class AbstractFunctionEmitterFactory {
         throw SymbolResolutionErrors.memberNotFound(pathExpression.getSourceInfo(), declaringClass, methodName);
     }
 
-    protected final TypeInstance getArgumentType(Node argument, boolean preferObservable) {
-        if (argument instanceof FunctionExpressionNode funcExpressionArg) {
-            return createInvocation(funcExpressionArg, false, preferObservable, null, null).type();
-        } else if (argument instanceof PathExpressionNode pathExpressionArg) {
-            BindingOperator operator = pathExpressionArg.getOperator();
-            if (operator == BindingOperator.NOT || operator == BindingOperator.BOOLIFY) {
-                return TypeInstance.booleanType();
-            }
-
-            return pathExpressionArg.resolvePath(preferObservable).getValueTypeInstance();
-        } else if (argument instanceof ExpressionNode expression) {
-            BindingEmitterInfo emitterInfo = expression.toEmitter(
+    protected final TypeInstance resolveArgumentType(Node argument, boolean preferObservable) {
+        if (argument instanceof ExpressionNode expression) {
+            return ExpressionResolver.resolveArgument(
+                expression,
                 preferObservable ? BindingMode.UNIDIRECTIONAL : BindingMode.ONCE,
                 invokingType,
-                null);
+                null).getTypeInfo().valueType();
+        }
 
-            return emitterInfo.getValueType();
-        } else if (argument instanceof ValueEmitterNode) {
+        if (argument instanceof ValueEmitterNode) {
             var extensionInfo = MarkupExtensionInfo.of(argument);
 
             if (extensionInfo instanceof MarkupExtensionInfo.Supplier supplierInfo) {
@@ -871,19 +629,6 @@ abstract class AbstractFunctionEmitterFactory {
             ? resolvedPath.getObservableDependencyKind()
             : ObservableDependencyKind.VALUE;
     }
-
-    private record InvocationInfoKey(
-        FunctionExpressionNode functionExpression,
-        boolean bidirectional,
-        boolean preferObservable,
-        @Nullable TypeInstance targetType,
-        @Nullable MethodFinder.ResolvedCandidate selected) {}
-
-    private record ConstructionInvocationInfoKey(
-        ConstructorExpressionNode expression,
-        boolean preferObservable,
-        boolean bidirectional,
-        @Nullable MethodFinder.ResolvedCandidate selected) {}
 
     private record ReceiverInfo(
         List<ValueEmitterNode> emitters,

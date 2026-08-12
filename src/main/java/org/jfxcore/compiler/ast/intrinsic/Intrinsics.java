@@ -8,6 +8,7 @@ import org.jfxcore.compiler.type.KnownSymbols;
 import java.util.List;
 
 import static org.jfxcore.compiler.ast.intrinsic.Intrinsic.*;
+import static org.jfxcore.compiler.ast.intrinsic.IntrinsicProperty.Syntax.*;
 
 public class Intrinsics {
 
@@ -62,22 +63,22 @@ public class Intrinsics {
 
     public static final Intrinsic EVALUATE = new Intrinsic(
         "Evaluate", Kind.OBJECT, Placement.ANY, KnownSymbols::BottomTypeDecl,
-        new IntrinsicProperty("source", KnownSymbols::StringDecl, true));
+        new IntrinsicProperty("source", KnownSymbols::StringDecl, true, EXPRESSION));
 
     public static final Intrinsic OBSERVE = new Intrinsic(
         "Observe", Kind.OBJECT, Placement.ANY, KnownSymbols::BottomTypeDecl,
-        new IntrinsicProperty("source", KnownSymbols::StringDecl, true));
+        new IntrinsicProperty("source", KnownSymbols::StringDecl, true, EXPRESSION));
 
     public static final Intrinsic PUSH = new Intrinsic(
         "Push", Kind.OBJECT, Placement.ANY, KnownSymbols::BottomTypeDecl,
-        new IntrinsicProperty("source", KnownSymbols::StringDecl, true));
+        new IntrinsicProperty("source", KnownSymbols::StringDecl, true, EXPRESSION));
 
     public static final Intrinsic SYNCHRONIZE = new Intrinsic(
         "Synchronize", Kind.OBJECT, Placement.ANY, KnownSymbols::BottomTypeDecl,
-        new IntrinsicProperty("source", KnownSymbols::StringDecl, true),
-        new IntrinsicProperty("format", KnownSymbols::FormatDecl),
-        new IntrinsicProperty("converter", KnownSymbols::StringConverterDecl),
-        new IntrinsicProperty("inverseMethod", KnownSymbols::StringDecl));
+        new IntrinsicProperty("source", KnownSymbols::StringDecl, true, EXPRESSION),
+        new IntrinsicProperty("format", KnownSymbols::FormatDecl, PATH_REFERENCE),
+        new IntrinsicProperty("converter", KnownSymbols::StringConverterDecl, PATH_REFERENCE),
+        new IntrinsicProperty("inverseMethod", KnownSymbols::StringDecl, PATH_REFERENCE));
 
     private static final List<Intrinsic> NODES = List.of(
         SUBCLASS, CLASS_MODIFIER, CLASS_NAME, CLASS_PARAMETERS, CONTEXT, ID, VALUE, CONSTANT, FACTORY,

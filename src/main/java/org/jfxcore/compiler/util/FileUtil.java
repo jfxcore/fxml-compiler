@@ -4,10 +4,12 @@
 package org.jfxcore.compiler.util;
 
 import org.jfxcore.compiler.ast.DocumentNode;
+import org.jfxcore.compiler.ast.AttributeValueNode;
+import org.jfxcore.compiler.ast.LiteralValueNode;
+import org.jfxcore.compiler.ast.Node;
 import org.jfxcore.compiler.ast.ObjectNode;
 import org.jfxcore.compiler.ast.PropertyNode;
 import org.jfxcore.compiler.ast.intrinsic.Intrinsics;
-import org.jfxcore.compiler.ast.text.TextNode;
 import org.jfxcore.compiler.diagnostic.errors.GeneralErrors;
 import org.jfxcore.compiler.diagnostic.errors.PropertyAssignmentErrors;
 import org.jfxcore.compiler.diagnostic.errors.SymbolResolutionErrors;
@@ -212,12 +214,18 @@ public class FileUtil {
     }
 
     private static String getTextNotEmpty(ObjectNode parent, PropertyNode node) {
-        if (node.getValues().size() > 1 || !(node.getValues().get(0) instanceof TextNode)) {
+        Node value = node.getValues().size() == 1 ? node.getValues().get(0) : null;
+        if (value instanceof AttributeValueNode attributeValue
+                && attributeValue.getForm() == AttributeValueNode.Form.LITERAL) {
+            value = attributeValue.getLiteral();
+        }
+
+        if (!(value instanceof LiteralValueNode literal)) {
             throw PropertyAssignmentErrors.propertyMustContainText(
                 node.getSourceInfo(), parent.getType().getMarkupName(), node.getMarkupName());
         }
 
-        String text = ((TextNode)node.getValues().get(0)).getText();
+        String text = literal.getText();
         if (text.isBlank()) {
             throw PropertyAssignmentErrors.propertyCannotBeEmpty(
                 node.getSourceInfo(), parent.getType().getMarkupName(), node.getMarkupName());

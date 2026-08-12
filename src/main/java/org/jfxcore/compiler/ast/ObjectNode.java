@@ -6,7 +6,6 @@ package org.jfxcore.compiler.ast;
 import org.jetbrains.annotations.Nullable;
 import org.jfxcore.compiler.ast.intrinsic.Intrinsic;
 import org.jfxcore.compiler.ast.intrinsic.Intrinsics;
-import org.jfxcore.compiler.ast.text.TextNode;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.diagnostic.errors.ObjectInitializationErrors;
 import org.jfxcore.compiler.diagnostic.errors.PropertyAssignmentErrors;
@@ -109,20 +108,20 @@ public class ObjectNode extends AbstractNode implements ValueNode {
         return propertyNode;
     }
 
-    public TextNode getTextContent() {
+    public LiteralValueNode getTextContent() {
         if (children.size() > 1) {
             throw ObjectInitializationErrors.objectCannotHaveMultipleChildren(
                 SourceInfo.span(children.get(0).getSourceInfo(), children.get(children.size() - 1).getSourceInfo()),
                 TypeHelper.getTypeDeclaration(this));
         }
 
-        if (children.isEmpty() || !(children.get(0) instanceof TextNode)) {
+        if (children.isEmpty() || !(children.get(0) instanceof LiteralValueNode)) {
             throw ObjectInitializationErrors.objectMustContainText(
                 children.isEmpty() ? getSourceInfo() : children.get(0).getSourceInfo(),
                 TypeHelper.getTypeDeclaration(this));
         }
 
-        return (TextNode)children.get(0);
+        return (LiteralValueNode)children.get(0);
     }
 
     @Override

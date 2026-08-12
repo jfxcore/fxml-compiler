@@ -3,21 +3,43 @@
 
 package org.jfxcore.compiler.ast.text;
 
+import org.jfxcore.compiler.ast.AbstractSyntaxNode;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
-import org.jfxcore.compiler.ast.TypeNode;
+import java.util.Objects;
 
-public class NumberNode extends TextNode {
+/**
+ * Numeric source syntax. Its runtime type is assigned during expression lowering.
+ */
+public final class NumberNode extends AbstractSyntaxNode {
+
+    private final String text;
 
     public NumberNode(String text, SourceInfo sourceInfo) {
-        super(text, sourceInfo);
+        super(sourceInfo);
+        this.text = checkNotNull(text);
     }
 
-    private NumberNode(String text, TypeNode type, SourceInfo sourceInfo) {
-        super(text, false, type, sourceInfo);
+    public String getText() {
+        return text;
+    }
+
+    @Override
+    public String format() {
+        return text;
     }
 
     @Override
     public NumberNode deepClone() {
-        return new NumberNode(getText(), getType().deepClone(), getSourceInfo()).copy(this);
+        return new NumberNode(text, getSourceInfo()).copy(this);
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        return obj instanceof NumberNode other && text.equals(other.text);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(text);
     }
 }

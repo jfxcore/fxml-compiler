@@ -4,7 +4,6 @@
 package org.jfxcore.compiler.ast;
 
 import org.jfxcore.compiler.ast.intrinsic.Intrinsic;
-import org.jfxcore.compiler.ast.text.TextNode;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.diagnostic.errors.PropertyAssignmentErrors;
 import org.jfxcore.compiler.transform.TransformContext;
@@ -91,16 +90,32 @@ public class PropertyNode extends AbstractNode {
         if (values.size() > 1) {
             TypeDeclaration declaringType = tryGetTypeDeclaration(context.getParent(this));
             String propertyName = intrinsic ? markupName : name;
+
             throw declaringType != null
                 ? PropertyAssignmentErrors.propertyCannotHaveMultipleValues(getSourceInfo(), declaringType, propertyName)
                 : PropertyAssignmentErrors.propertyCannotHaveMultipleValues(getSourceInfo(), propertyName);
         }
 
-        return values.get(0);
+        Node value = values.get(0);
+        if (value instanceof AttributeValueNode attributeValue) {
+            if (attributeValue.getForm() == AttributeValueNode.Form.SEQUENCE
+                    && attributeValue.getItems().size() != 1) {
+                TypeDeclaration declaringType = tryGetTypeDeclaration(context.getParent(this));
+                String propertyName = intrinsic ? markupName : name;
+
+                throw declaringType != null
+                    ? PropertyAssignmentErrors.propertyCannotHaveMultipleValues(getSourceInfo(), declaringType, propertyName)
+                    : PropertyAssignmentErrors.propertyCannotHaveMultipleValues(getSourceInfo(), propertyName);
+            }
+
+            return attributeValue.getSingleValue();
+        }
+
+        return value;
     }
 
     public String getTrimmedTextNotEmpty(TransformContext context) {
-        String text = getTextNode(context).getText();
+        String text = getLiteralText(context);
         if (text.isBlank()) {
             TypeDeclaration declaringType = tryGetTypeDeclaration(context.getParent(this));
             String propertyName = intrinsic ? markupName : name;
@@ -113,11 +128,22 @@ public class PropertyNode extends AbstractNode {
     }
 
     public SourceInfo getTrimmedTextSourceInfo(TransformContext context) {
-        return getTextNode(context).getSourceInfo().getTrimmed();
+        return getLiteralNode(context).getSourceInfo().getTrimmed();
     }
 
-    private TextNode getTextNode(TransformContext context) {
-        if (values.size() != 1 || !(values.get(0) instanceof TextNode)) {
+    public String getLiteralText(TransformContext context) {
+        Node node = getLiteralNode(context);
+        return ((LiteralValueNode)node).getText();
+    }
+
+    private Node getLiteralNode(TransformContext context) {
+        Node value = values.size() == 1 ? values.get(0) : null;
+        if (value instanceof AttributeValueNode attributeValue
+                && attributeValue.getForm() == AttributeValueNode.Form.LITERAL) {
+            value = attributeValue.getLiteral();
+        }
+
+        if (!(value instanceof LiteralValueNode)) {
             ObjectNode parent = (ObjectNode)context.getParent(this);
             String parentName;
 
@@ -130,15 +156,17 @@ public class PropertyNode extends AbstractNode {
             }
 
             String propertyName = intrinsic ? markupName : name;
-            SourceInfo sourceInfo = SourceInfo.span(
-                values.get(0).getSourceInfo(), values.get(values.size() - 1).getSourceInfo());
+
+            SourceInfo sourceInfo = values.isEmpty()
+                ? getSourceInfo()
+                : SourceInfo.span(values.get(0).getSourceInfo(), values.get(values.size() - 1).getSourceInfo());
 
             throw parentName != null
                 ? PropertyAssignmentErrors.propertyMustContainText(sourceInfo, parentName, propertyName)
                 : PropertyAssignmentErrors.propertyMustContainText(sourceInfo, propertyName);
         }
 
-        return (TextNode)values.get(0);
+        return value;
     }
 
     private TypeDeclaration tryGetTypeDeclaration(Node node) {

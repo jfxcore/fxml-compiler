@@ -34,7 +34,7 @@ public class LiteralIntrinsicsTransform implements Transform {
         }
 
         ObjectNode objectNode = (ObjectNode)node;
-        Node parentNode = context.getParent();
+        Node parentNode = context.getNearestSemanticOwner();
         if (!(parentNode instanceof PropertyNode) && !(parentNode instanceof InvocationExpressionNode)) {
             throw GeneralErrors.unexpectedIntrinsic(node.getSourceInfo(), objectNode.getType().getMarkupName());
         }

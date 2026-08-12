@@ -570,6 +570,7 @@ public class TypeInstance {
     public boolean equals(Object o) {
         if (this == o) return true;
         if (!(o instanceof TypeInstance that)) return false;
+        if ((this instanceof NullTypeInstance) != (that instanceof NullTypeInstance)) return false;
         if (arguments.size() != that.arguments.size()) return false;
         if (dimensions != that.dimensions) return false;
         if (wildcard != that.wildcard) return false;
@@ -584,7 +585,8 @@ public class TypeInstance {
 
         set.add(this);
 
-        if (!type.equals(other.type)
+        if ((this instanceof NullTypeInstance) != (other instanceof NullTypeInstance)
+                || !type.equals(other.type)
                 || arguments.size() != other.arguments.size()
                 || wildcard != other.wildcard) {
             return false;

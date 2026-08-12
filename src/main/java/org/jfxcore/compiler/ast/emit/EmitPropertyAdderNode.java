@@ -8,6 +8,7 @@ import org.jfxcore.compiler.ast.ValueNode;
 import org.jfxcore.compiler.ast.Visitor;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.type.MethodDeclaration;
+import org.jfxcore.compiler.type.TypeDeclaration;
 import org.jfxcore.compiler.type.TypeHelper;
 import org.jfxcore.compiler.type.TypeInstance;
 import org.jfxcore.compiler.util.Bytecode;
@@ -63,22 +64,43 @@ public class EmitPropertyAdderNode extends AbstractNode implements EmitterNode {
         for (int i = 0; i < values.size(); ++i) {
             ValueNode value = values.get(i);
 
-            code.aload(local);
-
             if (isMap) {
-                context.emit(keys.get(i));
-            }
+                ValueNode key = keys.get(i);
+                TypeDeclaration keyType = TypeHelper.getTypeDeclaration(key);
+                TypeDeclaration valueType = TypeHelper.getTypeDeclaration(value);
+                Local keyLocal = code.acquireLocal(keyType);
+                Local valueLocal = code.acquireLocal(valueType);
 
-            context.emit(value);
+                context.emit(key);
+                code.store(keyType, keyLocal);
+                context.emit(value);
+                code.store(valueType, valueLocal)
+                    .aload(local)
+                    .load(keyType, keyLocal)
+                    .autoconv(keyType, ObjectDecl())
+                    .load(valueType, valueLocal);
 
-            if (itemType != null) {
-                code.autoconv(TypeHelper.getTypeDeclaration(value), itemType.declaration());
-            }
+                if (itemType != null) {
+                    code.autoconv(valueType, itemType.declaration());
+                }
 
-            if (isMap) {
                 code.invoke(MapDecl().requireDeclaredMethod("put", ObjectDecl(), ObjectDecl()));
+                code.releaseLocal(valueLocal);
+                code.releaseLocal(keyLocal);
             } else {
+                TypeDeclaration valueType = TypeHelper.getTypeDeclaration(value);
+                Local valueLocal = code.acquireLocal(valueType);
+                context.emit(value);
+                code.store(valueType, valueLocal)
+                    .aload(local)
+                    .load(valueType, valueLocal);
+
+                if (itemType != null) {
+                    code.autoconv(valueType, itemType.declaration());
+                }
+
                 code.invoke(CollectionDecl().requireDeclaredMethod("add", ObjectDecl()));
+                code.releaseLocal(valueLocal);
             }
 
             code.pop();

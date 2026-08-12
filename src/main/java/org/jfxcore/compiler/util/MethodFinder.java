@@ -17,46 +17,11 @@ import org.jfxcore.compiler.type.TypeInstance;
 import org.jfxcore.compiler.type.TypeInvoker;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 
 import static org.jfxcore.compiler.type.TypeInstance.AssignmentContext.*;
 import static org.jfxcore.compiler.type.KnownSymbols.*;
 
 public class MethodFinder {
-
-    /**
-     * One overload candidate with the invocation metadata needed to instantiate its generic parameter and
-     * result types. Different candidates may have different invocation contexts and witness lists.
-     */
-    public record InvocationCandidate(
-            BehaviorDeclaration behavior,
-            List<TypeInstance> invocationContext,
-            List<TypeInstance> typeWitnesses,
-            boolean staticInvocation,
-            @Nullable TypeInstance resultType) {
-
-        public InvocationCandidate {
-            Objects.requireNonNull(behavior);
-            invocationContext = List.copyOf(invocationContext);
-            typeWitnesses = List.copyOf(typeWitnesses);
-        }
-    }
-
-    /**
-     * A candidate that is applicable in the selected overload phase.
-     */
-    public record ResolvedCandidate(
-            InvocationCandidate candidate,
-            List<TypeInstance> parameterTypes,
-            TypeInstance resultType,
-            int phase) {
-
-        public ResolvedCandidate {
-            Objects.requireNonNull(candidate);
-            parameterTypes = List.copyOf(parameterTypes);
-            Objects.requireNonNull(resultType);
-        }
-    }
 
     private final List<TypeInstance> invocationContext;
     private final TypeDeclaration declaringType;
@@ -112,7 +77,7 @@ public class MethodFinder {
      * contains every maximally-specific candidate in the first applicable phase; a single element is
      * an unambiguous selection.
      */
-    public static List<ResolvedCandidate> resolveInvocationCandidates(
+    public static List<ApplicableInvocationCandidate> resolveInvocationCandidates(
             List<InvocationCandidate> candidates,
             @Nullable TypeInstance targetType,
             List<TypeInstance> argumentTypes,
@@ -122,10 +87,10 @@ public class MethodFinder {
         for (int phase = 0; phase < 3; ++phase) {
             TypeInstance.AssignmentContext assignmentContext = phase == 0 ? STRICT : LOOSE;
             boolean allowVarargInvocation = phase == 2;
-            List<ResolvedCandidate> applicable = new ArrayList<>();
+            List<ApplicableInvocationCandidate> applicable = new ArrayList<>();
 
             for (InvocationCandidate candidate : candidates) {
-                ResolvedCandidate resolved = evaluateInvocationCandidate(
+                ApplicableInvocationCandidate resolved = evaluateInvocationCandidate(
                     candidate, assignmentContext, allowVarargInvocation, targetType, argumentTypes,
                     argumentSourceInfo, phase == 2 ? diagnostics : null, sourceInfo, phase);
 
@@ -135,14 +100,49 @@ public class MethodFinder {
             }
 
             if (!applicable.isEmpty()) {
-                return findMaximallySpecificCandidates(applicable, argumentTypes);
+                return selectApplicableCandidates(applicable);
             }
         }
 
         return List.of();
     }
 
-    private static @Nullable ResolvedCandidate evaluateInvocationCandidate(
+    /**
+     * Selects from candidates whose applicability and target-specific conversions have already
+     * been established by the caller.
+     */
+    public static List<ApplicableInvocationCandidate> selectApplicableCandidates(
+            List<ApplicableInvocationCandidate> candidates) {
+        if (candidates.isEmpty()) {
+            return List.of();
+        }
+
+        int bestPhase = candidates.stream().mapToInt(ApplicableInvocationCandidate::phase).min().orElseThrow();
+
+        List<ApplicableInvocationCandidate> phased = candidates.stream()
+            .filter(candidate -> candidate.phase() == bestPhase)
+            .toList();
+
+        List<ApplicableInvocationCandidate> conversionMaximal = new ArrayList<>();
+
+        for (int i = 0; i < phased.size(); ++i) {
+            boolean maximal = true;
+            for (int j = 0; j < phased.size(); ++j) {
+                if (i != j && conversionDominates(phased.get(j), phased.get(i))) {
+                    maximal = false;
+                    break;
+                }
+            }
+
+            if (maximal) {
+                conversionMaximal.add(phased.get(i));
+            }
+        }
+
+        return findMaximallySpecificCandidates(conversionMaximal);
+    }
+
+    private static @Nullable ApplicableInvocationCandidate evaluateInvocationCandidate(
             InvocationCandidate candidate,
             TypeInstance.AssignmentContext assignmentContext,
             boolean allowVarargInvocation,
@@ -175,6 +175,7 @@ public class MethodFinder {
             int numParams = parameterTypes.length;
             int numArgs = argumentTypes.size();
             boolean varargs = allowVarargInvocation && behavior.isVarArgs();
+            boolean expandedVarargs = false;
 
             if (numParams > numArgs && !(varargs && numParams == 1) || numParams < numArgs && !varargs) {
                 if (diagnostics != null) {
@@ -212,6 +213,7 @@ public class MethodFinder {
                     }
 
                     TypeInstance componentType = arrayType.componentType();
+                    expandedVarargs = true;
                     for (int i = varargIndex; i < numArgs; ++i) {
                         if (!componentType.isAssignableFrom(argumentTypes.get(i), assignmentContext)) {
                             addArgumentDiagnostic(
@@ -240,7 +242,25 @@ public class MethodFinder {
                 return null;
             }
 
-            return new ResolvedCandidate(candidate, List.of(parameterTypes), resultType, phase);
+            List<ArgumentConversion> conversions = new ArrayList<>(numArgs);
+            for (int i = 0; i < numArgs; ++i) {
+                int parameterIndex = Math.min(i, parameterTypes.length - 1);
+                TypeInstance formalType = parameterTypes[parameterIndex];
+                if (expandedVarargs && parameterIndex == parameterTypes.length - 1) {
+                    formalType = formalType.componentType();
+                }
+
+                TypeInstance sourceType = argumentTypes.get(i);
+                conversions.add(new ArgumentConversion(
+                    formalType,
+                    List.of(sourceType),
+                    conversionCategory(formalType, sourceType),
+                    i < argumentSourceInfo.size() ? argumentSourceInfo.get(i) : sourceInfo));
+            }
+
+            return new ApplicableInvocationCandidate(
+                candidate, List.of(parameterTypes), resultType, phase,
+                expandedVarargs, conversions);
         } catch (MarkupException ex) {
             if (diagnostics != null) {
                 diagnostics.add(new DiagnosticInfo(ex.getDiagnostic(), ex.getSourceInfo()));
@@ -293,16 +313,15 @@ public class MethodFinder {
                 ? argumentSourceInfo.get(argumentIndex) : sourceInfo));
     }
 
-    private static List<ResolvedCandidate> findMaximallySpecificCandidates(
-            List<ResolvedCandidate> candidates,
-            List<TypeInstance> argumentTypes) {
-        List<ResolvedCandidate> result = new ArrayList<>();
+    private static List<ApplicableInvocationCandidate> findMaximallySpecificCandidates(
+            List<ApplicableInvocationCandidate> candidates) {
+        List<ApplicableInvocationCandidate> result = new ArrayList<>();
 
         for (int i = 0; i < candidates.size(); ++i) {
             boolean maximal = true;
 
             for (int j = 0; j < candidates.size(); ++j) {
-                if (i != j && isMoreSpecific(candidates.get(j), candidates.get(i), argumentTypes)) {
+                if (i != j && isMoreSpecific(candidates.get(j), candidates.get(i))) {
                     maximal = false;
                     break;
                 }
@@ -317,18 +336,18 @@ public class MethodFinder {
     }
 
     private static boolean isMoreSpecific(
-            ResolvedCandidate first,
-            ResolvedCandidate second,
-            List<TypeInstance> argumentTypes) {
+            ApplicableInvocationCandidate first,
+            ApplicableInvocationCandidate second) {
         boolean moreSpecific = false;
-        int comparisons = argumentTypes.isEmpty()
+        int argumentCount = Math.max(first.argumentConversions().size(), second.argumentConversions().size());
+        int comparisons = argumentCount == 0
             ? Math.max(first.parameterTypes().size(), second.parameterTypes().size())
-            : argumentTypes.size();
+            : argumentCount;
 
         for (int i = 0; i < comparisons; ++i) {
-            TypeInstance argumentType = argumentTypes.isEmpty() ? null : argumentTypes.get(i);
-            TypeInstance firstType = effectiveParameterType(first, i, argumentType);
-            TypeInstance secondType = effectiveParameterType(second, i, argumentType);
+            TypeInstance argumentType = comparisonSourceType(first, second, i);
+            TypeInstance firstType = effectiveParameterType(first, i);
+            TypeInstance secondType = effectiveParameterType(second, i);
 
             if (firstType == null || secondType == null) {
                 return false;
@@ -349,9 +368,12 @@ public class MethodFinder {
     }
 
     private static @Nullable TypeInstance effectiveParameterType(
-            ResolvedCandidate candidate,
-            int argumentIndex,
-            @Nullable TypeInstance argumentType) {
+            ApplicableInvocationCandidate candidate,
+            int argumentIndex) {
+        if (argumentIndex < candidate.argumentConversions().size()) {
+            return candidate.argumentConversions().get(argumentIndex).formalType();
+        }
+
         List<TypeInstance> parameters = candidate.parameterTypes();
         if (parameters.isEmpty()) {
             return null;
@@ -359,18 +381,84 @@ public class MethodFinder {
 
         int index = Math.min(argumentIndex, parameters.size() - 1);
         TypeInstance result = parameters.get(index);
-        boolean expandedVarargs = candidate.phase() == 2
-            && candidate.candidate().behavior().isVarArgs()
+        boolean expandedVarargs = candidate.expandedVarargs()
             && index == parameters.size() - 1;
 
-        if (expandedVarargs && result.isArray()
-                && (argumentIndex >= parameters.size()
-                    || argumentType == null
-                    || !result.isAssignableFrom(argumentType, LOOSE))) {
+        if (expandedVarargs && result.isArray()) {
             result = result.componentType();
         }
 
         return result;
+    }
+
+    private static @Nullable TypeInstance comparisonSourceType(
+            ApplicableInvocationCandidate first,
+            ApplicableInvocationCandidate second,
+            int argumentIndex) {
+        List<TypeInstance> alternatives = new ArrayList<>();
+        addSourceTypes(alternatives, first, argumentIndex);
+        addSourceTypes(alternatives, second, argumentIndex);
+
+        return alternatives.isEmpty()
+            ? null
+            : alternatives.size() == 1
+                ? alternatives.get(0)
+                : TypeInstance.ofUnion(alternatives);
+    }
+
+    private static void addSourceTypes(
+            List<TypeInstance> result,
+            ApplicableInvocationCandidate candidate,
+            int argumentIndex) {
+        if (argumentIndex >= candidate.argumentConversions().size()) {
+            return;
+        }
+
+        for (TypeInstance sourceType : candidate.argumentConversions().get(argumentIndex).sourceTypes()) {
+            if (!result.contains(sourceType)) {
+                result.add(sourceType);
+            }
+        }
+    }
+
+    private static boolean conversionDominates(
+            ApplicableInvocationCandidate first, ApplicableInvocationCandidate second) {
+        if (first.argumentConversions().size() != second.argumentConversions().size()) {
+            return false;
+        }
+
+        boolean better = false;
+
+        for (int i = 0; i < first.argumentConversions().size(); ++i) {
+            int firstRank = conversionRank(first.argumentConversions().get(i).category());
+            int secondRank = conversionRank(second.argumentConversions().get(i).category());
+            if (firstRank > secondRank) {
+                return false;
+            }
+
+            better |= firstRank < secondRank;
+        }
+
+        return better;
+    }
+
+    private static int conversionRank(ConversionCategory category) {
+        return switch (category) {
+            case IDENTITY -> 0;
+            case STRICT -> 1;
+            case LOOSE -> 2;
+            case TARGET -> 3;
+        };
+    }
+
+    private static ConversionCategory conversionCategory(TypeInstance formalType, TypeInstance sourceType) {
+        if (formalType.equals(sourceType)) {
+            return ConversionCategory.IDENTITY;
+        }
+
+        return formalType.isAssignableFrom(sourceType, STRICT)
+            ? ConversionCategory.STRICT
+            : ConversionCategory.LOOSE;
     }
 
     private static boolean isInvocationTypeMoreSpecific(
@@ -395,13 +483,23 @@ public class MethodFinder {
         }
 
         TypeDeclaration argumentDeclaration = argumentType.declaration();
-        if (argumentDeclaration.isIntegralPrimitive()) {
+
+        TypeDeclaration primitiveArgumentDeclaration = argumentDeclaration.isNumericPrimitive()
+            ? argumentDeclaration
+            : argumentDeclaration.primitive().filter(TypeDeclaration::isNumericPrimitive).orElse(null);
+
+        TypeInstance primitiveArgument = primitiveArgumentDeclaration != null
+            ? TypeInstance.of(primitiveArgumentDeclaration)
+            : null;
+
+        if (primitiveArgumentDeclaration != null && primitiveArgumentDeclaration.isIntegralPrimitive()) {
             if (first.declaration().isIntegralPrimitive()) {
                 if (!second.declaration().isIntegralPrimitive()) {
                     return true;
                 }
 
-                return maxWideningConversions(argumentType, first) < maxWideningConversions(argumentType, second);
+                return maxWideningConversions(primitiveArgument, first)
+                    < maxWideningConversions(primitiveArgument, second);
             }
 
             if (first.equals(floatDecl()) && second.equals(doubleDecl())) {
@@ -409,12 +507,15 @@ public class MethodFinder {
             }
         }
 
-        if (argumentDeclaration.isFloatingPointPrimitive() && first.declaration().isFloatingPointPrimitive()) {
+        if (primitiveArgumentDeclaration != null
+                && primitiveArgumentDeclaration.isFloatingPointPrimitive()
+                && first.declaration().isFloatingPointPrimitive()) {
             if (!second.declaration().isFloatingPointPrimitive()) {
                 return true;
             }
 
-            return maxWideningConversions(argumentType, first) < maxWideningConversions(argumentType, second);
+            return maxWideningConversions(primitiveArgument, first)
+                < maxWideningConversions(primitiveArgument, second);
         }
 
         return false;
@@ -461,7 +562,7 @@ public class MethodFinder {
                 method, invocationContext, typeWitnesses, staticInvocation, constructorResult))
             .toList();
 
-        List<ResolvedCandidate> resolved = resolveInvocationCandidates(
+        List<ApplicableInvocationCandidate> resolved = resolveInvocationCandidates(
             candidates, returnType, argumentTypes, argumentSourceInfo, diagnostics, sourceInfo);
 
         if (resolved.size() == 1) {

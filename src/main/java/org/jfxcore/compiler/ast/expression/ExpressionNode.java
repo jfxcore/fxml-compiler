@@ -6,15 +6,19 @@ package org.jfxcore.compiler.ast.expression;
 import org.jetbrains.annotations.Nullable;
 import org.jfxcore.compiler.ast.BindingMode;
 import org.jfxcore.compiler.ast.Node;
+import org.jfxcore.compiler.ast.expression.util.ExpressionResolver;
 import org.jfxcore.compiler.type.TypeInstance;
 
 public interface ExpressionNode extends Node {
 
     int NO_BINDING_DISTANCE = Integer.MAX_VALUE;
 
-    BindingEmitterInfo toEmitter(BindingMode bindingMode,
-                                 TypeInstance invokingType,
-                                 @Nullable TypeInstance targetType);
+    default ExpressionResolution resolve(
+            BindingMode bindingMode,
+            TypeInstance invokingType,
+            @Nullable TypeInstance targetType) {
+        return ExpressionResolver.resolve(this, bindingMode, invokingType, targetType);
+    }
 
     /**
      * Gets the smallest binding distance referenced by this expression. Expressions without a

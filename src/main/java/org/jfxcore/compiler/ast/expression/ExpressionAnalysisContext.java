@@ -3,6 +3,7 @@
 
 package org.jfxcore.compiler.ast.expression;
 
+import org.jetbrains.annotations.Nullable;
 import org.jfxcore.compiler.ast.BindingMode;
 import org.jfxcore.compiler.ast.Node;
 import org.jfxcore.compiler.ast.ValueNode;
@@ -24,12 +25,17 @@ public final class ExpressionAnalysisContext {
 
     public static final class Input {
         private final Node expression;
+        private final @Nullable ExpressionResolution resolution;
         private TypeDeclaration parameterType;
         private int localIndex = -1;
 
-        private Input(Node expression, TypeInstance sourceType) {
+        private Input(
+                Node expression,
+                TypeInstance sourceType,
+                @Nullable ExpressionResolution resolution) {
             this.expression = expression;
             this.parameterType = sourceType.declaration();
+            this.resolution = resolution;
         }
 
         public Node expression() {
@@ -38,6 +44,10 @@ public final class ExpressionAnalysisContext {
 
         public TypeDeclaration parameterType() {
             return parameterType;
+        }
+
+        public @Nullable ExpressionResolution resolution() {
+            return resolution;
         }
 
         public int localIndex() {
@@ -92,8 +102,15 @@ public final class ExpressionAnalysisContext {
             throw new IllegalStateException("Expression input slots have already been allocated");
         }
 
-        TypeInstance sourceType = resolveInputType(expression);
-        Input input = new Input(expression, sourceType);
+        ExpressionResolution resolution = expression instanceof ExpressionNode expressionNode
+            ? expressionNode.resolve(bindingMode, invokingType, null)
+            : null;
+
+        TypeInstance sourceType = resolution != null
+            ? resolution.getTypeInfo().valueType()
+            : resolveNonExpressionInputType(expression);
+
+        Input input = new Input(expression, sourceType, resolution);
         inputsByNode.put(node, input);
         inputs.add(input);
         return sourceType;
@@ -155,11 +172,7 @@ public final class ExpressionAnalysisContext {
         return List.copyOf(inputs);
     }
 
-    private TypeInstance resolveInputType(Node expression) {
-        if (expression instanceof ExpressionNode expressionNode) {
-            return expressionNode.toEmitter(bindingMode, invokingType, null).getValueType();
-        }
-
+    private TypeInstance resolveNonExpressionInputType(Node expression) {
         if (expression instanceof ValueNode) {
             return TypeHelper.getTypeInstance(expression);
         }

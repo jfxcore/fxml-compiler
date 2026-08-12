@@ -3,22 +3,21 @@
 
 package org.jfxcore.compiler.ast.text;
 
-import org.jfxcore.compiler.ast.TypeNode;
-import org.jfxcore.compiler.ast.ValueNode;
+import org.jfxcore.compiler.ast.AbstractSyntaxNode;
+import org.jfxcore.compiler.ast.SyntaxNode;
 import org.jfxcore.compiler.ast.Visitor;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import java.util.Objects;
 
 /**
- * A named member selected from an arbitrary postfix receiver. Without an enclosing
- * {@link InvocationNode}, this node has ordinary property-path semantics.
+ * A named member selected from an arbitrary postfix receiver.
  */
-public final class SelectedMemberNode extends DerivedTextNode {
+public final class SelectedMemberNode extends AbstractSyntaxNode {
 
-    private ValueNode receiver;
+    private SyntaxNode receiver;
     private TextSegmentNode member;
 
-    public SelectedMemberNode(ValueNode receiver, TextSegmentNode member, SourceInfo sourceInfo) {
+    public SelectedMemberNode(SyntaxNode receiver, TextSegmentNode member, SourceInfo sourceInfo) {
         super(sourceInfo);
         this.receiver = checkNotNull(receiver);
         this.member = checkNotNull(member);
@@ -28,13 +27,7 @@ public final class SelectedMemberNode extends DerivedTextNode {
         }
     }
 
-    private SelectedMemberNode(ValueNode receiver, TextSegmentNode member, TypeNode type, SourceInfo sourceInfo) {
-        super(type, sourceInfo);
-        this.receiver = checkNotNull(receiver);
-        this.member = checkNotNull(member);
-    }
-
-    public ValueNode getReceiver() {
+    public SyntaxNode getReceiver() {
         return receiver;
     }
 
@@ -43,34 +36,27 @@ public final class SelectedMemberNode extends DerivedTextNode {
     }
 
     @Override
-    public String formatText() {
-        return formatValue(receiver)
-            + (member.isObservableSelector() ? "::" : ".")
-            + member.formatText();
+    public String format() {
+        return format(receiver) + (member.isObservableSelector() ? "::" : ".") + member.format();
     }
 
     @Override
     public void acceptChildren(Visitor visitor) {
-        super.acceptChildren(visitor);
-        receiver = (ValueNode)receiver.accept(visitor);
+        receiver = (SyntaxNode)receiver.accept(visitor);
         member = (TextSegmentNode)member.accept(visitor);
     }
 
     @Override
     public SelectedMemberNode deepClone() {
-        return new SelectedMemberNode(
-            receiver.deepClone(), member.deepClone(), getType().deepClone(), getSourceInfo()).copy(this);
+        return new SelectedMemberNode(receiver.deepClone(), member.deepClone(), getSourceInfo()).copy(this);
     }
 
     @Override
-    public boolean equals(Object o) {
-        return super.equals(o)
-            && receiver.equals(((SelectedMemberNode)o).receiver)
-            && member.equals(((SelectedMemberNode)o).member);
+    public boolean equals(Object obj) {
+        return obj instanceof SelectedMemberNode other
+            && receiver.equals(other.receiver) && member.equals(other.member);
     }
 
     @Override
-    public int hashCode() {
-        return Objects.hash(super.hashCode(), receiver, member);
-    }
+    public int hashCode() { return Objects.hash(receiver, member); }
 }

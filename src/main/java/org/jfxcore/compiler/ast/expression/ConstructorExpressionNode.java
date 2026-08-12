@@ -5,17 +5,11 @@ package org.jfxcore.compiler.ast.expression;
 
 import org.jetbrains.annotations.Nullable;
 import org.jfxcore.compiler.ast.AbstractNode;
-import org.jfxcore.compiler.ast.BindingMode;
 import org.jfxcore.compiler.ast.Node;
 import org.jfxcore.compiler.ast.Visitor;
-import org.jfxcore.compiler.ast.expression.util.ObservableConstructorEmitterFactory;
-import org.jfxcore.compiler.ast.expression.util.SimpleConstructorEmitterFactory;
 import org.jfxcore.compiler.ast.text.PathNode;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
-import org.jfxcore.compiler.diagnostic.errors.BindingSourceErrors;
-import org.jfxcore.compiler.diagnostic.errors.GeneralErrors;
 import org.jfxcore.compiler.type.TypeDeclaration;
-import org.jfxcore.compiler.type.TypeInstance;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -95,30 +89,6 @@ public final class ConstructorExpressionNode extends AbstractNode implements Exp
         }
 
         return result;
-    }
-
-    @Override
-    public BindingEmitterInfo toEmitter(
-            BindingMode bindingMode,
-            TypeInstance invokingType,
-            @Nullable TypeInstance targetType) {
-        if (bindingMode.isContent()) {
-            throw GeneralErrors.expressionNotApplicable(getSourceInfo(), false);
-        }
-
-        if (bindingMode.isReverse()) {
-            throw BindingSourceErrors.expressionNotInvertible(getSourceInfo());
-        }
-
-        BindingEmitterInfo emitterInfo = bindingMode.isObservable()
-            ? new ObservableConstructorEmitterFactory(this, invokingType).newInstance(bindingMode.isBidirectional())
-            : new SimpleConstructorEmitterFactory(this, invokingType).newInstance();
-
-        if (emitterInfo == null) {
-            emitterInfo = new SimpleConstructorEmitterFactory(this, invokingType).newInstance();
-        }
-
-        return emitterInfo;
     }
 
     @Override

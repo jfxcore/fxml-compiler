@@ -4,10 +4,10 @@
 package org.jfxcore.compiler.util;
 
 import org.jfxcore.compiler.ast.DocumentNode;
+import org.jfxcore.compiler.ast.LiteralValueNode;
 import org.jfxcore.compiler.ast.ObjectNode;
 import org.jfxcore.compiler.ast.PropertyNode;
 import org.jfxcore.compiler.ast.TypeNode;
-import org.jfxcore.compiler.ast.text.TextNode;
 import org.jfxcore.compiler.diagnostic.ErrorCode;
 import org.jfxcore.compiler.diagnostic.MarkupException;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
@@ -38,7 +38,7 @@ public class FileUtilTest {
                 new TypeNode("TestNode", SourceInfo.none()),
                 List.of(new PropertyNode(
                     new String[] {"subclass"}, "fx:subclass",
-                    TextNode.createRawUnresolved("foo.bar.MyCustomNode", SourceInfo.none()),
+                    new LiteralValueNode("foo.bar.MyCustomNode", SourceInfo.none()),
                     true, false, SourceInfo.none())),
                 List.of(), false, SourceInfo.none()));
 
@@ -53,7 +53,7 @@ public class FileUtilTest {
                 new TypeNode("TestNode", SourceInfo.none()),
                 List.of(new PropertyNode(
                     new String[] {"subclass"}, "fx:subclass",
-                    TextNode.createRawUnresolved("foo.bar.AnotherName", SourceInfo.none()),
+                    new LiteralValueNode("foo.bar.AnotherName", SourceInfo.none()),
                     true, false, SourceInfo.none())),
                 List.of(), false, SourceInfo.none()));
 
@@ -69,7 +69,7 @@ public class FileUtilTest {
                 new TypeNode("TestNode", SourceInfo.none()),
                 List.of(new PropertyNode(
                     new String[] {"subclass"}, "fx:subclass",
-                    TextNode.createRawUnresolved("MyCustomNode", SourceInfo.none()),
+                    new LiteralValueNode("MyCustomNode", SourceInfo.none()),
                     true, false, SourceInfo.none())),
                 List.of(), false, SourceInfo.none()));
 
@@ -85,7 +85,7 @@ public class FileUtilTest {
                 new TypeNode("TestNode", SourceInfo.none()),
                 List.of(new PropertyNode(
                     new String[] {"className"}, "fx:className",
-                    TextNode.createRawUnresolved("MyCustomFileName", SourceInfo.none()),
+                    new LiteralValueNode("MyCustomFileName", SourceInfo.none()),
                     true, false, SourceInfo.none())),
                 List.of(), false, SourceInfo.none()));
 
@@ -100,7 +100,7 @@ public class FileUtilTest {
                 new TypeNode("TestNode", SourceInfo.none()),
                 List.of(new PropertyNode(
                     new String[] {"className"}, "fx:className",
-                    TextNode.createRawUnresolved("foo.bar.MyCustomFileName", SourceInfo.none()),
+                    new LiteralValueNode("foo.bar.MyCustomFileName", SourceInfo.none()),
                     true, false, SourceInfo.none())),
                 List.of(), false, SourceInfo.none()));
 

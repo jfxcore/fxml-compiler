@@ -3,40 +3,23 @@
 
 package org.jfxcore.compiler.ast.text;
 
-import org.jfxcore.compiler.ast.TypeNode;
-import org.jfxcore.compiler.ast.ValueNode;
+import org.jfxcore.compiler.ast.AbstractSyntaxNode;
+import org.jfxcore.compiler.ast.SyntaxNode;
 import org.jfxcore.compiler.ast.Visitor;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import java.util.Objects;
 
-public class BinaryOperatorNode extends DerivedTextNode {
+public final class BinaryOperatorNode extends AbstractSyntaxNode {
 
     private final BinaryOperator operator;
     private final SourceInfo operatorSourceInfo;
-    private ValueNode left;
-    private ValueNode right;
+    private SyntaxNode left;
+    private SyntaxNode right;
 
     public BinaryOperatorNode(
-            BinaryOperator operator,
-            ValueNode left,
-            ValueNode right,
-            SourceInfo operatorSourceInfo,
-            SourceInfo sourceInfo) {
+            BinaryOperator operator, SyntaxNode left, SyntaxNode right,
+            SourceInfo operatorSourceInfo, SourceInfo sourceInfo) {
         super(sourceInfo);
-        this.operator = checkNotNull(operator);
-        this.left = checkNotNull(left);
-        this.right = checkNotNull(right);
-        this.operatorSourceInfo = checkNotNull(operatorSourceInfo);
-    }
-
-    private BinaryOperatorNode(
-            BinaryOperator operator,
-            ValueNode left,
-            ValueNode right,
-            SourceInfo operatorSourceInfo,
-            TypeNode type,
-            SourceInfo sourceInfo) {
-        super(type, sourceInfo);
         this.operator = checkNotNull(operator);
         this.left = checkNotNull(left);
         this.right = checkNotNull(right);
@@ -47,11 +30,11 @@ public class BinaryOperatorNode extends DerivedTextNode {
         return operator;
     }
 
-    public ValueNode getLeft() {
+    public SyntaxNode getLeft() {
         return left;
     }
 
-    public ValueNode getRight() {
+    public SyntaxNode getRight() {
         return right;
     }
 
@@ -60,38 +43,33 @@ public class BinaryOperatorNode extends DerivedTextNode {
     }
 
     @Override
-    public String formatText() {
-        return formatValue(left) + operator.getSymbol() + formatValue(right);
+    public String format() {
+        return format(left) + operator.getSymbol() + format(right);
     }
 
     @Override
     public void acceptChildren(Visitor visitor) {
-        super.acceptChildren(visitor);
-        left = (ValueNode)left.accept(visitor);
-        right = (ValueNode)right.accept(visitor);
+        left = (SyntaxNode)left.accept(visitor);
+        right = (SyntaxNode)right.accept(visitor);
     }
 
     @Override
     public BinaryOperatorNode deepClone() {
         return new BinaryOperatorNode(
-            operator, left.deepClone(), right.deepClone(), operatorSourceInfo,
-            getType().deepClone(), getSourceInfo()).copy(this);
+            operator, left.deepClone(), right.deepClone(), operatorSourceInfo, getSourceInfo()).copy(this);
     }
 
     @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        if (!super.equals(o)) return false;
-        BinaryOperatorNode that = (BinaryOperatorNode)o;
-        return operator == that.operator
-            && left.equals(that.left)
-            && right.equals(that.right)
-            && operatorSourceInfo.equals(that.operatorSourceInfo);
+    public boolean equals(Object obj) {
+        return obj instanceof BinaryOperatorNode other
+            && operator == other.operator
+            && left.equals(other.left)
+            && right.equals(other.right)
+            && operatorSourceInfo.equals(other.operatorSourceInfo);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(super.hashCode(), operator, left, right, operatorSourceInfo);
+        return Objects.hash(operator, left, right, operatorSourceInfo);
     }
 }

@@ -4,12 +4,15 @@
 package org.jfxcore.compiler.parse;
 
 import org.jfxcore.compiler.TestBase;
+import org.jfxcore.compiler.ast.AttributeValueNode;
 import org.jfxcore.compiler.ast.DocumentNode;
+import org.jfxcore.compiler.ast.LiteralValueNode;
+import org.jfxcore.compiler.ast.Node;
 import org.jfxcore.compiler.ast.ObjectNode;
+import org.jfxcore.compiler.ast.PropertyNode;
 import org.jfxcore.compiler.ast.intrinsic.Intrinsics;
-import org.jfxcore.compiler.ast.text.ListNode;
-import org.jfxcore.compiler.ast.text.NumberNode;
-import org.jfxcore.compiler.ast.text.TextNode;
+import org.jfxcore.compiler.ast.text.BinaryOperatorNode;
+import org.jfxcore.compiler.ast.text.PathNode;
 import org.jfxcore.compiler.diagnostic.ErrorCode;
 import org.jfxcore.compiler.diagnostic.Location;
 import org.jfxcore.compiler.diagnostic.MarkupException;
@@ -160,9 +163,9 @@ public class FxmlParserTest extends TestBase {
 
         var property = ((ObjectNode)document.getRoot()).findProperty("text");
         assertNotNull(property);
-        var objectNode = assertInstanceOf(ObjectNode.class, property.getValues().get(0));
+        var objectNode = assertInstanceOf(ObjectNode.class, getSingleAttributeItem(property));
         assertEquals("StaticResource", objectNode.getType().getMarkupName());
-        assertTrue(objectNode.getChildren().get(0) instanceof TextNode textNode && textNode.getText().equals("greeting"));
+        assertTrue(objectNode.getChildren().get(0) instanceof LiteralValueNode literal && literal.getText().equals("greeting"));
         assertEquals("formatArguments", objectNode.getProperties().get(0).getName());
     }
 
@@ -177,9 +180,9 @@ public class FxmlParserTest extends TestBase {
 
         var property = ((ObjectNode)document.getRoot()).findProperty("text");
         assertNotNull(property);
-        var objectNode = assertInstanceOf(ObjectNode.class, property.getValues().get(0));
+        var objectNode = assertInstanceOf(ObjectNode.class, getSingleAttributeItem(property));
         assertEquals("org.jfxcore.markup.resource.StaticResource", objectNode.getType().getMarkupName());
-        assertTrue(objectNode.getChildren().get(0) instanceof TextNode textNode && textNode.getText().equals("greeting"));
+        assertTrue(objectNode.getChildren().get(0) instanceof LiteralValueNode literal && literal.getText().equals("greeting"));
         assertEquals("formatArguments", objectNode.getProperties().get(0).getName());
     }
 
@@ -195,15 +198,15 @@ public class FxmlParserTest extends TestBase {
         var root = (ObjectNode)document.getRoot();
         var textProperty = root.findProperty("text");
         assertNotNull(textProperty);
-        var textValue = assertInstanceOf(ObjectNode.class, textProperty.getValues().get(0));
+        var textValue = assertInstanceOf(ObjectNode.class, getSingleAttributeItem(textProperty));
         assertEquals("org.jfxcore.markup.resource.StaticResource", textValue.getType().getName());
-        assertTrue(textValue.getChildren().get(0) instanceof TextNode textNode && textNode.getText().equals("greeting"));
+        assertTrue(textValue.getChildren().get(0) instanceof LiteralValueNode literal && literal.getText().equals("greeting"));
 
         var graphicProperty = root.findProperty("graphic");
         assertNotNull(graphicProperty);
-        var graphicValue = assertInstanceOf(ObjectNode.class, graphicProperty.getValues().get(0));
+        var graphicValue = assertInstanceOf(ObjectNode.class, getSingleAttributeItem(graphicProperty));
         assertEquals("org.jfxcore.markup.resource.ClassPathResource", graphicValue.getType().getName());
-        assertTrue(graphicValue.getChildren().get(0) instanceof TextNode textNode && textNode.getText().equals("icons/app.png"));
+        assertTrue(graphicValue.getChildren().get(0) instanceof LiteralValueNode literal && literal.getText().equals("icons/app.png"));
     }
 
     @Test
@@ -228,9 +231,9 @@ public class FxmlParserTest extends TestBase {
 
         var property = ((ObjectNode)document.getRoot()).findProperty("text");
         assertNotNull(property);
-        var objectNode = assertInstanceOf(ObjectNode.class, property.getValues().get(0));
+        var objectNode = assertInstanceOf(ObjectNode.class, getSingleAttributeItem(property));
         assertEquals("com.example.CustomResource", objectNode.getType().getName());
-        assertTrue(objectNode.getChildren().get(0) instanceof TextNode textNode && textNode.getText().equals("greeting"));
+        assertTrue(objectNode.getChildren().get(0) instanceof LiteralValueNode literal && literal.getText().equals("greeting"));
     }
 
     @ParameterizedTest
@@ -245,9 +248,9 @@ public class FxmlParserTest extends TestBase {
 
         var property = ((ObjectNode)document.getRoot()).findProperty("text");
         assertNotNull(property);
-        var objectNode = assertInstanceOf(ObjectNode.class, property.getValues().get(0));
+        var objectNode = assertInstanceOf(ObjectNode.class, getSingleAttributeItem(property));
         assertEquals("com.example.CustomResource", objectNode.getType().getName());
-        assertTrue(objectNode.getChildren().get(0) instanceof TextNode textNode && textNode.getText().equals("greeting"));
+        assertTrue(objectNode.getChildren().get(0) instanceof LiteralValueNode literal && literal.getText().equals("greeting"));
     }
 
     @ParameterizedTest
@@ -352,7 +355,7 @@ public class FxmlParserTest extends TestBase {
             + "xmlns:fx=\"http://jfxcore.org/fxml/2.0\" text=\"&#36;{foo}\"/>";
         DocumentNode document = new FxmlParser(source).parseDocument();
         var property = ((ObjectNode)document.getRoot()).findProperty("text");
-        ObjectNode value = assertInstanceOf(ObjectNode.class, property.getValues().get(0));
+        ObjectNode value = assertInstanceOf(ObjectNode.class, getSingleAttributeItem(property));
         int start = source.indexOf("&#36;");
 
         assertEquals(new SourceInfo(0, start, 0, start + 2), value.getType().getSourceInfo());
@@ -423,7 +426,7 @@ public class FxmlParserTest extends TestBase {
         String source = "<Label xmlns=\"http://javafx.com/javafx\" "
             + "xmlns:fx=\"http://jfxcore.org/fxml/2.0\" text=\"&#32;\\&#36;{foo}\"/>";
         DocumentNode document = new FxmlParser(source).parseDocument();
-        TextNode value = getPropertyValue(document, "text");
+        LiteralValueNode value = getPropertyValue(document, "text");
         int start = source.indexOf("&#32;");
         int end = source.indexOf('"', start);
 
@@ -507,15 +510,16 @@ public class FxmlParserTest extends TestBase {
         assertEquals(1, properties.size());
         var values = properties.get(0).getValues();
         assertEquals(1, values.size());
-        assertInstanceOf(ObjectNode.class, values.get(0));
-        assertTrue(((ObjectNode)values.get(0)).getType().isIntrinsic());
+        Node attributeItem = getSingleAttributeItem(properties.get(0));
+        assertInstanceOf(ObjectNode.class, attributeItem);
+        assertTrue(((ObjectNode)attributeItem).getType().isIntrinsic());
 
         var children = ((ObjectNode)document.getRoot()).getChildren();
         assertEquals(1, children.size());
         values = ((ObjectNode)children.get(0)).getChildren();
         assertEquals(1, values.size());
-        assertInstanceOf(TextNode.class, values.get(0));
-        assertEquals("{fx:foo bar}", ((TextNode)values.get(0)).getText());
+        assertInstanceOf(LiteralValueNode.class, values.get(0));
+        assertEquals("{fx:foo bar}", ((LiteralValueNode)values.get(0)).getText());
     }
 
     @Test
@@ -535,26 +539,27 @@ public class FxmlParserTest extends TestBase {
         assertEquals(1, properties.size());
         var values = properties.get(0).getValues();
         assertEquals(1, values.size());
-        var list = assertInstanceOf(ListNode.class, values.get(0)).getValues();
+        var list = assertInstanceOf(AttributeValueNode.class, values.get(0))
+            .getLiteral().getCoercionParts();
         assertEquals(5, list.size());
 
-        var item1 = assertInstanceOf(NumberNode.class, list.get(0));
+        var item1 = assertInstanceOf(LiteralValueNode.class, list.get(0));
         assertEquals("123.5", item1.getText());
         assertSourceInfo(2, 21, 2, 26, item1.getSourceInfo());
 
-        var item2 = assertInstanceOf(TextNode.class, list.get(1));
+        var item2 = assertInstanceOf(LiteralValueNode.class, list.get(1));
         assertEquals("foo", item2.getText());
         assertSourceInfo(3, 21, 3, 24, item2.getSourceInfo());
 
-        var item3 = assertInstanceOf(TextNode.class, list.get(2));
+        var item3 = assertInstanceOf(LiteralValueNode.class, list.get(2));
         assertEquals("bar", item3.getText());
         assertSourceInfo(5, 22, 5, 25, item3.getSourceInfo());
 
-        var item4 = assertInstanceOf(TextNode.class, list.get(3));
+        var item4 = assertInstanceOf(LiteralValueNode.class, list.get(3));
         assertEquals("", item4.getText());
         assertSourceInfo(6, 21, 6, 21, item4.getSourceInfo());
 
-        var item5 = assertInstanceOf(TextNode.class, list.get(4));
+        var item5 = assertInstanceOf(LiteralValueNode.class, list.get(4));
         assertEquals("true", item5.getText());
         assertSourceInfo(7, 21, 7, 25, item5.getSourceInfo());
     }
@@ -564,55 +569,93 @@ public class FxmlParserTest extends TestBase {
         String source = "<Label xmlns=\"http://javafx.com/javafx\" "
             + "userData=\"one&amp;two, &#x1F600;, three\"/>";
         DocumentNode document = new FxmlParser(source).parseDocument();
-        ListNode list = assertInstanceOf(ListNode.class,
-            ((ObjectNode)document.getRoot()).findProperty("userData").getValues().get(0));
+        List<LiteralValueNode> list = getPropertyValue(document, "userData").getCoercionParts();
 
         int firstStart = source.indexOf("one&amp;two");
         int firstEnd = source.indexOf(',', firstStart);
         int secondStart = source.indexOf("&#x1F600;");
         int thirdStart = source.indexOf("three");
 
-        assertEquals("one&two", ((TextNode)list.getValues().get(0)).getText());
-        assertEquals(new SourceInfo(0, firstStart, 0, firstStart + 7), list.getValues().get(0).getSourceInfo());
-        assertEquals("\uD83D\uDE00", ((TextNode)list.getValues().get(1)).getText());
-        assertEquals(new SourceInfo(0, firstStart + 9, 0, firstStart + 11), list.getValues().get(1).getSourceInfo());
-        assertEquals(new SourceInfo(0, firstStart + 13, 0, firstStart + 18), list.getValues().get(2).getSourceInfo());
+        assertEquals("one&two", list.get(0).getText());
+        assertEquals(new SourceInfo(0, firstStart, 0, firstStart + 7), list.get(0).getSourceInfo());
+        assertEquals("\uD83D\uDE00", list.get(1).getText());
+        assertEquals(new SourceInfo(0, firstStart + 9, 0, firstStart + 11), list.get(1).getSourceInfo());
+        assertEquals(new SourceInfo(0, firstStart + 13, 0, firstStart + 18), list.get(2).getSourceInfo());
         assertEquals(
             new SourceInfo(0, firstStart, 0, firstEnd),
-            list.getValues().get(0).getSourceInfo().toOriginal());
+            list.get(0).getSourceInfo().toOriginal());
         assertEquals(
             new SourceInfo(0, secondStart, 0, secondStart + 9),
-            list.getValues().get(1).getSourceInfo().toOriginal());
+            list.get(1).getSourceInfo().toOriginal());
         assertEquals(
             new SourceInfo(0, thirdStart, 0, thirdStart + 5),
-            list.getValues().get(2).getSourceInfo().toOriginal());
+            list.get(2).getSourceInfo().toOriginal());
     }
 
     @Test
     public void Entity_Newline_List_Items_Use_Logical_Lines_With_Raw_Projection() {
         String source = "<Label xmlns=\"http://javafx.com/javafx\" userData=\"one&#10;two\"/>";
         DocumentNode document = new FxmlParser(source).parseDocument();
-        ListNode list = assertInstanceOf(ListNode.class,
-            ((ObjectNode)document.getRoot()).findProperty("userData").getValues().get(0));
+        List<LiteralValueNode> list = getPropertyValue(document, "userData").getCoercionParts();
 
         int firstStart = source.indexOf("one&#10;two");
         int secondStart = source.indexOf("two", firstStart);
 
-        assertEquals(new SourceInfo(0, firstStart, 0, firstStart + 3), list.getValues().get(0).getSourceInfo());
-        assertEquals(new SourceInfo(1, 0, 1, 3), list.getValues().get(1).getSourceInfo());
+        assertEquals(new SourceInfo(0, firstStart, 0, firstStart + 3), list.get(0).getSourceInfo());
+        assertEquals(new SourceInfo(1, 0, 1, 3), list.get(1).getSourceInfo());
         assertEquals(
             new SourceInfo(0, secondStart, 0, secondStart + 3),
-            list.getValues().get(1).getSourceInfo().toOriginal());
+            list.get(1).getSourceInfo().toOriginal());
     }
 
     @Test
     public void Literal_Crlf_Attribute_List_Uses_Second_Line_Columns() {
         String source = "<Label xmlns=\"http://javafx.com/javafx\" userData=\"one,\r\n  two\"/>";
         DocumentNode document = new FxmlParser(source).parseDocument();
-        ListNode list = assertInstanceOf(ListNode.class,
-            ((ObjectNode)document.getRoot()).findProperty("userData").getValues().get(0));
+        List<LiteralValueNode> list = getPropertyValue(document, "userData").getCoercionParts();
 
-        assertEquals(new SourceInfo(1, 2, 1, 5), list.getValues().get(1).getSourceInfo());
+        assertEquals(new SourceInfo(1, 2, 1, 5), list.get(1).getSourceInfo());
+    }
+
+    @Test
+    public void Literal_Leading_And_Trailing_Commas_Preserve_Empty_Coercion_Parts() {
+        DocumentNode document = new FxmlParser(
+            "<Label xmlns=\"http://javafx.com/javafx\" userData=\",one,\"/>").parseDocument();
+        List<LiteralValueNode> parts = getPropertyValue(document, "userData").getCoercionParts();
+
+        assertEquals(List.of("", "one", ""), parts.stream().map(LiteralValueNode::getText).toList());
+    }
+
+    @Test
+    public void Xml_Decoded_Comma_Is_Structural_And_Projects_To_The_Entity() {
+        String source = "<Label xmlns=\"http://javafx.com/javafx\" userData=\"a&#44;b\"/>";
+        DocumentNode document = new FxmlParser(source).parseDocument();
+        List<LiteralValueNode> parts = getPropertyValue(document, "userData").getCoercionParts();
+        int valueStart = source.indexOf("a&#44;b");
+
+        assertEquals(List.of("a", "b"), parts.stream().map(LiteralValueNode::getText).toList());
+        assertEquals(new SourceInfo(0, valueStart, 0, valueStart + 1),
+            parts.get(0).getSourceInfo().toOriginal());
+        assertEquals(new SourceInfo(0, valueStart + 6, 0, valueStart + 7),
+            parts.get(1).getSourceInfo().toOriginal());
+    }
+
+    @Test
+    public void Xml_Intrinsic_Attributes_Use_Declared_Syntax_Modes() {
+        DocumentNode document = new FxmlParser("""
+            <Label xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
+                <fx:Synchronize source="foo + bar" converter="converters.number"
+                                format="formats.decimal" inverseMethod="model.parse"/>
+            </Label>
+        """).parseDocument();
+        ObjectNode root = (ObjectNode)((ObjectNode)document.getRoot()).getChildren().get(0);
+
+        assertInstanceOf(BinaryOperatorNode.class,
+            root.findProperty("source").getValues().get(0).as(AttributeValueNode.class).getSyntax());
+        for (String property : List.of("converter", "format", "inverseMethod")) {
+            assertInstanceOf(PathNode.class,
+                root.findProperty(property).getValues().get(0).as(AttributeValueNode.class).getSyntax());
+        }
     }
 
     private ObjectNode getElement(DocumentNode document, String elementName) {
@@ -629,14 +672,14 @@ public class FxmlParserTest extends TestBase {
             .getText();
     }
 
-    private TextNode getPropertyValue(DocumentNode document, String propertyName) {
+    private LiteralValueNode getPropertyValue(DocumentNode document, String propertyName) {
         return document
             .getRoot().as(ObjectNode.class)
             .getProperties().stream()
             .filter(p -> p.getName().equals(propertyName))
             .findFirst()
             .orElseThrow()
-            .getValues().get(0).as(TextNode.class);
+            .getValues().get(0).as(AttributeValueNode.class).getLiteral();
     }
 
     private String getPropertyText(DocumentNode document, String propertyName) {
@@ -650,14 +693,26 @@ public class FxmlParserTest extends TestBase {
             + encodedOperator + "}\"/>";
         DocumentNode document = new FxmlParser(source).parseDocument();
         ObjectNode extension = assertInstanceOf(ObjectNode.class,
-            ((ObjectNode)document.getRoot()).findProperty("text").getValues().get(0));
-        TextNode operator = assertInstanceOf(TextNode.class, extension.getChildren().get(0));
+            getSingleAttributeItem(((ObjectNode)document.getRoot()).findProperty("text")));
+        LiteralValueNode operator = assertInstanceOf(LiteralValueNode.class, extension.getChildren().get(0));
         int originalStart = source.indexOf(encodedOperator);
         int logicalStart = source.indexOf(expressionStart) + expressionStart.length();
 
         assertEquals(decodedOperator, operator.getText());
         assertEquals(new SourceInfo(0, logicalStart, 0, logicalStart + decodedOperator.length()), operator.getSourceInfo());
         assertEquals(new SourceInfo(0, originalStart, 0, originalStart + encodedOperator.length()), operator.getSourceInfo().toOriginal());
+    }
+
+    private Node getSingleAttributeItem(PropertyNode property) {
+        AttributeValueNode value = property.getValues().get(0).as(AttributeValueNode.class);
+        return switch (value.getForm()) {
+            case LITERAL -> value.getLiteral();
+            case SEQUENCE -> {
+                assertEquals(1, value.getItems().size());
+                yield value.getItems().get(0);
+            }
+            case SYNTAX -> value.getSyntax();
+        };
     }
 
     public static void assertSourceInfo(

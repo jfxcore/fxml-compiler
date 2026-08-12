@@ -3,38 +3,33 @@
 
 package org.jfxcore.compiler.ast.expression.util;
 
-import org.jetbrains.annotations.Nullable;
 import org.jfxcore.compiler.ast.BindingMode;
-import org.jfxcore.compiler.ast.ObservableDependencyKind;
-import org.jfxcore.compiler.ast.ValueSourceKind;
 import org.jfxcore.compiler.ast.emit.EmitMethodCallNode;
 import org.jfxcore.compiler.ast.emit.ValueEmitterNode;
-import org.jfxcore.compiler.ast.expression.BindingEmitterInfo;
 import org.jfxcore.compiler.ast.expression.FunctionExpressionNode;
 import org.jfxcore.compiler.type.MethodDeclaration;
-import org.jfxcore.compiler.type.TypeHelper;
 import org.jfxcore.compiler.type.TypeInstance;
-import org.jfxcore.compiler.util.AccessVerifier;
+import org.jfxcore.compiler.util.ApplicableInvocationCandidate;
 
-public class SimpleFunctionEmitterFactory extends AbstractFunctionEmitterFactory implements EmitterFactory {
+final class SimpleFunctionEmitterFactory extends AbstractFunctionEmitterFactory {
 
     private final FunctionExpressionNode functionExpression;
+    private final ApplicableInvocationCandidate selected;
+    private final boolean preferObservable;
 
-    public SimpleFunctionEmitterFactory(FunctionExpressionNode functionExpression,
-                                        TypeInstance invokingType,
-                                        @Nullable TypeInstance targetType) {
-        super(invokingType, targetType);
+    SimpleFunctionEmitterFactory(
+            FunctionExpressionNode functionExpression,
+            TypeInstance invokingType,
+            ApplicableInvocationCandidate selected,
+            boolean preferObservable) {
+        super(invokingType);
         this.functionExpression = functionExpression;
+        this.selected = selected;
+        this.preferObservable = preferObservable;
     }
 
-    @Override
-    public BindingEmitterInfo newInstance() {
-        InvocationInfo invocationInfo = createInvocation(functionExpression, false, false);
-
-        AccessVerifier.verifyAccessible(
-            invocationInfo.function().getBehavior(),
-            functionExpression.getInvocationContext(),
-            functionExpression.getPath().getSourceInfo());
+    ValueEmitterNode newInstance() {
+        InvocationInfo invocationInfo = createInvocation(functionExpression, false, preferObservable, selected);
 
         ValueEmitterNode value = new EmitMethodCallNode(
             (MethodDeclaration)invocationInfo.function().getBehavior(), invocationInfo.type(),
@@ -43,16 +38,6 @@ public class SimpleFunctionEmitterFactory extends AbstractFunctionEmitterFactory
 
         value = functionExpression.getPath().getOperator().toEmitter(value, BindingMode.ONCE);
 
-        return new BindingEmitterInfo(
-            value,
-            TypeHelper.getTypeInstance(value),
-            null,
-            ValueSourceKind.NONE,
-            ObservableDependencyKind.get(TypeHelper.getTypeDeclaration(value)),
-            invocationInfo.function().getBehavior().declaringType(),
-            invocationInfo.function().getBehavior().name(),
-            true,
-            false,
-            functionExpression.getSourceInfo());
+        return value;
     }
 }

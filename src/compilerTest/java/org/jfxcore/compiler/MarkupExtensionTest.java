@@ -713,7 +713,10 @@ public class MarkupExtensionTest extends CompilerTestBase {
                           doubleProp1="{ObjectSupplierWithReturnTypeAnnotation param={ObjectSupplierWithoutReturnTypeAnnotation}}"/>
             """));
 
-            assertEquals(ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT, ex.getDiagnostic().getCode());
+            assertEquals(ErrorCode.CONSTRUCTOR_NOT_FOUND, ex.getDiagnostic().getCode());
+            assertEquals(2, ex.getDiagnostic().getCauses().length);
+            assertTrue(Arrays.stream(ex.getDiagnostic().getCauses()).allMatch(
+                cause -> cause.getCode() == ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT));
             assertCodeHighlight("{ObjectSupplierWithoutReturnTypeAnnotation}", ex);
         }
 
@@ -735,7 +738,10 @@ public class MarkupExtensionTest extends CompilerTestBase {
                 </TestPane>
             """));
 
-            assertEquals(ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT, ex.getDiagnostic().getCode());
+            assertEquals(ErrorCode.CONSTRUCTOR_NOT_FOUND, ex.getDiagnostic().getCode());
+            assertEquals(2, ex.getDiagnostic().getCauses().length);
+            assertTrue(Arrays.stream(ex.getDiagnostic().getCauses()).allMatch(
+                cause -> cause.getCode() == ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT));
             assertCodeHighlight("<ObjectSupplierWithoutReturnTypeAnnotation/>", ex);
         }
 
@@ -822,7 +828,7 @@ public class MarkupExtensionTest extends CompilerTestBase {
                           doubleProp1="{ObjectSupplierWithReturnTypeAnnotation param={DoublePropertyConsumer}}"/>
             """));
 
-            assertEquals(ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT, ex.getDiagnostic().getCode());
+            assertEquals(ErrorCode.INVALID_MARKUP_EXTENSION_USAGE, ex.getDiagnostic().getCode());
             assertCodeHighlight("{DoublePropertyConsumer}", ex);
         }
 

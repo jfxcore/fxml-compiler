@@ -144,6 +144,44 @@ public class ClassPathResourceExtensionTest extends CompilerTestBase {
     }
 
     @Test
+    public void Multiple_Resources_Can_Be_Added_With_Attribute_Sequence_Syntax() {
+        Label root = compileAndRun("""
+            <?import javafx.scene.control.*?>
+            <Label xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                   stylesheets="@image.jpg, @'image with   spaces.jpg'"/>
+        """);
+
+        assertEquals(2, root.getStylesheets().size());
+        assertTrue(root.getStylesheets().get(0).endsWith("org/jfxcore/compiler/image.jpg"));
+        assertTrue(root.getStylesheets().get(1).endsWith(
+            "org/jfxcore/compiler/image%20with%20%20%20spaces.jpg"));
+    }
+
+    @Test
+    public void Literal_Then_Resource_Stylesheets_Are_Item_Local() {
+        Label root = compileAndRun("""
+            <?import javafx.scene.control.*?>
+            <Label xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                   stylesheets="plain.css, @image.jpg"/>
+        """);
+
+        assertEquals("plain.css", root.getStylesheets().get(0));
+        assertTrue(root.getStylesheets().get(1).endsWith("org/jfxcore/compiler/image.jpg"));
+    }
+
+    @Test
+    public void Resource_Then_Literal_Stylesheets_Are_Item_Local() {
+        Label root = compileAndRun("""
+            <?import javafx.scene.control.*?>
+            <Label xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                   stylesheets="@image.jpg, plain.css"/>
+        """);
+
+        assertTrue(root.getStylesheets().get(0).endsWith("org/jfxcore/compiler/image.jpg"));
+        assertEquals("plain.css", root.getStylesheets().get(1));
+    }
+
+    @Test
     public void Resource_Cannot_Be_Assigned_To_Incompatible_Property() {
         MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
             <?import javafx.scene.control.*?>

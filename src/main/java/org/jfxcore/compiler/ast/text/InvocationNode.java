@@ -3,8 +3,9 @@
 
 package org.jfxcore.compiler.ast.text;
 
-import org.jfxcore.compiler.ast.TypeNode;
-import org.jfxcore.compiler.ast.ValueNode;
+import org.jfxcore.compiler.ast.AbstractSyntaxNode;
+import org.jfxcore.compiler.ast.Node;
+import org.jfxcore.compiler.ast.SyntaxNode;
 import org.jfxcore.compiler.ast.Visitor;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import java.util.ArrayList;
@@ -14,18 +15,18 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
- * Source-level invocation whose target is neutral between a method and a constructor.
+ * Source-level invocation whose target has not yet been resolved as either a method or a constructor.
  */
-public final class InvocationNode extends DerivedTextNode {
+public final class InvocationNode extends AbstractSyntaxNode {
 
-    private final List<ValueNode> arguments;
+    private final List<Node> arguments;
     private final SourceInfo openParenSourceInfo;
     private final SourceInfo closeParenSourceInfo;
-    private ValueNode target;
+    private SyntaxNode target;
 
     public InvocationNode(
-            ValueNode target,
-            Collection<? extends ValueNode> arguments,
+            SyntaxNode target,
+            Collection<? extends Node> arguments,
             SourceInfo openParenSourceInfo,
             SourceInfo closeParenSourceInfo,
             SourceInfo sourceInfo) {
@@ -36,25 +37,11 @@ public final class InvocationNode extends DerivedTextNode {
         this.closeParenSourceInfo = checkNotNull(closeParenSourceInfo);
     }
 
-    private InvocationNode(
-            ValueNode target,
-            Collection<? extends ValueNode> arguments,
-            SourceInfo openParenSourceInfo,
-            SourceInfo closeParenSourceInfo,
-            TypeNode type,
-            SourceInfo sourceInfo) {
-        super(type, sourceInfo);
-        this.target = checkTarget(target);
-        this.arguments = new ArrayList<>(checkNotNull(arguments));
-        this.openParenSourceInfo = checkNotNull(openParenSourceInfo);
-        this.closeParenSourceInfo = checkNotNull(closeParenSourceInfo);
-    }
-
-    public ValueNode getTarget() {
+    public SyntaxNode getTarget() {
         return target;
     }
 
-    public List<ValueNode> getArguments() {
+    public List<Node> getArguments() {
         return arguments;
     }
 
@@ -67,41 +54,39 @@ public final class InvocationNode extends DerivedTextNode {
     }
 
     @Override
-    public String formatText() {
-        return formatValue(target) + "(" + arguments.stream()
-            .map(TextNode::formatValue)
+    public String format() {
+        return format(target) + "(" + arguments.stream()
+            .map(AbstractSyntaxNode::format)
             .collect(Collectors.joining(",")) + ")";
     }
 
     @Override
     public void acceptChildren(Visitor visitor) {
-        super.acceptChildren(visitor);
-        target = checkTarget((ValueNode)target.accept(visitor));
-        acceptChildren(arguments, visitor, ValueNode.class);
+        target = checkTarget((SyntaxNode)target.accept(visitor));
+        acceptChildren(arguments, visitor, Node.class);
     }
 
     @Override
     public InvocationNode deepClone() {
         return new InvocationNode(
-            target.deepClone(), deepClone(arguments), openParenSourceInfo, closeParenSourceInfo,
-            getType().deepClone(), getSourceInfo()).copy(this);
+            target.deepClone(), deepClone(arguments), openParenSourceInfo,
+            closeParenSourceInfo, getSourceInfo()).copy(this);
     }
 
     @Override
-    public boolean equals(Object o) {
-        return super.equals(o)
-            && target.equals(((InvocationNode)o).target)
-            && arguments.equals(((InvocationNode)o).arguments)
-            && openParenSourceInfo.equals(((InvocationNode)o).openParenSourceInfo)
-            && closeParenSourceInfo.equals(((InvocationNode)o).closeParenSourceInfo);
+    public boolean equals(Object obj) {
+        return obj instanceof InvocationNode other && target.equals(other.target)
+            && arguments.equals(other.arguments)
+            && openParenSourceInfo.equals(other.openParenSourceInfo)
+            && closeParenSourceInfo.equals(other.closeParenSourceInfo);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(super.hashCode(), target, arguments, openParenSourceInfo, closeParenSourceInfo);
+        return Objects.hash(target, arguments, openParenSourceInfo, closeParenSourceInfo);
     }
 
-    private static ValueNode checkTarget(ValueNode target) {
+    private static SyntaxNode checkTarget(SyntaxNode target) {
         checkNotNull(target);
 
         if (target instanceof SelectedMemberNode) {

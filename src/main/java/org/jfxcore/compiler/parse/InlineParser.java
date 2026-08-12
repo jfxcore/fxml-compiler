@@ -4,19 +4,25 @@
 package org.jfxcore.compiler.parse;
 
 import org.jetbrains.annotations.Nullable;
+import org.jfxcore.compiler.ast.AttributeValueNode;
+import org.jfxcore.compiler.ast.ContentSelectionNode;
+import org.jfxcore.compiler.ast.IdentifierNode;
+import org.jfxcore.compiler.ast.InlineArgumentSequenceNode;
+import org.jfxcore.compiler.ast.LiteralValueNode;
+import org.jfxcore.compiler.ast.Node;
 import org.jfxcore.compiler.ast.ObjectNode;
 import org.jfxcore.compiler.ast.PropertyNode;
+import org.jfxcore.compiler.ast.SyntaxNode;
 import org.jfxcore.compiler.ast.TypeNode;
-import org.jfxcore.compiler.ast.ValueNode;
+import org.jfxcore.compiler.ast.intrinsic.Intrinsic;
+import org.jfxcore.compiler.ast.intrinsic.IntrinsicProperty;
 import org.jfxcore.compiler.ast.intrinsic.Intrinsics;
 import org.jfxcore.compiler.ast.text.AttachedSegmentNode;
 import org.jfxcore.compiler.ast.text.BinaryOperator;
 import org.jfxcore.compiler.ast.text.BinaryOperatorNode;
-import org.jfxcore.compiler.ast.text.CompositeNode;
 import org.jfxcore.compiler.ast.text.ContextSelector;
 import org.jfxcore.compiler.ast.text.ContextSelectorNode;
 import org.jfxcore.compiler.ast.text.InvocationNode;
-import org.jfxcore.compiler.ast.text.ListNode;
 import org.jfxcore.compiler.ast.text.LiteralKeywordNode;
 import org.jfxcore.compiler.ast.text.NumberNode;
 import org.jfxcore.compiler.ast.text.ParenthesizedNode;
@@ -25,7 +31,6 @@ import org.jfxcore.compiler.ast.text.PathSegmentNode;
 import org.jfxcore.compiler.ast.text.SelectedMemberNode;
 import org.jfxcore.compiler.ast.text.StringLiteralNode;
 import org.jfxcore.compiler.ast.text.TextSegmentNode;
-import org.jfxcore.compiler.ast.text.TextNode;
 import org.jfxcore.compiler.ast.text.UnaryOperator;
 import org.jfxcore.compiler.ast.text.UnaryOperatorNode;
 import org.jfxcore.compiler.diagnostic.ErrorCode;
@@ -36,6 +41,7 @@ import org.jfxcore.compiler.diagnostic.errors.ParserErrors;
 import java.util.Map;
 import java.util.ArrayList;
 import java.util.List;
+import org.jfxcore.compiler.util.StringHelper;
 
 import static org.jfxcore.compiler.parse.CurlyTokenType.*;
 
@@ -50,11 +56,12 @@ public class InlineParser {
 
     private enum ParseMode {
         VALUE,
-        EXPRESSION
+        EXPRESSION,
+        PATH_REFERENCE
     }
 
     private record InvocationInfo(
-            List<ValueNode> arguments,
+            List<Node> arguments,
             SourceInfo openParenSourceInfo,
             SourceInfo closeParenSourceInfo) {}
 
@@ -92,7 +99,7 @@ public class InlineParser {
         this.prefixMappings = Map.copyOf(prefixMappings);
     }
 
-    public ObjectNode parseObject() {
+    public ObjectNode parseObjectStrict() {
         InlineTokenizer tokenizer = new InlineTokenizer(input);
         ObjectNode result = parseObjectExpression(tokenizer, tryGetSyntaxMapping(tokenizer));
         if (!tokenizer.isEmpty()) {
@@ -102,15 +109,24 @@ public class InlineParser {
         return result;
     }
 
-    public ValueNode parsePath() {
+    public SyntaxNode parsePathReferenceStrict() {
         InlineTokenizer tokenizer = new InlineTokenizer(input);
-        return parseSelectedMemberSuffixes(
-            tokenizer, parsePathOrInvocation(tokenizer, ParseMode.EXPRESSION), ParseMode.EXPRESSION);
+        SyntaxNode result = parseSelectedMemberSuffixes(tokenizer, parsePathOrInvocation(tokenizer));
+
+        if (!tokenizer.isEmpty()) {
+            throw ParserErrors.unexpectedToken(tokenizer.peekNotNull());
+        }
+
+        if (!(result instanceof PathNode) && !(result instanceof SelectedMemberNode)) {
+            throw ParserErrors.invalidExpression(result.getSourceInfo());
+        }
+
+        return result;
     }
 
-    public ValueNode parseExpression() {
+    public SyntaxNode parseExpressionStrict() {
         InlineTokenizer tokenizer = new InlineTokenizer(input);
-        ValueNode result = parseExpression(tokenizer);
+        SyntaxNode result = parseContentSelectionOrExpression(tokenizer);
         if (!tokenizer.isEmpty()) {
             throw ParserErrors.unexpectedToken(tokenizer.peekNotNull());
         }
@@ -118,40 +134,197 @@ public class InlineParser {
         return result;
     }
 
-    private ValueNode parseValueSequence(InlineTokenizer tokenizer, boolean eager, ParseMode mode) {
-        List<ValueNode> list = new ArrayList<>();
-        List<ValueNode> values = new ArrayList<>();
-        CurlyTokenClass nextTokenClass;
+    /**
+     * Parses a complete XML attribute through the shared value-language grammar.
+     */
+    AttributeValueNode parseAttribute(AttributeMode mode) {
+        return switch (mode) {
+            case EXPRESSION -> AttributeValueNode.syntax(
+                parseExpressionStrict(), input.getSourceInfo(0, input.getText().length()));
 
-        do {
-            values.add(parseSingleValue(tokenizer, mode));
+            case PATH_REFERENCE -> AttributeValueNode.syntax(
+                parsePathReferenceStrict(), input.getSourceInfo(0, input.getText().length()));
 
-            if (tokenizer.isEmpty()) {
+            case GENERIC -> parseGenericAttribute();
+        };
+    }
+
+    private AttributeValueNode parseGenericAttribute() {
+        SourceCursor cursor = new SourceCursor(input);
+        List<Node> items = new ArrayList<>();
+        List<Integer> escapeOffsets = new ArrayList<>();
+        boolean hasActiveItem = false;
+
+        while (true) {
+            skipHorizontalLayout(cursor);
+            int itemStart = cursor.getOffset();
+
+            if (!cursor.isAtEnd()
+                    && cursor.peek() == '\\'
+                    && activePrefixLength(cursor.getText(), itemStart + 1) > 0) {
+                int itemEnd = findOuterComma(cursor.getText(), itemStart);
+                SourceMappedText itemSource = input.slice(itemStart, itemEnd).without(0);
+                items.add(createScalarLiteral(itemSource));
+                escapeOffsets.add(itemStart);
+                cursor.setOffset(itemEnd);
+            } else if (activePrefixLength(cursor.getText(), itemStart) > 0) {
+                hasActiveItem = true;
+                items.add(parseObjectItem(cursor));
+
+                if (!cursor.isAtEnd() && cursor.peek() != ',') {
+                    throw ParserErrors.unexpectedToken(
+                        input.getSourceInfo(cursor.getOffset(), Math.min(cursor.length(), cursor.getOffset() + 1)));
+                }
+            } else {
+                int itemEnd = findOuterComma(cursor.getText(), itemStart);
+                items.add(createScalarLiteral(input.slice(itemStart, itemEnd)));
+                cursor.setOffset(itemEnd);
+            }
+
+            if (cursor.isAtEnd()) {
                 break;
             }
 
-            if (tokenizer.peekNotNull().getType() == COMMA) {
-                if (eager) {
-                    break;
-                }
+            cursor.advance(); // outer comma
+            consumeSeparatorLayout(cursor);
 
-                tokenizer.remove(COMMA);
-                list.add(compositeNode(values));
-                values.clear();
+            // A trailing comma contributes a final empty member.
+            if (cursor.isAtEnd()) {
+                items.add(createScalarLiteral(input.slice(cursor.length(), cursor.length())));
+                break;
             }
-
-            nextTokenClass = tokenizer.peekNotNull().getType().getTokenClass();
-        } while (nextTokenClass != CurlyTokenClass.SEMI && nextTokenClass != CurlyTokenClass.DELIMITER);
-
-        if (!values.isEmpty()) {
-            list.add(compositeNode(values));
         }
 
-        if (list.size() == 1) {
-            return list.get(0);
+        SourceMappedText logicalInput = escapeOffsets.isEmpty()
+            ? input
+            : input.withoutAll(escapeOffsets.stream().mapToInt(Integer::intValue).toArray());
+
+        SourceInfo sourceInfo = logicalInput.getSourceInfo(0, logicalInput.getText().length());
+        if (!hasActiveItem) {
+            return AttributeValueNode.literal(createLiteral(logicalInput), sourceInfo);
         }
 
-        return listNode(list);
+        return AttributeValueNode.sequence(items, sourceInfo);
+    }
+
+    private ObjectNode parseObjectItem(SourceCursor cursor) {
+        InlineTokenizer tokenizer = new InlineTokenizer(cursor);
+        ObjectNode result = parseObjectExpression(tokenizer, tryGetSyntaxMapping(tokenizer));
+        tokenizer.commit();
+        return result;
+    }
+
+    private int activePrefixLength(String text, int offset) {
+        if (offset < 0 || offset >= text.length()) {
+            return 0;
+        }
+
+        for (String prefix : new String[] {
+                OBSERVE_EXPR_PREFIX, SYNCHRONIZE_EXPR_PREFIX,
+                PUSH_EXPR_PREFIX, EVALUATE_EXPR_PREFIX, "{" }) {
+            if (text.startsWith(prefix, offset)) {
+                return prefix.length();
+            }
+        }
+
+        return prefixMappings.containsKey(text.charAt(offset)) ? 1 : 0;
+    }
+
+    private int findOuterComma(String text, int start) {
+        int comma = text.indexOf(',', start);
+        return comma >= 0 ? comma : text.length();
+    }
+
+    private void skipHorizontalLayout(SourceCursor cursor) {
+        while (!cursor.isAtEnd() && isHorizontalWhitespace(cursor.peek())) {
+            cursor.advance();
+        }
+    }
+
+    private void consumeSeparatorLayout(SourceCursor cursor) {
+        int checkpoint = cursor.checkpoint();
+        skipHorizontalLayout(cursor);
+
+        if (cursor.isAtEnd() || !isLineBreak(cursor.peek())) {
+            cursor.reset(checkpoint);
+            return;
+        }
+
+        consumeLineBreak(cursor);
+
+        while (!cursor.isAtEnd()) {
+            int beforeLayout = cursor.checkpoint();
+            skipHorizontalLayout(cursor);
+
+            if (!cursor.isAtEnd() && isLineBreak(cursor.peek())) {
+                consumeLineBreak(cursor);
+            } else {
+                cursor.reset(beforeLayout);
+                break;
+            }
+        }
+    }
+
+    private void consumeLineBreak(SourceCursor cursor) {
+        char ch = cursor.peek();
+        cursor.advance();
+
+        if (ch == '\r' && !cursor.isAtEnd() && cursor.peek() == '\n') {
+            cursor.advance();
+        }
+    }
+
+    private boolean isHorizontalWhitespace(char ch) {
+        return ch == '\t' || ch == ' ' || ch == '\u00A0' || ch == '\u1680'
+            || ch >= '\u2000' && ch <= '\u200A' || ch == '\u202F'
+            || ch == '\u205F' || ch == '\u3000';
+    }
+
+    private boolean isLineBreak(char ch) {
+        return ch == '\r' || ch == '\n' || ch == '\u000B' || ch == '\u000C'
+            || ch == '\u0085' || ch == '\u2028' || ch == '\u2029';
+    }
+
+    private LiteralValueNode createLiteral(SourceMappedText source) {
+        String text = source.getText();
+        List<StringHelper.OffsetPart> split = StringHelper.splitListWithOffsets(text);
+        List<LiteralValueNode> parts = split.size() > 1
+            ? split.stream()
+                .map(part -> new LiteralValueNode(
+                    part.text(), source.getSourceInfo(part.start(), part.end())))
+                .toList()
+            : List.of();
+
+        return new LiteralValueNode(text, parts, source.getSourceInfo(0, text.length()));
+    }
+
+    private LiteralValueNode createScalarLiteral(SourceMappedText source) {
+        return new LiteralValueNode(source.getText(), source.getSourceInfo(0, source.getText().length()));
+    }
+
+    private Node parseValueSequence(InlineTokenizer tokenizer, boolean eager, ParseMode mode) {
+        if (mode == ParseMode.EXPRESSION) {
+            return parseContentSelectionOrExpression(tokenizer);
+        }
+
+        if (mode == ParseMode.PATH_REFERENCE) {
+            return parseSelectedMemberSuffixes(tokenizer, parsePathOrInvocation(tokenizer));
+        }
+
+        List<Node> values = new ArrayList<>();
+        values.add(parseInlineValue(tokenizer));
+
+        while (!tokenizer.isEmpty() && tokenizer.peekNotNull().getType() == COMMA && !eager) {
+            tokenizer.remove(COMMA);
+            values.add(parseInlineValue(tokenizer));
+        }
+
+        if (values.size() == 1) {
+            return values.get(0);
+        }
+
+        var sourceInfo = SourceInfo.span(values.get(0).getSourceInfo(), values.get(values.size() - 1).getSourceInfo());
+        return new InlineArgumentSequenceNode(values, sourceInfo);
     }
 
     private SyntaxMapping tryGetSyntaxMapping(InlineTokenizer tokenizer) {
@@ -186,58 +359,88 @@ public class InlineParser {
         return null;
     }
 
-    private ValueNode parseSingleValue(InlineTokenizer tokenizer, ParseMode mode) {
+    private Node parseInlineValue(InlineTokenizer tokenizer) {
         SyntaxMapping mapping = tryGetSyntaxMapping(tokenizer);
         if (mapping != null) {
             return parseObjectExpression(tokenizer, mapping);
         }
 
         CurlyTokenType tokenType = tokenizer.peekNotNull().getType();
-        if (mode == ParseMode.EXPRESSION && isExpressionToken(tokenType)) {
-            return parseExpression(tokenizer);
+        if (tokenType == OPEN_CURLY) {
+            return parseObjectExpression(tokenizer, null);
         }
 
-        return switch (tokenType) {
-            case NUMBER -> {
-                InlineToken number = tokenizer.remove(NUMBER);
-                yield new NumberNode(number.getValue(), number.getSourceInfo());
+        if (tokenType == STRING) {
+            InlineToken string = tokenizer.remove(STRING);
+            return new LiteralValueNode(string.getValue(), string.getSourceInfo());
+        }
+
+        List<String> fragments = new ArrayList<>();
+        List<CurlyTokenType> delimiters = new ArrayList<>();
+        SourceInfo start = tokenizer.peekNotNull().getSourceInfo();
+        SourceInfo end = start;
+
+        while (!tokenizer.isEmpty()) {
+            InlineToken token = tokenizer.peekNotNull();
+            CurlyTokenType type = token.getType();
+            boolean atTopLevel = delimiters.isEmpty();
+
+            if (atTopLevel && (type == COMMA || type == EQUALS
+                    || type.getTokenClass() == CurlyTokenClass.SEMI
+                    || type == CLOSE_CURLY || type == CLOSE_PAREN)) {
+                break;
             }
 
-            case PLUS, MINUS -> parseSignedLiteral(tokenizer);
-
-            case STRING -> {
-                InlineToken string = tokenizer.remove(STRING);
-                yield new StringLiteralNode(
-                    string.getValue(), string.getLexeme(), string.getSourceInfo());
+            if (atTopLevel && !fragments.isEmpty()
+                    && (type == OPEN_CURLY || tryGetSyntaxMapping(tokenizer) != null)) {
+                throw ParserErrors.unexpectedToken(token);
             }
 
-            case IDENTIFIER, COLON -> parsePathPrimary(tokenizer, ParseMode.VALUE);
-
-            case KEYWORD -> throw ParserErrors.unexpectedToken(tokenizer.peekNotNull());
-
-            case OPEN_CURLY -> parseObjectExpression(tokenizer, null);
-
-            default -> {
-                if (tokenizer.containsAhead(COLON, COLON)) {
-                    PathNode path = parsePath(tokenizer, true, true, false);
-                    yield tokenizer.peek(OPEN_PAREN) != null
-                        ? parseInvocationExpression(tokenizer, path, ParseMode.VALUE)
-                        : path;
+            if (isClosingDelimiter(type) && !delimiters.isEmpty()) {
+                CurlyTokenType expected = delimiters.get(delimiters.size() - 1);
+                if (type != expected) {
+                    throw ParserErrors.expectedToken(token.getSourceInfo(), expected.getSymbol());
                 }
 
-                InlineToken token = tokenizer.remove();
-                if (token.getType().getTokenClass() == CurlyTokenClass.DELIMITER) {
-                    throw ParserErrors.unexpectedToken(token);
-                }
-
-                yield new TextNode(token.getValue(), token.getSourceInfo());
+                delimiters.remove(delimiters.size() - 1);
             }
-        };
+
+            tokenizer.remove();
+            end = token.getSourceInfo();
+
+            if (type != NEWLINE) {
+                fragments.add(type == STRING ? token.getLexeme() : token.getValue());
+            }
+
+            switch (type) {
+                case OPEN_PAREN -> delimiters.add(CLOSE_PAREN);
+                case OPEN_BRACKET -> delimiters.add(CLOSE_BRACKET);
+                case OPEN_CURLY -> delimiters.add(CLOSE_CURLY);
+                case OPEN_ANGLE -> delimiters.add(CLOSE_ANGLE);
+                default -> {}
+            }
+        }
+
+        if (fragments.isEmpty()) {
+            throw ParserErrors.unexpectedToken(tokenizer.peekNotNull());
+        }
+
+        if (!delimiters.isEmpty()) {
+            CurlyTokenType expected = delimiters.get(delimiters.size() - 1);
+            throw ParserErrors.expectedToken(input.getEndOfInput(), expected.getSymbol());
+        }
+
+        return new LiteralValueNode(StringHelper.concatValues(fragments), SourceInfo.span(start, end));
+    }
+
+    private boolean isClosingDelimiter(CurlyTokenType type) {
+        return type == CLOSE_PAREN || type == CLOSE_BRACKET
+            || type == CLOSE_CURLY || type == CLOSE_ANGLE;
     }
 
     private ObjectNode parseObjectExpression(InlineTokenizer tokenizer, SyntaxMapping mapping) {
         SourceInfo sourceStart, sourceEnd;
-        TextNode name;
+        IdentifierNode name;
         String cleanName;
 
         if (mapping != null) {
@@ -252,7 +455,7 @@ public class InlineParser {
 
             sourceEnd = lastToken.getSourceInfo();
 
-            name = new TextNode(
+            name = new IdentifierNode(
                 intrinsicPrefix != null && mapping.intrinsic()
                     ? intrinsicPrefix + ":" + mapping.name()
                     : mapping.name(),
@@ -260,17 +463,17 @@ public class InlineParser {
         } else {
             sourceStart = sourceEnd = tokenizer.remove(OPEN_CURLY).getSourceInfo();
             name = parseIdentifier(tokenizer);
-            cleanName = cleanIdentifier(name.getText(), name.getSourceInfo());
+            cleanName = cleanIdentifier(name.getName(), name.getSourceInfo());
         }
 
-        List<ValueNode> children = new ArrayList<>();
+        List<Node> children = new ArrayList<>();
         List<PropertyNode> properties = new ArrayList<>();
-        boolean bindingExpression = isBindingExpression(mapping, cleanName, name.getText());
+        Intrinsic intrinsic = findIntrinsic(mapping, cleanName, name.getName());
 
         if (mapping == null) {
             if (tokenizer.peek(OPEN_ANGLE) != null) {
                 PropertyNode typeArgs = parseTypeArguments(tokenizer);
-                name = new TextNode(name.getText(), SourceInfo.span(name.getSourceInfo(), typeArgs.getSourceInfo()));
+                name = new IdentifierNode(name.getName(), SourceInfo.span(name.getSourceInfo(), typeArgs.getSourceInfo()));
                 properties.add(typeArgs);
             }
 
@@ -295,14 +498,15 @@ public class InlineParser {
                 }
 
                 tokenizer.mark();
-                ValueNode key = parseValueSequence(
-                    tokenizer,
-                    mapping != null && !mapping.closingCurly(),
-                    bindingExpression ? ParseMode.EXPRESSION : ParseMode.VALUE);
+                IntrinsicProperty defaultProperty = intrinsic != null ? intrinsic.getDefaultProperty() : null;
+
+                Node key = parseValueSequence(
+                    tokenizer, mapping != null && !mapping.closingCurly(),
+                    parseMode(defaultProperty));
 
                 if (tokenizer.poll(EQUALS) != null) {
                     tokenizer.resetToMark();
-                    PropertyNode propertyNode = parsePropertyExpression(tokenizer, bindingExpression);
+                    PropertyNode propertyNode = parsePropertyExpression(tokenizer, intrinsic);
                     sourceEnd = propertyNode.getSourceInfo();
                     properties.add(propertyNode);
                 } else {
@@ -312,7 +516,7 @@ public class InlineParser {
                 }
 
                 if (mapping != null && !mapping.closingCurly() && !tokenizer.isEmpty()) {
-                    var tokenClass = tokenizer.peekNotNull().getType().getTokenClass();
+                    CurlyTokenClass tokenClass = tokenizer.peekNotNull().getType().getTokenClass();
                     if (tokenClass == CurlyTokenClass.DELIMITER
                             || tokenClass == CurlyTokenClass.SEMI && mapping.intrinsic()) {
                         break;
@@ -336,39 +540,35 @@ public class InlineParser {
         return new ObjectNode(
             new TypeNode(
                 cleanName,
-                name.getText(),
-                mapping != null ? mapping.intrinsic() : !cleanName.equals(name.getText()),
+                name.getName(),
+                mapping != null ? mapping.intrinsic() : !cleanName.equals(name.getName()),
                 name.getSourceInfo()),
             properties, children, true, SourceInfo.span(sourceStart, sourceEnd));
     }
 
-    private PropertyNode parsePropertyExpression(InlineTokenizer tokenizer, boolean bindingExpression) {
-        TextNode propertyName = parseIdentifier(tokenizer);
-        String cleanName = cleanIdentifier(propertyName.getText(), propertyName.getSourceInfo());
+    private PropertyNode parsePropertyExpression(InlineTokenizer tokenizer, @Nullable Intrinsic intrinsic) {
+        IdentifierNode propertyName = parseIdentifier(tokenizer);
+        String cleanName = cleanIdentifier(propertyName.getName(), propertyName.getSourceInfo());
         tokenizer.remove(EQUALS);
-        ValueNode value = parseValueSequence(
-            tokenizer,
-            false,
-            bindingExpression && "source".equals(cleanName)
-                ? ParseMode.EXPRESSION : ParseMode.VALUE);
+
+        IntrinsicProperty intrinsicProperty = intrinsic != null ? intrinsic.findProperty(cleanName) : null;
+        Node value = parseValueSequence(tokenizer, false, parseMode(intrinsicProperty));
 
         return new PropertyNode(
             cleanName.split("\\."),
-            propertyName.getText(),
+            propertyName.getName(),
             value,
-            !propertyName.getText().equals(cleanName),
+            !propertyName.getName().equals(cleanName),
             false,
             SourceInfo.span(propertyName.getSourceInfo(), value.getSourceInfo()));
     }
 
-    private InvocationNode parseInvocationExpression(InlineTokenizer tokenizer, ValueNode target, ParseMode mode) {
+    private InvocationNode parseInvocationExpression(InlineTokenizer tokenizer, SyntaxNode target) {
         if (!isCallableTarget(target)) {
             throw ParserErrors.unexpectedToken(tokenizer.peekNotNull());
         }
 
-        InvocationInfo invocation = mode == ParseMode.EXPRESSION
-            ? parseExpressionInvocationArguments(tokenizer)
-            : parseValueInvocationArguments(tokenizer);
+        InvocationInfo invocation = parseInvocationArguments(tokenizer);
 
         return new InvocationNode(
             target,
@@ -378,7 +578,7 @@ public class InlineParser {
             SourceInfo.span(target.getSourceInfo(), invocation.closeParenSourceInfo()));
     }
 
-    private boolean isCallableTarget(ValueNode target) {
+    private boolean isCallableTarget(SyntaxNode target) {
         if (target instanceof SelectedMemberNode) {
             return true;
         }
@@ -392,16 +592,17 @@ public class InlineParser {
             && segments.get(segments.size() - 1) instanceof TextSegmentNode;
     }
 
-    private InvocationInfo parseExpressionInvocationArguments(InlineTokenizer tokenizer) {
+    private InvocationInfo parseInvocationArguments(InlineTokenizer tokenizer) {
         SourceInfo openParenSourceInfo = tokenizer.remove(OPEN_PAREN).getSourceInfo();
-        List<ValueNode> arguments = new ArrayList<>();
+        List<Node> arguments = new ArrayList<>();
 
         if (tokenizer.peekSkipWS(CLOSE_PAREN) == null) {
             while (true) {
                 SyntaxMapping mapping = tryGetSyntaxMapping(tokenizer);
-                ValueNode argument = mapping != null || tokenizer.peek(OPEN_CURLY) != null
+                Node argument = mapping != null || tokenizer.peek(OPEN_CURLY) != null
                     ? parseObjectExpression(tokenizer, mapping)
                     : parseExpression(tokenizer);
+
                 arguments.add(argument);
 
                 if (tokenizer.peekSkipWS(CLOSE_PAREN) != null) {
@@ -419,44 +620,43 @@ public class InlineParser {
         return new InvocationInfo(arguments, openParenSourceInfo, closeParenSourceInfo);
     }
 
-    private InvocationInfo parseValueInvocationArguments(InlineTokenizer tokenizer) {
-        SourceInfo openParenSourceInfo = tokenizer.remove(OPEN_PAREN).getSourceInfo();
-        ValueNode arguments = tokenizer.peekSkipWS(CLOSE_PAREN) == null
-            ? parseValueSequence(tokenizer, false, ParseMode.VALUE)
-            : null;
-
-        SourceInfo closeParenSourceInfo = tokenizer.removeSkipWS(CLOSE_PAREN).getSourceInfo();
-
-        return new InvocationInfo(
-            arguments instanceof ListNode listNode
-                ? listNode.getValues()
-                : arguments != null
-                    ? List.of(arguments)
-                    : List.of(),
-            openParenSourceInfo,
-            closeParenSourceInfo);
-    }
-
-    private TextNode parseIdentifier(InlineTokenizer tokenizer) {
+    private IdentifierNode parseIdentifier(InlineTokenizer tokenizer) {
         var text = new StringBuilder();
-        SourceInfo start = tokenizer.peekNotNull().getSourceInfo(), end;
-        InlineToken identifier = null;
+        IdentifierNode identifier = parseIdentifierComponent(tokenizer);
+        SourceInfo start = identifier.getSourceInfo(), end = start;
+        text.append(identifier.getName());
 
-        do {
-            if (identifier != null && isIntrinsicIdentifier(identifier.getValue(), identifier.getSourceInfo())) {
+        while (tokenizer.peek(DOT) != null) {
+            if (isIntrinsicIdentifier(identifier.getName(), identifier.getSourceInfo())) {
                 throw ParserErrors.unexpectedToken(tokenizer.peekNotNull());
             }
 
-            if (!text.isEmpty()) {
-                text.append(tokenizer.remove(DOT).getValue());
-            }
-
-            identifier = tokenizer.remove(IDENTIFIER);
+            text.append(tokenizer.remove(DOT).getValue());
+            identifier = parseIdentifierComponent(tokenizer);
             end = identifier.getSourceInfo();
-            text.append(identifier.getValue());
-        } while (tokenizer.peek(DOT) != null);
+            text.append(identifier.getName());
+        }
 
-        return new TextNode(text.toString(), SourceInfo.span(start, end));
+        return new IdentifierNode(text.toString(), SourceInfo.span(start, end));
+    }
+
+    private IdentifierNode parseIdentifierComponent(InlineTokenizer tokenizer) {
+        InlineToken first = tokenizer.remove(IDENTIFIER);
+        InlineToken[] following = tokenizer.peekAhead(2);
+
+        if (following != null && following[0].getType() == COLON
+                && following[1].getType() == IDENTIFIER
+                && first.getDecodedEnd() == following[0].getDecodedStart()
+                && following[0].getDecodedEnd() == following[1].getDecodedStart()) {
+            tokenizer.remove(COLON);
+            InlineToken localName = tokenizer.remove(IDENTIFIER);
+
+            return new IdentifierNode(
+                first.getValue() + ":" + localName.getValue(),
+                SourceInfo.span(first.getSourceInfo(), localName.getSourceInfo()));
+        }
+
+        return new IdentifierNode(first.getValue(), first.getSourceInfo());
     }
 
     private PathNode parsePath(InlineTokenizer tokenizer,
@@ -469,8 +669,7 @@ public class InlineParser {
 
         if (allowContextSelector && tokenizer.containsAhead(COLON, COLON)) {
             SourceInfo selectorSourceInfo = parseObservableSelector(tokenizer);
-            segments.add(parsePathSegment(
-                tokenizer, true, selectorSourceInfo, allowPostfixTypeArguments));
+            segments.add(parsePathSegment(tokenizer, true, selectorSourceInfo, allowPostfixTypeArguments));
         } else if (allowContextSelector && tokenizer.peek(COLON) != null) {
             bindingContextSelector = parseContextSelector(tokenizer);
         } else {
@@ -526,12 +725,11 @@ public class InlineParser {
         }
 
         InlineToken identifier = tokenizer.remove(IDENTIFIER);
-        PathInfo typeArguments = allowPostfixTypeArguments
-            ? tryParsePostfixTypeArguments(tokenizer) : null;
+        PathInfo typeArguments = allowPostfixTypeArguments ? tryParsePostfixTypeArguments(tokenizer) : null;
 
         return new TextSegmentNode(
             observableSelector,
-            new TextNode(identifier.getValue(), identifier.getSourceInfo()),
+            new IdentifierNode(identifier.getValue(), identifier.getSourceInfo()),
             typeArguments != null ? typeArguments.paths() : List.of(),
             selectorSourceInfo,
             typeArguments != null ? typeArguments.sourceInfo() : null,
@@ -568,10 +766,10 @@ public class InlineParser {
 
         return new AttachedSegmentNode(
             observableSelector,
-            new TextNode(
+            new IdentifierNode(
                 declaringTypeName,
                 SourceInfo.span(identifiers.get(0).getSourceInfo(), declaringTypeEnd.getSourceInfo())),
-            new TextNode(propertyName.getValue(), propertyName.getSourceInfo()),
+            new IdentifierNode(propertyName.getValue(), propertyName.getSourceInfo()),
             selectorSourceInfo,
             openParenSourceInfo,
             separators.get(separators.size() - 1).getSourceInfo(),
@@ -579,19 +777,14 @@ public class InlineParser {
             SourceInfo.span(openParenSourceInfo, closeParenSourceInfo));
     }
 
-    private ValueNode parsePathPrimary(InlineTokenizer tokenizer, ParseMode mode) {
-        return parseSelectedMemberSuffixes(
-            tokenizer, parsePathOrInvocation(tokenizer, mode), mode);
-    }
-
-    private ValueNode parsePathOrInvocation(InlineTokenizer tokenizer, ParseMode mode) {
+    private SyntaxNode parsePathOrInvocation(InlineTokenizer tokenizer) {
         PathNode path = parsePath(tokenizer, true, true, false);
         return tokenizer.peek(OPEN_PAREN) != null
-            ? parseInvocationExpression(tokenizer, path, mode)
+            ? parseInvocationExpression(tokenizer, path)
             : path;
     }
 
-    private ValueNode parseSelectedMemberSuffixes(InlineTokenizer tokenizer, ValueNode receiver, ParseMode mode) {
+    private SyntaxNode parseSelectedMemberSuffixes(InlineTokenizer tokenizer, SyntaxNode receiver) {
         while (tokenizer.peek(DOT) != null || tokenizer.containsAhead(COLON, COLON)) {
             boolean observableSelector;
             SourceInfo selectorSourceInfo;
@@ -614,7 +807,7 @@ public class InlineParser {
 
             TextSegmentNode member = new TextSegmentNode(
                 observableSelector,
-                new TextNode(identifier.getValue(), identifier.getSourceInfo()),
+                new IdentifierNode(identifier.getValue(), identifier.getSourceInfo()),
                 typeArguments != null ? typeArguments.paths() : List.of(),
                 selectorSourceInfo,
                 typeArguments != null ? typeArguments.sourceInfo() : null,
@@ -624,7 +817,7 @@ public class InlineParser {
                 receiver, member, SourceInfo.span(receiver.getSourceInfo(), memberSourceInfo));
 
             if (tokenizer.peek(OPEN_PAREN) != null) {
-                receiver = parseInvocationExpression(tokenizer, receiver, mode);
+                receiver = parseInvocationExpression(tokenizer, receiver);
             }
         }
 
@@ -658,7 +851,6 @@ public class InlineParser {
             return null;
         }
 
-        InlineToken[] candidateTokens = tokenizer.peekAhead(tokenizer.size());
         tokenizer.mark();
 
         try {
@@ -671,30 +863,38 @@ public class InlineParser {
             tokenizer.resetToMark();
             return null;
         } catch (MarkupException ex) {
-            if (hasCompletedMalformedPostfixTypeArguments(candidateTokens)) {
-                tokenizer.forgetMark();
+            tokenizer.resetToMark();
+            if (hasCompletedMalformedPostfixTypeArguments(tokenizer)) {
                 throw ex;
             }
 
-            tokenizer.resetToMark();
             return null;
         }
     }
 
-    private boolean hasCompletedMalformedPostfixTypeArguments(InlineToken[] tokens) {
-        if (tokens == null || tokens.length == 0) {
-            return false;
-        }
-
+    private boolean hasCompletedMalformedPostfixTypeArguments(InlineTokenizer tokenizer) {
         int depth = 0;
 
-        for (int i = 0; i < tokens.length; ++i) {
-            switch (tokens[i].getType()) {
+        for (int i = 0; ; ++i) {
+            InlineToken[] tokens = tokenizer.peekAhead(i + 1);
+            if (tokens == null) {
+                return false;
+            }
+
+            InlineToken token = tokens[i];
+            switch (token.getType()) {
                 case OPEN_ANGLE -> ++depth;
                 case CLOSE_ANGLE -> {
                     if (--depth == 0) {
-                        InlineToken follower = i + 1 < tokens.length ? tokens[i + 1] : null;
-                        return isPostfixFollower(follower, i + 2 < tokens.length ? tokens[i + 2] : null);
+                        InlineToken[] followers = tokenizer.peekAhead(i + 3);
+                        InlineToken first = followers != null ? followers[i + 1] : null;
+                        InlineToken second = followers != null ? followers[i + 2] : null;
+                        if (first == null) {
+                            InlineToken[] oneFollower = tokenizer.peekAhead(i + 2);
+                            first = oneFollower != null ? oneFollower[i + 1] : null;
+                        }
+
+                        return isPostfixFollower(first, second);
                     }
 
                     if (depth < 0) {
@@ -709,7 +909,7 @@ public class InlineParser {
                 }
 
                 case KEYWORD -> {
-                    if (depth == 0 || !isPrimitiveTypeKeyword(tokens[i].getValue())) {
+                    if (depth == 0 || !isPrimitiveTypeKeyword(token.getValue())) {
                         return false;
                     }
                 }
@@ -720,7 +920,6 @@ public class InlineParser {
             }
         }
 
-        return false;
     }
 
     private boolean isPostfixFollower(InlineTokenizer tokenizer) {
@@ -754,7 +953,7 @@ public class InlineParser {
         }
 
         token = tokenizer.remove(KEYWORD);
-        TextNode name = new TextNode(token.getValue(), token.getSourceInfo());
+        IdentifierNode name = new IdentifierNode(token.getValue(), token.getSourceInfo());
         TextSegmentNode segment = new TextSegmentNode(false, name, List.of(), null, token.getSourceInfo());
         return new PathNode(null, List.of(segment), List.of(), token.getSourceInfo());
     }
@@ -798,7 +997,7 @@ public class InlineParser {
         return new PropertyNode(
             new String[] { intrinsicName },
             intrinsicPrefix != null ? intrinsicPrefix + ":" + intrinsicName : intrinsicName,
-            new TextNode(builder.toString(), SourceInfo.span(start, end)),
+            new LiteralValueNode(builder.toString(), SourceInfo.span(start, end)),
             true, false, SourceInfo.span(start, end));
     }
 
@@ -811,7 +1010,7 @@ public class InlineParser {
             throw ParserErrors.unexpectedToken(selectorToken);
         }
 
-        TextNode searchType = null;
+        IdentifierNode searchType = null;
         NumberNode level = null;
         SourceInfo openAngleSourceInfo = null;
         SourceInfo closeAngleSourceInfo = null;
@@ -879,85 +1078,130 @@ public class InlineParser {
         }
     }
 
-    private ValueNode parseExpression(InlineTokenizer tokenizer) {
-        ValueNode left = parseLogicalAndExpression(tokenizer);
+    private SyntaxNode parseContentSelectionOrExpression(InlineTokenizer tokenizer) {
+        InlineToken[] prefix = tokenizer.peekAhead(2);
+        if (prefix != null && prefix[0].getType() == DOT && prefix[1].getType() == DOT) {
+            SourceInfo start = tokenizer.remove(DOT).getSourceInfo();
+            tokenizer.remove(DOT);
+
+            if (tokenizer.peek(DOT) != null) {
+                throw ParserErrors.invalidExpression(SourceInfo.span(start, expressionTail(tokenizer)));
+            }
+
+            SyntaxNode value = parseExpression(tokenizer);
+            return new ContentSelectionNode(value, SourceInfo.span(start, value.getSourceInfo()));
+        }
+
+        SyntaxNode result = parseExpression(tokenizer);
+        InlineToken trailing = tokenizer.peek(NUMBER);
+        if (trailing != null && trailing.getLexeme().startsWith(".")) {
+            throw ParserErrors.unexpectedExpression(
+                SourceInfo.span(result.getSourceInfo(), trailing.getSourceInfo()));
+        }
+
+        return result;
+    }
+
+    private SourceInfo expressionTail(InlineTokenizer tokenizer) {
+        InlineToken end = tokenizer.peekNotNull();
+
+        for (int count = 2; ; ++count) {
+            InlineToken[] tokens = tokenizer.peekAhead(count);
+            if (tokens == null) {
+                break;
+            }
+
+            InlineToken candidate = tokens[tokens.length - 1];
+            if (candidate.getType().getTokenClass() == CurlyTokenClass.DELIMITER
+                    || candidate.getType().getTokenClass() == CurlyTokenClass.SEMI) {
+                break;
+            }
+
+            end = candidate;
+        }
+
+        return end.getSourceInfo();
+    }
+
+    private SyntaxNode parseExpression(InlineTokenizer tokenizer) {
+        SyntaxNode left = parseLogicalAndExpression(tokenizer);
 
         while (tokenizer.peek(LOGICAL_OR) != null) {
             InlineToken operator = tokenizer.remove();
-            ValueNode right = parseLogicalAndExpression(tokenizer);
+            SyntaxNode right = parseLogicalAndExpression(tokenizer);
             left = createBinaryOperator(operator, left, right);
         }
 
         return left;
     }
 
-    private ValueNode parseLogicalAndExpression(InlineTokenizer tokenizer) {
-        ValueNode left = parseEqualityExpression(tokenizer);
+    private SyntaxNode parseLogicalAndExpression(InlineTokenizer tokenizer) {
+        SyntaxNode left = parseEqualityExpression(tokenizer);
 
         while (tokenizer.peek(LOGICAL_AND) != null) {
             InlineToken operator = tokenizer.remove();
-            ValueNode right = parseEqualityExpression(tokenizer);
+            SyntaxNode right = parseEqualityExpression(tokenizer);
             left = createBinaryOperator(operator, left, right);
         }
 
         return left;
     }
 
-    private ValueNode parseEqualityExpression(InlineTokenizer tokenizer) {
-        ValueNode left = parseRelationalExpression(tokenizer);
+    private SyntaxNode parseEqualityExpression(InlineTokenizer tokenizer) {
+        SyntaxNode left = parseRelationalExpression(tokenizer);
 
         while (tokenizer.peek(VALUE_EQUALITY) != null
                 || tokenizer.peek(VALUE_INEQUALITY) != null
                 || tokenizer.peek(IDENTITY_EQUALITY) != null
                 || tokenizer.peek(IDENTITY_INEQUALITY) != null) {
             InlineToken operator = tokenizer.remove();
-            ValueNode right = parseRelationalExpression(tokenizer);
+            SyntaxNode right = parseRelationalExpression(tokenizer);
             left = createBinaryOperator(operator, left, right);
         }
 
         return left;
     }
 
-    private ValueNode parseRelationalExpression(InlineTokenizer tokenizer) {
-        ValueNode left = parseAdditiveExpression(tokenizer);
+    private SyntaxNode parseRelationalExpression(InlineTokenizer tokenizer) {
+        SyntaxNode left = parseAdditiveExpression(tokenizer);
 
         while (tokenizer.peek(OPEN_ANGLE) != null
                 || tokenizer.peek(LESS_THAN_OR_EQUAL) != null
                 || tokenizer.peek(CLOSE_ANGLE) != null
                 || tokenizer.peek(GREATER_THAN_OR_EQUAL) != null) {
             InlineToken operator = tokenizer.remove();
-            ValueNode right = parseAdditiveExpression(tokenizer);
+            SyntaxNode right = parseAdditiveExpression(tokenizer);
             left = createBinaryOperator(operator, left, right);
         }
 
         return left;
     }
 
-    private ValueNode parseAdditiveExpression(InlineTokenizer tokenizer) {
-        ValueNode left = parseMultiplicativeExpression(tokenizer);
+    private SyntaxNode parseAdditiveExpression(InlineTokenizer tokenizer) {
+        SyntaxNode left = parseMultiplicativeExpression(tokenizer);
 
         while (tokenizer.peek(PLUS) != null || tokenizer.peek(MINUS) != null) {
             InlineToken operator = tokenizer.remove();
-            ValueNode right = parseMultiplicativeExpression(tokenizer);
+            SyntaxNode right = parseMultiplicativeExpression(tokenizer);
             left = createBinaryOperator(operator, left, right);
         }
 
         return left;
     }
 
-    private ValueNode parseMultiplicativeExpression(InlineTokenizer tokenizer) {
-        ValueNode left = parseUnaryExpression(tokenizer);
+    private SyntaxNode parseMultiplicativeExpression(InlineTokenizer tokenizer) {
+        SyntaxNode left = parseUnaryExpression(tokenizer);
 
         while (tokenizer.peek(STAR) != null || tokenizer.peek(SLASH) != null) {
             InlineToken operator = tokenizer.remove();
-            ValueNode right = parseUnaryExpression(tokenizer);
+            SyntaxNode right = parseUnaryExpression(tokenizer);
             left = createBinaryOperator(operator, left, right);
         }
 
         return left;
     }
 
-    private ValueNode parseUnaryExpression(InlineTokenizer tokenizer) {
+    private SyntaxNode parseUnaryExpression(InlineTokenizer tokenizer) {
         InlineToken operator = switch (tokenizer.peekNotNull().getType()) {
             case PLUS, MINUS, NOT, BOOLIFY -> tokenizer.remove();
             default -> null;
@@ -967,7 +1211,8 @@ public class InlineParser {
             return parsePostfixExpression(tokenizer);
         }
 
-        ValueNode operand = parseUnaryExpression(tokenizer);
+        SyntaxNode operand = parseUnaryExpression(tokenizer);
+
         UnaryOperator unaryOperator = switch (operator.getType()) {
             case PLUS -> UnaryOperator.PLUS;
             case MINUS -> UnaryOperator.MINUS;
@@ -983,12 +1228,11 @@ public class InlineParser {
             SourceInfo.span(operator.getSourceInfo(), operand.getSourceInfo()));
     }
 
-    private ValueNode parsePostfixExpression(InlineTokenizer tokenizer) {
-        return parseSelectedMemberSuffixes(
-            tokenizer, parsePrimaryExpression(tokenizer), ParseMode.EXPRESSION);
+    private SyntaxNode parsePostfixExpression(InlineTokenizer tokenizer) {
+        return parseSelectedMemberSuffixes(tokenizer, parsePrimaryExpression(tokenizer));
     }
 
-    private ValueNode parsePrimaryExpression(InlineTokenizer tokenizer) {
+    private SyntaxNode parsePrimaryExpression(InlineTokenizer tokenizer) {
         InlineToken token = tokenizer.peekNotNull();
 
         if (token.getType() == STRING) {
@@ -1003,7 +1247,7 @@ public class InlineParser {
 
         if (token.getType() == IDENTIFIER || token.getType() == COLON) {
             if (token.getType() == COLON) {
-                return parsePathOrInvocation(tokenizer, ParseMode.EXPRESSION);
+                return parsePathOrInvocation(tokenizer);
             }
 
             LiteralKeywordNode literal = LiteralKeywordNode.tryCreate(token.getValue(), token.getSourceInfo());
@@ -1012,12 +1256,12 @@ public class InlineParser {
                 return literal;
             }
 
-            return parsePathOrInvocation(tokenizer, ParseMode.EXPRESSION);
+            return parsePathOrInvocation(tokenizer);
         }
 
         if (token.getType() == OPEN_PAREN) {
             SourceInfo start = tokenizer.remove().getSourceInfo();
-            ValueNode operand = parseExpression(tokenizer);
+            SyntaxNode operand = parseExpression(tokenizer);
             SourceInfo end = tokenizer.remove(CLOSE_PAREN).getSourceInfo();
             return new ParenthesizedNode(operand, start, end, SourceInfo.span(start, end));
         }
@@ -1025,8 +1269,7 @@ public class InlineParser {
         throw ParserErrors.unexpectedToken(token);
     }
 
-    private BinaryOperatorNode createBinaryOperator(
-            InlineToken operator, ValueNode left, ValueNode right) {
+    private BinaryOperatorNode createBinaryOperator(InlineToken operator, SyntaxNode left, SyntaxNode right) {
         BinaryOperator binaryOperator = switch (operator.getType()) {
             case PLUS -> BinaryOperator.ADD;
             case MINUS -> BinaryOperator.SUBTRACT;
@@ -1053,45 +1296,22 @@ public class InlineParser {
             SourceInfo.span(left.getSourceInfo(), right.getSourceInfo()));
     }
 
-    private boolean isExpressionToken(CurlyTokenType type) {
-        return switch (type) {
-            case STRING, NUMBER, IDENTIFIER, KEYWORD, OPEN_PAREN,
-                 PLUS, MINUS, STAR, SLASH, NOT, BOOLIFY,
-                 OPEN_ANGLE, CLOSE_ANGLE, LESS_THAN_OR_EQUAL, GREATER_THAN_OR_EQUAL,
-                 VALUE_EQUALITY, VALUE_INEQUALITY, IDENTITY_EQUALITY, IDENTITY_INEQUALITY,
-                 LOGICAL_AND, LOGICAL_OR, COLON -> true;
-            default -> false;
-        };
-    }
-
-    private ValueNode parseSignedLiteral(InlineTokenizer tokenizer) {
-        InlineToken sign = tokenizer.remove();
-        InlineToken next = tokenizer.peek();
-
-        if (next != null && next.getType() == NUMBER) {
-            tokenizer.remove();
-            return new NumberNode(
-                sign.getValue() + next.getValue(), SourceInfo.span(sign.getSourceInfo(), next.getSourceInfo()));
-        }
-
-        if (sign.getType() == MINUS && next != null && next.getType() == IDENTIFIER) {
-            tokenizer.remove();
-            InlineToken identifier = new InlineToken(
-                IDENTIFIER, sign.getValue() + next.getValue(), sign.getLine(),
-                SourceInfo.span(sign.getSourceInfo(), next.getSourceInfo()));
-            tokenizer.addFirst(identifier);
-            return parsePath(tokenizer, true, true, false);
-        }
-
-        return new TextNode(sign.getValue(), sign.getSourceInfo());
-    }
-
-    private boolean isBindingExpression(SyntaxMapping mapping, String cleanName, String markupName) {
+    private @Nullable Intrinsic findIntrinsic(
+            @Nullable SyntaxMapping mapping, String cleanName, String markupName) {
         boolean intrinsic = mapping != null ? mapping.intrinsic() : !cleanName.equals(markupName);
-        return intrinsic && (Intrinsics.EVALUATE.getName().equals(cleanName)
-            || Intrinsics.OBSERVE.getName().equals(cleanName)
-            || Intrinsics.PUSH.getName().equals(cleanName)
-            || Intrinsics.SYNCHRONIZE.getName().equals(cleanName));
+        return intrinsic ? Intrinsics.find(cleanName) : null;
+    }
+
+    private ParseMode parseMode(@Nullable IntrinsicProperty property) {
+        if (property == null) {
+            return ParseMode.VALUE;
+        }
+
+        return switch (property.getSyntax()) {
+            case GENERIC -> ParseMode.VALUE;
+            case EXPRESSION -> ParseMode.EXPRESSION;
+            case PATH_REFERENCE -> ParseMode.PATH_REFERENCE;
+        };
     }
 
     private boolean isIntrinsicIdentifier(String identifier, SourceInfo sourceInfo) {
@@ -1110,23 +1330,5 @@ public class InlineParser {
         }
 
         return index >= 0 ? identifier.substring(index + 1) : identifier;
-    }
-
-    private ValueNode listNode(List<? extends ValueNode> values) {
-        if (values.size() == 1) {
-            return values.get(0);
-        }
-
-        return new ListNode(
-            values, SourceInfo.span(values.get(0).getSourceInfo(), values.get(values.size() - 1).getSourceInfo()));
-    }
-
-    private ValueNode compositeNode(List<? extends ValueNode> values) {
-        if (values.size() == 1) {
-            return values.get(0);
-        }
-
-        return new CompositeNode(
-            values, SourceInfo.span(values.get(0).getSourceInfo(), values.get(values.size() - 1).getSourceInfo()));
     }
 }

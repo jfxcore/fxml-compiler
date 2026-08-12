@@ -18,6 +18,7 @@ import org.jfxcore.compiler.ast.expression.ExpressionNode;
 import org.jfxcore.compiler.ast.expression.FunctionExpressionNode;
 import org.jfxcore.compiler.ast.expression.InvocationExpressionNode;
 import org.jfxcore.compiler.ast.expression.PathExpressionNode;
+import org.jfxcore.compiler.ast.expression.TargetTypeNotApplicableException;
 import org.jfxcore.compiler.ast.text.PathNode;
 import org.jfxcore.compiler.ast.text.PathSegmentNode;
 import org.jfxcore.compiler.ast.text.TextSegmentNode;
@@ -38,14 +39,17 @@ import org.jfxcore.compiler.type.TypeDeclaration;
 import org.jfxcore.compiler.type.TypeInstance;
 import org.jfxcore.compiler.type.TypeInvoker;
 import org.jfxcore.compiler.util.AccessVerifier;
+import org.jfxcore.compiler.util.ApplicableInvocationCandidate;
 import org.jfxcore.compiler.util.Callable;
+import org.jfxcore.compiler.util.InvocationCandidate;
 import org.jfxcore.compiler.util.MethodFinder;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
- * Resolves one neutral invocation into a method or constructor invocation plan.
+ * Resolves an invocation into a method or constructor invocation plan.
  */
 final class InvocationResolver extends AbstractFunctionEmitterFactory {
 
@@ -64,76 +68,141 @@ final class InvocationResolver extends AbstractFunctionEmitterFactory {
         boolean qualifierResolved,
         @Nullable ConstructorTarget target) {}
 
+    private record CandidateSelection(
+        @Nullable ApplicableInvocationCandidate candidate,
+        List<DiagnosticInfo> diagnostics) {}
+
     private final InvocationExpressionNode expression;
+    private final @Nullable TypeInstance targetType;
+    private boolean staticInvocation;
 
     InvocationResolver(
             InvocationExpressionNode expression,
             TypeInstance invokingType,
             @Nullable TypeInstance targetType) {
-        super(invokingType, targetType);
+        super(invokingType);
         this.expression = expression;
+        this.targetType = targetType;
     }
 
-    ResolvedInvocation resolve(boolean bidirectional, boolean preferObservable) {
-        MethodFinder.ResolvedCandidate selected = resolveCandidate(preferObservable);
-
-        if (selected != null && selected.candidate().behavior() instanceof MethodDeclaration) {
+    ResolvedInvocation emitSelected(
+            ApplicableInvocationCandidate selected,
+            boolean bidirectional,
+            boolean preferObservable) {
+        if (selected.candidate().behavior() instanceof MethodDeclaration) {
             Alternative method = createMethodAlternative(bidirectional, preferObservable, selected);
             return new ResolvedInvocation(method.invocation(), false);
         }
 
-        if (selected != null && selected.candidate().behavior() instanceof ConstructorDeclaration) {
+        if (selected.candidate().behavior() instanceof ConstructorDeclaration) {
             ConstructorExpressionNode constructorExpression = createConstructorExpression(preferObservable);
+
             InvocationInfo invocation = createConstructorInvocation(
-                constructorExpression, preferObservable, bidirectional, selected);
+                Objects.requireNonNull(constructorExpression), preferObservable, bidirectional, selected);
+
             return new ResolvedInvocation(invocation, true);
         }
 
-        return resolveFailure(bidirectional, preferObservable);
+        throw new AssertionError(selected.candidate().behavior().getClass().getName());
     }
 
-    private @Nullable MethodFinder.ResolvedCandidate resolveCandidate(boolean preferObservable) {
-        List<MethodFinder.InvocationCandidate> methodCandidates;
-        List<MethodFinder.InvocationCandidate> constructorCandidates;
+    ApplicableInvocationCandidate resolveCandidate(boolean preferObservable) {
+        List<InvocationCandidate> methodCandidates;
+        List<InvocationCandidate> constructorCandidates;
+        MarkupException methodError = null;
+        MarkupException constructorError = null;
 
         try {
             methodCandidates = createMethodCandidates(preferObservable);
-        } catch (MarkupException ignored) {
+        } catch (MarkupException ex) {
             methodCandidates = List.of();
+            methodError = ex;
         }
 
         try {
             constructorCandidates = createConstructorCandidates(preferObservable);
-        } catch (MarkupException ignored) {
+        } catch (MarkupException ex) {
             constructorCandidates = List.of();
+            constructorError = ex;
         }
 
-        List<MethodFinder.InvocationCandidate> candidates = new ArrayList<>(
-            methodCandidates.size() + constructorCandidates.size());
+        List<InvocationCandidate> candidates = new ArrayList<>(methodCandidates.size() + constructorCandidates.size());
         candidates.addAll(methodCandidates);
         candidates.addAll(constructorCandidates);
 
+        CandidateSelection selection = selectCandidate(
+            preferAccessibleCandidates(candidates), preferObservable, true, targetType);
+
+        if (selection.candidate() == null && targetType != null && expression.getOperator().isBoolean()) {
+            selection = selectCandidate(preferAccessibleCandidates(candidates), preferObservable, true, null);
+        }
+
+        if (selection.candidate() == null) {
+            boolean targetMismatch = targetType != null
+                && hasTargetIndependentCandidate(preferAccessibleCandidates(candidates), preferObservable);
+
+            try {
+                throwCandidateFailure(
+                    selection.diagnostics(), methodCandidates, constructorCandidates,
+                    methodError, constructorError);
+            } catch (MarkupException ex) {
+                throw targetMismatch ? new TargetTypeNotApplicableException(ex) : ex;
+            }
+        }
+
+        verifyAccessible(selection.candidate());
+        return selection.candidate();
+    }
+
+    ApplicableInvocationCandidate resolveMethodCandidate(boolean preferObservable) {
+        List<InvocationCandidate> candidates = createMethodCandidates(preferObservable);
+
+        CandidateSelection selection = selectCandidate(
+            preferAccessibleCandidates(candidates), preferObservable, false, targetType);
+
+        if (selection.candidate() == null && targetType != null && expression.getOperator().isBoolean()) {
+            selection = selectCandidate(preferAccessibleCandidates(candidates), preferObservable, false, null);
+        }
+
+        if (selection.candidate() == null) {
+            boolean targetMismatch = targetType != null
+                && hasTargetIndependentCandidate(preferAccessibleCandidates(candidates), preferObservable);
+
+            try {
+                throwMethodFailure(selection.diagnostics());
+            } catch (MarkupException ex) {
+                throw targetMismatch ? new TargetTypeNotApplicableException(ex) : ex;
+            }
+        }
+
+        verifyAccessible(selection.candidate());
+        return selection.candidate();
+    }
+
+    private CandidateSelection selectCandidate(
+            List<InvocationCandidate> candidates,
+            boolean preferObservable,
+            boolean mixedCategories,
+            @Nullable TypeInstance targetType) {
         if (candidates.isEmpty()) {
-            return null;
+            return new CandidateSelection(null, List.of());
         }
 
         List<TypeInstance> argumentTypes = expression.getArguments().stream()
-            .map(argument -> getArgumentType(argument, preferObservable))
+            .map(argument -> resolveArgumentType(argument, preferObservable))
             .toList();
 
         List<SourceInfo> argumentSources = expression.getArguments().stream()
             .map(Node::getSourceInfo)
             .toList();
 
-        TypeInstance targetType = expression.getOperator().isBoolean() ? null : getTargetType();
-
         List<DiagnosticInfo> diagnostics = new ArrayList<>();
 
-        List<MethodFinder.ResolvedCandidate> selected = MethodFinder.resolveInvocationCandidates(
-            candidates, targetType, argumentTypes, argumentSources, diagnostics, expression.getSourceInfo());
+        List<ApplicableInvocationCandidate> selected = MethodFinder.resolveInvocationCandidates(
+            candidates, targetType, argumentTypes, argumentSources, diagnostics, invocationSourceInfo());
 
         if (selected.isEmpty()) {
-            return null;
+            return new CandidateSelection(null, List.copyOf(diagnostics));
         }
 
         boolean hasMethod = selected.stream().anyMatch(
@@ -142,7 +211,7 @@ final class InvocationResolver extends AbstractFunctionEmitterFactory {
         boolean hasConstructor = selected.stream().anyMatch(
             candidate -> candidate.candidate().behavior() instanceof ConstructorDeclaration);
 
-        if (hasMethod && hasConstructor) {
+        if (mixedCategories && hasMethod && hasConstructor) {
             throw GeneralErrors.ambiguousMethodOrConstructorCall(
                 expression.getTerminalSegment().getSourceInfo(),
                 expression.getTerminalSegment().getText(),
@@ -175,20 +244,47 @@ final class InvocationResolver extends AbstractFunctionEmitterFactory {
                 diagnostic);
         }
 
-        return selected.get(0);
+        return new CandidateSelection(selected.get(0), List.of());
     }
 
-    private List<MethodFinder.InvocationCandidate> createMethodCandidates(boolean preferObservable) {
+    /**
+     * Tests invocation applicability without a return target. A non-empty result proves that the
+     * target-aware failure was caused only by the requested return type, even when target-free
+     * resolution would itself be ambiguous.
+     */
+    private boolean hasTargetIndependentCandidate(List<InvocationCandidate> candidates, boolean preferObservable) {
+        if (candidates.isEmpty()) {
+            return false;
+        }
+
+        List<TypeInstance> argumentTypes = expression.getArguments().stream()
+            .map(argument -> resolveArgumentType(argument, preferObservable))
+            .toList();
+
+        List<SourceInfo> argumentSources = expression.getArguments().stream()
+            .map(Node::getSourceInfo)
+            .toList();
+
+        return !MethodFinder.resolveInvocationCandidates(
+            candidates, null, argumentTypes, argumentSources, null, invocationSourceInfo()).isEmpty();
+    }
+
+    private List<InvocationCandidate> preferAccessibleCandidates(List<InvocationCandidate> candidates) {
+        List<InvocationCandidate> accessible = candidates.stream()
+            .filter(candidate -> AccessVerifier.isAccessible(candidate.behavior(), expression.getInvocationContext()))
+            .toList();
+
+        return accessible.isEmpty() ? candidates : accessible;
+    }
+
+    private List<InvocationCandidate> createMethodCandidates(boolean preferObservable) {
         TypeDeclaration declaringType;
         List<TypeInstance> invocationContext;
         boolean staticInvocation;
 
         if (expression.getPathTarget() == null) {
-            BindingEmitterInfo receiverInfo = expression.getReceiver().toEmitter(
-                preferObservable ? BindingMode.UNIDIRECTIONAL : BindingMode.ONCE,
-                getInvokingType(), null);
-
-            TypeInstance receiverType = receiverInfo.getValueType();
+            ExpressionNode receiver = Objects.requireNonNull(expression.getReceiver());
+            TypeInstance receiverType = getExpressionValueType(receiver, preferObservable);
             declaringType = receiverType.declaration();
             invocationContext = List.of(receiverType);
             staticInvocation = false;
@@ -211,7 +307,8 @@ final class InvocationResolver extends AbstractFunctionEmitterFactory {
                     staticInvocation = false;
                 } catch (MarkupException ex) {
                     if (!path.getBindingContext().mayResolveAgainstImports()) {
-                        throw ex;
+                        throw BindingSourceErrors.bindingContextNotApplicable(
+                            path.getBindingContext().getSourceInfo());
                     }
 
                     String className = path.getSimplePath(limit);
@@ -236,44 +333,40 @@ final class InvocationResolver extends AbstractFunctionEmitterFactory {
             .map(PathNode::resolve)
             .toList();
 
-        List<MethodFinder.InvocationCandidate> result = new ArrayList<>();
+        this.staticInvocation = staticInvocation;
+
+        List<InvocationCandidate> result = new ArrayList<>();
 
         for (MethodDeclaration method : declaringType.methods(expression.getTerminalSegment().getText())) {
-            if (AccessVerifier.isAccessible(method, expression.getInvocationContext())) {
-                result.add(new MethodFinder.InvocationCandidate(
-                    method, invocationContext, witnesses, staticInvocation, null));
-            }
+            result.add(new InvocationCandidate(method, invocationContext, witnesses, false, null));
         }
 
         return result;
     }
 
-    private List<MethodFinder.InvocationCandidate> createConstructorCandidates(boolean preferObservable) {
+    private List<InvocationCandidate> createConstructorCandidates(boolean preferObservable) {
         ConstructorExpressionNode constructorExpression = createConstructorExpression(preferObservable);
         if (constructorExpression == null) {
             return List.of();
         }
 
-        BindingEmitterInfo qualifierInfo = constructorExpression.getQualifier() != null
-            ? constructorExpression.getQualifier().toEmitter(
-                preferObservable ? BindingMode.UNIDIRECTIONAL : BindingMode.ONCE,
-                getInvokingType(), null)
+        TypeInstance owner = constructorExpression.getQualifier() != null
+            ? getExpressionValueType(constructorExpression.getQualifier(), preferObservable)
             : null;
 
-        TypeInstance owner = qualifierInfo != null ? qualifierInfo.getValueType() : null;
         SourceInfo typeSourceInfo = constructorExpression.getConstructedType().getSourceInfo();
         Resolver resolver = new Resolver(typeSourceInfo);
         TypeDeclaration constructedClass;
 
         if (owner == null) {
             constructedClass = resolver.resolveClassAgainstImports(
-                constructorExpression.getConstructedType().formatText());
+                constructorExpression.getConstructedType().format());
 
             if (!constructedClass.isStatic() && constructedClass.declaringType().isPresent()) {
                 throw ObjectInitializationErrors.constructorNotFound(typeSourceInfo, constructedClass);
             }
         } else {
-            String memberName = constructorExpression.getConstructedType().formatText();
+            String memberName = constructorExpression.getConstructedType().format();
             constructedClass = resolver.tryResolveNestedClass(owner.declaration(), memberName);
 
             if (constructedClass == null) {
@@ -311,8 +404,7 @@ final class InvocationResolver extends AbstractFunctionEmitterFactory {
             .toList();
 
         return constructedClass.constructors().stream()
-            .filter(constructor -> AccessVerifier.isAccessible(constructor, expression.getInvocationContext()))
-            .map(constructor -> new MethodFinder.InvocationCandidate(
+            .map(constructor -> new InvocationCandidate(
                 constructor, invocationContext, witnesses, false, constructedType))
             .collect(Collectors.toList());
     }
@@ -332,62 +424,10 @@ final class InvocationResolver extends AbstractFunctionEmitterFactory {
         result.add(type);
     }
 
-    private ResolvedInvocation resolveFailure(boolean bidirectional, boolean preferObservable) {
-        Alternative method = null;
-        Alternative constructor = null;
-        MarkupException methodError = null;
-        MarkupException constructorError = null;
-
-        try {
-            method = createMethodAlternative(bidirectional, preferObservable);
-        } catch (MarkupException ex) {
-            methodError = ex;
-        }
-
-        ConstructorExpressionNode constructorExpression = null;
-
-        try {
-            constructorExpression = createConstructorExpression(preferObservable);
-
-            if (constructorExpression != null) {
-                InvocationInfo invocation = createConstructorInvocation(
-                    constructorExpression, preferObservable, bidirectional);
-
-                if (getTargetType() != null && !getTargetType().isAssignableFrom(invocation.type())) {
-                    throw GeneralErrors.incompatibleReturnValue(
-                        expression.getSourceInfo(), invocation.function().getBehavior(), getTargetType());
-                }
-
-                constructor = new Alternative(invocation, true);
-            }
-        } catch (MarkupException ex) {
-            constructorError = ex;
-        }
-
-        if (method == null && constructor == null) {
-            throw selectFailure(methodError, constructorError, constructorExpression != null);
-        }
-
-        if (method != null && constructor != null) {
-            throw GeneralErrors.ambiguousMethodOrConstructorCall(
-                expression.getTerminalSegment().getSourceInfo(),
-                expression.getTerminalSegment().getText(),
-                method.invocation().function().getBehavior(),
-                constructor.invocation().function().getBehavior());
-        }
-
-        Alternative selected = method != null ? method : constructor;
-        return new ResolvedInvocation(selected.invocation(), selected.construction());
-    }
-
-    private Alternative createMethodAlternative(boolean bidirectional, boolean preferObservable) {
-        return createMethodAlternative(bidirectional, preferObservable, null);
-    }
-
     private Alternative createMethodAlternative(
             boolean bidirectional,
             boolean preferObservable,
-            @Nullable MethodFinder.ResolvedCandidate selected) {
+            ApplicableInvocationCandidate selected) {
         InvocationInfo invocation;
 
         if (expression.getPathTarget() != null) {
@@ -398,9 +438,7 @@ final class InvocationResolver extends AbstractFunctionEmitterFactory {
                 expression.getInversePath(),
                 expression.getSourceInfo());
 
-            invocation = selected != null
-                ? createInvocation(function, bidirectional, preferObservable, selected)
-                : createInvocation(function, bidirectional, preferObservable);
+            invocation = createInvocation(function, bidirectional, preferObservable, selected);
         } else {
             invocation = createSelectedMethodInvocation(bidirectional, preferObservable, selected);
         }
@@ -411,72 +449,17 @@ final class InvocationResolver extends AbstractFunctionEmitterFactory {
     private InvocationInfo createSelectedMethodInvocation(
             boolean bidirectional,
             boolean preferObservable,
-            @Nullable MethodFinder.ResolvedCandidate selected) {
-        BindingEmitterInfo receiverInfo = expression.getReceiver().toEmitter(
+            ApplicableInvocationCandidate selected) {
+        ExpressionNode receiver = Objects.requireNonNull(expression.getReceiver());
+        BindingEmitterInfo receiverInfo = receiver.resolve(
             preferObservable ? BindingMode.UNIDIRECTIONAL : BindingMode.ONCE,
-            getInvokingType(), null);
+            getInvokingType(), null).toEmitter();
 
-        TypeInstance receiverType = receiverInfo.getValueType();
-        TextSegmentNode target = expression.getSelectedTarget();
-        MethodDeclaration method;
-        List<TypeInstance> invocationContext;
-        TypeInstance[] parameterTypes;
-        TypeInstance returnType;
-
-        if (selected != null) {
-            method = (MethodDeclaration)selected.candidate().behavior();
-            invocationContext = selected.candidate().invocationContext();
-            parameterTypes = selected.parameterTypes().toArray(TypeInstance[]::new);
-            returnType = selected.resultType();
-        } else {
-            List<TypeInstance> witnesses = target.getTypeArguments().stream()
-                .map(PathNode::resolve)
-                .toList();
-
-            List<TypeInstance> argumentTypes = expression.getArguments().stream()
-                .map(argument -> getArgumentType(argument, preferObservable))
-                .toList();
-
-            List<SourceInfo> argumentSources = expression.getArguments().stream()
-                .map(Node::getSourceInfo)
-                .toList();
-
-            invocationContext = List.of(receiverType);
-            List<DiagnosticInfo> diagnostics = new ArrayList<>();
-            MethodFinder finder = new MethodFinder(invocationContext, receiverType.declaration());
-
-            method = finder.findMethod(
-                target.getText(), false, getTargetType(), witnesses,
-                argumentTypes, argumentSources, diagnostics, expression.getSourceInfo());
-
-            if (method == null && getTargetType() != null && expression.getOperator().isBoolean()) {
-                diagnostics.clear();
-
-                method = finder.findMethod(
-                    target.getText(), false, null, witnesses,
-                    argumentTypes, argumentSources, diagnostics, expression.getSourceInfo());
-            }
-
-            if (method == null) {
-                if (diagnostics.size() == 1) {
-                    DiagnosticInfo diagnostic = diagnostics.get(0);
-                    throw new MarkupException(diagnostic.getSourceInfo(), diagnostic.getDiagnostic());
-                }
-
-                if (!diagnostics.isEmpty()) {
-                    throw BindingSourceErrors.cannotBindFunction(
-                        expression.getSourceInfo(), diagnostics.stream()
-                            .map(DiagnosticInfo::getDiagnostic).toArray(Diagnostic[]::new));
-                }
-
-                throw SymbolResolutionErrors.memberNotFound(
-                    target.getSourceInfo(), receiverType.declaration(), target.getText());
-            }
-
-            TypeInvoker invoker = new TypeInvoker(expression.getSourceInfo());
-            parameterTypes = invoker.invokeParameterTypes(method, invocationContext, witnesses);
-            returnType = invoker.invokeReturnType(method, invocationContext, witnesses);
-        }
+        TextSegmentNode target = Objects.requireNonNull(expression.getSelectedTarget());
+        MethodDeclaration method = (MethodDeclaration)selected.candidate().behavior();
+        List<TypeInstance> invocationContext = selected.candidate().invocationContext();
+        TypeInstance[] parameterTypes = selected.parameterTypes().toArray(TypeInstance[]::new);
+        TypeInstance returnType = selected.resultType();
 
         AccessVerifier.verifyAccessible(method, expression.getInvocationContext(), target.getSourceInfo());
 
@@ -497,15 +480,6 @@ final class InvocationResolver extends AbstractFunctionEmitterFactory {
         Callable inverse = null;
 
         if (bidirectional) {
-            if (prepared.values().size() != 1) {
-                throw BindingSourceErrors.invalidBidirectionalMethodParamCount(expression.getSourceInfo());
-            }
-
-            Node argument = expression.getArguments().get(0);
-            if (!(argument instanceof PathExpressionNode)) {
-                throw BindingSourceErrors.invalidBidirectionalMethodParamKind(argument.getSourceInfo());
-            }
-
             if (expression.getInversePath() != null) {
                 class ReturnValueNode extends AbstractNode implements ValueEmitterNode {
                     private final ResolvedTypeNode type = new ResolvedTypeNode(returnType, target.getSourceInfo());
@@ -535,7 +509,7 @@ final class InvocationResolver extends AbstractFunctionEmitterFactory {
             prepared.observable(), returnType, callable, inverse, prepared.values());
     }
 
-    private @Nullable ConstructorExpressionNode createConstructorExpression(boolean preferObservable) {
+    @Nullable ConstructorExpressionNode createConstructorExpression(boolean preferObservable) {
         TextSegmentNode terminal = expression.getTerminalSegment();
         if (terminal.isObservableSelector()) {
             return null;
@@ -616,7 +590,7 @@ final class InvocationResolver extends AbstractFunctionEmitterFactory {
         }
 
         return lookupMemberConstructorTarget(
-            expression.getReceiver(), expression.getSelectedTarget(),
+            expression.getReceiver(), Objects.requireNonNull(expression.getSelectedTarget()),
             resolver, preferObservable).target();
     }
 
@@ -626,12 +600,9 @@ final class InvocationResolver extends AbstractFunctionEmitterFactory {
             Resolver resolver,
             boolean preferObservable) {
         try {
-            BindingEmitterInfo qualifierInfo = qualifier.toEmitter(
-                preferObservable ? BindingMode.UNIDIRECTIONAL : BindingMode.ONCE,
-                getInvokingType(), null);
-
             TypeDeclaration type = resolver.tryResolveNestedClass(
-                qualifierInfo.getValueType().declaration(), terminal.getText());
+                getExpressionValueType(qualifier, preferObservable).declaration(),
+                terminal.getText());
 
             if (type == null || type.isStatic() || type.declaringType().isEmpty()) {
                 return new MemberTargetLookup(true, null);
@@ -664,41 +635,110 @@ final class InvocationResolver extends AbstractFunctionEmitterFactory {
                 result.get(result.size() - 1).getSourceInfo()));
     }
 
-    private MarkupException selectFailure(
-            @Nullable MarkupException methodError,
-            @Nullable MarkupException constructorError,
-            boolean constructorTargetExisted) {
-        if (constructorError != null && constructorTargetExisted
-                && (methodError == null || methodError.getDiagnostic().getCode() == ErrorCode.MEMBER_NOT_FOUND)) {
-            return constructorError;
+    private void verifyAccessible(ApplicableInvocationCandidate selected) {
+        SourceInfo invocationSource = expression.getPathTarget() != null
+            ? expression.getPathTarget().getSourceInfo()
+            : expression.getTerminalSegment().getSourceInfo();
+
+        if (staticInvocation
+                && selected.candidate().behavior() instanceof MethodDeclaration method
+                && !method.isStatic()) {
+            throw SymbolResolutionErrors.instanceMemberReferencedFromStaticContext(
+                invocationSource, method);
         }
 
-        if (methodError != null && constructorError == null) {
-            return methodError;
+        AccessVerifier.verifyAccessible(
+            selected.candidate().behavior(),
+            expression.getInvocationContext(),
+            expression.getTerminalSegment().getSourceInfo());
+    }
+
+    private void throwCandidateFailure(
+            List<DiagnosticInfo> diagnostics,
+            List<InvocationCandidate> methodCandidates,
+            List<InvocationCandidate> constructorCandidates,
+            @Nullable MarkupException methodError,
+            @Nullable MarkupException constructorError) {
+        if (!diagnostics.isEmpty()) {
+            if (methodCandidates.isEmpty() && !constructorCandidates.isEmpty()) {
+                TypeInstance resultType = Objects.requireNonNull(constructorCandidates.get(0).resultType());
+                TypeDeclaration constructedType = resultType.declaration();
+
+                throw ObjectInitializationErrors.constructorNotFound(
+                    expression.getSourceInfo(), constructedType,
+                    diagnostics.stream()
+                        .map(DiagnosticInfo::getDiagnostic).toArray(Diagnostic[]::new));
+            }
+
+            throwMethodFailure(diagnostics);
         }
 
         if (constructorError != null && methodError == null) {
-            return constructorError;
+            throw invocationError(constructorError);
+        }
+
+        if (methodError != null && constructorError == null) {
+            throw invocationError(methodError);
         }
 
         if (methodError != null) {
-            return BindingSourceErrors.cannotBindFunction(
-                expression.getSourceInfo(),
-                new Diagnostic[] { methodError.getDiagnostic(), constructorError.getDiagnostic() });
+            throw BindingSourceErrors.cannotBindFunction(
+                invocationSourceInfo(),
+                new Diagnostic[] {methodError.getDiagnostic(), constructorError.getDiagnostic()});
         }
 
-        return SymbolResolutionErrors.memberNotFound(
-            expression.getTerminalSegment().getSourceInfo(),
-            getInvocationHost(),
-            expression.getTerminalSegment().getText());
+        throw SymbolResolutionErrors.memberNotFound(
+            invocationSourceInfo(),
+            getInvocationHost(), expression.getTerminalSegment().getText());
     }
 
-    private TypeDeclaration getInvocationHost() {
-        if (expression.getReceiver() != null) {
-            return getArgumentType(expression.getReceiver(), false).declaration();
+    private void throwMethodFailure(List<DiagnosticInfo> diagnostics) {
+        if (diagnostics.size() == 1) {
+            DiagnosticInfo diagnostic = diagnostics.get(0);
+            throw new MarkupException(diagnostic.getSourceInfo(), diagnostic.getDiagnostic());
+        }
+
+        if (!diagnostics.isEmpty()) {
+            throw BindingSourceErrors.cannotBindFunction(
+                invocationSourceInfo(), diagnostics.stream()
+                    .map(DiagnosticInfo::getDiagnostic)
+                    .toArray(Diagnostic[]::new));
+        }
+
+        throw SymbolResolutionErrors.memberNotFound(
+            invocationSourceInfo(),
+            getInvocationHost(), expression.getTerminalSegment().getText());
+    }
+
+    private SourceInfo invocationSourceInfo() {
+        if (expression.getPathTarget() == null) {
+            return expression.getSelectedTarget().getSourceInfo();
         }
 
         PathExpressionNode path = expression.getPathTarget();
+        SourceInfo start = path.getBindingContext().isExplicitReceiver()
+            ? path.getBindingContext().getSourceInfo()
+            : path.getSegments().get(0).getSourceInfo();
+
+        return SourceInfo.span(start, path.getSegments().get(path.getSegments().size() - 1).getSourceInfo());
+    }
+
+    private MarkupException invocationError(MarkupException error) {
+        if (error.getDiagnostic().getCode() != ErrorCode.MEMBER_NOT_FOUND) {
+            return error;
+        }
+
+        MarkupException result = new MarkupException(invocationSourceInfo(), error.getDiagnostic(), error);
+        result.getProperties().putAll(error.getProperties());
+        return result;
+    }
+
+    TypeDeclaration getInvocationHost() {
+        if (expression.getReceiver() != null) {
+            return resolveArgumentType(expression.getReceiver(), false).declaration();
+        }
+
+        PathExpressionNode path = Objects.requireNonNull(expression.getPathTarget());
         List<PathSegmentNode> segments = path.getSegments();
 
         if (segments.size() > 1) {
@@ -717,5 +757,11 @@ final class InvocationResolver extends AbstractFunctionEmitterFactory {
         }
 
         return path.getBindingContext().getType().getTypeDeclaration();
+    }
+
+    private TypeInstance getExpressionValueType(ExpressionNode expression, boolean preferObservable) {
+        return expression.resolve(
+            preferObservable ? BindingMode.UNIDIRECTIONAL : BindingMode.ONCE,
+            getInvokingType(), null).getTypeInfo().valueType();
     }
 }

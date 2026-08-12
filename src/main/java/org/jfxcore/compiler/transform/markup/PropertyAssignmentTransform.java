@@ -3,20 +3,17 @@
 
 package org.jfxcore.compiler.transform.markup;
 
-import org.jfxcore.compiler.ast.BindingNode;
+import org.jfxcore.compiler.ast.AttributeValueNode;
+import org.jfxcore.compiler.ast.LiteralValueNode;
 import org.jfxcore.compiler.ast.ContextNode;
 import org.jfxcore.compiler.ast.Node;
 import org.jfxcore.compiler.ast.PropertyNode;
 import org.jfxcore.compiler.ast.TemplateContentNode;
 import org.jfxcore.compiler.ast.ValueNode;
 import org.jfxcore.compiler.ast.ValueSourceKind;
-import org.jfxcore.compiler.ast.emit.EmitApplyMarkupExtensionNode;
-import org.jfxcore.compiler.ast.emit.EmitClassConstantNode;
 import org.jfxcore.compiler.ast.emit.EmitEventHandlerNode;
 import org.jfxcore.compiler.ast.emit.EmitInvokeGetterNode;
-import org.jfxcore.compiler.ast.emit.EmitLiteralNode;
 import org.jfxcore.compiler.ast.emit.EmitObjectNode;
-import org.jfxcore.compiler.ast.emit.EmitPropertyAdderNode;
 import org.jfxcore.compiler.ast.emit.EmitPropertyPathNode;
 import org.jfxcore.compiler.ast.emit.EmitPropertySetterNode;
 import org.jfxcore.compiler.ast.emit.EmitSetFieldNode;
@@ -24,11 +21,8 @@ import org.jfxcore.compiler.ast.emit.EmitStaticPropertySetterNode;
 import org.jfxcore.compiler.ast.emit.EmitTemplateContentNode;
 import org.jfxcore.compiler.ast.emit.EmitUnwrapObservableNode;
 import org.jfxcore.compiler.ast.emit.EmitterNode;
-import org.jfxcore.compiler.ast.emit.ReferenceableNode;
 import org.jfxcore.compiler.ast.emit.ValueEmitterNode;
 import org.jfxcore.compiler.ast.intrinsic.Intrinsics;
-import org.jfxcore.compiler.ast.text.ListNode;
-import org.jfxcore.compiler.ast.text.TextNode;
 import org.jfxcore.compiler.diagnostic.MarkupException;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.diagnostic.errors.GeneralErrors;
@@ -37,21 +31,16 @@ import org.jfxcore.compiler.diagnostic.errors.PropertyAssignmentErrors;
 import org.jfxcore.compiler.diagnostic.errors.SymbolResolutionErrors;
 import org.jfxcore.compiler.transform.Transform;
 import org.jfxcore.compiler.transform.TransformContext;
-import org.jfxcore.compiler.transform.markup.util.BindingEmitterFactory;
-import org.jfxcore.compiler.transform.markup.util.MarkupExtensionInfo;
+import org.jfxcore.compiler.transform.markup.util.TargetValueResolver;
 import org.jfxcore.compiler.transform.markup.util.ValueEmitterFactory;
 import org.jfxcore.compiler.type.Resolver;
 import org.jfxcore.compiler.type.TypeDeclaration;
 import org.jfxcore.compiler.type.TypeHelper;
 import org.jfxcore.compiler.type.TypeInstance;
-import org.jfxcore.compiler.type.TypeInvoker;
-import org.jfxcore.compiler.util.NameHelper;
 import org.jfxcore.compiler.util.PropertyInfo;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
-import java.util.UUID;
 
 import static org.jfxcore.compiler.type.KnownSymbols.*;
 
@@ -163,35 +152,71 @@ public class PropertyAssignmentTransform implements Transform {
                 propertyNode.getSourceInfo(), declaringType.declaration(), propertyNode.getMarkupName());
         }
 
-        MarkupException storedException = null;
+        AttributeValueNode attributeValue = propertyNode.getValues().size() == 1
+            ? propertyNode.getValues().get(0).as(AttributeValueNode.class)
+            : null;
 
-        if (propertyNode.getValues().size() == 1) {
-            Node child = propertyNode.getValues().get(0);
+        if (attributeValue != null) {
+            ValueAssignmentResolution resolution = resolveValueAssignment(
+                context,
+                TargetValueResolver.ValueInput.of(attributeValue),
+                targetProperty,
+                declaringType,
+                propertyNode.getSourceInfo());
 
-            if (child instanceof BindingNode bindingNode) {
-                return BindingEmitterFactory.createBindingEmitter(context, propertyNode, bindingNode, targetProperty);
+            if (resolution instanceof ValueAssignmentResolution.Assign assign) {
+                return assign.node();
             }
 
-            if (child instanceof ValueNode valueNode) {
-                ValueAssignmentResolution res = resolveValueAssignment(context, valueNode, targetProperty);
+            if (resolution instanceof ValueAssignmentResolution.Invalid invalid) {
+                throw invalid.error();
+            }
 
-                if (res instanceof ValueAssignmentResolution.Assign assign) {
-                    return assign.node();
-                }
-
-                if (res instanceof ValueAssignmentResolution.Error error) {
-                    storedException = error.error();
+            if (resolution instanceof ValueAssignmentResolution.Error error
+                    && error.diagnostic() != null) {
+                if (attributeValue.getForm() != AttributeValueNode.Form.LITERAL
+                        || error.diagnostic().getDiagnostic().getCode()
+                            != org.jfxcore.compiler.diagnostic.ErrorCode.CONSTRUCTOR_NOT_FOUND) {
+                    throw error.diagnostic();
                 }
             }
+
+            if (targetProperty.isReadOnly()) {
+                throw PropertyAssignmentErrors.cannotModifyReadOnlyProperty(
+                    attributeValue.getSourceInfo(), targetProperty);
+            }
+
+            if (attributeValue.getForm() == AttributeValueNode.Form.LITERAL) {
+                LiteralValueNode literal = attributeValue.getLiteral();
+                throw PropertyAssignmentErrors.cannotCoercePropertyValue(
+                    literal.getSourceInfo(), targetProperty, literal.getText(), false);
+            }
+
+            String value = attributeValue.getSourceInfo().getText();
+            throw PropertyAssignmentErrors.cannotCoercePropertyValue(
+                attributeValue.getSourceInfo(), targetProperty,
+                value != null ? value : attributeValue.format());
         }
 
-        Node result = tryAddValue(context, propertyNode, targetProperty, declaringType);
-        if (result != null) {
-            return result;
+        ValueAssignmentResolution resolution = resolveValueAssignment(
+            context,
+            TargetValueResolver.ValueInput.propertyContent(
+                propertyNode.getValues(), propertyNode.getSourceInfo()),
+            targetProperty,
+            declaringType,
+            propertyNode.getSourceInfo());
+
+        if (resolution instanceof ValueAssignmentResolution.Assign assign) {
+            return assign.node();
         }
 
-        if (storedException != null) {
-            throw storedException;
+        if (resolution instanceof ValueAssignmentResolution.Invalid invalid) {
+            throw invalid.error();
+        }
+
+        if (resolution instanceof ValueAssignmentResolution.Error error
+                && error.failure().diagnostic() != null) {
+            throw error.failure().diagnostic();
         }
 
         if (propertyNode.getValues().size() > 1) {
@@ -204,10 +229,9 @@ public class PropertyAssignmentTransform implements Transform {
         }
 
         if (propertyNode.getValues().size() == 1) {
-            if (propertyNode.getValues().get(0) instanceof TextNode textNode) {
+            if (propertyNode.getValues().get(0) instanceof LiteralValueNode literalNode) {
                 throw PropertyAssignmentErrors.cannotCoercePropertyValue(
-                    propertyNode.getValues().get(0).getSourceInfo(), targetProperty,
-                    textNode.getText(), textNode.isRawText());
+                    literalNode.getSourceInfo(), targetProperty, literalNode.getText(), false);
             }
 
             throw PropertyAssignmentErrors.incompatiblePropertyType(
@@ -219,249 +243,80 @@ public class PropertyAssignmentTransform implements Transform {
     }
 
     private ValueAssignmentResolution resolveValueAssignment(
-            TransformContext context, ValueNode node, PropertyInfo propertyInfo) {
-        ValueNode value = null;
-        MarkupException exception = null;
-        MarkupExtensionResolution res = resolveMarkupExtension(node, propertyInfo, propertyInfo.getType());
+            TransformContext context,
+            TargetValueResolver.ValueInput input,
+            PropertyInfo propertyInfo,
+            TypeInstance invokingType,
+            SourceInfo assignmentSource) {
+        int parentsUnderInitialization = ValueEmitterFactory.getParentsUnderInitializationCount(context);
+        var target = TargetValueResolver.TargetContext.property(
+            propertyInfo, invokingType, parentsUnderInitialization, assignmentSource);
+        TargetValueResolver.ResolutionResult result = TargetValueResolver.resolveSequence(
+            context, input, target);
 
-        if (res instanceof MarkupExtensionResolution.ProvideValue provideValue) {
-            if (propertyInfo.isReadOnly()) {
-                // Value-producing extensions cannot mutate a read-only property directly.
-                // Let collection/map properties fall through to the add-item path instead.
-                return new ValueAssignmentResolution.NotHandled();
+        if (result instanceof TargetValueResolver.ResolutionResult.Applicable applicable) {
+            TargetValueResolver.Lowered lowered = applicable.plan().lower();
+            if (lowered instanceof TargetValueResolver.Lowered.Property property) {
+                return new ValueAssignmentResolution.Assign(property.node());
             }
 
-            value = provideValue.value();
-        } else if (res instanceof MarkupExtensionResolution.ConsumeProperty consumeProperty) {
-            return new ValueAssignmentResolution.Assign(consumeProperty.node());
-        } else if (res instanceof MarkupExtensionResolution.Error error) {
-            exception = error.error();
-        } else if (propertyInfo.isReadOnly()) {
-            // Only markup extensions that apply directly to the target property can be used with
-            // read-only properties. Value-producing extensions must fall through so collection
-            // properties can add items instead of attempting to invoke a setter.
-            return new ValueAssignmentResolution.NotHandled();
+            if (lowered instanceof TargetValueResolver.Lowered.Value value) {
+                return new ValueAssignmentResolution.Assign(
+                    createSetter(propertyInfo, (ValueEmitterNode)value.node(), input.sourceInfo()));
+            }
+        } else if (result instanceof TargetValueResolver.ResolutionResult.Invalid invalid) {
+            return new ValueAssignmentResolution.Invalid(invalid.diagnostic());
         }
 
-        if (value == null) {
-            value = createEventHandlerNode(context, node, propertyInfo.getType());
+        if (input.directValue() instanceof ValueNode valueNode) {
+            ValueEmitterNode value = createEventHandlerNode(context, valueNode, propertyInfo.getType());
             if (value == null) {
-                value = createTemplateContentNode(node, propertyInfo.getType());
-                if (value == null) {
-                    value = createValueNode(
-                        node, propertyInfo.getDeclaringType(), propertyInfo.getType());
-                }
+                value = createTemplateContentNode(valueNode, propertyInfo.getType());
+            }
+
+            if (value != null) {
+                return propertyInfo.isReadOnly()
+                    ? targetConstraint(
+                        input.directValue(), target, List.of(TypeHelper.getTypeInstance(value)),
+                        PropertyAssignmentErrors.cannotModifyReadOnlyProperty(
+                            assignmentSource, propertyInfo))
+                    : new ValueAssignmentResolution.Assign(
+                        createSetter(propertyInfo, value, input.sourceInfo()));
             }
         }
 
-        if (value != null) {
-            if (propertyInfo.isStatic()) {
-                return new ValueAssignmentResolution.Assign(new EmitStaticPropertySetterNode(
-                    propertyInfo.getDeclaringType(), propertyInfo, value, node.getSourceInfo()));
-            } else {
-                return new ValueAssignmentResolution.Assign(new EmitPropertySetterNode(
-                    propertyInfo, value, false, node.getSourceInfo()));
-            }
-        }
-
-        return exception != null
-            ? new ValueAssignmentResolution.Error(exception)
+        TargetValueResolver.CandidateFailure failure =
+            ((TargetValueResolver.ResolutionResult.NotApplicable)result).failure();
+        return failure.diagnostic() != null
+            ? new ValueAssignmentResolution.Error(failure)
             : new ValueAssignmentResolution.NotHandled();
     }
 
-    private Node tryAddValue(TransformContext context,
-                             PropertyNode propertyNode,
-                             PropertyInfo targetProperty,
-                             TypeInstance declaringType) {
-        boolean isMap = targetProperty.getType().subtypeOf(MapDecl());
-        if (!isMap && !targetProperty.getType().subtypeOf(CollectionDecl())) {
-            return null;
-        }
-
-        TypeInstance keyType, itemType;
-
-        if (isMap) {
-            List<TypeInstance> itemTypes = TypeHelper.getTypeArguments(targetProperty.getType(), MapDecl());
-            keyType = itemTypes.isEmpty() ? TypeInstance.ObjectType() : itemTypes.get(0);
-            itemType = itemTypes.isEmpty() ? TypeInstance.ObjectType() : itemTypes.get(1);
-        } else {
-            List<TypeInstance> itemTypes = TypeHelper.getTypeArguments(targetProperty.getType(), CollectionDecl());
-            keyType = null;
-            itemType = itemTypes.isEmpty() ? TypeInstance.ObjectType() : itemTypes.get(0);
-        }
-
-        List<ValueNode> keys = new ArrayList<>();
-        List<ValueNode> values = new ArrayList<>();
-
-        for (Node child : propertyNode.getValues()) {
-            boolean error = false;
-
-            MarkupExtensionResolution result = resolveMarkupExtension(child, targetProperty, itemType);
-
-            if (result instanceof MarkupExtensionResolution.ProvideValue provideValue) {
-                child = provideValue.value();
-            } else if (result instanceof MarkupExtensionResolution.Error err) {
-                throw err.error();
-            } else if (result instanceof MarkupExtensionResolution.ConsumeProperty) {
-                throw GeneralErrors.cannotAddItemIncompatibleValue(
-                    child.getSourceInfo(), declaringType.declaration(), propertyNode.getMarkupName(),
-                    child.getSourceInfo().getText());
-            }
-
-            TypeInstance childType = TypeHelper.getTypeInstance(child);
-
-            if (!isMap && child instanceof TextNode textNode) {
-                if (textNode instanceof ListNode listNode) {
-                    for (ValueNode item : listNode.getValues()) {
-                        if (item instanceof TextNode textItem) {
-                            ValueNode valueNode = ValueEmitterFactory.newLiteralValue(
-                                textItem, itemType, item.getSourceInfo());
-
-                            if (valueNode == null) {
-                                error = true;
-                                break;
-                            }
-
-                            values.add(valueNode);
-                        } else {
-                            error = true;
-                            break;
-                        }
-                    }
-                } else {
-                    ValueNode valueNode = ValueEmitterFactory.newLiteralValue(
-                        textNode, itemType, child.getSourceInfo());
-
-                    if (valueNode == null) {
-                        error = true;
-                    } else {
-                        values.add(valueNode);
-                    }
-                }
-            } else if (itemType.isAssignableFrom(childType)) {
-                if (isMap) {
-                    if (child instanceof EmitLiteralNode
-                            || child instanceof EmitObjectNode
-                            || child instanceof EmitClassConstantNode) {
-                        ValueNode key = tryCreateKey(context, (ValueEmitterNode)child, keyType);
-                        if (key == null) {
-                            throw GeneralErrors.unsupportedMapKeyType(child.getSourceInfo(), targetProperty);
-                        }
-
-                        keys.add(key);
-                    } else {
-                        throw GeneralErrors.cannotAddItemIncompatibleValue(
-                            child.getSourceInfo(), declaringType.declaration(), propertyNode.getMarkupName(),
-                            child.getSourceInfo().getText());
-                    }
-                }
-
-                values.add((ValueNode)child);
-            } else {
-                error = true;
-            }
-
-            if (error) {
-                throw GeneralErrors.cannotAddItemIncompatibleType(
-                    child.getSourceInfo(), targetProperty, TypeHelper.getTypeInstance(child), itemType);
-            }
-        }
-
-        return new EmitPropertyAdderNode(targetProperty, keys, values, itemType, propertyNode.getSourceInfo());
+    private ValueAssignmentResolution targetConstraint(
+            Node node,
+            TargetValueResolver.TargetContext target,
+            List<TypeInstance> sourceTypes,
+            MarkupException diagnostic) {
+        return new ValueAssignmentResolution.Error(new TargetValueResolver.CandidateFailure(
+            TargetValueResolver.FailureKind.TARGET_CONSTRAINT,
+            node.getSourceInfo(), target, sourceTypes, diagnostic));
     }
 
-    private ValueNode tryCreateKey(TransformContext context, ValueEmitterNode node, TypeInstance keyType) {
-        if (!keyType.equals(StringDecl()) && !keyType.equals(ObjectDecl())) {
-            return null;
-        }
-
-        if (node instanceof ReferenceableNode refNode) {
-            if (refNode.getId() != null) {
-                return ValueEmitterFactory.newLiteralValue(
-                    refNode.getId(), TypeInstance.StringType(), node.getSourceInfo());
-            }
-        }
-
-        if (keyType.equals(StringDecl())) {
-            StringBuilder builder = new StringBuilder();
-            for (Node parent : context.getParents()) {
-                if (parent instanceof ValueNode) {
-                    builder.append(((ValueNode)parent).getType().getMarkupName());
-                }
-            }
-
-            String id = NameHelper.getUniqueName(
-                UUID.nameUUIDFromBytes(builder.toString().getBytes()).toString(), this);
-
-            return ValueEmitterFactory.newLiteralValue(id, TypeInstance.StringType(), node.getSourceInfo());
-        }
-
-        // The key of unnamed templates is their data item class literal, which is used by the
-        // templating system to match templates to data items at runtime.
-        TypeInstance nodeType = TypeHelper.getTypeInstance(node);
-        if (Core.TemplateDecl() != null && nodeType.subtypeOf(Core.TemplateDecl())) {
-            Resolver resolver = new Resolver(node.getSourceInfo());
-            TypeInstance itemType = resolver.tryFindArgument(nodeType, Core.TemplateDecl());
-
-            return new EmitLiteralNode(
-                new TypeInvoker(node.getSourceInfo()).invokeType(ClassDecl(), List.of(itemType)),
-                itemType.name(),
-                node.getSourceInfo());
-        }
-
-        return EmitObjectNode
-            .constructor(
-                TypeInstance.ObjectType(),
-                ObjectDecl().requireDeclaredConstructor(),
-                Collections.emptyList(),
-                node.getSourceInfo())
-            .create();
-    }
-
-    private MarkupExtensionResolution resolveMarkupExtension(
-            Node node, PropertyInfo targetProperty, TypeInstance targetType) {
-        if (!(node instanceof ValueEmitterNode valueEmitterNode)) {
-            return new MarkupExtensionResolution.None();
-        }
-
-        var propertyConsumerInfo = MarkupExtensionInfo.of(node, MarkupExtensionInfo.PropertyConsumer.class);
-        if (propertyConsumerInfo != null
-                && targetProperty.isObservable()
-                && propertyConsumerInfo.propertyType().isAssignableFrom(targetProperty.getObservableType())) {
-            return new MarkupExtensionResolution.ConsumeProperty(new EmitApplyMarkupExtensionNode(
-                valueEmitterNode, propertyConsumerInfo.markupExtensionInterface(), targetProperty.getName(),
-                targetType, TypeInstance.voidType(), targetProperty));
-        }
-
-        var supplierInfo = MarkupExtensionInfo.of(node, MarkupExtensionInfo.Supplier.class);
-        if (supplierInfo != null) {
-            if (supplierInfo.providedTypes().stream().noneMatch(targetType::isAssignableFrom)) {
-                return new MarkupExtensionResolution.Error(PropertyAssignmentErrors.markupExtensionNotApplicable(
-                    node.getSourceInfo(), targetProperty, TypeHelper.getTypeDeclaration(node),
-                    supplierInfo.providedTypes().toArray(TypeInstance[]::new)));
-            }
-
-            return new MarkupExtensionResolution.ProvideValue(new EmitApplyMarkupExtensionNode.Supplier(
-                valueEmitterNode, supplierInfo.markupExtensionInterface(), targetProperty.getName(),
-                targetType, supplierInfo.returnType(), targetProperty));
-        }
-
-        if (propertyConsumerInfo != null) {
-            return new MarkupExtensionResolution.Error(PropertyAssignmentErrors.markupExtensionNotApplicable(
-                node.getSourceInfo(), targetProperty, TypeHelper.getTypeDeclaration(node),
-                new TypeInstance[] {propertyConsumerInfo.propertyType()}));
-        }
-
-        return new MarkupExtensionResolution.None();
+    private EmitterNode createSetter(
+            PropertyInfo propertyInfo, ValueEmitterNode value, SourceInfo sourceInfo) {
+        return propertyInfo.isStatic()
+            ? new EmitStaticPropertySetterNode(
+                propertyInfo.getDeclaringType(), propertyInfo, value, sourceInfo)
+            : new EmitPropertySetterNode(propertyInfo, value, false, sourceInfo);
     }
 
     private ValueEmitterNode createEventHandlerNode(TransformContext context, ValueNode node, TypeInstance targetType) {
-        if (targetType.subtypeOf(EventHandlerDecl()) && node instanceof TextNode textNode) {
+        if (targetType.subtypeOf(EventHandlerDecl()) && node instanceof LiteralValueNode literalNode) {
             return new EmitEventHandlerNode(
                 context.getCodeBehindOrMarkupClass(),
                 targetType.arguments().get(0),
-                textNode.getText().trim(),
-                textNode.getSourceInfo().getTrimmed());
+                literalNode.getText().trim(),
+                literalNode.getSourceInfo().getTrimmed());
         }
 
         return null;
@@ -482,34 +337,15 @@ public class PropertyAssignmentTransform implements Transform {
         return null;
     }
 
-    private ValueEmitterNode createValueNode(ValueNode node, TypeInstance declaringType, TypeInstance targetType) {
-        TypeInstance valueType = TypeHelper.getTypeInstance(node);
-
-        if (node instanceof TextNode textNode) {
-            ValueEmitterNode coercedValue = ValueEmitterFactory.newLiteralValue(
-                textNode, List.of(targetType, declaringType), targetType, node.getSourceInfo());
-
-            if (coercedValue != null) {
-                return coercedValue;
-            }
-
-            return ValueEmitterFactory.newObjectByCoercion(targetType, textNode);
-        }
-
-        return node instanceof ValueEmitterNode valueEmitterNode && targetType.isAssignableFrom(valueType) ?
-            valueEmitterNode : null;
-    }
-
     private sealed interface ValueAssignmentResolution {
         record NotHandled() implements ValueAssignmentResolution {}
         record Assign(EmitterNode node) implements ValueAssignmentResolution {}
-        record Error(MarkupException error) implements ValueAssignmentResolution {}
+        record Error(TargetValueResolver.CandidateFailure failure) implements ValueAssignmentResolution {
+            MarkupException diagnostic() {
+                return java.util.Objects.requireNonNull(failure.diagnostic());
+            }
+        }
+        record Invalid(MarkupException error) implements ValueAssignmentResolution {}
     }
 
-    private sealed interface MarkupExtensionResolution {
-        record None() implements MarkupExtensionResolution {}
-        record ProvideValue(ValueEmitterNode value) implements MarkupExtensionResolution {}
-        record ConsumeProperty(EmitterNode node) implements MarkupExtensionResolution {}
-        record Error(MarkupException error) implements MarkupExtensionResolution {}
-    }
 }

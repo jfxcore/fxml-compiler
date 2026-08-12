@@ -7,7 +7,6 @@ import org.jfxcore.compiler.ast.Node;
 import org.jfxcore.compiler.ast.ObjectNode;
 import org.jfxcore.compiler.ast.PropertyNode;
 import org.jfxcore.compiler.ast.ResolvedTypeNode;
-import org.jfxcore.compiler.ast.ValueNode;
 import org.jfxcore.compiler.ast.intrinsic.Intrinsic;
 import org.jfxcore.compiler.ast.intrinsic.IntrinsicProperty;
 import org.jfxcore.compiler.ast.intrinsic.Intrinsics;
@@ -72,11 +71,11 @@ public class DefaultPropertyTransform implements Transform {
                 objectNode.getSourceInfo(), objectNode.getType().getMarkupName(), defaultProperty);
         }
 
-        List<ValueNode> children = new ArrayList<>(numChildren);
+        List<Node> children = new ArrayList<>(numChildren);
         Iterator<Node> it = objectNode.getChildren().iterator();
         while (it.hasNext()) {
             Node child = it.next();
-            children.add((ValueNode)child);
+            children.add(child);
             it.remove();
         }
 

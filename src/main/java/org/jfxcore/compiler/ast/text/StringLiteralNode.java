@@ -3,26 +3,26 @@
 
 package org.jfxcore.compiler.ast.text;
 
-import org.jfxcore.compiler.ast.TypeNode;
+import org.jfxcore.compiler.ast.AbstractSyntaxNode;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import java.util.Objects;
 
-import static org.jfxcore.compiler.type.KnownSymbols.*;
-
 /**
- * A string literal with a decoded semantic value and its original inline-language lexeme.
+ * A compiled-expression string literal with decoded value and original lexeme.
  */
-public final class StringLiteralNode extends TextNode {
+public final class StringLiteralNode extends AbstractSyntaxNode {
 
+    private final String value;
     private final String lexeme;
 
     public StringLiteralNode(String value, String lexeme, SourceInfo sourceInfo) {
-        this(value, lexeme, new TypeNode(StringName, sourceInfo), sourceInfo);
+        super(sourceInfo);
+        this.value = checkNotNull(value);
+        this.lexeme = checkNotNull(lexeme);
     }
 
-    private StringLiteralNode(String value, String lexeme, TypeNode type, SourceInfo sourceInfo) {
-        super(value, true, type, sourceInfo);
-        this.lexeme = checkNotNull(lexeme);
+    public String getText() {
+        return value;
     }
 
     public String getLexeme() {
@@ -30,23 +30,23 @@ public final class StringLiteralNode extends TextNode {
     }
 
     @Override
-    public String formatText() {
+    public String format() {
         return lexeme;
     }
 
     @Override
     public StringLiteralNode deepClone() {
-        return new StringLiteralNode(
-            getText(), lexeme, getType().deepClone(), getSourceInfo()).copy(this);
+        return new StringLiteralNode(value, lexeme, getSourceInfo()).copy(this);
     }
 
     @Override
-    public boolean equals(Object o) {
-        return super.equals(o) && lexeme.equals(((StringLiteralNode)o).lexeme);
+    public boolean equals(Object obj) {
+        return obj instanceof StringLiteralNode other
+            && value.equals(other.value) && lexeme.equals(other.lexeme);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(super.hashCode(), lexeme);
+        return Objects.hash(value, lexeme);
     }
 }

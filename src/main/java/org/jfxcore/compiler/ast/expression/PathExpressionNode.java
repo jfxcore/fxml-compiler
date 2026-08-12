@@ -4,20 +4,15 @@
 package org.jfxcore.compiler.ast.expression;
 
 import org.jfxcore.compiler.ast.AbstractNode;
-import org.jfxcore.compiler.ast.BindingMode;
 import org.jfxcore.compiler.ast.Visitor;
 import org.jfxcore.compiler.ast.expression.path.ResolvedPath;
-import org.jfxcore.compiler.ast.expression.util.ObservablePathEmitterFactory;
-import org.jfxcore.compiler.ast.expression.util.SimplePathEmitterFactory;
 import org.jfxcore.compiler.ast.text.PathSegmentNode;
-import org.jfxcore.compiler.ast.text.TextNode;
 import org.jfxcore.compiler.ast.text.TextSegmentNode;
 import org.jfxcore.compiler.diagnostic.MarkupException;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.diagnostic.errors.ParserErrors;
 import org.jfxcore.compiler.type.Resolver;
 import org.jfxcore.compiler.type.TypeDeclaration;
-import org.jfxcore.compiler.type.TypeInstance;
 import org.jfxcore.compiler.type.TypeInvoker;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -30,8 +25,6 @@ public class PathExpressionNode extends AbstractNode implements ExpressionNode {
     private final BindingOperator operator;
     private final List<PathSegmentNode> segments;
     private BindingContextNode bindingContext;
-    private ResolvedPath resolvedPath;
-    private ResolvedPath resolvedObservablePath;
 
     public PathExpressionNode(
             BindingOperator operator,
@@ -77,7 +70,7 @@ public class PathExpressionNode extends AbstractNode implements ExpressionNode {
 
         return segments.stream()
             .limit(limit)
-            .map(TextNode::getText)
+            .map(PathSegmentNode::getText)
             .collect(Collectors.joining("."));
     }
 
@@ -92,23 +85,7 @@ public class PathExpressionNode extends AbstractNode implements ExpressionNode {
     private ResolvedPath resolvePath(boolean preferObservable, boolean mayResolveAgainstImports, int limit) {
         mayResolveAgainstImports &= bindingContext.mayResolveAgainstImports();
 
-        if (!mayResolveAgainstImports || limit != Integer.MAX_VALUE) {
-            return resolvePathImpl(preferObservable, mayResolveAgainstImports, limit);
-        }
-
-        if (preferObservable) {
-            if (resolvedObservablePath != null) {
-                return resolvedObservablePath;
-            }
-
-            return resolvedObservablePath = resolvePathImpl(true, true, limit);
-        }
-
-        if (resolvedPath != null) {
-            return resolvedPath;
-        }
-
-        return resolvedPath = resolvePathImpl(false, true, limit);
+        return resolvePathImpl(preferObservable, mayResolveAgainstImports, limit);
     }
 
     private ResolvedPath resolvePathImpl(boolean preferObservable, boolean mayResolveAgainstImports, int limit) {
@@ -176,21 +153,6 @@ public class PathExpressionNode extends AbstractNode implements ExpressionNode {
 
             return newPathExpression.resolvePath(false, false, Integer.MAX_VALUE);
         }
-    }
-
-    @Override
-    public BindingEmitterInfo toEmitter(BindingMode bindingMode, TypeInstance invokingType, TypeInstance targetType) {
-        boolean bidirectional = bindingMode == BindingMode.BIDIRECTIONAL;
-
-        BindingEmitterInfo emitterInfo = bindingMode.isObservable() ?
-            new ObservablePathEmitterFactory(this).newInstance(bidirectional) :
-            new SimplePathEmitterFactory(this).newInstance();
-
-        if (emitterInfo == null) {
-            emitterInfo = new SimplePathEmitterFactory(this).newInstance();
-        }
-
-        return emitterInfo;
     }
 
     @Override

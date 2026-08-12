@@ -3,16 +3,16 @@
 
 package org.jfxcore.compiler.ast.expression;
 
-import org.jetbrains.annotations.Nullable;
 import org.jfxcore.compiler.TestBase;
 import org.jfxcore.compiler.ast.AbstractNode;
 import org.jfxcore.compiler.ast.BindingMode;
 import org.jfxcore.compiler.ast.BindingNode;
+import org.jfxcore.compiler.ast.IdentifierNode;
 import org.jfxcore.compiler.ast.ObjectNode;
 import org.jfxcore.compiler.ast.ResolvedTypeNode;
+import org.jfxcore.compiler.ast.Visitor;
 import org.jfxcore.compiler.ast.text.BinaryOperator;
 import org.jfxcore.compiler.ast.text.PathNode;
-import org.jfxcore.compiler.ast.text.TextNode;
 import org.jfxcore.compiler.ast.text.TextSegmentNode;
 import org.jfxcore.compiler.ast.text.UnaryOperator;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
@@ -30,7 +30,7 @@ public class ExpressionBindingDistanceTest extends TestBase {
     @Test
     public void Binding_Node_Uses_The_Polymorphic_Expression_Distance() {
         BindingNode binding = BindingNode.newInstance(
-            BindingMode.ONCE, new DistanceExpression(7), null, null, false, NONE);
+            BindingMode.ONCE, new DistanceExpression(7), null, null, NONE);
 
         assertEquals(7, binding.getBindingDistance());
     }
@@ -96,6 +96,36 @@ public class ExpressionBindingDistanceTest extends TestBase {
     }
 
     @Test
+    public void Resolution_Does_Not_Mutate_The_Original_Expression() {
+        CompiledExpressionNode expression = new CompiledExpressionNode(
+            ObjectDecl(), "expression", LiteralExpressionNode.ofNumber(1, NONE), NONE);
+
+        BindingTypeInfo result = expression.resolve(
+            BindingMode.ONCE, TypeInstance.ObjectType(), TypeInstance.intType()).getTypeInfo();
+
+        assertEquals(TypeInstance.intType(), result.emittedType());
+        assertDoesNotThrow(() -> expression.accept(new Visitor() {
+            @Override
+            protected org.jfxcore.compiler.ast.Node onVisited(org.jfxcore.compiler.ast.Node node) {
+                return node;
+            }
+        }));
+    }
+
+    @Test
+    public void One_Resolution_Materializes_Exactly_One_Emitter() {
+        ExpressionResolution resolution = LiteralExpressionNode.ofNumber(1, NONE).resolve(
+            BindingMode.ONCE, TypeInstance.ObjectType(), TypeInstance.intType());
+
+        BindingEmitterInfo first = resolution.toEmitter();
+        BindingEmitterInfo second = resolution.toEmitter();
+
+        assertSame(first, second);
+        assertSame(first.getValue(), second.getValue());
+        assertEquals(resolution.getTypeInfo().emittedType(), first.getType());
+    }
+
+    @Test
     public void Comparison_And_Logical_Roots_Aggregate_Distance_Polymorphically() {
         ComparisonExpressionNode comparison = new ComparisonExpressionNode(
             BinaryOperator.LESS_THAN,
@@ -142,7 +172,7 @@ public class ExpressionBindingDistanceTest extends TestBase {
     private static PathNode typePath(String name) {
         return new PathNode(
             null,
-            List.of(new TextSegmentNode(false, new TextNode(name, NONE), List.of(), NONE)),
+            List.of(new TextSegmentNode(false, new IdentifierNode(name, NONE), List.of(), NONE)),
             List.of(), NONE);
     }
 
@@ -152,14 +182,6 @@ public class ExpressionBindingDistanceTest extends TestBase {
         private DistanceExpression(int distance) {
             super(NONE);
             this.distance = distance;
-        }
-
-        @Override
-        public BindingEmitterInfo toEmitter(
-                BindingMode bindingMode,
-                TypeInstance invokingType,
-                @Nullable TypeInstance targetType) {
-            throw new UnsupportedOperationException();
         }
 
         @Override

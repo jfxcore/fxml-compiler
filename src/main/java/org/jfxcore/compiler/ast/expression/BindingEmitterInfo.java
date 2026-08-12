@@ -10,41 +10,16 @@ import org.jfxcore.compiler.ast.emit.ValueEmitterNode;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.type.TypeDeclaration;
 import org.jfxcore.compiler.type.TypeInstance;
+import java.util.Objects;
 
-public class BindingEmitterInfo {
+public final class BindingEmitterInfo {
 
     private final ValueEmitterNode value;
-    private final TypeInstance valueType;
-    private final TypeInstance valueSourceType;
-    private final ValueSourceKind valueSourceKind;
-    private final ObservableDependencyKind dependencyKind;
-    private final TypeDeclaration sourceDeclaringType;
-    private final String sourceName;
-    private final boolean function;
-    private final boolean compiledPath;
-    private final SourceInfo sourceInfo;
+    private final BindingTypeInfo typeInfo;
 
-    public BindingEmitterInfo(
-            ValueEmitterNode value,
-            TypeInstance valueType,
-            TypeInstance valueSourceType,
-            ValueSourceKind valueSourceKind,
-            ObservableDependencyKind dependencyKind,
-            @Nullable TypeDeclaration sourceDeclaringType,
-            String sourceName,
-            boolean function,
-            boolean compiledPath,
-            SourceInfo sourceInfo) {
-        this.value = value;
-        this.valueType = valueType;
-        this.valueSourceType = valueSourceType;
-        this.valueSourceKind = valueSourceKind;
-        this.dependencyKind = dependencyKind;
-        this.sourceDeclaringType = sourceDeclaringType;
-        this.sourceName = sourceName;
-        this.function = function;
-        this.compiledPath = compiledPath;
-        this.sourceInfo = sourceInfo;
+    BindingEmitterInfo(ValueEmitterNode value, BindingTypeInfo typeInfo) {
+        this.value = Objects.requireNonNull(value);
+        this.typeInfo = Objects.requireNonNull(typeInfo);
     }
 
     public ValueEmitterNode getValue() {
@@ -52,42 +27,42 @@ public class BindingEmitterInfo {
     }
 
     public TypeInstance getType() {
-        return valueSourceType != null ? valueSourceType : valueType;
+        return typeInfo.type();
     }
 
     public TypeInstance getValueType() {
-        return valueType;
+        return typeInfo.valueType();
     }
 
     public @Nullable TypeInstance getValueSourceType() {
-        return valueSourceType;
+        return typeInfo.valueSourceType();
     }
 
     public @Nullable TypeDeclaration getSourceDeclaringType() {
-        return sourceDeclaringType;
+        return typeInfo.sourceDeclaringType();
     }
 
     public ValueSourceKind getValueSourceKind() {
-        return valueSourceKind;
+        return typeInfo.valueSourceKind();
     }
 
     public ObservableDependencyKind getObservableDependencyKind() {
-        return dependencyKind;
+        return typeInfo.observableDependencyKind();
     }
 
     public String getSourceName() {
-        return sourceName;
+        return typeInfo.sourceName();
     }
 
     public boolean isFunction() {
-        return function;
+        return typeInfo.function();
     }
 
     public boolean isCompiledPath() {
-        return compiledPath;
+        return typeInfo.compiledPath();
     }
 
     public SourceInfo getSourceInfo() {
-        return sourceInfo;
+        return typeInfo.sourceInfo();
     }
 }

@@ -593,6 +593,16 @@ public class TypeInstanceTest extends TestBase {
     }
 
     @Test
+    public void NullType_Is_Not_Equal_To_ObjectType() {
+        TypeInstance nullType = TypeInstance.nullType();
+        TypeInstance objectType = TypeInstance.ObjectType();
+
+        assertNotEquals(nullType, objectType);
+        assertNotEquals(objectType, nullType);
+        assertEquals(2, new HashSet<>(List.of(nullType, objectType)).size());
+    }
+
+    @Test
     public void PrimitiveType_Is_Not_Assignable_From_NullType() {
         TypeInstance t0 = new TypeParser("double").parse().get(0);
         assertFalse(t0.isAssignableFrom(TypeInstance.nullType()));

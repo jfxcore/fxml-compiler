@@ -5,15 +5,14 @@ package org.jfxcore.compiler.ast.codebehind;
 
 import javassist.Modifier;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
+import org.jfxcore.compiler.ast.LiteralValueNode;
 import org.jfxcore.compiler.ast.PropertyNode;
-import org.jfxcore.compiler.ast.text.TextNode;
-import org.jfxcore.compiler.ast.ValueNode;
 
 public class AddCodeFieldNode extends PropertyNode implements JavaEmitterNode {
 
     private final int modifier;
 
-    public AddCodeFieldNode(String name, ValueNode value, int modifier, SourceInfo sourceInfo) {
+    public AddCodeFieldNode(String name, LiteralValueNode value, int modifier, SourceInfo sourceInfo) {
         super(new String[] {name}, name, value, false, false, sourceInfo);
         this.modifier = modifier;
     }
@@ -32,12 +31,13 @@ public class AddCodeFieldNode extends PropertyNode implements JavaEmitterNode {
                 "\t%s%s%s %s;\r\n",
                 isPrivate ? "private " : "",
                 isProtected ? "protected " : "",
-                ((TextNode)getValues().get(0)).getText(),
+                ((LiteralValueNode)getValues().get(0)).getText(),
                 getName()));
     }
 
     @Override
     public AddCodeFieldNode deepClone() {
-        return new AddCodeFieldNode(getName(), (ValueNode)getValues().get(0), modifier, getSourceInfo()).copy(this);
+        return new AddCodeFieldNode(
+            getName(), (LiteralValueNode)getValues().get(0), modifier, getSourceInfo()).copy(this);
     }
 }

@@ -103,11 +103,11 @@ public class ResolvedPath {
                 } else {
                     if (segment instanceof AttachedSegmentNode attachedSegment) {
                         var declaringClass = new Resolver(attachedSegment.getDeclaringType().getSourceInfo())
-                            .resolveClassAgainstImports(attachedSegment.getDeclaringType().getText());
+                            .resolveClassAgainstImports(attachedSegment.getDeclaringType().getName());
 
                         throw SymbolResolutionErrors.memberNotFound(
                             attachedSegment.getPropertyName().getSourceInfo(),
-                            declaringClass, attachedSegment.getPropertyName().getText());
+                            declaringClass, attachedSegment.getPropertyName().getName());
                     }
 
                     throw SymbolResolutionErrors.memberNotFound(
@@ -276,9 +276,9 @@ public class ResolvedPath {
 
         if (segment instanceof AttachedSegmentNode attachedSegment) {
             attachedProperty = true;
-            propertyName = attachedSegment.getPropertyName().getText();
+            propertyName = attachedSegment.getPropertyName().getName();
             declaringClass = new Resolver(attachedSegment.getDeclaringType().getSourceInfo())
-                .resolveClassAgainstImports(attachedSegment.getDeclaringType().getText());
+                .resolveClassAgainstImports(attachedSegment.getDeclaringType().getName());
             resolver = new Resolver(attachedSegment.getPropertyName().getSourceInfo());
         }
 

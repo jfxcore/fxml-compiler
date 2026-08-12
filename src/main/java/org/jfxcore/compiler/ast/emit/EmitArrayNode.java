@@ -12,6 +12,7 @@ import org.jfxcore.compiler.type.TypeDeclaration;
 import org.jfxcore.compiler.type.TypeHelper;
 import org.jfxcore.compiler.type.TypeInstance;
 import org.jfxcore.compiler.util.Bytecode;
+import org.jfxcore.compiler.util.Local;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -40,23 +41,32 @@ public class EmitArrayNode extends AbstractNode implements ValueEmitterNode {
         Bytecode code = context.getOutput();
 
         code.newarray(componentType, values.size());
+        Local arrayLocal = code.acquireLocal(false);
+        code.astore(arrayLocal);
 
         for (int i = 0; i < values.size(); ++i) {
-            code.dup()
-                .iconst(i);
-
+            TypeDeclaration valueType = TypeHelper.getTypeInstance(values.get(i)).declaration();
+            Local valueLocal = code.acquireLocal(valueType);
             context.emit(values.get(i));
+            code.store(valueType, valueLocal)
+                .aload(arrayLocal)
+                .iconst(i)
+                .load(valueType, valueLocal);
 
-            if (!componentType.isPrimitive()) {
-                TypeDeclaration valueType = TypeHelper.getTypeInstance(values.get(i)).declaration();
-
+            if (componentType.isPrimitive()) {
+                code.castconv(valueType, componentType);
+            } else {
                 if (valueType.isPrimitive()) {
                     code.box(valueType);
                 }
             }
 
             code.arraystore(componentType);
+            code.releaseLocal(valueLocal);
         }
+
+        code.aload(arrayLocal);
+        code.releaseLocal(arrayLocal);
     }
 
     @Override

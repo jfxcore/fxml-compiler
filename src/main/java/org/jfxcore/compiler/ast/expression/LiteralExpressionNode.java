@@ -5,9 +5,6 @@ package org.jfxcore.compiler.ast.expression;
 
 import org.jetbrains.annotations.Nullable;
 import org.jfxcore.compiler.ast.AbstractNode;
-import org.jfxcore.compiler.ast.BindingMode;
-import org.jfxcore.compiler.ast.ObservableDependencyKind;
-import org.jfxcore.compiler.ast.ValueSourceKind;
 import org.jfxcore.compiler.ast.emit.EmitLiteralNode;
 import org.jfxcore.compiler.ast.emit.ValueEmitterNode;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
@@ -69,6 +66,10 @@ public final class LiteralExpressionNode
         return literal;
     }
 
+    public TypeInstance getLiteralType() {
+        return literalType;
+    }
+
     @Override
     public TypeInstance analyze(ExpressionAnalysisContext context) {
         return literalType;
@@ -82,17 +83,6 @@ public final class LiteralExpressionNode
     @Override
     public int getBindingDistance() {
         return NO_BINDING_DISTANCE;
-    }
-
-    @Override
-    public BindingEmitterInfo toEmitter(
-            BindingMode bindingMode,
-            TypeInstance invokingType,
-            @Nullable TypeInstance targetType) {
-        return new BindingEmitterInfo(
-            new EmitLiteralNode(literalType, literal, getSourceInfo()), literalType, null,
-            ValueSourceKind.NONE, ObservableDependencyKind.NONE, null, "literal", false, false,
-            getSourceInfo());
     }
 
     @Override

@@ -5,18 +5,14 @@ package org.jfxcore.compiler.transform.common;
 
 import org.jfxcore.compiler.ast.Node;
 import org.jfxcore.compiler.ast.NodeDataKey;
+import org.jfxcore.compiler.ast.ContentSelectionNode;
 import org.jfxcore.compiler.ast.ObjectNode;
 import org.jfxcore.compiler.ast.PropertyNode;
-import org.jfxcore.compiler.ast.ValueNode;
 import org.jfxcore.compiler.ast.intrinsic.Intrinsic;
-import org.jfxcore.compiler.ast.text.CompositeNode;
-import org.jfxcore.compiler.ast.text.TextNode;
 import org.jfxcore.compiler.diagnostic.errors.ObjectInitializationErrors;
-import org.jfxcore.compiler.diagnostic.errors.ParserErrors;
 import org.jfxcore.compiler.diagnostic.errors.PropertyAssignmentErrors;
 import org.jfxcore.compiler.transform.Transform;
 import org.jfxcore.compiler.transform.TransformContext;
-import java.util.List;
 
 import static org.jfxcore.compiler.ast.intrinsic.Intrinsics.*;
 
@@ -54,21 +50,8 @@ public class ContentExpressionTransform implements Transform {
                 sourceIntrinsic.getDefaultProperty().getName());
         }
 
-        if (!(pathProperty.getSingleValue(context) instanceof CompositeNode compositeNode)) {
+        if (!(pathProperty.getSingleValue(context) instanceof ContentSelectionNode contentSelection)) {
             return;
-        }
-
-        List<ValueNode> values = compositeNode.getValues();
-
-        if (values.size() < 3
-                || !(values.get(0) instanceof TextNode text2 && text2.getText().equals("."))
-                || !(values.get(1) instanceof TextNode text3 && text3.getText().equals("."))) {
-            return;
-        }
-
-        List<ValueNode> newValues = values.subList(2, values.size());
-        if (newValues.size() != 1) {
-            throw ParserErrors.invalidExpression(compositeNode.getSourceInfo());
         }
 
         for (PropertyNode property : expression.getProperties()) {
@@ -79,7 +62,7 @@ public class ContentExpressionTransform implements Transform {
         }
 
         pathProperty.getValues().clear();
-        pathProperty.getValues().addAll(newValues);
+        pathProperty.getValues().add(contentSelection.getValue());
         expression.setNodeData(NodeDataKey.CONTENT_EXPRESSION, true);
     }
 }

@@ -4,6 +4,7 @@
 package org.jfxcore.compiler.transform.common;
 
 import org.jfxcore.compiler.ast.DocumentNode;
+import org.jfxcore.compiler.ast.LiteralValueNode;
 import org.jfxcore.compiler.ast.Node;
 import org.jfxcore.compiler.ast.NodeDataKey;
 import org.jfxcore.compiler.ast.ObjectNode;
@@ -13,7 +14,6 @@ import org.jfxcore.compiler.ast.TypeNode;
 import org.jfxcore.compiler.ast.UnresolvedTypeNode;
 import org.jfxcore.compiler.ast.intrinsic.Intrinsic;
 import org.jfxcore.compiler.ast.intrinsic.Intrinsics;
-import org.jfxcore.compiler.ast.text.TextNode;
 import org.jfxcore.compiler.diagnostic.ErrorCode;
 import org.jfxcore.compiler.diagnostic.MarkupException;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
@@ -73,7 +73,7 @@ public class ResolveTypeTransform implements Transform {
                 return new UnresolvedTypeNode(typeNode, List.of(), ex);
             }
 
-            validateTypeArgs(typeArgsNode, typeNode.getName());
+            validateTypeArgs(context, typeArgsNode, typeNode.getName());
 
             List<String> formattedTypeArgs = new TypeFormatter(
                 typeArgsNode.getTrimmedTextNotEmpty(context),
@@ -131,7 +131,7 @@ public class ResolveTypeTransform implements Transform {
             typeArgsNode.remove();
 
             try {
-                validateTypeArgs(typeArgsNode, objectTypeClass.javaName());
+                validateTypeArgs(context, typeArgsNode, objectTypeClass.javaName());
 
                 List<TypeInstance> typeArguments = new TypeParser(
                     typeArgsNode.getTrimmedTextNotEmpty(context),
@@ -175,7 +175,7 @@ public class ResolveTypeTransform implements Transform {
             node.getSourceInfo());
     }
 
-    private void validateTypeArgs(PropertyNode typeArgsNode, String declaringTypeName) {
+    private void validateTypeArgs(TransformContext context, PropertyNode typeArgsNode, String declaringTypeName) {
         switch (typeArgsNode.getValues().size()) {
             case 1: break;
             case 0: throw PropertyAssignmentErrors.propertyCannotBeEmpty(
@@ -184,10 +184,7 @@ public class ResolveTypeTransform implements Transform {
                 typeArgsNode.getSourceInfo(), declaringTypeName, typeArgsNode.getMarkupName());
         }
 
-        if (!(typeArgsNode.getValues().get(0) instanceof TextNode)) {
-            throw PropertyAssignmentErrors.propertyMustContainText(
-                typeArgsNode.getSourceInfo(), declaringTypeName, typeArgsNode.getMarkupName());
-        } else if (((TextNode)typeArgsNode.getValues().get(0)).getText().isEmpty()) {
+        if (typeArgsNode.getLiteralText(context).isEmpty()) {
             throw PropertyAssignmentErrors.propertyCannotBeEmpty(
                 typeArgsNode.getSourceInfo(), declaringTypeName, typeArgsNode.getMarkupName());
         }
@@ -198,13 +195,13 @@ public class ResolveTypeTransform implements Transform {
         Node fieldNameNode = constantProperty.getSingleValue(context);
         SourceInfo sourceInfo = fieldNameNode.getSourceInfo();
 
-        if (!(fieldNameNode instanceof TextNode fieldNameTextNode)) {
+        if (!(fieldNameNode instanceof LiteralValueNode fieldNameLiteral)) {
             throw PropertyAssignmentErrors.propertyMustContainText(
                 sourceInfo, objectTypeClass, constantProperty.getMarkupName());
         }
 
         var resolver = new Resolver(sourceInfo);
-        FieldDeclaration field = resolver.resolveField(objectTypeClass, fieldNameTextNode.getText().trim(), false);
+        FieldDeclaration field = resolver.resolveField(objectTypeClass, fieldNameLiteral.getText().trim(), false);
         TypeInstance fieldType = new TypeInvoker(sourceInfo).invokeFieldType(field, List.of());
         var resolvedType = new ResolvedTypeNode(
             fieldType, fieldType.name(), fieldType.name(), false, sourceInfo);
@@ -217,12 +214,12 @@ public class ResolveTypeTransform implements Transform {
         Node methodNameNode = factoryProperty.getSingleValue(context);
         SourceInfo sourceInfo = methodNameNode.getSourceInfo();
 
-        if (!(methodNameNode instanceof TextNode methodNameTextNode)) {
+        if (!(methodNameNode instanceof LiteralValueNode methodNameLiteral)) {
             throw PropertyAssignmentErrors.propertyMustContainText(
                 sourceInfo, objectTypeClass, factoryProperty.getMarkupName());
         }
 
-        TypeParser.MethodInfo methodInfo = new TypeParser(methodNameTextNode.getText(), sourceInfo).parseMethod();
+        TypeParser.MethodInfo methodInfo = new TypeParser(methodNameLiteral.getText(), sourceInfo).parseMethod();
         var resolver = new Resolver(methodInfo.sourceInfo());
         var invoker = new TypeInvoker(methodInfo.sourceInfo());
         MethodDeclaration method = resolver.resolveGetter(objectTypeClass, methodInfo.methodName(), true, null);

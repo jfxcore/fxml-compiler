@@ -6,7 +6,6 @@ package org.jfxcore.compiler.transform.markup.util;
 import org.jetbrains.annotations.Nullable;
 import org.jfxcore.compiler.ast.BindingMode;
 import org.jfxcore.compiler.ast.BindingNode;
-import org.jfxcore.compiler.ast.PropertyNode;
 import org.jfxcore.compiler.ast.ValueSourceKind;
 import org.jfxcore.compiler.ast.emit.EmitCollectionWrapperNode;
 import org.jfxcore.compiler.ast.emit.EmitPropertyBindingNode;
@@ -16,6 +15,7 @@ import org.jfxcore.compiler.ast.emit.EmitUnwrapObservableNode;
 import org.jfxcore.compiler.ast.emit.EmitterNode;
 import org.jfxcore.compiler.ast.emit.ValueEmitterNode;
 import org.jfxcore.compiler.ast.expression.BindingEmitterInfo;
+import org.jfxcore.compiler.ast.expression.ExpressionResolution;
 import org.jfxcore.compiler.diagnostic.ErrorCode;
 import org.jfxcore.compiler.diagnostic.MarkupException;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
@@ -37,22 +37,39 @@ import static org.jfxcore.compiler.type.KnownSymbols.*;
 public class BindingEmitterFactory {
 
     public static EmitterNode createBindingEmitter(
-            TransformContext context, PropertyNode propertyNode, BindingNode bindingNode, PropertyInfo propertyInfo) {
-        checkPreconditions(context, propertyNode, propertyInfo, bindingNode);
-
-        if (bindingNode.getMode().isObservable()) {
-            return createPropertyBindingEmitter(bindingNode, propertyInfo);
-        }
-
-        return createPropertyAssignmentEmitter(bindingNode, propertyInfo);
+            TransformContext context,
+            BindingNode bindingNode,
+            PropertyInfo propertyInfo,
+            SourceInfo assignmentSource) {
+        return createBindingEmitter(context, bindingNode, propertyInfo, assignmentSource, null);
     }
 
-    private static EmitterNode createPropertyAssignmentEmitter(BindingNode bindingNode, PropertyInfo propertyInfo) {
+    static EmitterNode createBindingEmitter(
+            TransformContext context,
+            BindingNode bindingNode,
+            PropertyInfo propertyInfo,
+            SourceInfo assignmentSource,
+            @Nullable ExpressionResolution pathResolution) {
+        checkPreconditions(context, propertyInfo, bindingNode, assignmentSource);
+
+        if (bindingNode.getMode().isObservable()) {
+            return createPropertyBindingEmitter(bindingNode, propertyInfo, pathResolution);
+        }
+
+        return createPropertyAssignmentEmitter(bindingNode, propertyInfo, pathResolution);
+    }
+
+    private static EmitterNode createPropertyAssignmentEmitter(
+            BindingNode bindingNode,
+            PropertyInfo propertyInfo,
+            @Nullable ExpressionResolution pathResolution) {
         SourceInfo sourceInfo = bindingNode.getSourceInfo();
         BindingMode bindingMode = bindingNode.getMode();
         TypeInstance targetType = propertyInfo.getType();
-        BindingEmitterInfo result = bindingNode.toPathEmitter(propertyInfo.getDeclaringType(), propertyInfo.getType());
         ValueEmitterNode value = null;
+        BindingEmitterInfo result = pathResolution != null
+            ? pathResolution.toEmitter()
+            : bindingNode.toPathEmitter(propertyInfo.getDeclaringType(), propertyInfo.getType());
 
         if (bindingMode.isContent()) {
             if (isValidContentBindingSource(bindingMode, targetType, result.getType())) {
@@ -94,14 +111,19 @@ public class BindingEmitterFactory {
         return new EmitPropertySetterNode(propertyInfo, value, bindingMode.isContent(), sourceInfo);
     }
 
-    private static EmitterNode createPropertyBindingEmitter(BindingNode bindingNode, PropertyInfo propertyInfo) {
+    private static EmitterNode createPropertyBindingEmitter(
+            BindingNode bindingNode,
+            PropertyInfo propertyInfo,
+            @Nullable ExpressionResolution pathResolution) {
         BindingMode bindingMode = bindingNode.getMode();
         TypeInstance targetType = propertyInfo.getType();
         ValueEmitterNode value, format = null, converter = null;
         BindingEmitterInfo result;
 
         try {
-            result = bindingNode.toPathEmitter(propertyInfo.getDeclaringType(), propertyInfo.getType());
+            result = pathResolution != null
+                ? pathResolution.toEmitter()
+                : bindingNode.toPathEmitter(propertyInfo.getDeclaringType(), propertyInfo.getType());
         } catch (MarkupException ex) {
             TypeInstance sourceType = (TypeInstance)ex.getProperties().get("sourceType");
 
@@ -238,12 +260,15 @@ public class BindingEmitterFactory {
             propertyInfo, bindingMode, value, converter, format, bindingNode.getSourceInfo());
     }
 
-    private static void checkPreconditions(
-            TransformContext context, PropertyNode propertyNode, PropertyInfo propertyInfo, BindingNode bindingNode) {
+    static void checkPreconditions(
+            TransformContext context,
+            PropertyInfo propertyInfo,
+            BindingNode bindingNode,
+            SourceInfo assignmentSource) {
         int count = ValueEmitterFactory.getParentsUnderInitializationCount(context);
         if (count > 0 && bindingNode.getBindingDistance() <= count) {
             throw PropertyAssignmentErrors.cannotReferenceNodeUnderInitialization(
-                context, propertyInfo, bindingNode.getBindingDistance(), propertyNode.getSourceInfo());
+                context, propertyInfo, bindingNode.getBindingDistance(), assignmentSource);
         }
 
         BindingMode bindingMode = bindingNode.getMode();
@@ -251,29 +276,29 @@ public class BindingEmitterFactory {
             if (bindingMode.isContent()) {
                 if (!propertyInfo.isContentBindable(bindingMode)) {
                     throw PropertyAssignmentErrors.invalidContentBindingTarget(
-                        propertyNode.getSourceInfo(), propertyInfo, bindingMode);
+                        assignmentSource, propertyInfo, bindingMode);
                 }
             } else {
                 if (propertyInfo.isReadOnly()) {
                     throw PropertyAssignmentErrors.cannotModifyReadOnlyProperty(
-                        propertyNode.getSourceInfo(), propertyInfo);
+                        assignmentSource, propertyInfo);
                 }
 
                 if (!propertyInfo.isBindable()) {
                     throw PropertyAssignmentErrors.invalidBindingTarget(
-                        propertyNode.getSourceInfo(), propertyInfo);
+                        assignmentSource, propertyInfo);
                 }
             }
         } else {
             if (bindingMode.isContent()) {
                 if (!propertyInfo.isContentBindable(bindingMode)) {
                     throw PropertyAssignmentErrors.invalidContentBindingTarget(
-                        propertyNode.getSourceInfo(), propertyInfo, bindingMode);
+                        assignmentSource, propertyInfo, bindingMode);
                 }
             } else {
                 if (propertyInfo.isReadOnly()) {
                     throw PropertyAssignmentErrors.cannotModifyReadOnlyProperty(
-                        propertyNode.getSourceInfo(), propertyInfo);
+                        assignmentSource, propertyInfo);
                 }
             }
         }

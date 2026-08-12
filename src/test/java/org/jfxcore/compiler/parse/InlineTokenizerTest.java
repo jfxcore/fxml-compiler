@@ -243,7 +243,9 @@ public class InlineTokenizerTest {
     public void Namespace_Context_And_Colon_Boundaries_Remain_Positional() {
         assertTokens(
             "fx:name :parent<Pane>(1) this::foo :foo ::foo $:parent",
-            token(CurlyTokenType.IDENTIFIER, "fx:name"),
+            token(CurlyTokenType.IDENTIFIER, "fx"),
+            token(CurlyTokenType.COLON, ":"),
+            token(CurlyTokenType.IDENTIFIER, "name"),
             token(CurlyTokenType.COLON, ":"),
             token(CurlyTokenType.IDENTIFIER, "parent"),
             token(CurlyTokenType.OPEN_ANGLE, "<"),
@@ -385,15 +387,23 @@ public class InlineTokenizerTest {
     }
 
     @Test
-    public void Namespace_Concatenation_Retains_Logical_Span_And_Mapped_Envelope() {
+    public void Namespace_Tokens_Retain_Logical_Spans_And_Mapped_Envelopes() {
         String raw = "fx&#58;foo";
         var input = SourceMappedText.decodedXml(raw, new Location(1, 3), XmlEntityDecoder.decode(raw));
         var tokenizer = new InlineTokenizer(input);
 
-        InlineToken token = tokenizer.remove(CurlyTokenType.IDENTIFIER);
-        assertEquals("fx:foo", token.getValue());
-        assertEquals(new SourceInfo(1, 3, 1, 9), token.getSourceInfo());
-        assertEquals(new SourceInfo(1, 3, 1, 13), token.getSourceInfo().toOriginal());
+        InlineToken namespace = tokenizer.remove(CurlyTokenType.IDENTIFIER);
+        InlineToken colon = tokenizer.remove(CurlyTokenType.COLON);
+        InlineToken localName = tokenizer.remove(CurlyTokenType.IDENTIFIER);
+
+        assertEquals("fx", namespace.getValue());
+        assertEquals(new SourceInfo(1, 3, 1, 5), namespace.getSourceInfo());
+        assertEquals(new SourceInfo(1, 3, 1, 5), namespace.getSourceInfo().toOriginal());
+        assertEquals(new SourceInfo(1, 5, 1, 6), colon.getSourceInfo());
+        assertEquals(new SourceInfo(1, 5, 1, 10), colon.getSourceInfo().toOriginal());
+        assertEquals("foo", localName.getValue());
+        assertEquals(new SourceInfo(1, 6, 1, 9), localName.getSourceInfo());
+        assertEquals(new SourceInfo(1, 10, 1, 13), localName.getSourceInfo().toOriginal());
     }
 
     @Test
@@ -453,16 +463,16 @@ public class InlineTokenizerTest {
 
     @Test
     public void Tokenizer_Empty_Input_Reports_Complete_Input_End() {
-        MarkupException empty = assertThrows(MarkupException.class,
-            () -> new InlineTokenizer("", new Location(6, 4)));
+        var emptyTokenizer = new InlineTokenizer("", new Location(6, 4));
+        MarkupException empty = assertThrows(MarkupException.class, emptyTokenizer::peekNotNull);
         assertEquals(new SourceInfo(6, 4), empty.getSourceInfo());
 
-        MarkupException whitespace = assertThrows(MarkupException.class,
-            () -> new InlineTokenizer("  \n", new Location(6, 4)));
+        var whitespaceTokenizer = new InlineTokenizer("  \n", new Location(6, 4));
+        MarkupException whitespace = assertThrows(MarkupException.class, whitespaceTokenizer::peekNotNull);
         assertEquals(new SourceInfo(7, 0), whitespace.getSourceInfo());
 
-        MarkupException comment = assertThrows(MarkupException.class,
-            () -> new InlineTokenizer("/* comment */", new Location(6, 4)));
+        var commentTokenizer = new InlineTokenizer("/* comment */", new Location(6, 4));
+        MarkupException comment = assertThrows(MarkupException.class, commentTokenizer::peekNotNull);
 
         assertEquals(new SourceInfo(6, 17), comment.getSourceInfo());
     }
