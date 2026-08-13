@@ -4,8 +4,8 @@
 package org.jfxcore.compiler.parse;
 
 import org.jfxcore.compiler.ast.DocumentNode;
+import org.jfxcore.compiler.ast.AttributeValueNode;
 import org.jfxcore.compiler.ast.ObjectNode;
-import org.jfxcore.compiler.ast.text.TextNode;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.util.CompilationContext;
 import org.jfxcore.compiler.util.CompilationScope;
@@ -28,7 +28,8 @@ public class SourceInfoTest {
         var context = new CompilationContext(new CompilationSource.InMemory(sourceText));
         try (var ignored = new CompilationScope(context)) {
             DocumentNode document = new FxmlParser(sourceText).parseDocument();
-            var textNode = (TextNode)document.getRoot().as(ObjectNode.class).getProperty("text").getValues().get(0);
+            var textNode = ((AttributeValueNode)document.getRoot().as(ObjectNode.class)
+                .getProperty("text").getValues().get(0)).getLiteral();
             var sourceInfo = textNode.getSourceInfo().getTrimmed();
             assertEquals(new SourceInfo(2, 18), sourceInfo);
         }
@@ -48,7 +49,8 @@ public class SourceInfoTest {
         var context = new CompilationContext(new CompilationSource.InMemory(sourceText));
         try (var ignored = new CompilationScope(context)) {
             DocumentNode document = new FxmlParser(sourceText).parseDocument();
-            var textNode = (TextNode)document.getRoot().as(ObjectNode.class).getProperty("text").getValues().get(0);
+            var textNode = ((AttributeValueNode)document.getRoot().as(ObjectNode.class)
+                .getProperty("text").getValues().get(0)).getLiteral();
             var sourceInfo = textNode.getSourceInfo().getTrimmed();
             assertEquals(new SourceInfo(2, 18), sourceInfo);
         }
@@ -66,7 +68,8 @@ public class SourceInfoTest {
         var context = new CompilationContext(new CompilationSource.InMemory(sourceText));
         try (var ignored = new CompilationScope(context)) {
             DocumentNode document = new FxmlParser(sourceText).parseDocument();
-            var textNode = (TextNode)document.getRoot().as(ObjectNode.class).getProperty("text").getValues().get(0);
+            var textNode = ((AttributeValueNode)document.getRoot().as(ObjectNode.class)
+                .getProperty("text").getValues().get(0)).getLiteral();
             var sourceInfo = textNode.getSourceInfo().getTrimmed();
             assertEquals(new SourceInfo(2, 18, 2, 21), sourceInfo);
         }
@@ -84,7 +87,8 @@ public class SourceInfoTest {
         var context = new CompilationContext(new CompilationSource.InMemory(sourceText));
         try (var ignored = new CompilationScope(context)) {
             DocumentNode document = new FxmlParser(sourceText).parseDocument();
-            var textNode = (TextNode)document.getRoot().as(ObjectNode.class).getProperty("text").getValues().get(0);
+            var textNode = ((AttributeValueNode)document.getRoot().as(ObjectNode.class)
+                .getProperty("text").getValues().get(0)).getLiteral();
             var sourceInfo = textNode.getSourceInfo().getTrimmed();
             assertEquals(new SourceInfo(2, 21, 2, 24), sourceInfo);
         }
@@ -108,7 +112,8 @@ public class SourceInfoTest {
         var context = new CompilationContext(new CompilationSource.InMemory(sourceText));
         try (var ignored = new CompilationScope(context)) {
             DocumentNode document = new FxmlParser(sourceText).parseDocument();
-            var textNode = (TextNode)document.getRoot().as(ObjectNode.class).getProperty("text").getValues().get(0);
+            var textNode = ((AttributeValueNode)document.getRoot().as(ObjectNode.class)
+                .getProperty("text").getValues().get(0)).getLiteral();
             var sourceInfo = textNode.getSourceInfo().getTrimmed();
             assertEquals(new SourceInfo(4, 17, 6, 11), sourceInfo);
         }

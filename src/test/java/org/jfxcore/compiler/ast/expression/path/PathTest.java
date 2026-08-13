@@ -11,6 +11,7 @@ import javafx.collections.ObservableList;
 import javafx.collections.ObservableMap;
 import javafx.collections.ObservableSet;
 import org.jfxcore.compiler.TestBase;
+import org.jfxcore.compiler.ast.IdentifierNode;
 import org.jfxcore.compiler.ast.ObservableDependencyKind;
 import org.jfxcore.compiler.ast.ValueSourceKind;
 import org.jfxcore.compiler.ast.expression.BindingContextNode;
@@ -20,7 +21,6 @@ import org.jfxcore.compiler.ast.expression.PathExpressionNode;
 import org.jfxcore.compiler.ast.text.AttachedSegmentNode;
 import org.jfxcore.compiler.ast.text.PathNode;
 import org.jfxcore.compiler.ast.text.PathSegmentNode;
-import org.jfxcore.compiler.ast.text.TextNode;
 import org.jfxcore.compiler.ast.text.TextSegmentNode;
 import org.jfxcore.compiler.diagnostic.ErrorCode;
 import org.jfxcore.compiler.diagnostic.MarkupException;
@@ -40,12 +40,12 @@ public class PathTest extends TestBase {
 
     private static List<PathSegmentNode> segments(String... segments) {
         return Arrays.stream(segments)
-            .map(s -> (PathSegmentNode)new TextSegmentNode(false, new TextNode(s, SourceInfo.none()), List.of(), SourceInfo.none()))
+            .map(s -> (PathSegmentNode)new TextSegmentNode(false, new IdentifierNode(s, SourceInfo.none()), List.of(), SourceInfo.none()))
             .toList();
     }
 
     private static PathSegmentNode segment(String value, List<PathNode> witnesses) {
-        return new TextSegmentNode(false, new TextNode(value, SourceInfo.none()), witnesses, SourceInfo.none());
+        return new TextSegmentNode(false, new IdentifierNode(value, SourceInfo.none()), witnesses, SourceInfo.none());
     }
 
     private static PathNode pathFromSegments(String... segments) {
@@ -153,8 +153,8 @@ public class PathTest extends TestBase {
 
         var attached = new AttachedSegmentNode(
             false,
-            new TextNode(AttachedSource.class.getName(), declaringTypeSpan),
-            new TextNode("value", propertySpan),
+            new IdentifierNode(AttachedSource.class.getName(), declaringTypeSpan),
+            new IdentifierNode("value", propertySpan),
             SourceInfo.none(),
             SourceInfo.none(),
             SourceInfo.none(),

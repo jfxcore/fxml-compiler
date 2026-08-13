@@ -738,7 +738,7 @@ public class MemberClassConstructionTest extends CompilerTestBase {
     }
 
     @Test
-    public void Neutral_Invocation_Syntax_Resolves_Construction() {
+    public void Invocation_Syntax_Resolves_To_Construction() {
         TestPane root = compileAndRun("""
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
                       result="$GenericBox<String>('foo')"/>

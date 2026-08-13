@@ -5,14 +5,10 @@ package org.jfxcore.compiler.ast.expression;
 
 import org.jetbrains.annotations.Nullable;
 import org.jfxcore.compiler.ast.AbstractNode;
-import org.jfxcore.compiler.ast.BindingMode;
 import org.jfxcore.compiler.ast.Node;
 import org.jfxcore.compiler.ast.Visitor;
-import org.jfxcore.compiler.ast.expression.util.ObservableFunctionEmitterFactory;
-import org.jfxcore.compiler.ast.expression.util.SimpleFunctionEmitterFactory;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.type.TypeDeclaration;
-import org.jfxcore.compiler.type.TypeInstance;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -68,24 +64,6 @@ public class FunctionExpressionNode extends AbstractNode implements ExpressionNo
         }
 
         return result;
-    }
-
-    @Override
-    public BindingEmitterInfo toEmitter(BindingMode bindingMode,
-                                        TypeInstance invokingType,
-                                        @Nullable TypeInstance targetType) {
-        boolean bidirectional = bindingMode == BindingMode.BIDIRECTIONAL;
-        targetType = bindingMode == BindingMode.REVERSE ? null : targetType;
-
-        BindingEmitterInfo emitterInfo = bindingMode.isObservable() ?
-            new ObservableFunctionEmitterFactory(this, invokingType, targetType).newInstance(bidirectional) :
-            new SimpleFunctionEmitterFactory(this, invokingType, targetType).newInstance();
-
-        if (emitterInfo == null) {
-            emitterInfo = new SimpleFunctionEmitterFactory(this, invokingType, targetType).newInstance();
-        }
-
-        return emitterInfo;
     }
 
     @Override

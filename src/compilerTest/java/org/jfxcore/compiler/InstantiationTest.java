@@ -364,24 +364,24 @@ public class InstantiationTest extends CompilerTestBase {
         }
 
         @Test
-        public void Object_Instantiation_With_Array_Constructor_Fails_For_Scalar_Value() {
-            MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+        public void Object_Instantiation_With_Array_Constructor_Accepts_Scalar_Value() {
+            GridPane root = compileAndRun("""
                 <?import javafx.scene.layout.*?>
                 <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                     <ArrayConstructorClass>
                         <nodes><GridPane/></nodes>
                     </ArrayConstructorClass>
                 </GridPane>
-            """));
+            """);
 
-            assertEquals(ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT, ex.getDiagnostic().getCode());
-            assertEquals(0, ex.getDiagnostic().getCauses().length);
-            assertCodeHighlight("<GridPane/>", ex);
+            Node[] nodes = ((ArrayConstructorClass)root.getChildren().get(0)).nodes;
+            assertEquals(1, nodes.length);
+            assertInstanceOf(GridPane.class, nodes[0]);
         }
 
         @Test
-        public void Object_Instantiation_With_Array_Constructor_Fails_For_Multiple_Values() {
-            MarkupException ex = assertThrows(MarkupException.class, () -> compileAndRun("""
+        public void Object_Instantiation_With_Array_Constructor_Accepts_Multiple_Values() {
+            GridPane root = compileAndRun("""
                 <?import javafx.scene.layout.*?>
                 <GridPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                     <ArrayConstructorClass>
@@ -391,11 +391,12 @@ public class InstantiationTest extends CompilerTestBase {
                         </nodes>
                     </ArrayConstructorClass>
                 </GridPane>
-            """));
+            """);
 
-            assertEquals(ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT, ex.getDiagnostic().getCode());
-            assertTrue(ex.getDiagnostic().getMessage().contains("cannot be assigned from multiple values"));
-            assertCodeHighlight("<GridPane/>", ex);
+            Node[] nodes = ((ArrayConstructorClass)root.getChildren().get(0)).nodes;
+            assertEquals(2, nodes.length);
+            assertInstanceOf(GridPane.class, nodes[0]);
+            assertInstanceOf(GridPane.class, nodes[1]);
         }
 
         public static class NamedArgWithDefaultValueClass extends Rectangle {
@@ -506,8 +507,15 @@ public class InstantiationTest extends CompilerTestBase {
                 </GridPane>
             """));
 
-            assertEquals(ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT, ex.getDiagnostic().getCode());
-            assertEquals(0, ex.getDiagnostic().getCauses().length);
+            assertEquals(ErrorCode.CONSTRUCTOR_NOT_FOUND, ex.getDiagnostic().getCode());
+            assertEquals(1, ex.getDiagnostic().getCauses().length);
+            assertEquals(
+                ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT,
+                ex.getDiagnostic().getCauses()[0].getCode());
+            assertEquals(1, ex.getDiagnostic().getCauses()[0].getCauses().length);
+            assertEquals(
+                ErrorCode.CONSTRUCTOR_NOT_FOUND,
+                ex.getDiagnostic().getCauses()[0].getCauses()[0].getCode());
             assertCodeHighlight("""
                 <MyData fx:typeArguments="Double" value="foo"/>
             """.trim(), ex);
@@ -626,7 +634,11 @@ public class InstantiationTest extends CompilerTestBase {
                 </GridPane>
             """));
 
-            assertEquals(ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT, ex.getDiagnostic().getCode());
+            assertEquals(ErrorCode.CONSTRUCTOR_NOT_FOUND, ex.getDiagnostic().getCode());
+            assertEquals(1, ex.getDiagnostic().getCauses().length);
+            assertEquals(
+                ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT,
+                ex.getDiagnostic().getCauses()[0].getCode());
             assertCodeHighlight("MY_EVENT_TYPE", ex);
         }
     }
@@ -938,10 +950,9 @@ public class InstantiationTest extends CompilerTestBase {
         """));
 
         assertEquals(ErrorCode.CONSTRUCTOR_NOT_FOUND, ex.getDiagnostic().getCode());
-        assertEquals(2, ex.getDiagnostic().getCauses().length);
-        assertEquals(ErrorCode.NUM_FUNCTION_ARGUMENTS_MISMATCH, ex.getDiagnostic().getCauses()[0].getCode());
-        assertEquals(ErrorCode.NUM_FUNCTION_ARGUMENTS_MISMATCH, ex.getDiagnostic().getCauses()[1].getCode());
-        assertCodeHighlight("<Insets>foo</Insets>", ex);
+        assertEquals(1, ex.getDiagnostic().getCauses().length);
+        assertEquals(ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT, ex.getDiagnostic().getCauses()[0].getCode());
+        assertCodeHighlight("foo", ex);
     }
 
     @Test

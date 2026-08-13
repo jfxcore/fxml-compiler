@@ -9,6 +9,7 @@ import org.jfxcore.compiler.ast.DocumentNode;
 import org.jfxcore.compiler.ast.Node;
 import org.jfxcore.compiler.ast.TemplateContentNode;
 import org.jfxcore.compiler.ast.Visitor;
+import org.jfxcore.compiler.ast.SyntaxNode;
 import org.jfxcore.compiler.type.TypeDeclaration;
 import org.jfxcore.compiler.util.ArrayStack;
 import org.jfxcore.compiler.util.CompilationContext;
@@ -156,6 +157,36 @@ public class TransformContext {
             if (type.isInstance(parents.get(i))
                     && (predicate == null || predicate.test((T)parents.get(i)))) {
                 return (T)parents.get(i);
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Finds the nearest semantic owner while treating parse-only syntax wrappers as transparent.
+     */
+    public Node getNearestSemanticOwner() {
+        for (int i = parents.size() - 1; i >= 0; --i) {
+            Node node = parents.get(i);
+            if (!(node instanceof SyntaxNode)) {
+                return node;
+            }
+        }
+
+        return null;
+    }
+
+    @SuppressWarnings("unchecked")
+    public <T extends Node> T tryFindSemanticOwner(Class<T> type) {
+        for (int i = parents.size() - 1; i >= 0; --i) {
+            Node node = parents.get(i);
+            if (node instanceof SyntaxNode) {
+                continue;
+            }
+
+            if (type.isInstance(node)) {
+                return (T)node;
             }
         }
 

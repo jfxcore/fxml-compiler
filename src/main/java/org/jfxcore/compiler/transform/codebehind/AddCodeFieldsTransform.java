@@ -13,7 +13,7 @@ import org.jfxcore.compiler.ast.UnresolvedTypeNode;
 import org.jfxcore.compiler.ast.Visitor;
 import org.jfxcore.compiler.ast.codebehind.AddCodeFieldNode;
 import org.jfxcore.compiler.ast.intrinsic.Intrinsics;
-import org.jfxcore.compiler.ast.text.TextNode;
+import org.jfxcore.compiler.ast.LiteralValueNode;
 import org.jfxcore.compiler.diagnostic.errors.GeneralErrors;
 import org.jfxcore.compiler.transform.Transform;
 import org.jfxcore.compiler.transform.TransformContext;
@@ -58,15 +58,15 @@ public class AddCodeFieldsTransform implements Transform {
         context.getIds().add(id);
 
         ObjectNode root = (ObjectNode)context.getDocument().getRoot();
-        TextNode valueNode;
+        LiteralValueNode valueNode;
 
         if (objectNode.getType() instanceof ResolvedTypeNode resolvedTypeNode) {
-            valueNode = new TextNode(resolvedTypeNode.getTypeInstance().javaName(), idNode.getSourceInfo());
+            valueNode = new LiteralValueNode(resolvedTypeNode.getTypeInstance().javaName(), idNode.getSourceInfo());
         } else if (objectNode.getType() instanceof UnresolvedTypeNode unresolvedTypeNode) {
             if (unresolvedTypeNode.getArguments().isEmpty()) {
-                valueNode = new TextNode(objectNode.getType().getMarkupName(), idNode.getSourceInfo());
+                valueNode = new LiteralValueNode(objectNode.getType().getMarkupName(), idNode.getSourceInfo());
             } else {
-                valueNode = new TextNode(
+                valueNode = new LiteralValueNode(
                     objectNode.getType().getMarkupName()
                         + "<" + String.join(", ", unresolvedTypeNode.getArguments()) + ">",
                     idNode.getSourceInfo());

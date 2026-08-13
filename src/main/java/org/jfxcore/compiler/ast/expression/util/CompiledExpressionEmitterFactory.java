@@ -3,11 +3,14 @@
 
 package org.jfxcore.compiler.ast.expression.util;
 
+import org.jfxcore.compiler.ast.ObservableDependencyKind;
+import org.jfxcore.compiler.ast.emit.EmitApplyMarkupExtensionNode;
 import org.jfxcore.compiler.ast.emit.EmitMethodArgumentNode;
+import org.jfxcore.compiler.ast.emit.ValueEmitterNode;
 import org.jfxcore.compiler.ast.expression.ExpressionAnalysisContext;
-import org.jfxcore.compiler.ast.expression.path.InconvertibleArgumentException;
-import org.jfxcore.compiler.diagnostic.MarkupException;
-import org.jfxcore.compiler.diagnostic.errors.GeneralErrors;
+import org.jfxcore.compiler.ast.expression.ExpressionResolution;
+import org.jfxcore.compiler.diagnostic.errors.ObjectInitializationErrors;
+import org.jfxcore.compiler.transform.markup.util.MarkupExtensionInfo;
 import org.jfxcore.compiler.type.TypeInstance;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -16,33 +19,41 @@ import java.util.List;
 /**
  * Lowers ordered external expression inputs into fixed helper-method arguments.
  */
-public final class CompiledExpressionEmitterFactory extends AbstractFunctionEmitterFactory {
+final class CompiledExpressionEmitterFactory {
 
-    public CompiledExpressionEmitterFactory(TypeInstance invokingType) {
-        super(invokingType, null);
-    }
-
-    public List<EmitMethodArgumentNode> createArguments(
-            Collection<ExpressionAnalysisContext.Input> inputs,
-            boolean preferObservable,
-            String helperName) {
+    List<EmitMethodArgumentNode> createArguments(
+            Collection<ExpressionAnalysisContext.Input> inputs) {
         var result = new ArrayList<EmitMethodArgumentNode>(inputs.size());
-        int index = 0;
 
         for (ExpressionAnalysisContext.Input input : inputs) {
-            try {
-                result.add(createSingleFunctionArgumentValue(
-                    input.expression(), TypeInstance.of(input.parameterType()), false, preferObservable));
-            } catch (InconvertibleArgumentException ex) {
-                if (ex.getCause() instanceof MarkupException markupException) {
-                    throw markupException;
+            TypeInstance parameterType = TypeInstance.of(input.parameterType());
+            ExpressionResolution resolution = input.resolution();
+            ValueEmitterNode value;
+            ObservableDependencyKind dependency;
+
+            if (resolution != null) {
+                value = resolution.toEmitter().getValue();
+                dependency = resolution.getTypeInfo().argumentDependencyKind();
+            } else if (input.expression() instanceof ValueEmitterNode emitter) {
+                MarkupExtensionInfo extension = MarkupExtensionInfo.of(emitter);
+                if (extension instanceof MarkupExtensionInfo.Supplier supplier) {
+                    value = new EmitApplyMarkupExtensionNode.Supplier(
+                        emitter, supplier.markupExtensionInterface(), null,
+                        parameterType, supplier.returnType(), null);
+                } else if (extension instanceof MarkupExtensionInfo.PropertyConsumer) {
+                    throw ObjectInitializationErrors.invalidMarkupExtensionUsage(
+                        input.expression().getSourceInfo());
+                } else {
+                    value = emitter;
                 }
 
-                throw GeneralErrors.cannotAssignFunctionArgument(
-                    input.expression().getSourceInfo(), helperName, index, ex.getTypeName());
+                dependency = ObservableDependencyKind.NONE;
+            } else {
+                throw new AssertionError(input.expression().getClass().getName());
             }
 
-            ++index;
+            result.add(EmitMethodArgumentNode.newScalar(
+                parameterType, value, dependency, input.expression().getSourceInfo()));
         }
 
         return List.copyOf(result);

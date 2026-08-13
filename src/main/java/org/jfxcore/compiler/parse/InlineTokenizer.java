@@ -5,104 +5,439 @@ package org.jfxcore.compiler.parse;
 
 import org.jfxcore.compiler.diagnostic.Location;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
-
-import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
 import java.util.List;
+import java.util.regex.Matcher;
 
 public class InlineTokenizer extends CurlyTokenizer<InlineToken> {
 
+    private final SourceCursor cursor;
+    private final int cursorStart;
+    private final LazyTokenStream tokenStream;
+
     public InlineTokenizer(String text, Location sourceOffset) {
-        super(InlineToken.class, text, sourceOffset);
-        normalizeSigns();
-        concatPrefixesAndIdentifiers();
+        this(SourceMappedText.identity(text, sourceOffset));
     }
 
     InlineTokenizer(SourceMappedText source) {
         super(InlineToken.class, source);
-        normalizeSigns();
-        concatPrefixesAndIdentifiers();
+        this.cursor = null;
+        this.cursorStart = 0;
+        this.tokenStream = new LazyTokenStream(source);
+    }
+
+    InlineTokenizer(SourceCursor cursor) {
+        super(InlineToken.class, cursor.remaining());
+        this.cursor = cursor;
+        this.cursorStart = cursor.getOffset();
+        this.tokenStream = new LazyTokenStream(cursor.remaining());
+    }
+
+    void commit() {
+        if (cursor == null) {
+            throw new IllegalStateException("Tokenizer is not cursor-backed");
+        }
+
+        cursor.setOffset(cursorStart + tokenStream.nextDecodedOffset());
     }
 
     @Override
-    protected InlineToken parseToken(String value, String line, SourceInfo sourceInfo) {
-        return InlineToken.parse(value, line, sourceInfo);
+    public void mark() {
+        tokenStream.mark();
     }
 
     @Override
-    protected InlineToken newToken(CurlyTokenType type, String value, String line, SourceInfo sourceInfo) {
-        return new InlineToken(type, value, line, sourceInfo);
+    public void resetToMark() {
+        tokenStream.resetToMark();
     }
 
-    private void normalizeSigns() {
-        Deque<InlineToken> newTokens = new ArrayDeque<>(size());
+    @Override
+    public void forgetMark() {
+        tokenStream.forgetMark();
+    }
 
-        while (!isEmpty()) {
-            InlineToken token = remove();
-            String value = token.getValue();
+    @Override
+    public InlineToken peek() {
+        return tokenStream.peek();
+    }
 
-            boolean signedNumber = token.getType() == CurlyTokenType.NUMBER
-                && value.length() > 1
-                && (value.charAt(0) == '+' || value.charAt(0) == '-');
+    @Override
+    public InlineToken poll() {
+        return tokenStream.poll();
+    }
 
-            if (!signedNumber) {
-                newTokens.add(token);
-                continue;
-            }
+    @Override
+    public InlineToken remove() {
+        return tokenStream.remove();
+    }
 
-            SourceInfo sourceInfo = token.getSourceInfo();
-            Location start = sourceInfo.getStart();
-            Location valueStart = new Location(start.getLine(), start.getColumn() + 1);
-            SourceInfo signSourceInfo = SourceInfo.subspan(sourceInfo, start, valueStart);
-            SourceInfo valueSourceInfo = SourceInfo.subspan(sourceInfo, valueStart, sourceInfo.getEnd());
+    @Override
+    public InlineToken poll(CurlyTokenType type) {
+        return tokenStream.poll(type);
+    }
 
-            newTokens.add(new InlineToken(
-                value.charAt(0) == '+' ? CurlyTokenType.PLUS : CurlyTokenType.MINUS,
-                value.substring(0, 1), token.getLine(), signSourceInfo));
+    @Override
+    public InlineToken getLastRemoved() {
+        return tokenStream.getLastRemoved();
+    }
 
-            newTokens.add(new InlineToken(
-                CurlyTokenType.NUMBER, value.substring(1), token.getLine(), valueSourceInfo));
+    @Override
+    public boolean isEmpty() {
+        return tokenStream.isEmpty();
+    }
+
+    @Override
+    public int size() {
+        return tokenStream.size();
+    }
+
+    @Override
+    public InlineToken[] peekAhead(int count) {
+        return tokenStream.peekAhead(count);
+    }
+
+    @Override
+    public InlineToken peekSkipWS() {
+        return tokenStream.peekSkipWS();
+    }
+
+    @Override
+    public InlineToken peekSkipWS(CurlyTokenType expected) {
+        return tokenStream.peekSkipWS(expected);
+    }
+
+    @Override
+    public InlineToken peekNotNullSkipWS() {
+        InlineToken token = tokenStream.peekSkipWS();
+        if (token == null) {
+            throw unexpectedEnd(getEndOfInputSourceInfo());
         }
 
-        addAll(newTokens);
+        return token;
     }
 
-    private void concatPrefixesAndIdentifiers() {
-        Deque<InlineToken> newTokens = new ArrayDeque<>(size());
-        List<InlineToken> tempTokens = new ArrayList<>(4);
+    @Override
+    public InlineToken removeSkipWS(CurlyTokenType expected) {
+        return tokenStream.removeSkipWS(expected);
+    }
 
-        while (!isEmpty()) {
-            InlineToken current = remove();
-            tempTokens.add(current);
+    /** Token stream that lexes and normalizes only as much input as lookahead requests. */
+    private final class LazyTokenStream {
 
-            if (tempTokens.size() == 4) {
-                newTokens.add(tempTokens.remove(0));
+        private final SourceMappedText source;
+        private final String text;
+        private final List<InlineToken> tokens = new ArrayList<>();
+        private final Deque<Integer> marks = new java.util.ArrayDeque<>();
+        private int tokenIndex;
+        private int rawOffset;
+        private InlineToken pendingSemi;
+        private InlineToken deferredToken;
+        private InlineToken lastNormalizedToken;
+        private InlineToken lastRemoved;
+        private boolean finalEnd;
+
+        private LazyTokenStream(SourceMappedText source) {
+            this.source = source;
+            this.text = source.getText();
+        }
+
+        private void mark() {
+            marks.push(tokenIndex);
+        }
+
+        private void resetToMark() {
+            if (marks.isEmpty()) {
+                throw new IllegalStateException();
             }
 
-            if (tempTokens.size() == 3
-                    && tempTokens.get(0).getType() == CurlyTokenType.IDENTIFIER
-                    && !"$".equals(tempTokens.get(0).getValue())
-                    && tempTokens.get(1).getType() == CurlyTokenType.COLON
-                    && tempTokens.get(2).getType() == CurlyTokenType.IDENTIFIER
-                    && areAdjacent(tempTokens.get(0), tempTokens.get(1))
-                    && areAdjacent(tempTokens.get(1), tempTokens.get(2))) {
-                InlineToken token = new InlineToken(
-                    CurlyTokenType.IDENTIFIER,
-                    tempTokens.get(0).getValue() + ":" + current.getValue(),
-                    tempTokens.get(0).getLine(),
-                    SourceInfo.span(tempTokens.get(0).getSourceInfo(), tempTokens.get(2).getSourceInfo()));
+            tokenIndex = marks.pop();
+            lastRemoved = tokenIndex > 0 ? tokens.get(tokenIndex - 1) : null;
+        }
 
-                newTokens.add(token);
-                tempTokens.clear();
+        private void forgetMark() {
+            if (marks.isEmpty()) {
+                throw new IllegalStateException();
+            }
+
+            marks.pop();
+        }
+
+        private InlineToken peek() {
+            return ensureFinalToken(tokenIndex) ? tokens.get(tokenIndex) : null;
+        }
+
+        private InlineToken poll() {
+            InlineToken token = peek();
+            if (token != null) {
+                ++tokenIndex;
+                lastRemoved = token;
+            }
+
+            return token;
+        }
+
+        private InlineToken remove() {
+            InlineToken token = poll();
+            if (token == null) {
+                throw unexpectedEnd(source.getEndOfInput());
+            }
+
+            return token;
+        }
+
+        private InlineToken poll(CurlyTokenType type) {
+            InlineToken token = peek();
+            return token != null && token.getType() == type ? poll() : null;
+        }
+
+        private InlineToken getLastRemoved() {
+            return lastRemoved;
+        }
+
+        private boolean isEmpty() {
+            return peek() == null;
+        }
+
+        private int size() {
+            while (ensureFinalToken(tokens.size())) {
+                // Materialize only when callers explicitly ask for the complete size.
+            }
+
+            return tokens.size() - tokenIndex;
+        }
+
+        private InlineToken[] peekAhead(int count) {
+            if (count < 0) {
+                throw new IllegalArgumentException("count");
+            }
+
+            if (count == 0) {
+                return new InlineToken[0];
+            }
+
+            if (!ensureFinalToken(tokenIndex + count - 1)) {
+                return null;
+            }
+
+            InlineToken[] result = new InlineToken[count];
+            for (int i = 0; i < count; ++i) {
+                result[i] = tokens.get(tokenIndex + i);
+            }
+
+            return result;
+        }
+
+        private InlineToken peekSkipWS() {
+            int index = tokenIndex;
+            while (ensureFinalToken(index) && tokens.get(index).getType().isWhitespace()) {
+                ++index;
+            }
+
+            return ensureFinalToken(index) ? tokens.get(index) : null;
+        }
+
+        private InlineToken peekSkipWS(CurlyTokenType expected) {
+            InlineToken token = peekSkipWS();
+            return token != null && token.getType() == expected ? token : null;
+        }
+
+        private InlineToken removeSkipWS(CurlyTokenType expected) {
+            while (peek() != null && peek().getType().isWhitespace()) {
+                poll();
+            }
+
+            return InlineTokenizer.this.remove(expected);
+        }
+
+        private int nextDecodedOffset() {
+            InlineToken token = peek();
+            return token != null ? token.getDecodedStart() : text.length();
+        }
+
+        private boolean ensureFinalToken(int index) {
+            while (tokens.size() <= index && !finalEnd) {
+                InlineToken token = readFinalToken();
+                if (token == null) {
+                    finalEnd = true;
+                } else {
+                    tokens.add(token);
+                }
+            }
+
+            return index < tokens.size();
+        }
+
+        private InlineToken readFinalToken() {
+            if (deferredToken != null) {
+                InlineToken result = deferredToken;
+                deferredToken = null;
+                lastNormalizedToken = result;
+                return result;
+            }
+
+            while (true) {
+                InlineToken token = readRawToken();
+                if (token == null) {
+                    pendingSemi = null; // trailing semis are insignificant
+                    return null;
+                }
+
+                if (token.getType().getTokenClass() == CurlyTokenClass.SEMI) {
+                    if (lastNormalizedToken != null && pendingSemi == null) {
+                        pendingSemi = token;
+                    }
+
+                    continue;
+                }
+
+                if (pendingSemi != null) {
+                    InlineToken semi = pendingSemi;
+                    pendingSemi = null;
+                    boolean remove = lastNormalizedToken == null
+                        || lastNormalizedToken.getType() == CurlyTokenType.OPEN_CURLY
+                        || semi.getType() == CurlyTokenType.NEWLINE
+                            && (removeNewlineAfter(lastNormalizedToken.getType())
+                                || removeNewlineBefore(token.getType()));
+
+                    if (!remove) {
+                        deferredToken = token;
+                        lastNormalizedToken = semi;
+                        return semi;
+                    }
+                }
+
+                lastNormalizedToken = token;
+                return token;
             }
         }
 
-        newTokens.addAll(tempTokens);
-        addAll(newTokens);
+        private InlineToken readRawToken() {
+            while (rawOffset < text.length()) {
+                char ch = text.charAt(rawOffset);
+                if (Character.isWhitespace(ch) && !isLineBreak(ch)) {
+                    ++rawOffset;
+                    continue;
+                }
+
+                Matcher matcher = CurlyTokenizer.TOKENIZER_PATTERN.matcher(text);
+                matcher.region(rawOffset, text.length());
+                if (!matcher.lookingAt()) {
+                    int start = rawOffset++;
+                    while (rawOffset < text.length()
+                            && !Character.isWhitespace(text.charAt(rawOffset))) {
+                        matcher.region(rawOffset, text.length());
+                        if (matcher.lookingAt()) {
+                            break;
+                        }
+
+                        ++rawOffset;
+                    }
+
+                    return newRawToken(text.substring(start, rawOffset), start, rawOffset);
+                }
+
+                String value = matcher.group();
+                int start = matcher.start();
+                rawOffset = matcher.end();
+
+                if (isLineBreakToken(value)) {
+                    return newNewlineToken(value, start, rawOffset);
+                }
+
+                if (value.isBlank() || value.startsWith("/*")) {
+                    continue;
+                }
+
+                if (value.startsWith("//")) {
+                    skipLineComment();
+
+                    continue;
+                }
+
+                return newRawToken(value, start, rawOffset);
+            }
+
+            return null;
+        }
+
+        private void skipLineComment() {
+            int lineEnd = rawOffset;
+            while (lineEnd < text.length() && !isLineBreak(text.charAt(lineEnd))) {
+                ++lineEnd;
+            }
+
+            int blockComment = text.indexOf("/*", rawOffset);
+            if (blockComment >= 0 && blockComment < lineEnd) {
+                Matcher matcher = CurlyTokenizer.TOKENIZER_PATTERN.matcher(text);
+                matcher.region(blockComment, text.length());
+                if (matcher.lookingAt() && matcher.group().startsWith("/*")) {
+                    rawOffset = matcher.end();
+                    while (rawOffset < text.length() && !isLineBreak(text.charAt(rawOffset))) {
+                        ++rawOffset;
+                    }
+
+                    return;
+                }
+            }
+
+            rawOffset = lineEnd;
+        }
+
+        private InlineToken newRawToken(String value, int start, int end) {
+            SourceInfo sourceInfo = source.getSourceInfo(start, end);
+            InlineToken token = InlineToken.parse(
+                value, source.getLineText(sourceInfo.getStart().getLine()), sourceInfo);
+            token.setDecodedRange(start, end);
+            return token;
+        }
+
+        private InlineToken newNewlineToken(String value, int start, int end) {
+            SourceInfo sourceInfo = source.getSourceInfo(start, end);
+            InlineToken token = new InlineToken(
+                CurlyTokenType.NEWLINE, value, source.getLineText(sourceInfo.getStart().getLine()), sourceInfo);
+            token.setDecodedRange(start, end);
+            return token;
+        }
+
+        private boolean isLineBreakToken(String value) {
+            return value.equals("\r\n") || value.length() == 1 && isLineBreak(value.charAt(0));
+        }
     }
 
-    private boolean areAdjacent(InlineToken first, InlineToken second) {
-        return first.getSourceInfo().getEnd().equals(second.getSourceInfo().getStart());
+    private boolean removeNewlineAfter(CurlyTokenType type) {
+        return type == CurlyTokenType.OPEN_CURLY
+            || type == CurlyTokenType.OPEN_BRACKET
+            || type == CurlyTokenType.OPEN_PAREN
+            || type == CurlyTokenType.DOT
+            || type == CurlyTokenType.COLON
+            || type == CurlyTokenType.COMMA
+            || type == CurlyTokenType.EQUALS
+            || type == CurlyTokenType.NOT
+            || type == CurlyTokenType.BOOLIFY
+            || isInfixOperator(type);
+    }
+
+    private boolean removeNewlineBefore(CurlyTokenType type) {
+        return type == CurlyTokenType.DOT
+            || type == CurlyTokenType.COLON
+            || type == CurlyTokenType.COMMA
+            || type == CurlyTokenType.EQUALS
+            || isInfixOperator(type);
+    }
+
+    private boolean isInfixOperator(CurlyTokenType type) {
+        return switch (type) {
+            case PLUS, MINUS, STAR, SLASH,
+                 OPEN_ANGLE, CLOSE_ANGLE, LESS_THAN_OR_EQUAL, GREATER_THAN_OR_EQUAL,
+                 VALUE_EQUALITY, VALUE_INEQUALITY, IDENTITY_EQUALITY, IDENTITY_INEQUALITY,
+                 LOGICAL_AND, LOGICAL_OR -> true;
+            default -> false;
+        };
+    }
+
+    private boolean isLineBreak(char ch) {
+        return ch == '\r' || ch == '\n' || ch == '\u000B' || ch == '\u000C'
+            || ch == '\u0085' || ch == '\u2028' || ch == '\u2029';
     }
 }

@@ -4,19 +4,17 @@
 package org.jfxcore.compiler.ast.text;
 
 import org.jetbrains.annotations.Nullable;
-import org.jfxcore.compiler.ast.TypeNode;
+import org.jfxcore.compiler.ast.AbstractSyntaxNode;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
+import java.util.Objects;
 
 /**
- * A literal keyword recognized by the compiled-expression grammar.
- * This node records syntax only; its value and type are assigned during expression lowering.
+ * Boolean or null keyword syntax in a compiled expression.
  */
-public final class LiteralKeywordNode extends TextNode {
+public final class LiteralKeywordNode extends AbstractSyntaxNode {
 
     public enum Kind {
-        TRUE("true"),
-        FALSE("false"),
-        NULL("null");
+        TRUE("true"), FALSE("false"), NULL("null");
 
         private final String text;
 
@@ -43,12 +41,7 @@ public final class LiteralKeywordNode extends TextNode {
     }
 
     public LiteralKeywordNode(Kind kind, SourceInfo sourceInfo) {
-        super(kind.getText(), sourceInfo);
-        this.kind = checkNotNull(kind);
-    }
-
-    private LiteralKeywordNode(Kind kind, TypeNode type, SourceInfo sourceInfo) {
-        super(kind.getText(), false, type, sourceInfo);
+        super(sourceInfo);
         this.kind = checkNotNull(kind);
     }
 
@@ -56,8 +49,27 @@ public final class LiteralKeywordNode extends TextNode {
         return kind;
     }
 
+    public String getText() {
+        return kind.getText();
+    }
+
+    @Override
+    public String format() {
+        return kind.getText();
+    }
+
     @Override
     public LiteralKeywordNode deepClone() {
-        return new LiteralKeywordNode(kind, getType().deepClone(), getSourceInfo()).copy(this);
+        return new LiteralKeywordNode(kind, getSourceInfo()).copy(this);
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        return obj instanceof LiteralKeywordNode other && kind == other.kind;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(kind);
     }
 }

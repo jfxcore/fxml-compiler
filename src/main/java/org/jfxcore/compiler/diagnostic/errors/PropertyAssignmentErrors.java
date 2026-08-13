@@ -60,6 +60,12 @@ public class PropertyAssignmentErrors {
             ErrorCode.CANNOT_COERCE_PROPERTY_VALUE, propertyName, value));
     }
 
+    public static MarkupException cannotCoercePropertyValue(
+            SourceInfo sourceInfo, PropertyInfo propertyInfo, String value) {
+        return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
+            ErrorCode.CANNOT_COERCE_PROPERTY_VALUE, formatPropertyName(propertyInfo), value));
+    }
+
     public static MarkupException propertyCannotBeEmpty(SourceInfo sourceInfo, String propertyName) {
         return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
             ErrorCode.PROPERTY_CANNOT_BE_EMPTY, propertyName));
@@ -122,6 +128,27 @@ public class PropertyAssignmentErrors {
         return new MarkupException(sourceInfo, Diagnostic.newDiagnosticVariant(
             ErrorCode.CANNOT_REFERENCE_NODE_UNDER_INITIALIZATION, "property",
             formatPropertyName(propertyInfo), TypeHelper.getTypeInstance(referencedParent).javaName()));
+    }
+
+    public static MarkupException cannotReferenceNodeUnderInitialization(
+            TransformContext context, String constructorDisplayName, String argumentName,
+            int bindingDistance, SourceInfo sourceInfo) {
+        if (bindingDistance == 0) {
+            return new MarkupException(sourceInfo, Diagnostic.newDiagnosticVariant(
+                ErrorCode.CANNOT_REFERENCE_NODE_UNDER_INITIALIZATION, "argument",
+                constructorDisplayName, argumentName));
+        }
+
+        List<Node> parents = context.getParents().stream()
+            .filter(node -> node instanceof EmitObjectNode)
+            .toList();
+
+        Node referencedParent = parents.get(parents.size() - bindingDistance);
+
+        return new MarkupException(sourceInfo, Diagnostic.newDiagnosticVariant(
+            ErrorCode.CANNOT_REFERENCE_NODE_UNDER_INITIALIZATION, "parent",
+            constructorDisplayName, argumentName,
+            TypeHelper.getTypeInstance(referencedParent).javaName()));
     }
 
     public static MarkupException duplicateProperty(SourceInfo sourceInfo, String declaringType, String propertyName) {
@@ -191,4 +218,5 @@ public class PropertyAssignmentErrors {
         return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(ErrorCode.MARKUP_EXTENSION_NOT_APPLICABLE,
             markupExtensionType.javaName(), formatPropertyName(propertyInfo), supportedTargets));
     }
+
 }

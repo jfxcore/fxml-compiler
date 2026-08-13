@@ -24,4 +24,9 @@ public class ParentSegment extends Segment {
     public ValueEmitterNode toEmitter(boolean requireNonNull, SourceInfo sourceInfo) {
         return new EmitGetParentNode(getTypeInstance(), parentIndex, sourceInfo);
     }
+
+    @Override
+    public boolean isNullable() {
+        return false;
+    }
 }

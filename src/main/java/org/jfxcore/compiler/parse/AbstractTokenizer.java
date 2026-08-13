@@ -328,11 +328,10 @@ public abstract class AbstractTokenizer<TTokenType extends TokenType, TToken ext
 
     @SafeVarargs
     public final boolean containsAhead(TTokenType... expected) {
-        if (size() < expected.length) {
+        TToken[] tokens = peekAhead(expected.length);
+        if (tokens == null) {
             return false;
         }
-
-        TToken[] tokens = peekAheadNotNull(expected.length);
 
         for (int i = 0; i < expected.length; ++i) {
             if (tokens[i].getType() != expected[i]) {

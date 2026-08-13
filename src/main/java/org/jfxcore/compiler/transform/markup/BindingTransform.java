@@ -7,11 +7,11 @@ import org.jetbrains.annotations.Nullable;
 import org.jfxcore.compiler.ast.BindingMode;
 import org.jfxcore.compiler.ast.BindingNode;
 import org.jfxcore.compiler.ast.ContextNode;
+import org.jfxcore.compiler.ast.LiteralValueNode;
 import org.jfxcore.compiler.ast.Node;
 import org.jfxcore.compiler.ast.NodeDataKey;
 import org.jfxcore.compiler.ast.ObjectNode;
 import org.jfxcore.compiler.ast.PropertyNode;
-import org.jfxcore.compiler.ast.ValueNode;
 import org.jfxcore.compiler.ast.expression.AnalyzedExpressionNode;
 import org.jfxcore.compiler.ast.expression.BindingContextNode;
 import org.jfxcore.compiler.ast.expression.BindingContextSelector;
@@ -29,18 +29,15 @@ import org.jfxcore.compiler.ast.expression.BindingOperator;
 import org.jfxcore.compiler.ast.expression.PathExpressionNode;
 import org.jfxcore.compiler.ast.intrinsic.Intrinsics;
 import org.jfxcore.compiler.ast.text.BinaryOperatorNode;
-import org.jfxcore.compiler.ast.text.CompositeNode;
 import org.jfxcore.compiler.ast.text.ContextSelector;
 import org.jfxcore.compiler.ast.text.ContextSelectorNode;
 import org.jfxcore.compiler.ast.text.InvocationNode;
-import org.jfxcore.compiler.ast.text.ListNode;
 import org.jfxcore.compiler.ast.text.LiteralKeywordNode;
 import org.jfxcore.compiler.ast.text.NumberNode;
 import org.jfxcore.compiler.ast.text.ParenthesizedNode;
 import org.jfxcore.compiler.ast.text.PathNode;
 import org.jfxcore.compiler.ast.text.SelectedMemberNode;
 import org.jfxcore.compiler.ast.text.StringLiteralNode;
-import org.jfxcore.compiler.ast.text.TextNode;
 import org.jfxcore.compiler.ast.text.UnaryOperator;
 import org.jfxcore.compiler.ast.text.UnaryOperatorNode;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
@@ -70,7 +67,8 @@ public class BindingTransform implements Transform {
             return node;
         }
 
-        if (context.getParent() instanceof PropertyNode propertyNode && propertyNode.isIntrinsic(Intrinsics.CONTEXT)) {
+        PropertyNode semanticProperty = context.tryFindSemanticOwner(PropertyNode.class);
+        if (semanticProperty != null && semanticProperty.isIntrinsic(Intrinsics.CONTEXT)) {
             return node;
         }
 
@@ -79,10 +77,9 @@ public class BindingTransform implements Transform {
             return node;
         }
 
-        ValueNode sourceNode = (ValueNode)objectNode.getProperty("source").getSingleValue(context);
+        Node sourceNode = objectNode.getProperty("source").getSingleValue(context);
         PropertyNode inverseMethod = objectNode.findProperty("inverseMethod");
-        ValueNode inverseMethodNode = inverseMethod != null ?
-            inverseMethod.getSingleValue(context).as(ValueNode.class) : null;
+        Node inverseMethodNode = inverseMethod != null ? inverseMethod.getSingleValue(context) : null;
 
         ExpressionNode pathExpression = tryParseExpression(
             context, sourceNode, bindingMode, !bindingMode.isReverse(), inverseMethodNode);
@@ -101,7 +98,6 @@ public class BindingTransform implements Transform {
             bindingMode, pathExpression,
             converterPath != null ? parsePathNode(context, BindingOperator.IDENTITY, converterPath) : null,
             formatPath != null ? parsePathNode(context, BindingOperator.IDENTITY, formatPath) : null,
-            context.getParent() instanceof ListNode,
             node.getSourceInfo());
     }
 
@@ -125,19 +121,15 @@ public class BindingTransform implements Transform {
 
     private ExpressionNode tryParseExpression(
             TransformContext context,
-            @Nullable ValueNode value,
+            @Nullable Node value,
             BindingMode bindingMode,
             boolean allowOperator,
-            @Nullable ValueNode inverseMethodNode) {
+            @Nullable Node inverseMethodNode) {
         if (value == null) {
             return null;
         }
 
         value = unwrapGroups(value);
-
-        if (value instanceof CompositeNode compositeNode) {
-            return parseCompositeNode(context, compositeNode, bindingMode, allowOperator);
-        }
 
         if (value instanceof PathNode pathNode) {
             return parsePathNode(context, BindingOperator.IDENTITY, pathNode);
@@ -183,7 +175,7 @@ public class BindingTransform implements Transform {
             BindingOperator operator,
             InvocationNode invocationNode,
             BindingMode bindingMode,
-            @Nullable ValueNode inverseMethodNode) {
+            @Nullable Node inverseMethodNode) {
         ExpressionNode inverseExpression = tryParseExpression(
             context, inverseMethodNode, BindingMode.ONCE, true, null);
 
@@ -235,7 +227,7 @@ public class BindingTransform implements Transform {
             operator, receiver, List.of(selected.getMember()), selected.getSourceInfo());
     }
 
-    private Node parseFunctionArgumentNode(TransformContext context, ValueNode value, BindingMode bindingMode) {
+    private Node parseFunctionArgumentNode(TransformContext context, Node value, BindingMode bindingMode) {
         if (value instanceof LiteralKeywordNode literal) {
             return parseLiteralKeywordNode(literal);
         }
@@ -258,68 +250,31 @@ public class BindingTransform implements Transform {
             return expression;
         }
 
-        if (value instanceof TextNode text) {
-            return LiteralExpressionNode.ofString(text.getText(), text.getSourceInfo());
+        if (value instanceof LiteralValueNode literal) {
+            return LiteralExpressionNode.ofString(literal.getText(), literal.getSourceInfo());
         }
 
         throw ParserErrors.unexpectedExpression(value.getSourceInfo());
     }
 
-    private ExpressionNode parseCompositeNode(
-            TransformContext context,
-            CompositeNode node,
-            BindingMode bindingMode,
-            boolean allowOperator) {
-        List<ValueNode> values = node.getValues();
-        BindingOperator operator;
-
-        if (values.get(0) instanceof TextNode textNode) {
-            if (!allowOperator) {
-                throw ParserErrors.unexpectedToken(textNode.getSourceInfo());
-            }
-
-            operator = switch (textNode.getText()) {
-                case "!" -> BindingOperator.NOT;
-                case "!!" -> BindingOperator.BOOLIFY;
-                default -> throw ParserErrors.unexpectedExpression(node.getSourceInfo());
-            };
-        } else {
-            throw ParserErrors.unexpectedExpression(node.getSourceInfo());
-        }
-
-        if (values.size() > 2) {
-            throw ParserErrors.unexpectedExpression(values.get(2).getSourceInfo());
-        }
-
-        if (values.get(1) instanceof PathNode pathNode) {
-            return parsePathNode(context, operator, pathNode);
-        } else if (values.get(1) instanceof InvocationNode invocationNode) {
-            return parseInvocationNode(context, operator, invocationNode, bindingMode, null);
-        } else if (values.get(1) instanceof SelectedMemberNode selectedMemberNode) {
-            return parseSelectedMemberNode(context, operator, selectedMemberNode, bindingMode);
-        } else {
-            throw ParserErrors.unexpectedExpression(values.get(1).getSourceInfo());
-        }
-    }
-
     private @Nullable ExpressionNode tryParseDirectBooleanExpression(
             TransformContext context,
-            ValueNode value,
+            Node value,
             BindingMode bindingMode,
             boolean allowOperator,
-            @Nullable ValueNode inverseMethodNode) {
+            @Nullable Node inverseMethodNode) {
         if (!allowOperator) {
             return null;
         }
 
-        ValueNode unwrapped = unwrapGroups(value);
+        Node unwrapped = unwrapGroups(value);
 
         if (!(unwrapped instanceof UnaryOperatorNode unary)
                 || unary.getOperator() != UnaryOperator.NOT && unary.getOperator() != UnaryOperator.BOOLIFY) {
             return null;
         }
 
-        ValueNode operand = unwrapGroups(unary.getOperand());
+        Node operand = unwrapGroups(unary.getOperand());
 
         BindingOperator operator = unary.getOperator() == UnaryOperator.NOT
             ? BindingOperator.NOT
@@ -340,7 +295,7 @@ public class BindingTransform implements Transform {
         return null;
     }
 
-    private ValueNode unwrapGroups(ValueNode value) {
+    private Node unwrapGroups(Node value) {
         while (value instanceof ParenthesizedNode parenthesized) {
             value = parenthesized.getOperand();
         }
@@ -349,7 +304,7 @@ public class BindingTransform implements Transform {
     }
 
     private CompiledExpressionNode parseCompiledExpression(
-            TransformContext context, ValueNode value, BindingMode bindingMode) {
+            TransformContext context, Node value, BindingMode bindingMode) {
         AnalyzedExpressionNode root = parseCompiledNode(context, value, bindingMode);
         boolean arithmetic = isPureArithmeticSyntax(value);
         var expression = new CompiledExpressionNode(
@@ -372,7 +327,7 @@ public class BindingTransform implements Transform {
         return expression;
     }
 
-    private boolean isPureArithmeticSyntax(ValueNode value) {
+    private boolean isPureArithmeticSyntax(Node value) {
         if (value instanceof BinaryOperatorNode binary) {
             return switch (binary.getOperator()) {
                 case ADD, SUBTRACT, MULTIPLY, DIVIDE ->
@@ -394,7 +349,7 @@ public class BindingTransform implements Transform {
     }
 
     private AnalyzedExpressionNode parseCompiledNode(
-            TransformContext context, ValueNode value, BindingMode bindingMode) {
+            TransformContext context, Node value, BindingMode bindingMode) {
         if (value instanceof BinaryOperatorNode binary) {
             AnalyzedExpressionNode left = parseCompiledNode(context, binary.getLeft(), bindingMode);
             AnalyzedExpressionNode right = parseCompiledNode(context, binary.getRight(), bindingMode);
@@ -444,6 +399,10 @@ public class BindingTransform implements Transform {
             return parseLiteralKeywordNode(literal);
         }
 
+        if (value instanceof StringLiteralNode text) {
+            return LiteralExpressionNode.ofString(text.getText(), text.getSourceInfo());
+        }
+
         if (value instanceof PathNode path) {
             return new ExternalExpressionNode(
                 parsePathNode(context, BindingOperator.IDENTITY, path), path.getSourceInfo());
@@ -465,8 +424,8 @@ public class BindingTransform implements Transform {
             return new ExternalExpressionNode(object, object.getSourceInfo());
         }
 
-        if (value instanceof TextNode text) {
-            return LiteralExpressionNode.ofString(text.getText(), text.getSourceInfo());
+        if (value instanceof LiteralValueNode literal) {
+            return LiteralExpressionNode.ofString(literal.getText(), literal.getSourceInfo());
         }
 
         throw ParserErrors.unexpectedExpression(value.getSourceInfo());
@@ -551,7 +510,7 @@ public class BindingTransform implements Transform {
 
                 if (contextSelectorNode.getSearchType() != null) {
                     var resolver = new Resolver(contextSelectorNode.getSearchType().getSourceInfo());
-                    searchType = resolver.resolveClassAgainstImports(contextSelectorNode.getSearchType().getText());
+                    searchType = resolver.resolveClassAgainstImports(contextSelectorNode.getSearchType().getName());
                 }
 
                 ParentInfo parentInfo = findParent(parents, searchType, level, contextSelectorNode.getSourceInfo());

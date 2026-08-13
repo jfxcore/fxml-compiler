@@ -34,8 +34,11 @@ public class CompiledExpressionLoweringTest extends TestBase {
                 sourceInfo),
             sourceInfo);
 
-        BindingEmitterInfo emitterInfo = expression.toEmitter(BindingMode.ONCE, TypeInstance.of(markupClass), null);
-        EmitCompiledExpressionNode emitter = assertInstanceOf(EmitCompiledExpressionNode.class, emitterInfo.getValue());
+        BindingEmitterInfo emitterInfo = expression.resolve(
+            BindingMode.ONCE, TypeInstance.of(markupClass), null).toEmitter();
+
+        EmitCompiledExpressionNode emitter = assertInstanceOf(
+            EmitCompiledExpressionNode.class, emitterInfo.getValue());
 
         assertInstanceOf(EmitArithmeticExpressionNode.class, emitter.getBody());
         assertTrue(markupClass.declaredMethods().isEmpty());

@@ -5,22 +5,18 @@ package org.jfxcore.compiler.ast.expression;
 
 import org.jetbrains.annotations.Nullable;
 import org.jfxcore.compiler.ast.AbstractNode;
-import org.jfxcore.compiler.ast.BindingMode;
 import org.jfxcore.compiler.ast.Node;
 import org.jfxcore.compiler.ast.Visitor;
-import org.jfxcore.compiler.ast.expression.util.ObservableInvocationEmitterFactory;
-import org.jfxcore.compiler.ast.expression.util.SimpleInvocationEmitterFactory;
 import org.jfxcore.compiler.ast.text.TextSegmentNode;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.type.TypeDeclaration;
-import org.jfxcore.compiler.type.TypeInstance;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
 
 /**
- * Semantic invocation that remains neutral between method and construction until resolution.
+ * Semantic invocation whose target has not yet been resolved as either a method or a constructor.
  */
 public final class InvocationExpressionNode extends AbstractNode implements ExpressionNode {
 
@@ -125,25 +121,6 @@ public final class InvocationExpressionNode extends AbstractNode implements Expr
 
         for (Node argument : arguments) {
             result = Math.min(result, ExpressionNode.bindingDistance(argument));
-        }
-
-        return result;
-    }
-
-    @Override
-    public BindingEmitterInfo toEmitter(
-            BindingMode bindingMode,
-            TypeInstance invokingType,
-            @Nullable TypeInstance targetType) {
-        boolean bidirectional = bindingMode == BindingMode.BIDIRECTIONAL;
-        targetType = bindingMode == BindingMode.REVERSE ? null : targetType;
-
-        BindingEmitterInfo result = bindingMode.isObservable()
-            ? new ObservableInvocationEmitterFactory(this, invokingType, targetType, bindingMode).newInstance(bidirectional)
-            : new SimpleInvocationEmitterFactory(this, invokingType, targetType, bindingMode).newInstance();
-
-        if (result == null) {
-            result = new SimpleInvocationEmitterFactory(this, invokingType, targetType, bindingMode).newInstance();
         }
 
         return result;

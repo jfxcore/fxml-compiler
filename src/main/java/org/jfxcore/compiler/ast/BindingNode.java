@@ -6,7 +6,7 @@ package org.jfxcore.compiler.ast;
 import org.jetbrains.annotations.Nullable;
 import org.jfxcore.compiler.ast.expression.BindingEmitterInfo;
 import org.jfxcore.compiler.ast.expression.ExpressionNode;
-import org.jfxcore.compiler.ast.text.ListNode;
+import org.jfxcore.compiler.ast.expression.ExpressionResolution;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.type.TypeInstance;
 import java.util.Objects;
@@ -24,11 +24,8 @@ public class BindingNode extends AbstractNode {
                                           ExpressionNode path,
                                           @Nullable ExpressionNode converter,
                                           @Nullable ExpressionNode format,
-                                          boolean listValue,
                                           SourceInfo sourceInfo) {
-        return listValue
-            ? new ListValue(mode, path, converter, format, sourceInfo)
-            : new BindingNode(mode, path, converter, format, sourceInfo);
+        return new BindingNode(mode, path, converter, format, sourceInfo);
     }
 
     private BindingNode(BindingMode mode,
@@ -61,18 +58,22 @@ public class BindingNode extends AbstractNode {
     }
 
     public BindingEmitterInfo toPathEmitter(TypeInstance invokingType, @Nullable TypeInstance targetType) {
-        return path.toEmitter(mode, invokingType, targetType);
+        return path.resolve(mode, invokingType, targetType).toEmitter();
+    }
+
+    public ExpressionResolution resolvePath(TypeInstance invokingType, @Nullable TypeInstance targetType) {
+        return path.resolve(mode, invokingType, targetType);
     }
 
     public @Nullable BindingEmitterInfo toConverterEmitter(TypeInstance invokingType) {
         return converter != null
-            ? converter.toEmitter(BindingMode.ONCE, invokingType, TypeInstance.of(StringConverterDecl()))
+            ? converter.resolve(BindingMode.ONCE, invokingType, TypeInstance.of(StringConverterDecl())).toEmitter()
             : null;
     }
 
     public @Nullable BindingEmitterInfo toFormatEmitter(TypeInstance invokingType) {
         return format != null
-            ? format.toEmitter(BindingMode.ONCE, invokingType, TypeInstance.of(FormatDecl()))
+            ? format.resolve(BindingMode.ONCE, invokingType, TypeInstance.of(FormatDecl())).toEmitter()
             : null;
     }
 
@@ -89,14 +90,14 @@ public class BindingNode extends AbstractNode {
         return new BindingNode(
             mode,
             path.deepClone(),
-            format != null ? format.deepClone() : null,
             converter != null ? converter.deepClone() : null,
+            format != null ? format.deepClone() : null,
             getSourceInfo()).copy(this);
     }
 
     @Override
     public boolean equals(Object obj) {
-        return !(obj instanceof ListValue) && obj instanceof BindingNode other && equalsNode(other);
+        return obj instanceof BindingNode other && equalsNode(other);
     }
 
     boolean equalsNode(BindingNode other) {
@@ -104,38 +105,5 @@ public class BindingNode extends AbstractNode {
             && path.equals(other.path)
             && Objects.equals(format, other.format)
             && Objects.equals(converter, other.converter);
-    }
-
-    ExpressionNode getPath() { return path; }
-    ExpressionNode getConverter() { return converter; }
-    ExpressionNode getFormat() { return format; }
-
-    /**
-     * Specialized version of {@link BindingNode} that allows it to be used in a {@link ListNode}.
-     */
-    private static final class ListValue extends BindingNode implements ValueNode {
-
-        private final TypeNode type;
-
-        public ListValue(BindingMode mode, ExpressionNode path, @Nullable ExpressionNode converter,
-                         @Nullable ExpressionNode format, SourceInfo sourceInfo) {
-            super(mode, path, converter, format, sourceInfo);
-            type = new ResolvedTypeNode(TypeInstance.of(BottomTypeDecl()), sourceInfo);
-        }
-
-        @Override
-        public TypeNode getType() {
-            return type;
-        }
-
-        @Override
-        public boolean equals(Object obj) {
-            return obj instanceof ListValue other && equalsNode(other);
-        }
-
-        @Override
-        public ListValue deepClone() {
-            return new ListValue(getMode(), getPath(), getConverter(), getFormat(), getSourceInfo()).copy(this);
-        }
     }
 }

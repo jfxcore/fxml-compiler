@@ -36,6 +36,11 @@ public class RootSegment extends Segment {
     }
 
     @Override
+    public boolean isNullable() {
+        return rootField != null && !getTypeInstance().isPrimitive();
+    }
+
+    @Override
     public @Nullable TypeDeclaration getDeclaringType() {
         return rootField != null ? rootField.declaringType() : null;
     }

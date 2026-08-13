@@ -4,9 +4,7 @@
 package org.jfxcore.compiler.parse;
 
 import org.jetbrains.annotations.Nullable;
-import org.jfxcore.compiler.ast.intrinsic.IntrinsicProperty;
-import org.jfxcore.compiler.ast.text.ListNode;
-import org.jfxcore.compiler.ast.text.NumberNode;
+import org.jfxcore.compiler.ast.LiteralValueNode;
 import org.jfxcore.compiler.diagnostic.Diagnostic;
 import org.jfxcore.compiler.diagnostic.ErrorCode;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
@@ -15,13 +13,10 @@ import org.jfxcore.compiler.ast.ObjectNode;
 import org.jfxcore.compiler.ast.PropertyNode;
 import org.jfxcore.compiler.ast.intrinsic.Intrinsic;
 import org.jfxcore.compiler.ast.intrinsic.Intrinsics;
-import org.jfxcore.compiler.ast.text.TextNode;
 import org.jfxcore.compiler.ast.TypeNode;
-import org.jfxcore.compiler.ast.ValueNode;
 import org.jfxcore.compiler.diagnostic.errors.GeneralErrors;
 import org.jfxcore.compiler.diagnostic.errors.ParserErrors;
 import org.jfxcore.compiler.util.NameHelper;
-import org.jfxcore.compiler.util.NumberUtil;
 import org.jfxcore.compiler.util.StringHelper;
 import org.w3c.dom.Attr;
 import org.w3c.dom.Document;
@@ -33,7 +28,6 @@ import org.w3c.dom.Text;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -43,26 +37,10 @@ import java.util.Set;
 
 public class FxmlParser {
 
-    // Intrinsic properties that are always interpreted as expressions.
-    private static final IntrinsicProperty[] EXPRESSION_INTRINSICS = new IntrinsicProperty[] {
-        Intrinsics.EVALUATE.findProperty("source"),
-        Intrinsics.OBSERVE.findProperty("source"),
-        Intrinsics.PUSH.findProperty("source"),
-        Intrinsics.SYNCHRONIZE.findProperty("source")
-    };
-
     // Intrinsics that are not interpreted by the inline parser.
     private static final Intrinsic[] VERBATIM_INTRINSICS = new Intrinsic[] {
         Intrinsics.ID,
         Intrinsics.CLASS
-    };
-
-    private static final String[] INLINE_EXPR_TOKENS = new String[] {
-        "{",
-        InlineParser.SYNCHRONIZE_EXPR_PREFIX,
-        InlineParser.OBSERVE_EXPR_PREFIX,
-        InlineParser.PUSH_EXPR_PREFIX,
-        InlineParser.EVALUATE_EXPR_PREFIX
     };
 
     private static final Map<Character, String> DEFAULT_PREFIX_MAPPINGS = Map.of(
@@ -157,7 +135,7 @@ public class FxmlParser {
 
             rootNode.getProperties().add(new PropertyNode(
                 new String[] { Intrinsics.SUBCLASS.getName() }, Intrinsics.SUBCLASS.getName(),
-                List.of(new TextNode(embeddingContext.embeddingHost().fullName(), getSourceInfo(rootElement))),
+                List.of(new LiteralValueNode(embeddingContext.embeddingHost().fullName(), getSourceInfo(rootElement))),
                 true, false, getSourceInfo(rootElement)));
         }
 
@@ -172,7 +150,7 @@ public class FxmlParser {
         }
 
         List<PropertyNode> properties = new ArrayList<>();
-        List<org.jfxcore.compiler.ast.ValueNode> children = new ArrayList<>();
+        List<org.jfxcore.compiler.ast.Node> children = new ArrayList<>();
 
         for (int i = 0; i < element.getAttributes().getLength(); ++i) {
             Node attribute = element.getAttributes().item(i);
@@ -214,17 +192,7 @@ public class FxmlParser {
         return (SourceInfo)node.getUserData(XmlReader.SOURCE_INFO_KEY);
     }
 
-    private ValueNode nodeFromText(Node node, String text, SourceInfo sourceInfo) {
-        if (node.getParentNode() instanceof Element parent) {
-            if (FxmlNamespace.FXML.equalsIgnoreCase(parent.getNamespaceURI())) {
-                for (Intrinsic intrinsic : VERBATIM_INTRINSICS) {
-                    if (intrinsic.getName().equals(parent.getLocalName())) {
-                        return createTextNode(text, sourceInfo, true);
-                    }
-                }
-            }
-        }
-
+    private org.jfxcore.compiler.ast.Node nodeFromText(Node node, String text, SourceInfo sourceInfo) {
         if (node instanceof Attr attr) {
             SourceInfo valueSourceInfo = (SourceInfo)node.getUserData(XmlReader.ATTR_VALUE_SOURCE_INFO_KEY);
             SourceMappedText input = (SourceMappedText)node.getUserData(XmlReader.ATTR_VALUE_SOURCE_MAPPED_TEXT_KEY);
@@ -234,114 +202,60 @@ public class FxmlParser {
                 input = SourceMappedText.identity(text, fallbackSourceInfo.getStart());
             }
 
-            text = input.getText();
-            boolean parseAsPath = false;
+            return new InlineParser(input, getFxmlNamespacePrefix(node), prefixMappings)
+                .parseAttribute(getAttributeMode(attr));
+        }
 
-            if (FxmlNamespace.FXML.equalsIgnoreCase(attr.getOwnerElement().getNamespaceURI())) {
-                for (IntrinsicProperty intrinsicProperty : EXPRESSION_INTRINSICS) {
-                    if (intrinsicProperty.getIntrinsic().getName().equals(attr.getOwnerElement().getLocalName())
-                            && intrinsicProperty.getName().equals(attr.getLocalName())) {
-                        parseAsPath = true;
-                        break;
+        if (node.getParentNode() instanceof Element parent) {
+            if (FxmlNamespace.FXML.equalsIgnoreCase(parent.getNamespaceURI())) {
+                for (Intrinsic intrinsic : VERBATIM_INTRINSICS) {
+                    if (intrinsic.getName().equals(parent.getLocalName())) {
+                        return createLiteralNode(text, sourceInfo, true);
                     }
                 }
             }
-
-            if (parseAsPath) {
-                return new InlineParser(input, getFxmlNamespacePrefix(node), prefixMappings).parseExpression();
-            }
-
-            String trimmed = text.trim();
-            if (trimmed.startsWith("\\") && isInlineExpression(trimmed.substring(1))) {
-                int start = text.indexOf('\\');
-                return createEscapedTextNode(input, start);
-            }
-
-            if (isInlineExpression(trimmed)) {
-                return new InlineParser(input, getFxmlNamespacePrefix(node), prefixMappings).parseObject();
-            }
-
-            return createTextNode(input);
         }
 
-        return createTextNode(text, sourceInfo, true);
+        return createLiteralNode(text, sourceInfo, true);
     }
 
-    private TextNode createTextNode(SourceMappedText input) {
-        String text = input.getText();
-        SourceInfo sourceInfo = input.getSourceInfo(0, text.length());
-        TextNode scalarNode = createScalarTextNode(text, sourceInfo);
-
-        if (scalarNode instanceof NumberNode) {
-            return scalarNode;
+    private AttributeMode getAttributeMode(Attr attribute) {
+        Element owner = attribute.getOwnerElement();
+        if (!FxmlNamespace.FXML.equalsIgnoreCase(owner.getNamespaceURI())) {
+            return AttributeMode.GENERIC;
         }
 
-        List<StringHelper.OffsetPart> items = StringHelper.splitListWithOffsets(text);
-        if (items.size() == 1) {
-            return scalarNode;
+        Intrinsic intrinsic = Intrinsics.find(owner.getLocalName());
+        if (intrinsic == null) {
+            return AttributeMode.GENERIC;
         }
 
-        TextNode[] textNodes = new TextNode[items.size()];
-        for (int i = 0; i < items.size(); ++i) {
-            StringHelper.OffsetPart item = items.get(i);
-            textNodes[i] = createScalarTextNode(
-                item.text(), input.getSourceInfo(item.start(), item.end()));
+        var property = intrinsic.findProperty(attribute.getLocalName());
+        if (property == null) {
+            return AttributeMode.GENERIC;
         }
 
-        return new ListNode(text, Arrays.asList(textNodes), sourceInfo);
+        return switch (property.getSyntax()) {
+            case GENERIC -> AttributeMode.GENERIC;
+            case EXPRESSION -> AttributeMode.EXPRESSION;
+            case PATH_REFERENCE -> AttributeMode.PATH_REFERENCE;
+        };
     }
 
-    private TextNode createEscapedTextNode(SourceMappedText input, int escapeOffset) {
-        return createTextNode(input.without(escapeOffset));
-    }
-
-    private TextNode createTextNode(String text, SourceInfo sourceInfo, boolean allowList) {
-        TextNode scalarNode = createScalarTextNode(text, sourceInfo);
-
-        if (!allowList || scalarNode instanceof NumberNode) {
-            return scalarNode;
+    private LiteralValueNode createLiteralNode(
+            String text, SourceInfo sourceInfo, boolean allowCoercionParts) {
+        if (!allowCoercionParts) {
+            return new LiteralValueNode(text, sourceInfo);
         }
 
-        List<StringHelper.Part> items = StringHelper.splitList(text);
-        if (items.size() == 1) {
-            return scalarNode;
-        }
+        SourceMappedText source = SourceMappedText.identity(text, sourceInfo);
+        List<StringHelper.OffsetPart> split = StringHelper.splitListWithOffsets(text);
+        List<LiteralValueNode> parts = split.size() > 1
+            ? split.stream().map(part -> new LiteralValueNode(
+                part.text(), source.getSourceInfo(part.start(), part.end()))).toList()
+            : List.of();
 
-        TextNode[] textNodes = new TextNode[items.size()];
-        int column = sourceInfo.getStart().getColumn();
-
-        for (int i = 0; i < items.size(); i++) {
-            StringHelper.Part item = items.get(i);
-            int startLine = sourceInfo.getStart().getLine() + item.line();
-            int startColumn = column + item.column();
-            var itemSourceInfo = new SourceInfo(startLine, startColumn, startLine, startColumn + item.text().length());
-            textNodes[i] = createTextNode(item.text(), itemSourceInfo, false);
-
-            if (item.lineBreak()) {
-                column = 0;
-            }
-        }
-
-        return new ListNode(text, Arrays.asList(textNodes), sourceInfo);
-    }
-
-    private TextNode createScalarTextNode(String text, SourceInfo sourceInfo) {
-        try {
-            NumberUtil.parse(text);
-            return new NumberNode(text, sourceInfo);
-        } catch (NumberFormatException ignored) {
-            return new TextNode(text, sourceInfo);
-        }
-    }
-
-    private boolean isInlineExpression(String text) {
-        for (String token : INLINE_EXPR_TOKENS) {
-            if (text.startsWith(token)) {
-                return true;
-            }
-        }
-
-        return !text.isEmpty() && prefixMappings.containsKey(text.charAt(0));
+        return new LiteralValueNode(text, parts, sourceInfo);
     }
 
     private void parsePrefixInstruction(ProcessingInstruction pi, Map<Character, String> prefixMappings) {
@@ -396,7 +310,7 @@ public class FxmlParser {
             String prefix,
             String namespace,
             String name,
-            Collection<? extends ValueNode> values,
+            Collection<? extends org.jfxcore.compiler.ast.Node> values,
             SourceInfo sourceInfo) {
         if (!FxmlNamespace.JAVAFX.isParentOf(namespace) && !FxmlNamespace.FXML.equalsIgnoreCase(namespace)) {
             throw ParserErrors.unknownNamespace(sourceInfo, namespace);

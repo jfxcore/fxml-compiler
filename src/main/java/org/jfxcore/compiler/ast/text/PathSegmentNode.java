@@ -4,11 +4,11 @@
 package org.jfxcore.compiler.ast.text;
 
 import org.jetbrains.annotations.Nullable;
-import org.jfxcore.compiler.ast.TypeNode;
+import org.jfxcore.compiler.ast.AbstractSyntaxNode;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import java.util.List;
 
-public abstract class PathSegmentNode extends DerivedTextNode {
+public abstract class PathSegmentNode extends AbstractSyntaxNode {
 
     private final @Nullable SourceInfo selectorSourceInfo;
 
@@ -17,24 +17,15 @@ public abstract class PathSegmentNode extends DerivedTextNode {
         this.selectorSourceInfo = selectorSourceInfo;
     }
 
-    protected PathSegmentNode(
-            @Nullable SourceInfo selectorSourceInfo, TypeNode type, SourceInfo sourceInfo) {
-        super(type, sourceInfo);
-        this.selectorSourceInfo = selectorSourceInfo;
-    }
-
-    public @Nullable SourceInfo getSelectorSourceInfo() {
+    public final @Nullable SourceInfo getSelectorSourceInfo() {
         return selectorSourceInfo;
     }
 
     public abstract List<PathNode> getTypeArguments();
 
-    /**
-     * If this path segment refers to an {@code ObservableValue}, determines whether the segment
-     * should select the ObservableValue instance itself, rather than the value of the ObservableValue.
-     */
     public abstract boolean isObservableSelector();
 
     public abstract boolean equals(String text);
 
+    public abstract String getText();
 }

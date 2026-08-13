@@ -5,6 +5,8 @@ package org.jfxcore.compiler.transform.markup;
 
 import org.jfxcore.compiler.ast.BindingMode;
 import org.jfxcore.compiler.ast.BindingNode;
+import org.jfxcore.compiler.ast.AttributeValueNode;
+import org.jfxcore.compiler.ast.LiteralValueNode;
 import org.jfxcore.compiler.ast.Node;
 import org.jfxcore.compiler.ast.NodeDataKey;
 import org.jfxcore.compiler.ast.ObjectNode;
@@ -20,7 +22,6 @@ import org.jfxcore.compiler.ast.emit.EmitUnwrapObservableNode;
 import org.jfxcore.compiler.ast.emit.ValueEmitterNode;
 import org.jfxcore.compiler.ast.expression.BindingEmitterInfo;
 import org.jfxcore.compiler.ast.intrinsic.Intrinsics;
-import org.jfxcore.compiler.ast.text.TextNode;
 import org.jfxcore.compiler.diagnostic.Diagnostic;
 import org.jfxcore.compiler.diagnostic.DiagnosticInfo;
 import org.jfxcore.compiler.diagnostic.ErrorCode;
@@ -35,6 +36,7 @@ import org.jfxcore.compiler.transform.Transform;
 import org.jfxcore.compiler.transform.TransformContext;
 import org.jfxcore.compiler.transform.markup.util.AdderFactory;
 import org.jfxcore.compiler.transform.markup.util.MarkupExtensionInfo;
+import org.jfxcore.compiler.transform.markup.util.TargetValueResolver;
 import org.jfxcore.compiler.transform.markup.util.ValueEmitterFactory;
 import org.jfxcore.compiler.type.MethodDeclaration;
 import org.jfxcore.compiler.type.Resolver;
@@ -109,7 +111,7 @@ public class ObjectTransform implements Transform {
                 ListIterator<Node> it = objectNode.getChildren().listIterator();
                 while (it.hasNext()) {
                     if (it.next() instanceof ValueNode child) {
-                        adders.addAll(AdderFactory.newCollectionAdders(result, child));
+                        adders.addAll(AdderFactory.newCollectionAdders(context, result, child));
                         it.remove();
                     }
                 }
@@ -157,12 +159,7 @@ public class ObjectTransform implements Transform {
             return createFactoryNode(context, node, factoryNode);
         }
 
-        ValueNode newObjectNode = ValueEmitterFactory.newLiteralValue(node);
-        if (newObjectNode != null) {
-            return newObjectNode;
-        }
-
-        newObjectNode = ValueEmitterFactory.newObjectByCoercion(node);
+        ValueNode newObjectNode = createLiteralContentNode(context, node);
         if (newObjectNode != null) {
             return newObjectNode;
         }
@@ -212,13 +209,69 @@ public class ObjectTransform implements Transform {
 
         if (!diagnostics.isEmpty()) {
             throw ObjectInitializationErrors.constructorNotFound(
-                node.getSourceInfo(),
+                diagnostics.get(0).getSourceInfo(),
                 TypeHelper.getTypeDeclaration(node),
                 diagnostics.stream().map(DiagnosticInfo::getDiagnostic).toArray(Diagnostic[]::new));
         }
 
         throw ObjectInitializationErrors.constructorNotFound(
             node.getSourceInfo(), TypeHelper.getTypeDeclaration(node));
+    }
+
+    private ValueNode createLiteralContentNode(TransformContext context, ObjectNode node) {
+        if (node.getChildren().size() != 1
+                || !(node.getChildren().get(0) instanceof LiteralValueNode literal)) {
+            return null;
+        }
+
+        PropertyNode idProperty = node.findIntrinsicProperty(Intrinsics.ID);
+        String backingField = idProperty != null ? idProperty.getTrimmedTextNotEmpty(context) : null;
+
+        List<Node> children = PropertyHelper.getSorted(
+            node,
+            node.getProperties().stream()
+                .filter(property -> property != idProperty)
+                .toList())
+            .stream()
+            .map(property -> (Node)property)
+            .toList();
+
+        TargetValueResolver.ConstructionSite site = new TargetValueResolver.ConstructionSite(
+            backingField, children, node.getSourceInfo());
+
+        TypeInstance type = TypeHelper.getTypeInstance(node);
+
+        TargetValueResolver.TargetContext target = TargetValueResolver.TargetContext.object(
+            type, type, ValueEmitterFactory.getParentsUnderInitializationCount(context), site);
+
+        TargetValueResolver.ResolutionResult result = TargetValueResolver.resolveSequence(
+            context, TargetValueResolver.ValueInput.of(literal), target);
+
+        if (result instanceof TargetValueResolver.ResolutionResult.Invalid invalid) {
+            throw invalid.diagnostic();
+        }
+
+        if (result instanceof TargetValueResolver.ResolutionResult.NotApplicable notApplicable) {
+            if (notApplicable.failure().diagnostic() != null) {
+                throw notApplicable.failure().diagnostic();
+            }
+
+            return null;
+        }
+
+        if (result instanceof TargetValueResolver.ResolutionResult.Applicable applicable) {
+            ValueEmitterNode value = (ValueEmitterNode)applicable.plan().lowerValue();
+
+            // Commit source ownership only after the selected plan has materialized.
+            if (idProperty != null) {
+                idProperty.remove();
+            }
+
+            node.getChildren().clear();
+            return value;
+        }
+
+        throw new AssertionError();
     }
 
     private ValueNode createValueOfNode(
@@ -231,6 +284,10 @@ public class ObjectTransform implements Transform {
         }
 
         Node propertyValue = propertyNode.getSingleValue(context);
+        if (propertyValue instanceof AttributeValueNode attributeValue && attributeValue.getItems().size() == 1) {
+            propertyValue = attributeValue.getItems().get(0);
+        }
+
         ValueEmitterNode argumentValue;
 
         if (propertyValue instanceof BindingNode bindingNode) {
@@ -247,8 +304,9 @@ public class ObjectTransform implements Transform {
         } else if (propertyValue instanceof ValueNode valueNode
                    && transform(context, valueNode) instanceof ValueEmitterNode valueEmitterNode) {
             argumentValue = valueEmitterNode;
-        } else if (propertyValue instanceof TextNode textNode) {
-            argumentValue = new EmitLiteralNode(TypeInstance.StringType(), textNode.getText(), textNode.getSourceInfo());
+        } else if (propertyValue instanceof LiteralValueNode literalNode) {
+            argumentValue = new EmitLiteralNode(
+                TypeInstance.StringType(), literalNode.getText(), literalNode.getSourceInfo());
         } else {
             throw GeneralErrors.expressionNotApplicable(propertyValue.getSourceInfo(), false);
         }

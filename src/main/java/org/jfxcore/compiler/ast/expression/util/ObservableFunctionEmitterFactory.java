@@ -5,40 +5,32 @@ package org.jfxcore.compiler.ast.expression.util;
 
 import org.jetbrains.annotations.Nullable;
 import org.jfxcore.compiler.ast.BindingMode;
-import org.jfxcore.compiler.ast.ObservableDependencyKind;
-import org.jfxcore.compiler.ast.ValueSourceKind;
 import org.jfxcore.compiler.ast.emit.EmitObservableFunctionNode;
 import org.jfxcore.compiler.ast.emit.ValueEmitterNode;
-import org.jfxcore.compiler.ast.expression.BindingEmitterInfo;
 import org.jfxcore.compiler.ast.expression.FunctionExpressionNode;
 import org.jfxcore.compiler.ast.expression.BindingOperator;
-import org.jfxcore.compiler.diagnostic.errors.BindingSourceErrors;
 import org.jfxcore.compiler.type.Resolver;
-import org.jfxcore.compiler.type.TypeHelper;
 import org.jfxcore.compiler.type.TypeInstance;
+import org.jfxcore.compiler.util.ApplicableInvocationCandidate;
 
-public class ObservableFunctionEmitterFactory
-        extends AbstractFunctionEmitterFactory implements ObservableEmitterFactory {
+final class ObservableFunctionEmitterFactory extends AbstractFunctionEmitterFactory {
 
     private final FunctionExpressionNode functionExpression;
     private final Resolver resolver;
+    private final ApplicableInvocationCandidate selected;
 
-    public ObservableFunctionEmitterFactory(FunctionExpressionNode functionExpression,
-                                            TypeInstance invokingType,
-                                            @Nullable TypeInstance targetType) {
-        super(invokingType, targetType);
+    ObservableFunctionEmitterFactory(
+            FunctionExpressionNode functionExpression,
+            TypeInstance invokingType,
+            ApplicableInvocationCandidate selected) {
+        super(invokingType);
         this.functionExpression = functionExpression;
         this.resolver = new Resolver(functionExpression.getSourceInfo());
+        this.selected = selected;
     }
 
-    @Override
-    public BindingEmitterInfo newInstance() {
-        return newInstance(false);
-    }
-
-    @Override
-    public BindingEmitterInfo newInstance(boolean bidirectional) {
-        InvocationInfo invocationInfo = createInvocation(functionExpression, bidirectional, true);
+    @Nullable ValueEmitterNode newInstance(boolean bidirectional) {
+        InvocationInfo invocationInfo = createInvocation(functionExpression, bidirectional, true, selected);
         if (!invocationInfo.observable()) {
             return null;
         }
@@ -54,23 +46,7 @@ public class ObservableFunctionEmitterFactory
             functionExpression.getSourceInfo());
 
         BindingOperator operator = functionExpression.getPath().getOperator();
-        if (bidirectional && !operator.isInvertible(valueType)) {
-            throw BindingSourceErrors.expressionNotInvertible(value.getSourceInfo());
-        }
-
         value = operator.toEmitter(value, bidirectional ? BindingMode.BIDIRECTIONAL : BindingMode.UNIDIRECTIONAL);
-        valueType = operator.evaluateType(valueType);
-
-        return new BindingEmitterInfo(
-            value,
-            valueType,
-            TypeHelper.getTypeInstance(value),
-            ValueSourceKind.get(TypeHelper.getTypeDeclaration(value)),
-            ObservableDependencyKind.get(TypeHelper.getTypeDeclaration(value)),
-            invocationInfo.function().getBehavior().declaringType(),
-            invocationInfo.function().getBehavior().name(),
-            true,
-            false,
-            functionExpression.getSourceInfo());
+        return value;
     }
 }

@@ -3,34 +3,34 @@
 
 package org.jfxcore.compiler.ast.expression.util;
 
-import org.jfxcore.compiler.ast.ObservableDependencyKind;
-import org.jfxcore.compiler.ast.ValueSourceKind;
 import org.jfxcore.compiler.ast.emit.EmitObjectNode;
 import org.jfxcore.compiler.ast.emit.ValueEmitterNode;
-import org.jfxcore.compiler.ast.expression.BindingEmitterInfo;
 import org.jfxcore.compiler.ast.expression.ConstructorExpressionNode;
 import org.jfxcore.compiler.type.ConstructorDeclaration;
 import org.jfxcore.compiler.type.TypeInstance;
+import org.jfxcore.compiler.util.ApplicableInvocationCandidate;
 
-public final class SimpleConstructorEmitterFactory
-        extends AbstractFunctionEmitterFactory implements EmitterFactory {
+final class SimpleConstructorEmitterFactory extends AbstractFunctionEmitterFactory {
 
     private final ConstructorExpressionNode expression;
+    private final ApplicableInvocationCandidate selected;
 
-    public SimpleConstructorEmitterFactory(
-            ConstructorExpressionNode expression, TypeInstance invokingType) {
-        super(invokingType, null);
+    SimpleConstructorEmitterFactory(
+            ConstructorExpressionNode expression,
+            TypeInstance invokingType,
+            ApplicableInvocationCandidate selected) {
+        super(invokingType);
         this.expression = expression;
+        this.selected = selected;
     }
 
-    @Override
-    public BindingEmitterInfo newInstance() {
-        InvocationInfo invocation = createConstructorInvocation(expression, false, false);
+    ValueEmitterNode newInstance() {
+        InvocationInfo invocation = createConstructorInvocation(expression, false, false, selected);
 
         ValueEmitterNode enclosingInstance = invocation.function().getReceiver().isEmpty()
             ? null : invocation.function().getReceiver().get(0);
 
-        ValueEmitterNode value = EmitObjectNode
+        return EmitObjectNode
             .constructor(
                 invocation.type(),
                 (ConstructorDeclaration)invocation.function().getBehavior(),
@@ -38,17 +38,5 @@ public final class SimpleConstructorEmitterFactory
                 expression.getSourceInfo())
             .enclosingInstance(enclosingInstance)
             .create();
-
-        return new BindingEmitterInfo(
-            value,
-            invocation.type(),
-            null,
-            ValueSourceKind.NONE,
-            ObservableDependencyKind.get(invocation.type().declaration()),
-            invocation.type().declaration(),
-            invocation.type().declaration().simpleName(),
-            true,
-            false,
-            expression.getSourceInfo());
     }
 }

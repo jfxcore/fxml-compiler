@@ -132,7 +132,11 @@ public class IntrinsicsTest extends CompilerTestBase {
                 </Pane>
             """));
 
-            assertEquals(ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT, ex.getDiagnostic().getCode());
+            assertEquals(ErrorCode.CONSTRUCTOR_NOT_FOUND, ex.getDiagnostic().getCode());
+            assertEquals(1, ex.getDiagnostic().getCauses().length);
+            assertEquals(
+                ErrorCode.CANNOT_ASSIGN_FUNCTION_ARGUMENT,
+                ex.getDiagnostic().getCauses()[0].getCode());
             assertCodeHighlight("{fx:Null}", ex);
         }
     }

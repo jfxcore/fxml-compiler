@@ -95,6 +95,12 @@ public class GeneralErrors {
             ErrorCode.UNSUPPORTED_MAP_KEY_TYPE, mapType.javaName()));
     }
 
+    public static MarkupException cannotPopulateMapWithoutKeys(
+            SourceInfo sourceInfo, PropertyInfo propertyInfo) {
+        return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
+            ErrorCode.CANNOT_POPULATE_MAP_WITHOUT_KEYS, formatPropertyName(propertyInfo)));
+    }
+
     public static MarkupException typeArgumentOutOfBound(SourceInfo sourceInfo, TypeInstance typeArg, TypeInstance requiredType) {
         return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
             ErrorCode.TYPE_ARGUMENT_OUT_OF_BOUND, typeArg.javaName(), requiredType.javaName()));

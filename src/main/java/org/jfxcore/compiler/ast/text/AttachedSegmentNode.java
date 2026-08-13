@@ -4,51 +4,34 @@
 package org.jfxcore.compiler.ast.text;
 
 import org.jetbrains.annotations.Nullable;
-import org.jfxcore.compiler.ast.TypeNode;
+import org.jfxcore.compiler.ast.IdentifierNode;
 import org.jfxcore.compiler.ast.Visitor;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import java.util.List;
 import java.util.Objects;
 
-import static org.jfxcore.compiler.type.KnownSymbols.*;
-
 /**
  * A restricted attached-property path segment such as {@code (GridPane.rowIndex)}.
  */
-public class AttachedSegmentNode extends PathSegmentNode {
+public final class AttachedSegmentNode extends PathSegmentNode {
 
     private final boolean observableSelector;
     private final SourceInfo openParenSourceInfo;
     private final SourceInfo separatorSourceInfo;
     private final SourceInfo closeParenSourceInfo;
-    private TextNode declaringType;
-    private TextNode propertyName;
+    private IdentifierNode declaringType;
+    private IdentifierNode propertyName;
 
     public AttachedSegmentNode(
             boolean observableSelector,
-            TextNode declaringType,
-            TextNode propertyName,
+            IdentifierNode declaringType,
+            IdentifierNode propertyName,
             @Nullable SourceInfo selectorSourceInfo,
             SourceInfo openParenSourceInfo,
             SourceInfo separatorSourceInfo,
             SourceInfo closeParenSourceInfo,
             SourceInfo sourceInfo) {
-        this(observableSelector, declaringType, propertyName, selectorSourceInfo,
-             openParenSourceInfo, separatorSourceInfo, closeParenSourceInfo,
-             null, sourceInfo);
-    }
-
-    private AttachedSegmentNode(
-            boolean observableSelector,
-            TextNode declaringType,
-            TextNode propertyName,
-            @Nullable SourceInfo selectorSourceInfo,
-            SourceInfo openParenSourceInfo,
-            SourceInfo separatorSourceInfo,
-            SourceInfo closeParenSourceInfo,
-            @Nullable TypeNode type,
-            SourceInfo sourceInfo) {
-        super(selectorSourceInfo, type != null ? type : new TypeNode(StringName, sourceInfo), sourceInfo);
+        super(selectorSourceInfo, sourceInfo);
         this.observableSelector = observableSelector;
         this.declaringType = checkNotNull(declaringType);
         this.propertyName = checkNotNull(propertyName);
@@ -62,11 +45,11 @@ public class AttachedSegmentNode extends PathSegmentNode {
         return observableSelector;
     }
 
-    public TextNode getDeclaringType() {
+    public IdentifierNode getDeclaringType() {
         return declaringType;
     }
 
-    public TextNode getPropertyName() {
+    public IdentifierNode getPropertyName() {
         return propertyName;
     }
 
@@ -89,51 +72,40 @@ public class AttachedSegmentNode extends PathSegmentNode {
 
     @Override
     public String getText() {
-        return propertyName.getText();
+        return propertyName.getName();
     }
 
     @Override
-    public String formatText() {
-        return declaringType.formatText() + "." + propertyName.formatText();
+    public String format() {
+        return declaringType.format() + "." + propertyName.format();
     }
 
     @Override
     public void acceptChildren(Visitor visitor) {
-        super.acceptChildren(visitor);
-        declaringType = (TextNode)declaringType.accept(visitor);
-        propertyName = (TextNode)propertyName.accept(visitor);
+        declaringType = (IdentifierNode)declaringType.accept(visitor);
+        propertyName = (IdentifierNode)propertyName.accept(visitor);
     }
 
     @Override
     public AttachedSegmentNode deepClone() {
         return new AttachedSegmentNode(
-            observableSelector,
-            declaringType.deepClone(),
-            propertyName.deepClone(),
-            getSelectorSourceInfo(),
-            openParenSourceInfo,
-            separatorSourceInfo,
-            closeParenSourceInfo,
-            getType().deepClone(),
-            getSourceInfo()).copy(this);
+            observableSelector, declaringType.deepClone(), propertyName.deepClone(), getSelectorSourceInfo(),
+            openParenSourceInfo, separatorSourceInfo, closeParenSourceInfo, getSourceInfo()).copy(this);
     }
 
     @Override
-    public boolean equals(String text) {
-        return false;
-    }
+    public boolean equals(String text) { return false; }
 
     @Override
-    public boolean equals(Object o) {
-        if (!super.equals(o)) return false;
-        AttachedSegmentNode that = (AttachedSegmentNode)o;
-        return observableSelector == that.observableSelector
-            && declaringType.equals(that.declaringType)
-            && propertyName.equals(that.propertyName);
+    public boolean equals(Object obj) {
+        return obj instanceof AttachedSegmentNode other
+            && observableSelector == other.observableSelector
+            && declaringType.equals(other.declaringType) && propertyName.equals(other.propertyName)
+            && Objects.equals(getSelectorSourceInfo(), other.getSelectorSourceInfo());
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(super.hashCode(), observableSelector, declaringType, propertyName);
+        return Objects.hash(observableSelector, declaringType, propertyName, getSelectorSourceInfo());
     }
 }

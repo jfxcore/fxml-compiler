@@ -3,84 +3,56 @@
 
 package org.jfxcore.compiler.ast.text;
 
-import org.jfxcore.compiler.ast.TypeNode;
-import org.jfxcore.compiler.ast.ValueNode;
+import org.jfxcore.compiler.ast.AbstractSyntaxNode;
+import org.jfxcore.compiler.ast.SyntaxNode;
 import org.jfxcore.compiler.ast.Visitor;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import java.util.Objects;
 
-public class ParenthesizedNode extends DerivedTextNode {
+public final class ParenthesizedNode extends AbstractSyntaxNode {
 
     private final SourceInfo openParenSourceInfo;
     private final SourceInfo closeParenSourceInfo;
-    private ValueNode operand;
+    private SyntaxNode operand;
 
     public ParenthesizedNode(
-            ValueNode operand,
-            SourceInfo openParenSourceInfo,
-            SourceInfo closeParenSourceInfo,
-            SourceInfo sourceInfo) {
+            SyntaxNode operand, SourceInfo openParenSourceInfo,
+            SourceInfo closeParenSourceInfo, SourceInfo sourceInfo) {
         super(sourceInfo);
         this.operand = checkNotNull(operand);
         this.openParenSourceInfo = checkNotNull(openParenSourceInfo);
         this.closeParenSourceInfo = checkNotNull(closeParenSourceInfo);
     }
 
-    private ParenthesizedNode(
-            ValueNode operand,
-            SourceInfo openParenSourceInfo,
-            SourceInfo closeParenSourceInfo,
-            TypeNode type,
-            SourceInfo sourceInfo) {
-        super(type, sourceInfo);
-        this.operand = checkNotNull(operand);
-        this.openParenSourceInfo = checkNotNull(openParenSourceInfo);
-        this.closeParenSourceInfo = checkNotNull(closeParenSourceInfo);
-    }
-
-    public ValueNode getOperand() {
-        return operand;
-    }
-
-    public SourceInfo getOpenParenSourceInfo() {
-        return openParenSourceInfo;
-    }
-
-    public SourceInfo getCloseParenSourceInfo() {
-        return closeParenSourceInfo;
-    }
-
+    public SyntaxNode getOperand() { return operand; }
+    public SourceInfo getOpenParenSourceInfo() { return openParenSourceInfo; }
+    public SourceInfo getCloseParenSourceInfo() { return closeParenSourceInfo; }
     @Override
-    public String formatText() {
-        return "(" + formatValue(operand) + ")";
+    public String format() {
+        return "(" + format(operand) + ")";
     }
 
     @Override
     public void acceptChildren(Visitor visitor) {
-        super.acceptChildren(visitor);
-        operand = (ValueNode)operand.accept(visitor);
+        operand = (SyntaxNode)operand.accept(visitor);
     }
 
     @Override
     public ParenthesizedNode deepClone() {
         return new ParenthesizedNode(
-            operand.deepClone(), openParenSourceInfo, closeParenSourceInfo,
-            getType().deepClone(), getSourceInfo()).copy(this);
+            operand.deepClone(), openParenSourceInfo, closeParenSourceInfo, getSourceInfo()).copy(this);
     }
 
     @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        if (!super.equals(o)) return false;
-        ParenthesizedNode that = (ParenthesizedNode)o;
-        return operand.equals(that.operand)
-            && openParenSourceInfo.equals(that.openParenSourceInfo)
-            && closeParenSourceInfo.equals(that.closeParenSourceInfo);
+    public boolean equals(Object obj) {
+        return obj instanceof ParenthesizedNode other
+            && operand.equals(other.operand)
+            && openParenSourceInfo.equals(other.openParenSourceInfo)
+            && closeParenSourceInfo.equals(other.closeParenSourceInfo);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(super.hashCode(), operand, openParenSourceInfo, closeParenSourceInfo);
+        return Objects.hash(operand, openParenSourceInfo, closeParenSourceInfo);
     }
 }

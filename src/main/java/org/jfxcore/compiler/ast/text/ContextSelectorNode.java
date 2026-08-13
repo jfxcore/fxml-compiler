@@ -4,13 +4,13 @@
 package org.jfxcore.compiler.ast.text;
 
 import org.jetbrains.annotations.Nullable;
-import org.jfxcore.compiler.ast.TypeNode;
+import org.jfxcore.compiler.ast.AbstractSyntaxNode;
+import org.jfxcore.compiler.ast.IdentifierNode;
 import org.jfxcore.compiler.ast.Visitor;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
-
 import java.util.Objects;
 
-public class ContextSelectorNode extends DerivedTextNode {
+public final class ContextSelectorNode extends AbstractSyntaxNode {
 
     private final @Nullable SourceInfo colonSourceInfo;
     private final SourceInfo selectorSourceInfo;
@@ -19,45 +19,16 @@ public class ContextSelectorNode extends DerivedTextNode {
     private final @Nullable SourceInfo openParenSourceInfo;
     private final @Nullable SourceInfo closeParenSourceInfo;
     private final ContextSelector selector;
-    private TextNode searchType;
+    private IdentifierNode searchType;
     private NumberNode level;
 
     public ContextSelectorNode(
-            ContextSelector selector,
-            @Nullable TextNode searchType,
-            @Nullable NumberNode level,
-            @Nullable SourceInfo colonSourceInfo,
-            SourceInfo selectorSourceInfo,
-            @Nullable SourceInfo openAngleSourceInfo,
-            @Nullable SourceInfo closeAngleSourceInfo,
-            @Nullable SourceInfo openParenSourceInfo,
-            @Nullable SourceInfo closeParenSourceInfo,
+            ContextSelector selector, @Nullable IdentifierNode searchType, @Nullable NumberNode level,
+            @Nullable SourceInfo colonSourceInfo, SourceInfo selectorSourceInfo,
+            @Nullable SourceInfo openAngleSourceInfo, @Nullable SourceInfo closeAngleSourceInfo,
+            @Nullable SourceInfo openParenSourceInfo, @Nullable SourceInfo closeParenSourceInfo,
             SourceInfo sourceInfo) {
         super(sourceInfo);
-        this.selector = checkNotNull(selector);
-        this.searchType = searchType;
-        this.level = level;
-        this.colonSourceInfo = colonSourceInfo;
-        this.selectorSourceInfo = checkNotNull(selectorSourceInfo);
-        this.openAngleSourceInfo = openAngleSourceInfo;
-        this.closeAngleSourceInfo = closeAngleSourceInfo;
-        this.openParenSourceInfo = openParenSourceInfo;
-        this.closeParenSourceInfo = closeParenSourceInfo;
-    }
-
-    private ContextSelectorNode(
-            ContextSelector selector,
-            @Nullable TextNode searchType,
-            @Nullable NumberNode level,
-            @Nullable SourceInfo colonSourceInfo,
-            SourceInfo selectorSourceInfo,
-            @Nullable SourceInfo openAngleSourceInfo,
-            @Nullable SourceInfo closeAngleSourceInfo,
-            @Nullable SourceInfo openParenSourceInfo,
-            @Nullable SourceInfo closeParenSourceInfo,
-            TypeNode type,
-            SourceInfo sourceInfo) {
-        super(type, sourceInfo);
         this.selector = checkNotNull(selector);
         this.searchType = searchType;
         this.level = level;
@@ -77,7 +48,7 @@ public class ContextSelectorNode extends DerivedTextNode {
         return selectorSourceInfo;
     }
 
-    public @Nullable TextNode getSearchType() {
+    public @Nullable IdentifierNode getSearchType() {
         return searchType;
     }
 
@@ -106,70 +77,40 @@ public class ContextSelectorNode extends DerivedTextNode {
     }
 
     @Override
-    public String formatText() {
-        return formatText(selector, searchType, level);
+    public String format() {
+        if (searchType == null && level == null) {
+            return selector.getText();
+        }
+
+        var builder = new StringBuilder(selector.getText());
+        if (searchType != null) builder.append('<').append(searchType.format()).append('>');
+        if (level != null) builder.append('(').append(level.format()).append(')');
+        return builder.toString();
     }
 
     @Override
     public void acceptChildren(Visitor visitor) {
-        super.acceptChildren(visitor);
-
-        if (searchType != null) {
-            searchType = (TextNode)searchType.accept(visitor);
-        }
-
-        if (level != null) {
-            level = (NumberNode)level.accept(visitor);
-        }
+        if (searchType != null) searchType = (IdentifierNode)searchType.accept(visitor);
+        if (level != null) level = (NumberNode)level.accept(visitor);
     }
 
     @Override
     public ContextSelectorNode deepClone() {
         return new ContextSelectorNode(
-            selector,
-            searchType != null ? searchType.deepClone() : null,
-            level != null ? level.deepClone() : null,
-            colonSourceInfo,
-            selectorSourceInfo,
-            openAngleSourceInfo,
-            closeAngleSourceInfo,
-            openParenSourceInfo,
-            closeParenSourceInfo,
-            getType().deepClone(), getSourceInfo()).copy(this);
+            selector, searchType != null ? searchType.deepClone() : null,
+            level != null ? level.deepClone() : null, colonSourceInfo, selectorSourceInfo,
+            openAngleSourceInfo, closeAngleSourceInfo, openParenSourceInfo, closeParenSourceInfo,
+            getSourceInfo()).copy(this);
     }
 
     @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        if (!super.equals(o)) return false;
-        ContextSelectorNode that = (ContextSelectorNode) o;
-        return selector == that.selector
-            && Objects.equals(searchType, that.searchType)
-            && Objects.equals(level, that.level);
+    public boolean equals(Object obj) {
+        return obj instanceof ContextSelectorNode other
+            && selector == other.selector
+            && Objects.equals(searchType, other.searchType)
+            && Objects.equals(level, other.level);
     }
 
     @Override
-    public int hashCode() {
-        return Objects.hash(super.hashCode(), selector, searchType, level);
-    }
-
-    private static String formatText(
-            ContextSelector selector, @Nullable TextNode typeName, @Nullable NumberNode depth) {
-        if (typeName == null && depth == null) {
-            return selector.getText();
-        }
-
-        var builder = new StringBuilder(selector.getText());
-
-        if (typeName != null) {
-            builder.append('<').append(typeName.formatText()).append('>');
-        }
-
-        if (depth != null) {
-            builder.append('(').append(depth.formatText()).append(')');
-        }
-
-        return builder.toString();
-    }
+    public int hashCode() { return Objects.hash(selector, searchType, level); }
 }

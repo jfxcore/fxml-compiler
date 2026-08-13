@@ -45,13 +45,47 @@ to the property type. This process, called type coercion, is supported in the fo
 
 {: .note }
 Values that use [markup extension](markup-extension.html) syntax are not treated as literals and therefore do not
-participate in type coercion. This includes both the standard attribute form such as `{StaticResource greeting}`
-and a prefix shorthand such as `%greeting` after a matching `<?prefix?>` declaration.
+participate in type coercion. This includes both the standard form such as `{StaticResource greeting}`
+and a prefix shorthand such as `%greeting`. A markup extension is instead resolved against the type of
+its target property, collection item, array component, or constructor parameter.
+
+## Comma-separated lists
+When a property has a collection or array type, its values can be written as a comma-separated list:
+```xml
+<Polygon points="0, 0, 50, 100, 100, 50"/>
+```
+
+List items can be literal values or value-producing [markup extensions](markup-extension.html).
+Each list item is converted independently to the required element type.
+
+If the property does not have a collection or array type, a comma-separated list has no special meaning and
+is interpreted as a literal value. In the following example, the string `"hello, world"` is therefore assigned
+to the `text` property:
+
+```xml
+<Label text="hello, world"/>
+```
+
+### Greedy parsing of markup extensions in prefix notation
+A markup extension written in [prefix notation](markup-extension.html#prefix-shorthand-in-attribute-notation) can itself
+contain a comma-separated list. Because prefix syntax has no closing delimiter, this inner list is greedy: it consumes
+all subsequent comma-separated values. In the following example, `Jane`, `Doe`, and `@fallback.txt` all belong to
+`formatArguments`: the `@fallback.txt` expression is not a second item in the outer `values` list:
+
+```xml
+<MessageList values="%greeting; formatArguments=Jane, Doe, @fallback.txt"/>
+```
+
+To continue the outer list instead, use brace-style notation to delimit the extension explicitly:
+
+```xml
+<MessageList values="{StaticResource greeting; formatArguments=Jane, Doe}, @fallback.txt"/>
+```
 
 ## Implicit construction
-An object instance can be created implicitly from a literal value, provided that the literal value can be
-coerced to the type of the constructor argument. This conversion only works for constructors where the parameter
-is annotated with `@NamedArg`.
+An object instance can be created implicitly from a literal value or a value-producing [markup extension](markup-extension.html),
+provided that the literal or expression type is compatible with the type of the constructor argument.
+This conversion only works for constructors where the parameter is annotated with `@NamedArg`.
 
 For example, the `javafx.geometry.Insets` class declares a constructor that accepts a double value:
 ```java
@@ -64,20 +98,27 @@ An `Insets` instance would normally be created like this:
 ```xml
 <Button>
     <padding>
-        <Insets topLeftBottomRight="10"/>
+        <Insets topRightBottomLeft="10"/>
     </padding>
 </Button>
 ```
 
-However, since the literal `10` can be coerced to the type of the named constructor argument `topLeftBottomRight`,
+However, since the literal `10` can be coerced to the type of the named constructor argument `topRightBottomLeft`,
 the `Insets` object can also be created implicitly:
 ```xml
 <Button padding="10"/>
 ```
 
+A markup extension can supply the constructor argument in the same way. For example, if `model.uniformInset`
+resolves to a number, the following attribute also creates an `Insets` instance:
+```xml
+<Button padding="$model.uniformInset"/>
+```
+
 ## Implicit construction with multiple arguments
 Implicit construction also works for constructors with multiple parameters, provided that all parameters
 are annotated with `@NamedArg`. For example, we can create an instance of `Insets` with multiple arguments:
+
 ```xml
 <Button>
     <padding>
@@ -86,10 +127,12 @@ are annotated with `@NamedArg`. For example, we can create an instance of `Inset
 </Button>
 ```
 
-This also works with implicit coercion by separating the arguments with commas:
+This also works with implicit construction using a comma-separated list:
+
 ```xml
-<Button padding="10,20,10,20"/>
+<Button padding="10, 20, 10, 20"/>
+<Button padding="10, $model.rightInset, 10, $model.leftInset"/>
 ```
 
-{: .note }
-A comma-separated list can only contain literal values, it cannot contain other types of expressions.
+In both examples, the four values correspond to the `top`, `right`, `bottom`, and `left` parameters of the `Insets`
+constructor. Each argument is resolved against its parameter type.

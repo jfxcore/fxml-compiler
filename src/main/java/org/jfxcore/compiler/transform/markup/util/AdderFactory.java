@@ -3,30 +3,34 @@
 
 package org.jfxcore.compiler.transform.markup.util;
 
+import org.jfxcore.compiler.ast.AttributeValueNode;
+import org.jfxcore.compiler.ast.LiteralValueNode;
+import org.jfxcore.compiler.ast.Node;
 import org.jfxcore.compiler.ast.ObjectNode;
 import org.jfxcore.compiler.ast.PropertyNode;
 import org.jfxcore.compiler.ast.ValueNode;
 import org.jfxcore.compiler.ast.emit.EmitCollectionAdderNode;
+import org.jfxcore.compiler.ast.emit.EmitLiteralNode;
 import org.jfxcore.compiler.ast.emit.EmitMapAdderNode;
 import org.jfxcore.compiler.ast.emit.EmitObjectNode;
-import org.jfxcore.compiler.ast.emit.ValueEmitterNode;
 import org.jfxcore.compiler.ast.intrinsic.Intrinsics;
-import org.jfxcore.compiler.ast.text.ListNode;
-import org.jfxcore.compiler.ast.text.TextNode;
 import org.jfxcore.compiler.diagnostic.errors.GeneralErrors;
+import org.jfxcore.compiler.transform.TransformContext;
 import org.jfxcore.compiler.type.TypeHelper;
 import org.jfxcore.compiler.type.TypeInstance;
 import org.jfxcore.compiler.util.NameHelper;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 
 import static org.jfxcore.compiler.type.KnownSymbols.*;
 
 public class AdderFactory {
 
-    public static List<EmitCollectionAdderNode> newCollectionAdders(ValueNode collection, ValueNode child) {
+    public static List<EmitCollectionAdderNode> newCollectionAdders(
+            TransformContext context, ValueNode collection, ValueNode child) {
         if (!TypeHelper.getTypeInstance(collection).subtypeOf(CollectionDecl())) {
             throw new IllegalArgumentException();
         }
@@ -34,66 +38,43 @@ public class AdderFactory {
         List<TypeInstance> typeArgs = TypeHelper.getTypeInstance(collection).arguments();
         TypeInstance itemType = !typeArgs.isEmpty() ? typeArgs.get(0) : TypeInstance.ObjectType();
 
-        if (child instanceof ListNode listNode) {
-            List<EmitCollectionAdderNode> adders = new ArrayList<>();
+        List<? extends Node> items = child instanceof LiteralValueNode literal
+            ? literal.hasCoercionParts() ? literal.getCoercionParts() : List.of(literal)
+            : List.of(child);
 
-            for (ValueNode item : listNode.getValues()) {
-                boolean error = false;
+        List<EmitCollectionAdderNode> adders = new ArrayList<>(items.size());
+        TypeInstance collectionType = TypeHelper.getTypeInstance(collection);
+        int parentsUnderInitialization = ValueEmitterFactory.getParentsUnderInitializationCount(context);
 
-                if (item instanceof TextNode textItem) {
-                    ValueEmitterNode value = ValueEmitterFactory.newLiteralValue(
-                        textItem, itemType, item.getSourceInfo());
+        for (Node item : items) {
+            TargetValueResolver.TargetContext target =
+                TargetValueResolver.TargetContext.collectionItem(
+                    collectionType, itemType, collectionType,
+                    parentsUnderInitialization, item.getSourceInfo());
 
-                    if (value == null) {
-                        error = true;
-                    } else {
-                        adders.add(new EmitCollectionAdderNode(value));
-                    }
-                } else {
-                    error = true;
-                }
-
-                if (error) {
-                    throw GeneralErrors.cannotAddItemIncompatibleType(
-                        item.getSourceInfo(),
-                        TypeHelper.getTypeInstance(collection),
-                        TypeHelper.getTypeInstance(item),
-                        itemType);
-                }
+            TargetValueResolver.ResolutionResult result = TargetValueResolver.resolve(context, item, target);
+            if (result instanceof TargetValueResolver.ResolutionResult.Invalid invalid) {
+                throw invalid.diagnostic();
             }
 
-            return adders;
-        }
+            if (result instanceof TargetValueResolver.ResolutionResult.NotApplicable notApplicable) {
+                if (notApplicable.failure().diagnostic() != null) {
+                    throw notApplicable.failure().diagnostic();
+                }
 
-        if (child instanceof TextNode textNode) {
-            ValueEmitterNode value = ValueEmitterFactory.newLiteralValue(
-                textNode, itemType, child.getSourceInfo());
-
-            if (value == null) {
                 throw GeneralErrors.cannotAddItemIncompatibleType(
-                    child.getSourceInfo(),
-                    TypeHelper.getTypeInstance(collection),
-                    TypeHelper.getTypeInstance(child),
+                    item.getSourceInfo(), collectionType,
+                    notApplicable.failure().valueType() != null
+                        ? Objects.requireNonNull(notApplicable.failure().valueType())
+                        : TypeHelper.getTypeInstance(item),
                     itemType);
             }
 
-            return List.of(new EmitCollectionAdderNode(value));
+            adders.add(new EmitCollectionAdderNode(
+                ((TargetValueResolver.ResolutionResult.Applicable)result).plan().lowerValue()));
         }
 
-        if (!(child instanceof ObjectNode)) {
-            throw GeneralErrors.cannotAddItemIncompatibleValue(
-                child.getSourceInfo(), TypeHelper.getTypeInstance(collection), child.getSourceInfo().getText());
-        }
-
-        if (!TypeHelper.getTypeInstance(child).subtypeOf(itemType)) {
-            throw GeneralErrors.cannotAddItemIncompatibleType(
-                child.getSourceInfo(),
-                TypeHelper.getTypeInstance(collection),
-                TypeHelper.getTypeInstance(child),
-                itemType);
-        }
-
-        return List.of(new EmitCollectionAdderNode(child));
+        return adders;
     }
 
     public static EmitMapAdderNode newMapAdder(ValueNode map, ValueNode child) {
@@ -125,17 +106,23 @@ public class AdderFactory {
     private static ValueNode createKey(ObjectNode node, TypeInstance keyType) {
         PropertyNode id = node.findIntrinsicProperty(Intrinsics.ID);
         if (id != null) {
-            return ValueEmitterFactory.newLiteralValue(
-                (TextNode)id.getValues().get(0),
+            Node value = id.getValues().size() == 1 ? id.getValues().get(0) : null;
+            if (value instanceof AttributeValueNode attributeValue
+                    && attributeValue.getForm() == AttributeValueNode.Form.LITERAL) {
+                value = attributeValue.getLiteral();
+            }
+
+            return new EmitLiteralNode(
                 TypeInstance.StringType(),
+                ((LiteralValueNode)value).getText(),
                 node.getSourceInfo());
         }
 
         if (keyType.equals(StringDecl())) {
-            return ValueEmitterFactory.newLiteralValue(
-                NameHelper.getUniqueName(
-                    UUID.nameUUIDFromBytes(TypeHelper.getTypeDeclaration(node).name().getBytes()).toString(), node),
+            return new EmitLiteralNode(
                 TypeInstance.StringType(),
+                NameHelper.getUniqueName(UUID.nameUUIDFromBytes(
+                    TypeHelper.getTypeDeclaration(node).name().getBytes()).toString(), node),
                 node.getSourceInfo());
         }
 

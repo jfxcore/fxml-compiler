@@ -293,6 +293,48 @@ final class SourceMappedText {
         return new SourceMappedText(transformed, textIndex.origin, transformedSource);
     }
 
+    SourceMappedText withoutAll(int... offsets) {
+        if (offsets.length == 0) {
+            return this;
+        }
+
+        int[] sorted = offsets.clone();
+        Arrays.sort(sorted);
+        var builder = new StringBuilder(text);
+        var replacements = new ArrayList<Replacement>(sorted.length);
+        int removed = 0;
+        int previous = -1;
+
+        for (int offset : sorted) {
+            if (offset < 0 || offset >= text.length()) {
+                throw new IndexOutOfBoundsException("Invalid removal offset: " + offset);
+            }
+
+            if (offset == previous) {
+                continue;
+            }
+
+            int decodedOffset = offset - removed;
+            builder.deleteCharAt(decodedOffset);
+            replacements.add(new Replacement(offset, offset + 1, decodedOffset, decodedOffset));
+            previous = offset;
+            ++removed;
+        }
+
+        String transformed = builder.toString();
+        var transformedSource = new TransformedSource(transformed, text, textIndex.origin, source, replacements);
+
+        return new SourceMappedText(transformed, textIndex.origin, transformedSource);
+    }
+
+    SourceMappedText slice(int start, int end) {
+        validateRange(start, end);
+        String sliced = text.substring(start, end);
+        Location origin = textIndex.locationOf(start);
+        var slicedSource = new TransformedSource(sliced, sliced, origin, source, List.of());
+        return new SourceMappedText(sliced, origin, slicedSource);
+    }
+
     SourceInfo getSourceInfo(int decodedStart, int decodedEnd) {
         validateRange(decodedStart, decodedEnd);
         Location start = textIndex.locationOf(decodedStart);

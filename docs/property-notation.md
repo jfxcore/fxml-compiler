@@ -26,8 +26,8 @@ Properties of scene graph elements can either be specified using attribute notat
 </Button>
 ```
 
-## Static property notation
-Static properties can be specified using the following notation, where the static property name is prefixed
+## Attached property notation
+Attached properties can be specified using the following notation, where the static property name is prefixed
 with the declaring class:
 ```xml
 <!-- 1. Attribute notation -->

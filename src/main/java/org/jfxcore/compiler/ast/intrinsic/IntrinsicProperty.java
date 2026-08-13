@@ -8,18 +8,29 @@ import java.util.function.Supplier;
 
 public class IntrinsicProperty {
 
-    private final String name;
-    private final boolean isDefault;
-    Intrinsic intrinsic;
-
-    public IntrinsicProperty(String name, Supplier<TypeDeclaration> type) {
-        this.name = name;
-        this.isDefault = false;
+    public enum Syntax {
+        GENERIC,
+        EXPRESSION,
+        PATH_REFERENCE
     }
 
+    private final String name;
+    private final boolean isDefault;
+    private final Syntax syntax;
+    Intrinsic intrinsic;
+
     public IntrinsicProperty(String name, Supplier<TypeDeclaration> type, boolean isDefault) {
+        this(name, type, isDefault, Syntax.GENERIC);
+    }
+
+    public IntrinsicProperty(String name, Supplier<TypeDeclaration> type, Syntax syntax) {
+        this(name, type, false, syntax);
+    }
+
+    public IntrinsicProperty(String name, Supplier<TypeDeclaration> type, boolean isDefault, Syntax syntax) {
         this.name = name;
         this.isDefault = isDefault;
+        this.syntax = syntax;
     }
 
     public Intrinsic getIntrinsic() {
@@ -34,4 +45,7 @@ public class IntrinsicProperty {
         return isDefault;
     }
 
+    public Syntax getSyntax() {
+        return syntax;
+    }
 }

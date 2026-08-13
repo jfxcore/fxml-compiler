@@ -4,7 +4,7 @@
 package org.jfxcore.compiler.ast.text;
 
 import org.jetbrains.annotations.Nullable;
-import org.jfxcore.compiler.ast.TypeNode;
+import org.jfxcore.compiler.ast.AbstractSyntaxNode;
 import org.jfxcore.compiler.ast.Visitor;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.type.Resolver;
@@ -16,7 +16,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
-public class PathNode extends DerivedTextNode {
+public final class PathNode extends AbstractSyntaxNode {
 
     private final List<PathSegmentNode> segments;
     private final List<PathNode> arguments;
@@ -28,18 +28,6 @@ public class PathNode extends DerivedTextNode {
             Collection<? extends PathNode> arguments,
             SourceInfo sourceInfo) {
         super(sourceInfo);
-        this.contextSelector = contextSelector;
-        this.segments = new ArrayList<>(checkNotNull(segments));
-        this.arguments = new ArrayList<>(checkNotNull(arguments));
-    }
-
-    private PathNode(
-            @Nullable ContextSelectorNode contextSelector,
-            Collection<? extends PathSegmentNode> segments,
-            Collection<? extends PathNode> arguments,
-            TypeNode type,
-            SourceInfo sourceInfo) {
-        super(type, sourceInfo);
         this.contextSelector = contextSelector;
         this.segments = new ArrayList<>(checkNotNull(segments));
         this.arguments = new ArrayList<>(checkNotNull(arguments));
@@ -58,34 +46,27 @@ public class PathNode extends DerivedTextNode {
     }
 
     @Override
-    public String formatText() {
+    public String format() {
         String path = formatPath(contextSelector, segments);
-        if (arguments.isEmpty()) {
-            return path;
-        }
 
-        return path + "<" + arguments.stream()
-            .map(PathNode::formatText)
+        return arguments.isEmpty() ? path : path + "<" + arguments.stream()
+            .map(argument -> argument.format())
             .collect(Collectors.joining(",")) + ">";
     }
 
     public TypeInstance resolve() {
         SourceInfo sourceInfo = SourceInfo.span(
-            segments.get(0).getSourceInfo(),
-            segments.get(segments.size() - 1).getSourceInfo());
+            segments.get(0).getSourceInfo(), segments.get(segments.size() - 1).getSourceInfo());
 
         String typeName = segments.stream().map(PathSegmentNode::getText).collect(Collectors.joining("."));
 
         return new TypeInvoker(sourceInfo).invokeType(
             new Resolver(sourceInfo).resolveClassAgainstImports(typeName),
-            arguments.stream()
-                .map(PathNode::resolve)
-                .collect(Collectors.toList()));
+            arguments.stream().map(PathNode::resolve).collect(Collectors.toList()));
     }
 
     @Override
     public void acceptChildren(Visitor visitor) {
-        super.acceptChildren(visitor);
         acceptChildren(segments, visitor, PathSegmentNode.class);
         acceptChildren(arguments, visitor, PathNode.class);
 
@@ -95,26 +76,23 @@ public class PathNode extends DerivedTextNode {
     }
 
     @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        if (!super.equals(o)) return false;
-        PathNode pathNode = (PathNode) o;
-        return Objects.equals(segments, pathNode.segments)
-            && Objects.equals(arguments, pathNode.arguments)
-            && Objects.equals(contextSelector, pathNode.contextSelector);
+    public PathNode deepClone() {
+        return new PathNode(
+            contextSelector != null ? contextSelector.deepClone() : null,
+            deepClone(segments), deepClone(arguments), getSourceInfo()).copy(this);
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        return obj instanceof PathNode other
+            && segments.equals(other.segments)
+            && arguments.equals(other.arguments)
+            && Objects.equals(contextSelector, other.contextSelector);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(super.hashCode(), segments, arguments, contextSelector);
-    }
-
-    @Override
-    public PathNode deepClone() {
-        return new PathNode(
-            contextSelector != null ? contextSelector.deepClone() : null,
-            deepClone(segments), deepClone(arguments), getType().deepClone(), getSourceInfo()).copy(this);
+        return Objects.hash(segments, arguments, contextSelector);
     }
 
     private static String formatPath(
@@ -124,12 +102,13 @@ public class PathNode extends DerivedTextNode {
         boolean firstSegment = contextSelector == null;
 
         if (contextSelector != null) {
-            text.append(':').append(contextSelector.formatText());
+            text.append(':').append(contextSelector.format());
         }
 
         for (PathSegmentNode segment : segments) {
             if (firstSegment) {
                 firstSegment = false;
+
                 if (segment.isObservableSelector()) {
                     text.append("::");
                 }
@@ -138,9 +117,9 @@ public class PathNode extends DerivedTextNode {
             }
 
             if (segment instanceof AttachedSegmentNode) {
-                text.append("(").append(segment.formatText()).append(")");
+                text.append('(').append(segment.format()).append(')');
             } else {
-                text.append(segment.formatText());
+                text.append(segment.format());
             }
         }
 

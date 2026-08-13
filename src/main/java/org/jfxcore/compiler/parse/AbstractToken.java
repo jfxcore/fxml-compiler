@@ -1,4 +1,4 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.parse;
@@ -11,6 +11,8 @@ public abstract class AbstractToken<T extends TokenType> {
     private final T type;
     private String value;
     private SourceInfo sourceInfo;
+    private int decodedStart = -1;
+    private int decodedEnd = -1;
 
     AbstractToken(T type, String value, String line, SourceInfo sourceInfo) {
         this.type = type;
@@ -35,6 +37,19 @@ public abstract class AbstractToken<T extends TokenType> {
         return sourceInfo;
     }
 
+    int getDecodedStart() {
+        return decodedStart;
+    }
+
+    int getDecodedEnd() {
+        return decodedEnd;
+    }
+
+    void setDecodedRange(int start, int end) {
+        this.decodedStart = start;
+        this.decodedEnd = end;
+    }
+
     public void setContent(String value, SourceInfo sourceInfo) {
         this.value = value;
         this.sourceInfo = sourceInfo;
@@ -44,5 +59,4 @@ public abstract class AbstractToken<T extends TokenType> {
     public String toString() {
         return value;
     }
-
 }

@@ -32,6 +32,7 @@ import org.jfxcore.compiler.transform.markup.RemoveIntrinsicsTransform;
 import org.jfxcore.compiler.transform.markup.TemplateContentTransform;
 import org.jfxcore.compiler.transform.markup.TopologyTransform;
 import org.jfxcore.compiler.transform.markup.ValidateTypeTransform;
+import org.jfxcore.compiler.transform.markup.ValidateSyntaxTransform;
 import org.jfxcore.compiler.type.TypeDeclaration;
 import java.util.Arrays;
 import java.util.List;
@@ -91,6 +92,7 @@ public class Transformer {
             new LiteralIntrinsicsTransform(),
             new ObjectTransform(),
             new PropertyAssignmentTransform(),
+            new ValidateSyntaxTransform(),
             new TopologyTransform());
     }
 
