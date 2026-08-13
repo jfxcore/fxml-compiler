@@ -726,6 +726,8 @@ public class TypeInstanceTest extends TestBase {
         assertEquals(2, new HashSet<>(List.of(stringMember, doubleMember)).size());
         assertFalse(stringMember.isAssignableFrom(doubleMember));
         assertFalse(doubleMember.isAssignableFrom(stringMember));
+        assertFalse(stringMember.isEquivalentTo(doubleMember));
+        assertFalse(doubleMember.isEquivalentTo(stringMember));
         assertFalse(listOfStringMember.isAssignableFrom(listOfDoubleMember));
         assertFalse(listOfDoubleMember.isAssignableFrom(listOfStringMember));
     }
@@ -740,6 +742,8 @@ public class TypeInstanceTest extends TestBase {
 
         assertNull(ownerlessMember.owner());
         assertNotEquals(ownerlessMember, ownedMember);
+        assertTrue(ownerlessMember.isEquivalentTo(ownedMember));
+        assertTrue(ownedMember.isEquivalentTo(ownerlessMember));
         assertTrue(ownerlessMember.isAssignableFrom(ownedMember));
         assertTrue(ownedMember.isAssignableFrom(ownerlessMember));
     }

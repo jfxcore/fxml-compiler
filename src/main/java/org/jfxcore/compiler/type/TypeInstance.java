@@ -492,14 +492,8 @@ public class TypeInstance {
                     return false;
                 }
 
-                if (wildcard == WildcardType.NONE) {
-                    TypeInstance argument = arguments.get(i);
-                    TypeInstance other = from.arguments.get(i);
-
-                    if (!argument.equals(other)
-                        && !argument.hasEquivalentParameterization(other, new IdentityHashMap<>())) {
-                        return false;
-                    }
+                if (wildcard == WildcardType.NONE && !arguments.get(i).isEquivalentTo(from.arguments.get(i))) {
+                    return false;
                 }
             }
 
@@ -518,10 +512,16 @@ public class TypeInstance {
     }
 
     /**
-     * Compares two invariant type arguments while treating a missing member-class owner as an
-     * unknown owner. Type-instance equality cannot do this because explicit and unknown owners
-     * must remain distinct type identities, including when used as cache keys.
+     * Determines whether two types have the same parameterization for a compatibility check.
+     * <p>
+     * A missing member-class owner is treated as an unknown owner. This is useful when a type name
+     * comes from markup, such as an imported {@code Row}, while the corresponding Java signature
+     * contains {@code ViewModel<String>.Row}. The two forms are compatible, but not equal.
      */
+    public boolean isEquivalentTo(TypeInstance other) {
+        return equals(other) || hasEquivalentParameterization(other, new IdentityHashMap<>());
+    }
+
     private boolean hasEquivalentParameterization(
             TypeInstance other,
             Map<TypeInstance, Set<TypeInstance>> activeComparisons) {
