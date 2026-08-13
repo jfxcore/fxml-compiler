@@ -121,13 +121,13 @@ public record CompilationUnitDescriptor(@Nullable EmbeddingContext embeddingCont
      */
     private static void writeProperties(Path file, Properties props) throws IOException {
         try (BufferedWriter writer = Files.newBufferedWriter(file, StandardCharsets.US_ASCII)) {
-            writer.write("#FXML compilation unit descriptor\n");
+            writer.write("#FXML compilation unit descriptor\r\n");
 
             for (String key : props.stringPropertyNames().stream().sorted().toList()) {
                 writer.write(escapeProperty(key, true));
                 writer.write('=');
                 writer.write(escapeProperty(props.getProperty(key), false));
-                writer.write('\n');
+                writer.write("\r\n");
             }
         }
     }
