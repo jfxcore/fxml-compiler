@@ -5,9 +5,10 @@ package org.jfxcore.compiler.util;
 
 import org.jetbrains.annotations.Nullable;
 import org.jfxcore.compiler.parse.EmbeddingContext;
+import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -32,6 +33,7 @@ public record CompilationUnitDescriptor(@Nullable EmbeddingContext embeddingCont
                                         String sourceText) {
 
     private static final String EXTENSION = ".fxmd";
+    private static final char[] HEX_DIGITS = "0123456789ABCDEF".toCharArray();
 
     public CompilationUnitDescriptor {
         Objects.requireNonNull(markupClass, "markupClass");
@@ -84,9 +86,7 @@ public record CompilationUnitDescriptor(@Nullable EmbeddingContext embeddingCont
         Path outFile = getDescriptorPath(directory);
         Files.createDirectories(outFile.getParent());
 
-        try (OutputStream out = Files.newOutputStream(outFile)) {
-            props.store(out, "FXML compilation unit descriptor");
-        }
+        writeProperties(outFile, props);
     }
 
     public Path absoluteSourceFile() {
@@ -112,5 +112,61 @@ public record CompilationUnitDescriptor(@Nullable EmbeddingContext embeddingCont
         }
 
         return baseDir.resolve(parts[parts.length - 1] + EXTENSION);
+    }
+
+    /**
+     * Writes a canonical {@code .properties} file without the timestamp normally added by
+     * {@link Properties#store(java.io.OutputStream, String)}. Sorting the keys keeps serialization
+     * independent of property iteration order and the platform line separator.
+     */
+    private static void writeProperties(Path file, Properties props) throws IOException {
+        try (BufferedWriter writer = Files.newBufferedWriter(file, StandardCharsets.US_ASCII)) {
+            writer.write("#FXML compilation unit descriptor\r\n");
+
+            for (String key : props.stringPropertyNames().stream().sorted().toList()) {
+                writer.write(escapeProperty(key, true));
+                writer.write('=');
+                writer.write(escapeProperty(props.getProperty(key), false));
+                writer.write("\r\n");
+            }
+        }
+    }
+
+    private static String escapeProperty(String value, boolean escapeSpaces) {
+        StringBuilder result = new StringBuilder(value.length());
+
+        for (int i = 0; i < value.length(); i++) {
+            char ch = value.charAt(i);
+
+            switch (ch) {
+                case ' ' -> {
+                    if (i == 0 || escapeSpaces) {
+                        result.append('\\');
+                    }
+
+                    result.append(' ');
+                }
+
+                case '\\' -> result.append("\\\\");
+                case '\t' -> result.append("\\t");
+                case '\n' -> result.append("\\n");
+                case '\r' -> result.append("\\r");
+                case '\f' -> result.append("\\f");
+                case '=', ':', '#', '!' -> result.append('\\').append(ch);
+                default -> {
+                    if (ch < 0x20 || ch > 0x7e) {
+                        result.append("\\u")
+                            .append(HEX_DIGITS[(ch >> 12) & 0xf])
+                            .append(HEX_DIGITS[(ch >> 8) & 0xf])
+                            .append(HEX_DIGITS[(ch >> 4) & 0xf])
+                            .append(HEX_DIGITS[ch & 0xf]);
+                    } else {
+                        result.append(ch);
+                    }
+                }
+            }
+        }
+
+        return result.toString();
     }
 }
