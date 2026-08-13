@@ -217,8 +217,8 @@ public class BindingEmitterFactory {
                     FormatDecl().javaName());
             }
 
-            // Bidirectional bindings require equal types
-            if (!targetType.equals(result.getValueType()) && converter == null && format == null) {
+            // Bidirectional bindings require equivalent types.
+            if (!targetType.isEquivalentTo(result.getValueType()) && converter == null && format == null) {
                 throw BindingSourceErrors.sourceTypeMismatch(
                     result.getSourceInfo(), result.getValueType().javaName(), targetType.javaName());
             }
