@@ -32,8 +32,9 @@ In element notation, the markup extension looks like a regular XML element:
 ## Where markup extensions can be used
 Markup extensions fall into two semantic categories, which determine the position in which a markup extension can be used:
 
-- **Value supplier**, which provides a value to a property, constructor argument, or method argument.
-  This is the most general form of a markup extension, as it works in any position where a value is expected.
+- **Value supplier**, which provides a value to a property, collection item, array component, constructor argument,
+  or method argument. This is the most general form of a markup extension, as it works in any position where a value
+  is expected.
 
   ```xml
   <!-- fx:Observe in supplier position: provides an ObservableValue
@@ -77,7 +78,8 @@ User-defined markup extensions must implement one or both types of the following
 
 ## Prefix shorthand in attribute notation
 Markup extensions that use attribute notation can also be written with a single-character prefix.
-The `$` and `#` prefixes are intrinsic to the FXML/2 language and expand to [expression extensions](markup-extension/expression.html).
+The `$`, `${`, `#{`, and `>{` forms are intrinsic to the FXML/2 language and expand to
+[expression extensions](markup-extension/expression.html).
 The `%` and `@` prefixes expand to [`StaticResource`](markup-extension/static-resource.html)
 and [`ClassPathResource`](markup-extension/class-path-resource.html):
 
@@ -147,7 +149,6 @@ Explicit declarations can also override the built-in defaults for `%` and `@`:
 >   type.
 
 ### Escaping declared prefixes
-
 Prefix shorthand uses the same escape mechanism as other attribute-form markup extensions.
 To treat a prefixed value as a literal string, prefix it with `\`:
 

@@ -37,7 +37,7 @@ import static org.junit.jupiter.api.Assertions.*;
 @SuppressWarnings({"HttpUrlsUsage", "unused"})
 @ExtendWith(TestExtension.class)
 @Execution(ExecutionMode.SAME_THREAD)
-public class AttributeValueSequenceTest extends CompilerTestBase {
+public class ValueSequenceTest extends CompilerTestBase {
 
     public record Invocation(
             double value,
