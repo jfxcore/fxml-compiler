@@ -713,16 +713,21 @@ public class TypeInstanceTest extends TestBase {
     public void ParameterizedMemberTypes_With_DifferentOwners_Are_Distinct() {
         TypeDeclaration ownerClass = resolver.resolveClass(GenericOwner.class.getName());
         TypeDeclaration memberClass = resolver.resolveClass(GenericOwner.GenericMember.class.getName());
+        TypeDeclaration listClass = resolver.resolveClass(List.class.getName());
         TypeInstance stringOwner = invoker.invokeType(ownerClass, List.of(TypeInstance.StringType()));
         TypeInstance doubleOwner = invoker.invokeType(ownerClass, List.of(TypeInstance.DoubleType()));
         TypeInstance stringMember = invoker.invokeType(stringOwner, memberClass, List.of(TypeInstance.IntegerType()));
         TypeInstance doubleMember = invoker.invokeType(doubleOwner, memberClass, List.of(TypeInstance.IntegerType()));
+        TypeInstance listOfStringMember = invoker.invokeType(listClass, List.of(stringMember));
+        TypeInstance listOfDoubleMember = invoker.invokeType(listClass, List.of(doubleMember));
 
         assertNotSame(stringMember, doubleMember);
         assertNotEquals(stringMember, doubleMember);
         assertEquals(2, new HashSet<>(List.of(stringMember, doubleMember)).size());
         assertFalse(stringMember.isAssignableFrom(doubleMember));
         assertFalse(doubleMember.isAssignableFrom(stringMember));
+        assertFalse(listOfStringMember.isAssignableFrom(listOfDoubleMember));
+        assertFalse(listOfDoubleMember.isAssignableFrom(listOfStringMember));
     }
 
     @Test
@@ -737,6 +742,21 @@ public class TypeInstanceTest extends TestBase {
         assertNotEquals(ownerlessMember, ownedMember);
         assertTrue(ownerlessMember.isAssignableFrom(ownedMember));
         assertTrue(ownedMember.isAssignableFrom(ownerlessMember));
+    }
+
+    @Test
+    public void OwnerlessMemberType_Remains_Assignable_As_Invariant_Generic_Argument() {
+        TypeDeclaration ownerClass = resolver.resolveClass(GenericOwner.class.getName());
+        TypeDeclaration memberClass = resolver.resolveClass(GenericOwner.GenericMember.class.getName());
+        TypeDeclaration listClass = resolver.resolveClass(List.class.getName());
+        TypeInstance owner = invoker.invokeType(ownerClass, List.of(TypeInstance.StringType()));
+        TypeInstance ownedMember = invoker.invokeType(owner, memberClass, List.of(TypeInstance.IntegerType()));
+        TypeInstance ownerlessMember = invoker.invokeType(memberClass, List.of(TypeInstance.IntegerType()));
+        TypeInstance listOfOwnedMember = invoker.invokeType(listClass, List.of(ownedMember));
+        TypeInstance listOfOwnerlessMember = invoker.invokeType(listClass, List.of(ownerlessMember));
+
+        assertTrue(listOfOwnerlessMember.isAssignableFrom(listOfOwnedMember));
+        assertTrue(listOfOwnedMember.isAssignableFrom(listOfOwnerlessMember));
     }
 
     @Test

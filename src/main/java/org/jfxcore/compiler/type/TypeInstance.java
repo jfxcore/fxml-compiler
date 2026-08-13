@@ -7,8 +7,10 @@ import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.diagnostic.errors.GeneralErrors;
 import org.jfxcore.compiler.util.CompilationContext;
 import org.jetbrains.annotations.Nullable;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -490,8 +492,14 @@ public class TypeInstance {
                     return false;
                 }
 
-                if (wildcard == WildcardType.NONE && !arguments.get(i).equals(from.arguments.get(i))) {
-                    return false;
+                if (wildcard == WildcardType.NONE) {
+                    TypeInstance argument = arguments.get(i);
+                    TypeInstance other = from.arguments.get(i);
+
+                    if (!argument.equals(other)
+                        && !argument.hasEquivalentParameterization(other, new IdentityHashMap<>())) {
+                        return false;
+                    }
                 }
             }
 
@@ -507,6 +515,45 @@ public class TypeInstance {
         }
 
         return false;
+    }
+
+    /**
+     * Compares two invariant type arguments while treating a missing member-class owner as an
+     * unknown owner. Type-instance equality cannot do this because explicit and unknown owners
+     * must remain distinct type identities, including when used as cache keys.
+     */
+    private boolean hasEquivalentParameterization(
+            TypeInstance other,
+            Map<TypeInstance, Set<TypeInstance>> activeComparisons) {
+        Set<TypeInstance> comparisons = activeComparisons.computeIfAbsent(
+            this, ignored -> Collections.newSetFromMap(new IdentityHashMap<>()));
+
+        if (!comparisons.add(other)) {
+            return true;
+        }
+
+        if ((this instanceof NullTypeInstance) != (other instanceof NullTypeInstance)
+                || !type.equals(other.type)
+                || arguments.size() != other.arguments.size()
+                || dimensions != other.dimensions
+                || wildcard != other.wildcard) {
+            return false;
+        }
+
+        if (owner != null && other.owner != null
+                && !owner.hasEquivalentParameterization(other.owner, activeComparisons)) {
+            return false;
+        }
+
+        if (!isRaw() && !other.isRaw()) {
+            for (int i = 0; i < arguments.size(); ++i) {
+                if (!arguments.get(i).hasEquivalentParameterization(other.arguments.get(i), activeComparisons)) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
     }
 
     private boolean isOwnerAssignableFrom(TypeInstance from, AssignmentContext context) {

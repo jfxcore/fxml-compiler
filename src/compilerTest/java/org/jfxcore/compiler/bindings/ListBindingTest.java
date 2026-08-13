@@ -13,6 +13,7 @@ import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
+import javafx.scene.control.ListView;
 import javafx.scene.layout.Pane;
 import org.jfxcore.compiler.diagnostic.ErrorCode;
 import org.jfxcore.compiler.diagnostic.MarkupException;
@@ -83,6 +84,34 @@ public class ListBindingTest extends CompilerTestBase {
         }
     }
 
+    @SuppressWarnings({"unchecked", "unused", "InnerClassMayBeStatic"})
+    public static class InnerRowViewModel<T> {
+        public class Row {
+            private final String text;
+
+            public Row(String text) {
+                this.text = text;
+            }
+
+            @Override
+            public String toString() {
+                return text;
+            }
+        }
+
+        private final ListProperty<Row> rows = new SimpleListProperty<>(
+            FXCollections.observableArrayList(new Row("first row")));
+
+        public ListProperty<Row> getRows() {
+            return rows;
+        }
+    }
+
+    @SuppressWarnings("unused")
+    public static class InnerRowTestPane extends Pane {
+        public final InnerRowViewModel<String> vm = new InnerRowViewModel<>();
+    }
+
     private static String PUSH_LISTENER;
     private static String OBSERVABLE_VALUE_WRAPPER;
     private static String RESEATABLE_SOURCE_WRAPPER;
@@ -107,6 +136,20 @@ public class ListBindingTest extends CompilerTestBase {
 
         assertEquals(ErrorCode.INVALID_EXPRESSION, ex.getDiagnostic().getCode());
         assertCodeHighlight("...list", ex);
+    }
+
+    @Test
+    public void Unidirectional_Binding_Accepts_List_Of_Inner_Class() {
+        InnerRowTestPane root = compileAndRun("""
+            <?import javafx.scene.control.ListView?>
+            <?import org.jfxcore.compiler.bindings.ListBindingTest.InnerRowViewModel.Row?>
+            <InnerRowTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
+                <ListView fx:typeArguments="Row" items="${vm.rows}"/>
+            </InnerRowTestPane>
+        """);
+
+        ListView<?> listView = (ListView<?>)root.getChildren().get(0);
+        assertEquals(List.of("first row"), listView.getItems().stream().map(Object::toString).toList());
     }
 
     /*
