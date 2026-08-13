@@ -1,12 +1,15 @@
 // Copyright (c) 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
-/// # Inline expression grammar
+/// # Inline value and expression grammar
 ///
-/// This file describes the expression grammar implemented by [org.jfxcore.compiler.parse.InlineParser].
+/// This file describes the grammar implemented by [org.jfxcore.compiler.parse.InlineParser].
 ///
-/// [org.jfxcore.compiler.parse.FxmlParser] sends inline markup to `InlineParser`, where compact binding forms
-/// select expression mode before the expression itself is parsed:
+/// [org.jfxcore.compiler.parse.FxmlParser] sends every XML attribute value to `InlineParser`. Inline markup
+/// nested in braces or introduced by a compact prefix is parsed there as well. The surrounding attribute or
+/// markup-extension property selects generic-value, expression, or path-reference mode.
+///
+/// Compact binding forms select expression mode before the expression itself is parsed:
 ///
 /// ```text
 ///     $width + 1                 expression: width + 1
@@ -18,11 +21,13 @@
 /// The long forms of `fx:Evaluate`, `fx:Observe`, `fx:Synchronize`, and `fx:Push` use the same expression grammar
 /// for their `source` value.
 ///
-/// The tokenizer runs before the parser. It removes ordinary whitespace and comments, joins tokens that continue
-/// across some newlines, and keeps source locations for diagnostics. The parser then creates nodes in `ast/text`.
-/// Name lookup, type checking, and deciding whether a call names a method or a constructor happen later.
+/// Expression and active inline-markup syntax run through the tokenizer. It removes ordinary whitespace and
+/// comments, joins tokens that continue across some newlines, and keeps source locations for diagnostics. Generic
+/// XML attributes are first scanned for outer commas and active prefixes so that their remaining literal text can
+/// be preserved. The parser then creates syntax and value nodes in `ast` and `ast/text`. Name lookup, type checking,
+/// target-type selection, and deciding whether a call names a method or a constructor happen later.
 ///
-/// For example, the parser gives both of these the same kind of call node:
+/// For example, expression mode gives both of these the same kind of call node:
 ///
 /// ```text
 ///     format(value)
@@ -31,27 +36,86 @@
 ///
 /// Only a later compiler phase decides that `format` is a method and `Widget` is a constructor.
 ///
-/// ## Two ways of reading values
+/// ## Parsing modes
 ///
-/// Compiled bindings use expression mode. Ordinary markup extension content uses value mode.
-/// Paths and calls work in both modes, but operators and keywords do not.
+/// ### Expression mode
+///
+/// Compiled bindings and the `source` properties of the expression intrinsics use expression mode.
+/// Operators, keywords, paths, and calls are all parsed as syntax:
 ///
 /// ```text
 ///     ${foo-bar}                 subtraction: foo - bar
-///     {Ext value=foo-bar}        one text value: "foo-bar"
-///
 ///     ${-1}                      unary minus applied to the number 1
-///     {Ext value=-1}             one NumberNode containing "-1"
-///
 ///     ${true}                    the boolean literal true
-///     {Ext value=true}           one text value: "true"
 /// ```
 ///
-/// The rest of this file describes expression mode. The path, selector, type-argument, and call rules are also
-/// used when the parser encounters those forms in value mode. For example, `{Ext Type<T>(value)}` still
-/// contains a call.
+/// ### Generic-value mode
 ///
-/// ## Specification
+/// Ordinary attributes and markup-extension properties use generic-value mode. An unprefixed item is literal
+/// text, even when it resembles expression syntax. A brace-style markup extension or a recognized compact prefix
+/// starts active syntax:
+///
+/// ```text
+///     {Ext value=foo-bar}        LiteralValueNode containing "foo-bar"
+///     {Ext value=-1}             LiteralValueNode containing "-1"
+///     {Ext value=true}           LiteralValueNode containing "true"
+///     {Ext value=Type<T>(x)}     LiteralValueNode containing "Type<T>(x)"
+///     {Ext value=$Type<T>(x)}    Evaluate object whose source contains a call
+/// ```
+///
+/// This distinction lets text such as filenames and punctuation-heavy labels remain literal without quoting.
+///
+/// ### Path-reference mode
+///
+/// Path-reference mode accepts path-shaped syntax without accepting general operators or literal expressions.
+/// It is used by path-valued intrinsic properties such as `fx:Synchronize.format`, `converter`, and
+/// `inverseMethod`.
+///
+/// ## Comma-separated value sequences
+///
+/// Comma separation belongs to generic-value mode; it is not an expression operator.
+/// Conceptually, inline markup uses this outer grammar:
+///
+/// ```text
+///     generic-value-sequence
+///         ::= generic-value-item ("," generic-value-item)*
+///
+///     generic-value-item
+///         ::= literal-value
+///           | object-expression
+/// ```
+///
+/// For example, this property contains a literal, a compact expression object, and a brace-style object:
+///
+/// ```text
+///     {Ext values=1, $amount, {Other value=x}}
+/// ```
+///
+/// Commas inside a quoted string, a nested object, a call, or a type-argument list belong to that nested construct.
+/// A comma at the outer generic-value level separates items. Inline markup represents multiple items with an
+/// [org.jfxcore.compiler.ast.InlineArgumentSequenceNode].
+///
+/// Generic XML attributes are target-sensitive. An attribute containing only literal text stays a single
+/// [org.jfxcore.compiler.ast.LiteralValueNode] with optional coercion parts:
+///
+/// ```xml
+///     <Label text="hello, world"/>
+///     <Polygon points="0, 0, 50, 100, 100, 50"/>
+/// ```
+///
+/// This lets later resolution use the whole text for a scalar target such as `Label.text`, or use the parts for a
+/// collection, array, or implicit constructor. If any outer item uses active markup syntax, the attribute is an
+/// explicit sequence instead:
+///
+/// ```xml
+///     <Stylesheets values="plain.css, @theme.css"/>
+/// ```
+///
+/// Prefix notation has no closing delimiter. A comma-separated value assigned to one of its named properties is
+/// therefore greedy and consumes the remaining comma-separated items. Brace-style notation provides an explicit
+/// boundary when an outer sequence needs to continue.
+///
+/// ## Expression specification
 ///
 /// ```text
 ///     expression
@@ -489,13 +553,29 @@
 ///         ready
 /// ```
 ///
-/// In ordinary markup extension content, a newline or semicolon can instead separate properties and child values.
-/// That decision is made before the compiled-expression grammar runs.
+/// In generic inline markup, a comma groups several items into one value sequence, while a newline or semicolon can
+/// separate properties and child values. A newline next to a comma is treated as continuation layout. These
+/// decisions are made before the expression grammar runs.
 ///
 /// ## Syntax tree produced by the parser
 ///
-/// The parser records syntax; it does not yet record the method, constructor, field, or property that a name
-/// will resolve to.
+/// The parser records the source shape; it does not yet record the method, constructor, field, or property that a
+/// name will resolve to.
+///
+/// Every XML attribute starts with an [org.jfxcore.compiler.ast.AttributeValueNode]. Its form records which
+/// attribute grammar was selected:
+///
+/// | Attribute source | Form | Child nodes |
+/// |---|---|---|
+/// | generic `text="hello, world"` | `LITERAL` | `LiteralValueNode`, optionally with coercion parts |
+/// | generic `values="plain, @theme.css"` | `SEQUENCE` | `LiteralValueNode` and an `ObjectNode` |
+/// | expression `source="a + b"` | `SYNTAX` | `BinaryOperatorNode` |
+/// | path reference `converter="converters.number"` | `SYNTAX` | `PathNode` |
+///
+/// A comma-separated value inside inline markup uses an
+/// [org.jfxcore.compiler.ast.InlineArgumentSequenceNode], whose children can be literals or objects.
+///
+/// Expression syntax uses the following nodes:
 ///
 /// | Source form | Main syntax node |
 /// |---|---|
