@@ -537,7 +537,7 @@ public class GenericsTest extends CompilerTestBase {
     public void Unidirectional_Binding_Accepts_List_Of_Inner_Class() {
         InnerRowTestPane root = compileAndRun("""
             <?import javafx.scene.control.ListView?>
-            <?import org.jfxcore.compiler.bindings.ListBindingTest.InnerRowViewModel.Row?>
+            <?import org.jfxcore.compiler.GenericsTest.InnerRowViewModel.Row?>
             <InnerRowTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <ListView fx:typeArguments="Row" items="${vm.rows}"/>
             </InnerRowTestPane>
@@ -550,8 +550,7 @@ public class GenericsTest extends CompilerTestBase {
     @Test
     public void Bidirectional_Binding_Accepts_Property_Of_Inner_Class() {
         InnerRowTestPane root = compileAndRun("""
-            <?import org.jfxcore.compiler.bindings.ListBindingTest.InnerRowListView?>
-            <?import org.jfxcore.compiler.bindings.ListBindingTest.InnerRowViewModel.Row?>
+            <?import org.jfxcore.compiler.GenericsTest.InnerRowViewModel.Row?>
             <InnerRowTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
                 <InnerRowListView fx:typeArguments="Row"
                                   items="${vm.rows}"
