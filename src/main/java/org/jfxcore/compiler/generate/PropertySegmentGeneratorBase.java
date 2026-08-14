@@ -91,8 +91,7 @@ abstract class PropertySegmentGeneratorBase extends SegmentGeneratorBase {
             this.type = TypeInstance.of(superClass);
         } else {
             TypeInvoker invoker = new TypeInvoker(sourceInfo);
-            TypeInstance valueType = groups[groups.length - 1]
-                .getLastPathSegment().getValueTypeInstance().boxed();
+            TypeInstance valueType = groups[groups.length - 1].getLastPathSegment().getValueTypeInstance().boxed();
             this.type = invoker.invokeType(PropertyDecl(), List.of(valueType));
         }
     }
