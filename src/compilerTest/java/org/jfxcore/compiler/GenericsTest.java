@@ -3,8 +3,12 @@
 
 package org.jfxcore.compiler;
 
+import javafx.beans.property.ListProperty;
 import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.SimpleListProperty;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.collections.FXCollections;
+import javafx.scene.control.ListView;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Pane;
 import javassist.ClassPool;
@@ -16,6 +20,7 @@ import org.jfxcore.compiler.util.Reflection;
 import org.jfxcore.compiler.util.TestExtension;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import java.util.List;
 
 import static org.jfxcore.compiler.util.MoreAssertions.*;
 import static org.junit.jupiter.api.Assertions.*;
@@ -483,5 +488,86 @@ public class GenericsTest extends CompilerTestBase {
         assertEquals(123.5, root.getMinWidth());
         root.setId("5");
         assertEquals(5, root.getMinWidth());
+    }
+
+    @SuppressWarnings({"unchecked", "unused", "InnerClassMayBeStatic"})
+    public static class InnerRowViewModel<T> {
+        public class Row {
+            private final String text;
+
+            public Row(String text) {
+                this.text = text;
+            }
+
+            @Override
+            public String toString() {
+                return text;
+            }
+        }
+
+        private final ListProperty<Row> rows = new SimpleListProperty<>(
+            FXCollections.observableArrayList(new Row("first row")));
+
+        private final ObjectProperty<Row> selectedRow = new SimpleObjectProperty<>(this, "selectedRow");
+
+        public ListProperty<Row> getRows() {
+            return rows;
+        }
+
+        public ObjectProperty<Row> getSelectedRow() {
+            return selectedRow;
+        }
+    }
+
+    @SuppressWarnings("unused")
+    public static class InnerRowTestPane extends Pane {
+        public final InnerRowViewModel<String> vm = new InnerRowViewModel<>();
+    }
+
+    @SuppressWarnings("unused")
+    public static class InnerRowListView<T> extends ListView<T> {
+        private final ObjectProperty<T> selectedItem = new SimpleObjectProperty<>(this, "selectedItem");
+
+        public ObjectProperty<T> getSelectedItem() {
+            return selectedItem;
+        }
+    }
+
+    @Test
+    public void Unidirectional_Binding_Accepts_List_Of_Inner_Class() {
+        InnerRowTestPane root = compileAndRun("""
+            <?import javafx.scene.control.ListView?>
+            <?import org.jfxcore.compiler.bindings.ListBindingTest.InnerRowViewModel.Row?>
+            <InnerRowTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
+                <ListView fx:typeArguments="Row" items="${vm.rows}"/>
+            </InnerRowTestPane>
+        """);
+
+        ListView<?> listView = (ListView<?>)root.getChildren().get(0);
+        assertEquals(List.of("first row"), listView.getItems().stream().map(Object::toString).toList());
+    }
+
+    @Test
+    public void Bidirectional_Binding_Accepts_Property_Of_Inner_Class() {
+        InnerRowTestPane root = compileAndRun("""
+            <?import org.jfxcore.compiler.bindings.ListBindingTest.InnerRowListView?>
+            <?import org.jfxcore.compiler.bindings.ListBindingTest.InnerRowViewModel.Row?>
+            <InnerRowTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
+                <InnerRowListView fx:typeArguments="Row"
+                                  items="${vm.rows}"
+                                  selectedItem="#{vm.selectedRow}"/>
+            </InnerRowTestPane>
+        """);
+
+        @SuppressWarnings("unchecked")
+        InnerRowListView<InnerRowViewModel<String>.Row> listView =
+            (InnerRowListView<InnerRowViewModel<String>.Row>)root.getChildren().get(0);
+        InnerRowViewModel<String>.Row row = root.vm.rows.get(0);
+
+        root.vm.selectedRow.set(row);
+        assertSame(row, listView.selectedItem.get());
+
+        listView.selectedItem.set(null);
+        assertNull(root.vm.selectedRow.get());
     }
 }

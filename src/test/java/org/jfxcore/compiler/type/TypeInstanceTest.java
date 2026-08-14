@@ -1116,6 +1116,23 @@ public class TypeInstanceTest extends TestBase {
         assertTrue(type2.isAssignableFrom(type1));
     }
 
+    @Test
+    public void Raw_And_Parameterized_Types_Have_Distinct_Cache_Identities() {
+        TypeInstance parameterizedList = invoker.invokeType(ObservableListDecl(), List.of(TypeInstance.StringType()));
+        TypeInstance rawList = invoker.invokeType(ObservableListDecl(), Collections.emptyList());
+        TypeInstance parameterizedProperty = invoker.invokeType(PropertyDecl(), List.of(parameterizedList));
+        TypeInstance rawProperty = invoker.invokeType(PropertyDecl(), List.of(rawList));
+
+        assertFalse(parameterizedList.isRaw());
+        assertTrue(rawList.isRaw());
+        assertNotEquals(parameterizedList, rawList);
+        assertTrue(parameterizedList.isEquivalentTo(rawList));
+        assertNotSame(parameterizedProperty, rawProperty);
+        assertNotEquals(parameterizedProperty, rawProperty);
+        assertEquals("Property<ObservableList<String>>", parameterizedProperty.toString());
+        assertEquals("Property<ObservableList>", rawProperty.toString());
+    }
+
     public static class Type9<T> {}
     public static class Type10<T> extends Type9<T> {}
     public static class Type11 extends Type10<String> {}

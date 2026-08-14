@@ -6,8 +6,10 @@ package org.jfxcore.compiler.bindings;
 import javafx.beans.InvalidationListener;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
+import javafx.beans.property.ListProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ReadOnlyBooleanProperty;
+import javafx.beans.property.SimpleListProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleDoubleProperty;
@@ -19,6 +21,7 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
 import javafx.scene.control.Label;
+import javafx.scene.control.ListView;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Pane;
 import org.jfxcore.compiler.diagnostic.ErrorCode;
@@ -1087,5 +1090,29 @@ public class BindingPathTest extends CompilerTestBase {
         assertCodeHighlight("""
             GridPane.margin="#{context.margin}"
         """.trim(), ex);
+    }
+
+    @SuppressWarnings("unused")
+    public static class SelfReferentialListTestPane extends Pane {
+        private final ObjectProperty<SelfReferentialListTestPane> vm = new SimpleObjectProperty<>(this);
+        private final ListProperty<String> strings = new SimpleListProperty<>(FXCollections.observableArrayList("foo"));
+        private final ListProperty<Integer> integers = new SimpleListProperty<>(FXCollections.observableArrayList(1));
+        public ObjectProperty<SelfReferentialListTestPane> vmProperty() { return vm; }
+        public ListProperty<String> getStrings() { return strings; }
+        public ListProperty<Integer> getIntegers() { return integers; }
+    }
+
+    @Test
+    public void Multiple_List_Bindings_Through_Self_Referential_Property() {
+        SelfReferentialListTestPane root = compileAndRun("""
+            <?import javafx.scene.control.ListView?>
+            <SelfReferentialListTestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
+                <ListView items="${vm.strings}"/>
+                <ListView items="${vm.integers}"/>
+            </SelfReferentialListTestPane>
+        """);
+
+        assertEquals(List.of("foo"), ((ListView<?>)root.getChildren().get(0)).getItems());
+        assertEquals(List.of(1), ((ListView<?>)root.getChildren().get(1)).getItems());
     }
 }
