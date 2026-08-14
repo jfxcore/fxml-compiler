@@ -512,11 +512,12 @@ public class TypeInstance {
     }
 
     /**
-     * Determines whether two types have the same parameterization for a compatibility check.
+     * Determines whether two types are compatible when exact generic information is unavailable.
      * <p>
      * A missing member-class owner is treated as an unknown owner. This is useful when a type name
      * comes from markup, such as an imported {@code Row}, while the corresponding Java signature
-     * contains {@code ViewModel<String>.Row}. The two forms are compatible, but not equal.
+     * contains {@code ViewModel<String>.Row}. Raw usage is compatible with a parameterized usage
+     * of the same declaration.
      */
     public boolean isEquivalentTo(TypeInstance other) {
         return equals(other) || hasEquivalentParameterization(other, new IdentityHashMap<>());
@@ -636,6 +637,10 @@ public class TypeInstance {
                 || !type.equals(other.type)
                 || arguments.size() != other.arguments.size()
                 || wildcard != other.wildcard) {
+            return false;
+        }
+
+        if (isRaw() != other.isRaw()) {
             return false;
         }
 
