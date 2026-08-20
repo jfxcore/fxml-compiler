@@ -70,7 +70,7 @@ public class TestCompiler extends AbstractCompiler {
         DocumentNode document;
         String simpleClassName;
         Path fxmlTestSourcePath = Path.of("org/jfxcore/compiler/" + fileName + ".fxml");
-        var resourceCollector = new CompilerOutputRegistry();
+        var registry = new CompilerOutputRegistry();
 
         CompilationContext context = new CompilationContext(new CompilationSource.InMemory(source));
         if (configure != null) {
@@ -79,7 +79,7 @@ public class TestCompiler extends AbstractCompiler {
 
         try (CompilationScope ignored = new CompilationScope(context)) {
             document = new FxmlParser(fxmlTestSourcePath, source, null).parseDocument();
-            document.getResources().forEach(resourceCollector::registerResource);
+            document.getResources().forEach(registry::registerResource);
 
             DocumentNode codeDocument = (DocumentNode)Transformer.getCodeTransformer(classPool)
                 .transform(document, null, null);
@@ -172,10 +172,10 @@ public class TestCompiler extends AbstractCompiler {
             Path classFile = Paths.get(classUrl.toURI());
             Path outDir = FileUtil.removeLastN(classFile, packages + 1);
 
-            resourceCollector.registerClass(generatedClass);
+            registry.registerClass(generatedClass);
 
             for (TypeDeclaration nestedClass : bytecodeContext.getNestedClasses()) {
-                resourceCollector.registerClass(nestedClass);
+                registry.registerClass(nestedClass);
             }
 
             generatedClass.jvmType().writeFile(outDir.toString());
@@ -184,7 +184,7 @@ public class TestCompiler extends AbstractCompiler {
                 nestedClass.jvmType().writeFile(outDir.toString());
             }
 
-            materializeResource(outDir, resourceCollector.getEmbeddedResources());
+            materializeResource(outDir, registry.getEmbeddedResources());
 
             return (Class<T>)Class.forName(generatedClass.name());
         } catch (RuntimeException ex) {
