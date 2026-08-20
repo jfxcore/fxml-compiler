@@ -88,7 +88,7 @@ public final class MarkupCompiler extends AbstractCompiler {
             compileSingleFile(descriptor, codeTransformer, bytecodeTransformer, resourceCollector);
         }
 
-        return new CompilationResult(resourceCollector.getMaterializedResources());
+        return new CompilationResult(resourceCollector.getEmbeddedResources());
     }
 
     private void compileSingleFile(CompilationUnitDescriptor descriptor,

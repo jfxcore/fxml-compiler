@@ -52,10 +52,10 @@ public class EmbeddedResourceTest {
         collector.request(resource);
         collector.request(resource);
 
-        assertEquals(1, collector.getMaterializedResources().size());
-        assertSame(resource, collector.getMaterializedResources().get(0));
-        assertEquals("sample/View$item.txt", collector.getMaterializedResources().get(0).logicalPath());
-        assertSame(resource.content(), collector.getMaterializedResources().get(0).content());
+        assertEquals(1, collector.getEmbeddedResources().size());
+        assertSame(resource, collector.getEmbeddedResources().get(0));
+        assertEquals("sample/View$item.txt", collector.getEmbeddedResources().get(0).logicalPath());
+        assertSame(resource.content(), collector.getEmbeddedResources().get(0).content());
     }
 
     @Test

@@ -185,7 +185,7 @@ public class TestCompiler extends AbstractCompiler {
                 nestedClass.jvmType().writeFile(outDir.toString());
             }
 
-            materializeResource(outDir, resourceCollector.getMaterializedResources());
+            materializeResource(outDir, resourceCollector.getEmbeddedResources());
 
             return (Class<T>)Class.forName(generatedClass.name());
         } catch (RuntimeException ex) {

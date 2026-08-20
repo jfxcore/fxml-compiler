@@ -56,7 +56,7 @@ public final class EmbeddedResourceCollector {
         namespace.put(path, incoming);
     }
 
-    public List<EmbeddedResource> getMaterializedResources() {
+    public List<EmbeddedResource> getEmbeddedResources() {
         return resources.values().stream()
             .sorted(Comparator.comparing(EmbeddedResource::logicalPath))
             .toList();
