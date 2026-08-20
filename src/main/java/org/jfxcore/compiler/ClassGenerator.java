@@ -20,8 +20,8 @@ import org.jfxcore.compiler.util.CompilationUnit;
 import org.jfxcore.compiler.util.CompilationUnitDescriptor;
 import org.jfxcore.compiler.util.FileUtil;
 import org.jfxcore.compiler.util.QualifiedName;
+import org.jfxcore.compiler.util.XmlSourceDecoder;
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -51,7 +51,7 @@ public final class ClassGenerator extends AbstractCompiler {
      * @throws MarkupException if a markup error occurs
      */
     public boolean addFileSource(Path sourceRoot, Path sourceFile) throws IOException {
-        String sourceText = Files.readString(sourceRoot.resolve(sourceFile));
+        String sourceText = XmlSourceDecoder.decode(sourceRoot.resolve(sourceFile));
         return addSource(sourceRoot, sourceFile, sourceText, null);
     }
 

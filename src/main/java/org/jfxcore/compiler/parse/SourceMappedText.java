@@ -277,18 +277,24 @@ final class SourceMappedText {
     }
 
     SourceMappedText without(int offset) {
-        if (offset < 0 || offset >= text.length()) {
-            throw new IndexOutOfBoundsException("Invalid removal offset: " + offset);
-        }
+        return without(offset, offset + 1);
+    }
 
-        String transformed = text.substring(0, offset) + text.substring(offset + 1);
+    SourceMappedText without(int start, int end) {
+        return replace(start, end, "");
+    }
+
+    SourceMappedText replace(int start, int end, String replacement) {
+        Objects.requireNonNull(replacement, "replacement");
+        validateRange(start, end);
+        String transformed = text.substring(0, start) + replacement + text.substring(end);
 
         var transformedSource = new TransformedSource(
             transformed,
             text,
             textIndex.origin,
             source,
-            List.of(new Replacement(offset, offset + 1, offset, offset)));
+            List.of(new Replacement(start, end, start, start + replacement.length())));
 
         return new SourceMappedText(transformed, textIndex.origin, transformedSource);
     }

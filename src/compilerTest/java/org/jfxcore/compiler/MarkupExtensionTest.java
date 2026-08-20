@@ -129,6 +129,24 @@ public class MarkupExtensionTest extends CompilerTestBase {
         }
     }
 
+    @SuppressWarnings("unused")
+    public static class DocumentNameExtension implements MarkupExtension.Supplier<String> {
+        @Override
+        public String get(MarkupContext context) {
+            return context.getDocumentName();
+        }
+    }
+
+    @Test
+    public void MarkupContext_Reports_The_Source_Document_Name() {
+        TestPane root = compileAndRun("""
+            <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                      id="{DocumentNameExtension}"/>
+        """);
+
+        assertEquals("MarkupExtensionTest_MarkupContext_Reports_The_Source_Document_Name", root.getId());
+    }
+
     private record ExtensionInvocation(
             Object root,
             List<Object> ancestors,

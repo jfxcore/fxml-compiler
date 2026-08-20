@@ -1,10 +1,9 @@
-// Copyright (c) 2021, JFXcore. All rights reserved.
+// Copyright (c) 2021, 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
 package org.jfxcore.compiler.util;
 
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Objects;
 
@@ -22,7 +21,7 @@ public interface CompilationSource {
 
         public FileSystem(Path sourceFile) throws IOException {
             this.sourceFile = sourceFile;
-            this.sourceText = Files.readString(sourceFile);
+            this.sourceText = XmlSourceDecoder.decode(sourceFile);
             this.sourceLines = StringHelper.splitLines(this.sourceText, false);
             this.sourceLinesWithNewlines = StringHelper.splitLines(this.sourceText, true);
         }
@@ -89,5 +88,4 @@ public interface CompilationSource {
             return Objects.hash(sourceText);
         }
     }
-
 }

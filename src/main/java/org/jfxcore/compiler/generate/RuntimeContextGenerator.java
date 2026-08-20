@@ -13,6 +13,7 @@ import org.jfxcore.compiler.type.TypeInstance;
 import org.jfxcore.compiler.util.Bytecode;
 import org.jfxcore.compiler.util.NameHelper;
 import java.lang.reflect.Modifier;
+import java.util.Objects;
 
 import static org.jfxcore.compiler.type.KnownSymbols.*;
 
@@ -22,6 +23,7 @@ public class RuntimeContextGenerator extends ClassGenerator {
     public static final String PUSH_PARENT_METHOD = "push";
     public static final String POP_PARENT_METHOD = "pop";
     public static final String GET_ROOT_METHOD = "getRoot";
+    public static final String GET_DOCUMENT_NAME_METHOD = "getDocumentName";
     public static final String GET_ANCESTOR_METHOD = "getAncestor";
     public static final String GET_ANCESTOR_COUNT_METHOD = "getAncestorCount";
 
@@ -31,6 +33,7 @@ public class RuntimeContextGenerator extends ClassGenerator {
     private static final String TARGET_NAME_FIELD = "targetName";
     private static final String TARGET_TYPE_FIELD = "targetType";
 
+    private final String documentName;
     private final boolean markupContextSupport;
 
     private TypeDeclaration parentArrayType;
@@ -39,13 +42,15 @@ public class RuntimeContextGenerator extends ClassGenerator {
     private MethodDeclaration getTargetTypeMethod;
     private MethodDeclaration getTargetBeanMethod;
     private MethodDeclaration getRootMethod;
+    private MethodDeclaration getDocumentNameMethod;
     private MethodDeclaration pushParentMethod;
     private MethodDeclaration popParentMethod;
     private MethodDeclaration getAncestorMethod;
     private MethodDeclaration getAncestorCountMethod;
     private MethodDeclaration setTargetInfoMethod;
 
-    public RuntimeContextGenerator(boolean markupContextSupport) {
+    public RuntimeContextGenerator(String documentName, boolean markupContextSupport) {
+        this.documentName = Objects.requireNonNull(documentName, "documentName");
         this.markupContextSupport = markupContextSupport && Markup.isAvailable();
     }
 
@@ -116,6 +121,9 @@ public class RuntimeContextGenerator extends ClassGenerator {
             getTargetBeanMethod = createMethod("getTargetBean", ObjectDecl())
                 .setModifiers(Modifier.PUBLIC | Modifier.FINAL);
 
+            getDocumentNameMethod = createMethod(GET_DOCUMENT_NAME_METHOD, StringDecl())
+                .setModifiers(Modifier.PUBLIC | Modifier.FINAL);
+
             getAncestorCountMethod = createMethod(GET_ANCESTOR_COUNT_METHOD, intDecl())
                 .setModifiers(Modifier.PUBLIC | Modifier.FINAL);
         }
@@ -134,6 +142,7 @@ public class RuntimeContextGenerator extends ClassGenerator {
             emitGetTargetTypeMethod();
             emitGetTargetNameMethod();
             emitGetTargetBeanMethod();
+            emitGetDocumentNameMethod();
             emitGetParentCountMethod();
         }
     }
@@ -265,6 +274,15 @@ public class RuntimeContextGenerator extends ClassGenerator {
             .areturn();
 
         getTargetNameMethod.setCode(code);
+    }
+
+    private void emitGetDocumentNameMethod() {
+        Bytecode code = new Bytecode(getDocumentNameMethod);
+
+        code.ldc(documentName)
+            .areturn();
+
+        getDocumentNameMethod.setCode(code);
     }
 
     private void emitGetRootMethod() {

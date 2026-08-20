@@ -10,11 +10,43 @@ import org.jfxcore.compiler.util.CompilationScope;
 import org.jfxcore.compiler.util.CompilationSource;
 import org.junit.jupiter.api.Test;
 import org.w3c.dom.Attr;
+import org.w3c.dom.ProcessingInstruction;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 public class XmlReaderTest {
+
+    @Test
+    public void ProcessingInstruction_Retains_Exact_Data_And_Normalizes_Resource_Newlines() {
+        String data = " foo.txt:\r\n\tvalue\r\n  ";
+        String source = "<?resource" + data + "?>\r\n<Root/>";
+        var context = new CompilationContext(new CompilationSource.InMemory(source));
+
+        try (var ignored = new CompilationScope(context)) {
+            ProcessingInstruction instruction = assertInstanceOf(
+                ProcessingInstruction.class,
+                new XmlReader(source, Map.of()).getDocument().getFirstChild());
+
+            SourceMappedText mapped = assertInstanceOf(
+                SourceMappedText.class,
+                instruction.getUserData(XmlReader.PI_DATA_SOURCE_MAPPED_TEXT_KEY));
+
+            assertEquals(data, instruction.getData());
+            assertEquals(data, mapped.getText());
+            assertEquals(source.indexOf(data), mapped.getSourceInfo(0, 0).getStart().getColumn());
+
+            var resource = new ResourceInstructionParser(
+                mapped,
+                Path.of("Root.fxml"),
+                (SourceInfo)instruction.getUserData(XmlReader.SOURCE_INFO_KEY)).parse();
+
+            assertEquals("value", new String(resource.content(), StandardCharsets.UTF_8));
+            assertEquals("foo.txt", resource.nameSourceInfo().toOriginal().getText());
+        }
+    }
 
     @Test
     public void Attribute_Retains_Mapped_Lexer_Input_User_Data() {

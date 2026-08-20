@@ -39,13 +39,13 @@ public final class MarkupCompilerRunner extends AbstractCompilerRunner {
         return (boolean)invoke(() -> isCompiledFileMethod.invoke(instance, classFile));
     }
 
-    public void compile(Set<CompilationUnitDescriptorWrapper> descriptors) {
-        invoke(() -> {
+    public CompilationResultWrapper compile(Set<CompilationUnitDescriptorWrapper> descriptors) {
+        return invoke(() -> {
             Set<Object> targetDescriptors = descriptors.stream()
                 .map(CompilationUnitDescriptorWrapper::getTarget)
                 .collect(Collectors.toUnmodifiableSet());
 
-            return compileMethod.invoke(instance, targetDescriptors);
+            return new CompilationResultWrapper(compileMethod.invoke(instance, targetDescriptors));
         });
     }
 }

@@ -10,6 +10,8 @@ import org.jfxcore.compiler.ast.codebehind.JavaEmitContext;
 import org.jfxcore.compiler.ast.emit.BytecodeEmitContext;
 import org.jfxcore.compiler.ast.emit.EmitInitializeRootNode;
 import org.jfxcore.compiler.parse.FxmlParser;
+import org.jfxcore.compiler.resource.EmbeddedResource;
+import org.jfxcore.compiler.resource.EmbeddedResourceCollector;
 import org.jfxcore.compiler.transform.Transformer;
 import org.jfxcore.compiler.type.TypeDeclaration;
 import javax.tools.Diagnostic;
@@ -69,6 +71,7 @@ public class TestCompiler extends AbstractCompiler {
         DocumentNode document;
         String simpleClassName;
         Path fxmlTestSourcePath = Path.of("org/jfxcore/compiler/" + fileName + ".fxml");
+        var resourceCollector = new EmbeddedResourceCollector();
 
         CompilationContext context = new CompilationContext(new CompilationSource.InMemory(source));
         if (configure != null) {
@@ -77,6 +80,7 @@ public class TestCompiler extends AbstractCompiler {
 
         try (CompilationScope ignored = new CompilationScope(context)) {
             document = new FxmlParser(fxmlTestSourcePath, source, null).parseDocument();
+            document.getResources().forEach(resourceCollector::request);
 
             DocumentNode codeDocument = (DocumentNode)Transformer.getCodeTransformer(classPool)
                 .transform(document, null, null);
@@ -155,7 +159,8 @@ public class TestCompiler extends AbstractCompiler {
 
             Bytecode bytecode = new Bytecode(generatedClass, 1);
             BytecodeEmitContext bytecodeContext = new BytecodeEmitContext(
-                generatedClass, generatedClass, transformedNode, document.getImports(), bytecode);
+                document.getDocumentName(), generatedClass, generatedClass,
+                transformedNode, document.getImports(), bytecode);
             bytecodeContext.emitRootNode();
 
             MethodInfo methodInfo = generatedClass.jvmType().getClassFile().getMethod("initializeComponent");
@@ -168,11 +173,19 @@ public class TestCompiler extends AbstractCompiler {
             Path classFile = Paths.get(classUrl.toURI());
             Path outDir = FileUtil.removeLastN(classFile, packages + 1);
 
+            resourceCollector.reserveClass(classLogicalPath(generatedClass), generatedClass.name());
+
+            for (TypeDeclaration nestedClass : bytecodeContext.getNestedClasses()) {
+                resourceCollector.reserveClass(classLogicalPath(nestedClass), nestedClass.name());
+            }
+
             generatedClass.jvmType().writeFile(outDir.toString());
 
             for (TypeDeclaration nestedClass : bytecodeContext.getNestedClasses()) {
                 nestedClass.jvmType().writeFile(outDir.toString());
             }
+
+            materializeResource(outDir, resourceCollector.getMaterializedResources());
 
             return (Class<T>)Class.forName(generatedClass.name());
         } catch (RuntimeException ex) {
@@ -180,5 +193,33 @@ public class TestCompiler extends AbstractCompiler {
         } catch (Throwable ex) {
             throw new RuntimeException(ex);
         }
+    }
+
+    private void materializeResource(Path outDir, List<EmbeddedResource> resources) throws IOException {
+        Path normalizedOutDir = outDir.toAbsolutePath().normalize();
+
+        for (EmbeddedResource resource : resources) {
+            Path outputFile = normalizedOutDir;
+            for (String component : resource.logicalPath().split("/")) {
+                outputFile = outputFile.resolve(component);
+            }
+
+            outputFile = outputFile.normalize();
+            if (!outputFile.startsWith(normalizedOutDir)) {
+                throw new IOException(
+                    "Generated resource escapes the class output directory: " + resource.logicalPath());
+            }
+
+            Files.createDirectories(outputFile.getParent());
+            Files.write(
+                outputFile,
+                resource.content(),
+                StandardOpenOption.CREATE,
+                StandardOpenOption.TRUNCATE_EXISTING);
+        }
+    }
+
+    private static String classLogicalPath(TypeDeclaration type) {
+        return type.name().replace('.', '/') + ".class";
     }
 }

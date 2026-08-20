@@ -33,6 +33,7 @@ public class BytecodeEmitContext extends EmitContext<Bytecode> {
     private final TypeDeclaration codeBehindClass;
     private final TypeDeclaration markupClass;
     private final ClassSetImpl nestedClasses;
+    private final String documentName;
 
     private List<GeneratorEntry> activeGenerators;
     private TypeDeclaration bindingContextClass;
@@ -40,6 +41,7 @@ public class BytecodeEmitContext extends EmitContext<Bytecode> {
     private int runtimeContextLocal;
 
     public BytecodeEmitContext(
+            String documentName,
             TypeDeclaration codeBehindClass,
             TypeDeclaration markupClass,
             EmitInitializeRootNode rootNode,
@@ -51,6 +53,7 @@ public class BytecodeEmitContext extends EmitContext<Bytecode> {
         this.bindingContextClass = codeBehindClass;
         this.codeBehindClass = codeBehindClass;
         this.markupClass = markupClass;
+        this.documentName = documentName;
         this.nestedClasses = new ClassSetImpl(markupClass);
 
         CompilationContext context = CompilationContext.getCurrent();
@@ -70,6 +73,7 @@ public class BytecodeEmitContext extends EmitContext<Bytecode> {
         this.bindingContextClass = bindingContextClass;
         this.codeBehindClass = parentContext.codeBehindClass;
         this.markupClass = parentContext.markupClass;
+        this.documentName = parentContext.documentName;
         this.nestedClasses = parentContext.nestedClasses;
         this.runtimeContextLocal = runtimeContextLocal;
     }
@@ -84,6 +88,7 @@ public class BytecodeEmitContext extends EmitContext<Bytecode> {
         this.bindingContextClass = behavior.declaringType();
         this.codeBehindClass = parentContext.codeBehindClass;
         this.markupClass = parentContext.markupClass;
+        this.documentName = parentContext.documentName;
         this.nestedClasses = parentContext.nestedClasses;
         this.runtimeContextLocal = runtimeContextLocal;
     }
@@ -99,6 +104,7 @@ public class BytecodeEmitContext extends EmitContext<Bytecode> {
         this.bindingContextClass = bindingContextClass;
         this.codeBehindClass = parentContext.codeBehindClass;
         this.markupClass = parentContext.markupClass;
+        this.documentName = parentContext.documentName;
         this.nestedClasses = parentContext.nestedClasses;
         this.runtimeContextLocal = runtimeContextLocal;
     }
@@ -131,7 +137,8 @@ public class BytecodeEmitContext extends EmitContext<Bytecode> {
                 }
             });
 
-            runtimeContextClass = ClassGenerator.emit(this, new RuntimeContextGenerator(markupContextSupport[0]));
+            runtimeContextClass = ClassGenerator.emit(
+                this, new RuntimeContextGenerator(documentName, markupContextSupport[0]));
         }
 
         return runtimeContextClass;

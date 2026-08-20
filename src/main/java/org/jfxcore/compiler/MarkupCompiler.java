@@ -26,14 +26,18 @@ import org.jfxcore.compiler.util.Bytecode;
 import org.jfxcore.compiler.util.CompilationContext;
 import org.jfxcore.compiler.util.CompilationScope;
 import org.jfxcore.compiler.util.CompilationSource;
+import org.jfxcore.compiler.util.CompilationResult;
 import org.jfxcore.compiler.util.CompilationUnitDescriptor;
 import org.jfxcore.compiler.util.FileUtil;
+import org.jfxcore.compiler.resource.EmbeddedResourceCollector;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Objects;
+import java.util.Comparator;
+import java.util.List;
 import java.util.Set;
 
 @SuppressWarnings("unused")
@@ -60,31 +64,45 @@ public final class MarkupCompiler extends AbstractCompiler {
     /**
      * Compiles the content of the FXML compilation units.
      *
+     * @return the compilation result
      * @throws IOException if an I/O error occurs
      * @throws MarkupException if a markup error occurs
      */
-    public void compile(Set<CompilationUnitDescriptor> descriptors) throws IOException {
+    public CompilationResult compile(Set<CompilationUnitDescriptor> descriptors) throws IOException {
         if (descriptors.isEmpty()) {
-            return;
+            return new CompilationResult(List.of());
         }
 
         var classPool = newClassPool();
         var codeTransformer = Transformer.getCodeTransformer(classPool);
         var bytecodeTransformer = Transformer.getBytecodeTransformer(classPool);
+        var resourceCollector = new EmbeddedResourceCollector();
 
-        for (CompilationUnitDescriptor descriptor : descriptors) {
-            compileSingleFile(descriptor, codeTransformer, bytecodeTransformer);
+        List<CompilationUnitDescriptor> orderedDescriptors = descriptors.stream()
+            .sorted(Comparator
+                .comparing((CompilationUnitDescriptor d) -> FileUtil.getPortablePath(d.sourceFile()))
+                .thenComparing(descriptor -> descriptor.markupClass().fullName()))
+            .toList();
+
+        for (CompilationUnitDescriptor descriptor : orderedDescriptors) {
+            compileSingleFile(descriptor, codeTransformer, bytecodeTransformer, resourceCollector);
         }
+
+        return new CompilationResult(resourceCollector.getMaterializedResources());
     }
 
     private void compileSingleFile(CompilationUnitDescriptor descriptor,
                                    Transformer codeTransformer,
-                                   Transformer bytecodeTransformer) throws IOException {
+                                   Transformer bytecodeTransformer,
+                                   EmbeddedResourceCollector resourceCollector) throws IOException {
         CompilationContext context = new CompilationContext(new CompilationSource.InMemory(descriptor.sourceText()));
 
         try (var ignored = new CompilationScope(context)) {
             var parser = new FxmlParser(descriptor.sourceFile(), descriptor.sourceText(), descriptor.embeddingContext());
             var document = parser.parseDocument();
+
+            document.getResources().forEach(resourceCollector::request);
+
             var codeDocument = (DocumentNode)codeTransformer.transform(document, null, null);
             ClassNode classNode = (ClassNode)codeDocument.getRoot();
 
@@ -116,7 +134,7 @@ public final class MarkupCompiler extends AbstractCompiler {
                 document, codeBehindClass, markupClass);
 
             BytecodeEmitContext emitContext = new BytecodeEmitContext(
-                codeBehindClass, markupClass, rootNode, document.getImports(), bytecode);
+                document.getDocumentName(), codeBehindClass, markupClass, rootNode, document.getImports(), bytecode);
 
             emitContext.emitRootNode();
 
@@ -135,6 +153,12 @@ public final class MarkupCompiler extends AbstractCompiler {
             Path outDir = Paths.get(classUrl.toURI());
             context.addModifiedClass(markupClass, outDir);
             emitContext.getNestedClasses().forEach(c -> context.addModifiedClass(c, outDir));
+
+            resourceCollector.reserveClass(classLogicalPath(markupClass), markupClass.name());
+
+            for (TypeDeclaration nestedClass : emitContext.getNestedClasses()) {
+                resourceCollector.reserveClass(classLogicalPath(nestedClass), nestedClass.name());
+            }
 
             flushModifiedClasses(context);
         } catch (MarkupException ex) {
@@ -155,5 +179,9 @@ public final class MarkupCompiler extends AbstractCompiler {
             m.setSourceFile(descriptor.absoluteSourceFile().toFile());
             throw m;
         }
+    }
+
+    private static String classLogicalPath(TypeDeclaration type) {
+        return type.name().replace('.', '/') + ".class";
     }
 }

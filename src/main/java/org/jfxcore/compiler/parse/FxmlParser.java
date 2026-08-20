@@ -16,6 +16,8 @@ import org.jfxcore.compiler.ast.intrinsic.Intrinsics;
 import org.jfxcore.compiler.ast.TypeNode;
 import org.jfxcore.compiler.diagnostic.errors.GeneralErrors;
 import org.jfxcore.compiler.diagnostic.errors.ParserErrors;
+import org.jfxcore.compiler.resource.EmbeddedResource;
+import org.jfxcore.compiler.resource.EmbeddedResourceTable;
 import org.jfxcore.compiler.util.NameHelper;
 import org.jfxcore.compiler.util.StringHelper;
 import org.w3c.dom.Attr;
@@ -82,11 +84,25 @@ public class FxmlParser {
             Node node = nodes.item(i);
             if (node instanceof ProcessingInstruction pi) {
                 if ("import".equals(pi.getTarget())) {
-                    imports.add(pi.getData());
+                    imports.add(pi.getData().trim());
                 } else if ("prefix".equals(pi.getTarget())) {
                     parsePrefixInstruction(pi, prefixMappings);
                 }
             }
+        }
+
+        EmbeddedResourceTable resources = new EmbeddedResourceTable();
+        List<ProcessingInstruction> resourceInstructions = new ArrayList<>();
+        collectResourceInstructions(document, resourceInstructions);
+
+        for (ProcessingInstruction pi : resourceInstructions) {
+            SourceMappedText data = (SourceMappedText)pi.getUserData(XmlReader.PI_DATA_SOURCE_MAPPED_TEXT_KEY);
+            if (data == null) {
+                data = SourceMappedText.identity(pi.getData(), getSourceInfo(pi));
+            }
+
+            EmbeddedResource resource = new ResourceInstructionParser(data, documentFile, getSourceInfo(pi)).parse();
+            resources.register(resource);
         }
 
         if (embeddingContext != null && !embeddingContext.imports().isEmpty()) {
@@ -139,7 +155,7 @@ public class FxmlParser {
                 true, false, getSourceInfo(rootElement)));
         }
 
-        return new DocumentNode(documentFile, imports, rootNode);
+        return new DocumentNode(documentFile, imports, resources.declarations(), rootNode);
     }
 
     private ObjectNode parseElementNode(Element element) {
@@ -287,6 +303,17 @@ public class FxmlParser {
         return !Character.isWhitespace(character)
             && !Character.isJavaIdentifierPart(character)
             && RESERVED_PREFIX_CHARACTERS.indexOf(character) < 0;
+    }
+
+    private void collectResourceInstructions(Node node, List<ProcessingInstruction> result) {
+        if (node instanceof ProcessingInstruction pi && "resource".equals(pi.getTarget())) {
+            result.add(pi);
+        }
+
+        NodeList children = node.getChildNodes();
+        for (int i = 0; i < children.getLength(); ++i) {
+            collectResourceInstructions(children.item(i), result);
+        }
     }
 
     @SuppressWarnings("unchecked")
