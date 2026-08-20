@@ -1,10 +1,12 @@
 // Copyright (c) 2026, JFXcore. All rights reserved.
 // Use of this source code is governed by the BSD-3-Clause license that can be found in the LICENSE file.
 
-package org.jfxcore.compiler.resource;
+package org.jfxcore.compiler.util;
 
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.diagnostic.errors.ResourceErrors;
+import org.jfxcore.compiler.resource.EmbeddedResource;
+import org.jfxcore.compiler.type.TypeDeclaration;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -12,7 +14,7 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.stream.Stream;
 
-public final class EmbeddedResourceCollector {
+public final class CompilerOutputRegistry {
 
     private static final Comparator<Artifact> ARTIFACT_ORDER = Comparator
         .comparing(Artifact::path, String.CASE_INSENSITIVE_ORDER)
@@ -22,7 +24,7 @@ public final class EmbeddedResourceCollector {
     private final Map<String, Artifact> namespace = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
     private final Map<String, EmbeddedResource> resources = new LinkedHashMap<>();
 
-    public void request(EmbeddedResource resource) {
+    public void registerResource(EmbeddedResource resource) {
         String path = validateLogicalPath(resource.logicalPath());
         Artifact incoming = Artifact.resource(path, resource);
         Artifact existing = namespace.get(path);
@@ -39,9 +41,14 @@ public final class EmbeddedResourceCollector {
         resources.put(path, resource);
     }
 
-    public void reserveClass(String logicalPath, String className) {
+    public void registerClass(TypeDeclaration classDecl) {
+        String logicalPath = classDecl.name().replace('.', '/') + ".class";
+        registerClass(logicalPath, classDecl.name());
+    }
+
+    public void registerClass(String logicalPath, String name) {
         String path = validateLogicalPath(logicalPath);
-        Artifact incoming = Artifact.generatedClass(path, className);
+        Artifact incoming = Artifact.generatedClass(path, name);
         Artifact existing = namespace.get(path);
 
         if (existing != null) {

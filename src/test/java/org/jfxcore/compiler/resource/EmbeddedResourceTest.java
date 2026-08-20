@@ -9,6 +9,7 @@ import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.parse.ResourceInstructionParser;
 import org.jfxcore.compiler.runner.CompilationResultWrapper;
 import org.jfxcore.compiler.util.CompilationResult;
+import org.jfxcore.compiler.util.CompilerOutputRegistry;
 import org.junit.jupiter.api.Test;
 import java.nio.file.Path;
 import java.util.List;
@@ -47,28 +48,28 @@ public class EmbeddedResourceTest {
     @Test
     public void Collector_Deduplicates_One_Declaration() {
         EmbeddedResource resource = resource(Path.of("sample", "View.fxml"), " item.txt:value");
-        EmbeddedResourceCollector collector = new EmbeddedResourceCollector();
+        CompilerOutputRegistry registry = new CompilerOutputRegistry();
 
-        collector.request(resource);
-        collector.request(resource);
+        registry.registerResource(resource);
+        registry.registerResource(resource);
 
-        assertEquals(1, collector.getEmbeddedResources().size());
-        assertSame(resource, collector.getEmbeddedResources().get(0));
-        assertEquals("sample/View$item.txt", collector.getEmbeddedResources().get(0).logicalPath());
-        assertSame(resource.content(), collector.getEmbeddedResources().get(0).content());
+        assertEquals(1, registry.getEmbeddedResources().size());
+        assertSame(resource, registry.getEmbeddedResources().get(0));
+        assertEquals("sample/View$item.txt", registry.getEmbeddedResources().get(0).logicalPath());
+        assertSame(resource.content(), registry.getEmbeddedResources().get(0).content());
     }
 
     @Test
     public void Collector_Rejects_CaseOnly_And_GeneratedClass_Collisions() {
-        EmbeddedResourceCollector caseCollector = new EmbeddedResourceCollector();
-        caseCollector.request(resource(Path.of("sample", "View.fxml"), " Item.txt:first"));
+        CompilerOutputRegistry caseRegistry = new CompilerOutputRegistry();
+        caseRegistry.registerResource(resource(Path.of("sample", "View.fxml"), " Item.txt:first"));
         MarkupException caseCollision = assertThrows(MarkupException.class,
-            () -> caseCollector.request(resource(Path.of("sample", "View.fxml"), " item.txt:second")));
+            () -> caseRegistry.registerResource(resource(Path.of("sample", "View.fxml"), " item.txt:second")));
 
-        EmbeddedResourceCollector classCollector = new EmbeddedResourceCollector();
-        classCollector.request(resource(Path.of("sample", "View.fxml"), " Helper.class:value"));
+        CompilerOutputRegistry classRegistry = new CompilerOutputRegistry();
+        classRegistry.registerResource(resource(Path.of("sample", "View.fxml"), " Helper.class:value"));
         MarkupException classCollision = assertThrows(MarkupException.class,
-            () -> classCollector.reserveClass("sample/View$Helper.class", "sample.View$Helper"));
+            () -> classRegistry.registerClass("sample/View$Helper.class", "sample.View$Helper"));
 
         assertEquals(ErrorCode.RESOURCE_FILE_COLLISION, caseCollision.getDiagnostic().getCode());
         assertEquals(ErrorCode.RESOURCE_FILE_COLLISION, classCollision.getDiagnostic().getCode());
@@ -76,11 +77,11 @@ public class EmbeddedResourceTest {
 
     @Test
     public void Collector_Rejects_Distinct_Declarations_From_The_Same_Reported_Owner() {
-        EmbeddedResourceCollector collector = new EmbeddedResourceCollector();
-        collector.request(resource(Path.of("sample", "View.fxml"), " item.txt:first"));
+        CompilerOutputRegistry registry = new CompilerOutputRegistry();
+        registry.registerResource(resource(Path.of("sample", "View.fxml"), " item.txt:first"));
 
         MarkupException collision = assertThrows(MarkupException.class,
-            () -> collector.request(resource(Path.of("sample", "View.fxml"), " item.txt:second")));
+            () -> registry.registerResource(resource(Path.of("sample", "View.fxml"), " item.txt:second")));
 
         assertEquals(ErrorCode.RESOURCE_FILE_COLLISION, collision.getDiagnostic().getCode());
     }
@@ -95,10 +96,10 @@ public class EmbeddedResourceTest {
 
     @Test
     public void Collector_Rejects_NonPortable_Logical_Paths() {
-        EmbeddedResourceCollector collector = new EmbeddedResourceCollector();
+        CompilerOutputRegistry registry = new CompilerOutputRegistry();
 
         for (String path : List.of("", "/root.txt", "a\\b.txt", "a/../b.txt", "a//b.txt")) {
-            assertThrows(IllegalArgumentException.class, () -> collector.reserveClass(path, "sample.View"));
+            assertThrows(IllegalArgumentException.class, () -> registry.registerClass(path, "sample.View"));
         }
     }
 
@@ -107,8 +108,8 @@ public class EmbeddedResourceTest {
     }
 
     private String collisionMessage(EmbeddedResource first, EmbeddedResource second) {
-        EmbeddedResourceCollector collector = new EmbeddedResourceCollector();
-        collector.request(first);
-        return assertThrows(MarkupException.class, () -> collector.request(second)).getMessage();
+        CompilerOutputRegistry registry = new CompilerOutputRegistry();
+        registry.registerResource(first);
+        return assertThrows(MarkupException.class, () -> registry.registerResource(second)).getMessage();
     }
 }

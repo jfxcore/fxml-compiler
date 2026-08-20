@@ -11,7 +11,6 @@ import org.jfxcore.compiler.ast.emit.BytecodeEmitContext;
 import org.jfxcore.compiler.ast.emit.EmitInitializeRootNode;
 import org.jfxcore.compiler.parse.FxmlParser;
 import org.jfxcore.compiler.resource.EmbeddedResource;
-import org.jfxcore.compiler.resource.EmbeddedResourceCollector;
 import org.jfxcore.compiler.transform.Transformer;
 import org.jfxcore.compiler.type.TypeDeclaration;
 import javax.tools.Diagnostic;
@@ -71,7 +70,7 @@ public class TestCompiler extends AbstractCompiler {
         DocumentNode document;
         String simpleClassName;
         Path fxmlTestSourcePath = Path.of("org/jfxcore/compiler/" + fileName + ".fxml");
-        var resourceCollector = new EmbeddedResourceCollector();
+        var resourceCollector = new CompilerOutputRegistry();
 
         CompilationContext context = new CompilationContext(new CompilationSource.InMemory(source));
         if (configure != null) {
@@ -80,7 +79,7 @@ public class TestCompiler extends AbstractCompiler {
 
         try (CompilationScope ignored = new CompilationScope(context)) {
             document = new FxmlParser(fxmlTestSourcePath, source, null).parseDocument();
-            document.getResources().forEach(resourceCollector::request);
+            document.getResources().forEach(resourceCollector::registerResource);
 
             DocumentNode codeDocument = (DocumentNode)Transformer.getCodeTransformer(classPool)
                 .transform(document, null, null);
@@ -173,10 +172,10 @@ public class TestCompiler extends AbstractCompiler {
             Path classFile = Paths.get(classUrl.toURI());
             Path outDir = FileUtil.removeLastN(classFile, packages + 1);
 
-            resourceCollector.reserveClass(classLogicalPath(generatedClass), generatedClass.name());
+            resourceCollector.registerClass(generatedClass);
 
             for (TypeDeclaration nestedClass : bytecodeContext.getNestedClasses()) {
-                resourceCollector.reserveClass(classLogicalPath(nestedClass), nestedClass.name());
+                resourceCollector.registerClass(nestedClass);
             }
 
             generatedClass.jvmType().writeFile(outDir.toString());
@@ -217,9 +216,5 @@ public class TestCompiler extends AbstractCompiler {
                 StandardOpenOption.CREATE,
                 StandardOpenOption.TRUNCATE_EXISTING);
         }
-    }
-
-    private static String classLogicalPath(TypeDeclaration type) {
-        return type.name().replace('.', '/') + ".class";
     }
 }
