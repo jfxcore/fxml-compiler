@@ -30,7 +30,7 @@ public class EmbeddedResourceTest {
             firstBytes, "first.txt", Path.of("a", "View.fxml"), SourceInfo.none(), SourceInfo.none());
         List<EmbeddedResource> sourceResources = new ArrayList<>(List.of(second, first));
 
-        CompilationUnit unit = new CompilationUnit(descriptor(), "source", sourceResources);
+        CompilationUnit unit = new CompilationUnit(descriptor(), sourceResources, "source");
         sourceResources.clear();
 
         List<String> actual = unit.embeddedResources().stream()
@@ -53,7 +53,7 @@ public class EmbeddedResourceTest {
 
     @Test
     public void CompilationUnit_Without_Resources_Uses_An_Immutable_Empty_List() {
-        CompilationUnit unit = new CompilationUnit(descriptor(), "source", List.of());
+        CompilationUnit unit = new CompilationUnit(descriptor(), List.of(), "source");
 
         assertTrue(unit.embeddedResources().isEmpty());
         assertThrows(UnsupportedOperationException.class, () -> unit.embeddedResources().add(

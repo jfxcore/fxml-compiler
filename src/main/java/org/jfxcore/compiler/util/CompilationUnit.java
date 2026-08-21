@@ -10,8 +10,8 @@ import java.util.Objects;
 
 public record CompilationUnit(
         CompilationUnitDescriptor descriptor,
-        String generatedSourceText,
-        List<EmbeddedResource> embeddedResources) {
+        List<EmbeddedResource> embeddedResources,
+        String generatedSourceText) {
 
     public CompilationUnit {
         Objects.requireNonNull(descriptor, "descriptor");

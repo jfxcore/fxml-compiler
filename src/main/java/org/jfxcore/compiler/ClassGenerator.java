@@ -157,7 +157,7 @@ public final class ClassGenerator extends AbstractCompiler {
                     compilationUnit.document().getResources().forEach(resource ->
                         tracker.registerResource(resource, descriptor));
 
-                    result.add(new CompilationUnit(descriptor, sourceText, compilationUnit.document().getResources()));
+                    result.add(new CompilationUnit(descriptor, compilationUnit.document().getResources(), sourceText));
                 } catch (MarkupException ex) {
                     EmbeddingContext embeddingContext = descriptor.embeddingContext();
                     if (ex.getSourceOffset() == null) {
