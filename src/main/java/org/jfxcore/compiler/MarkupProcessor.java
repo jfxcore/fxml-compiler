@@ -12,6 +12,7 @@ import com.sun.source.util.Trees;
 import org.jfxcore.compiler.diagnostic.Location;
 import org.jfxcore.compiler.diagnostic.Logger;
 import org.jfxcore.compiler.diagnostic.MarkupException;
+import org.jfxcore.compiler.resource.EmbeddedResource;
 import org.jfxcore.compiler.util.CompilationUnit;
 import org.jfxcore.compiler.util.CompilationUnitDescriptor;
 import org.jfxcore.compiler.util.QualifiedName;
@@ -34,7 +35,9 @@ import javax.lang.model.type.TypeKind;
 import javax.lang.model.util.Elements;
 import javax.lang.model.util.Types;
 import javax.tools.Diagnostic;
+import javax.tools.StandardLocation;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.io.Writer;
 import java.net.URI;
 import java.nio.file.Path;
@@ -117,6 +120,10 @@ public final class MarkupProcessor extends AbstractProcessor {
                     writer.write(compilationUnit.generatedSourceText());
                 }
 
+                for (EmbeddedResource resource : compilationUnit.embeddedResources()) {
+                    writeEmbeddedResource(resource, originatingElement);
+                }
+
                 descriptor.writeTo(options.intermediateBuildDir());
             }
         } catch (MarkupException ex) {
@@ -127,6 +134,27 @@ public final class MarkupProcessor extends AbstractProcessor {
         }
 
         return true;
+    }
+
+    private void writeEmbeddedResource(EmbeddedResource resource, Element originatingElement) throws IOException {
+        String logicalPath = resource.logicalPath();
+
+        try (OutputStream output = filer.createResource(
+                StandardLocation.CLASS_OUTPUT,
+                getResourcePackageName(logicalPath),
+                getResourceFileName(logicalPath),
+                originatingElement).openOutputStream()) {
+            output.write(resource.content());
+        }
+    }
+
+    static String getResourcePackageName(String logicalPath) {
+        int separator = logicalPath.lastIndexOf('/');
+        return separator >= 0 ? logicalPath.substring(0, separator).replace('/', '.') : "";
+    }
+
+    static String getResourceFileName(String logicalPath) {
+        return logicalPath.substring(logicalPath.lastIndexOf('/') + 1);
     }
 
     private void processSingleElement(TypeElement typeElement) {

@@ -18,12 +18,14 @@ import org.jfxcore.compiler.util.CompilationScope;
 import org.jfxcore.compiler.util.CompilationSource;
 import org.jfxcore.compiler.util.CompilationUnit;
 import org.jfxcore.compiler.util.CompilationUnitDescriptor;
+import org.jfxcore.compiler.util.CompilerOutputTracker;
 import org.jfxcore.compiler.util.FileUtil;
 import org.jfxcore.compiler.util.QualifiedName;
 import org.jfxcore.compiler.util.XmlSourceDecoder;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -136,16 +138,36 @@ public final class ClassGenerator extends AbstractCompiler {
         try {
             var transformer = Transformer.getCodeTransformer(newClassPool());
             var result = new ArrayList<CompilationUnit>();
+            var tracker = new CompilerOutputTracker();
 
-            for (var entry : compilationUnits.entrySet()) {
-                CompilationUnitDescriptor descriptor = entry.getValue().descriptor();
+            for (CompilationUnitInfo compilationUnit : compilationUnits.values().stream()
+                    .sorted(Comparator
+                        .comparing((CompilationUnitInfo unit) -> FileUtil.getPortablePath(unit.descriptor().sourceFile()))
+                        .thenComparing(unit -> unit.descriptor().markupClass().fullName())
+                        .thenComparing(unit -> unit.descriptor().absoluteSourceFile().toAbsolutePath().normalize().toString()))
+                    .toList()) {
+                CompilationUnitDescriptor descriptor = compilationUnit.descriptor();
                 var context = new CompilationContext(new CompilationSource.InMemory(descriptor.sourceText()));
 
                 try (var ignored = new CompilationScope(context)) {
-                    ClassInfo classInfo = processSingleFile(entry.getValue(), transformer);
-                    result.add(new CompilationUnit(descriptor, classInfo.sourceText()));
+                    String sourceText = processSingleFile(compilationUnit, transformer);
+
+                    tracker.registerClass(descriptor.markupClass());
+
+                    compilationUnit.document().getResources().forEach(resource ->
+                        tracker.registerResource(resource, descriptor));
+
+                    result.add(new CompilationUnit(descriptor, sourceText, compilationUnit.document().getResources()));
                 } catch (MarkupException ex) {
-                    ex.setSourceFile(descriptor.absoluteSourceFile().toFile());
+                    EmbeddingContext embeddingContext = descriptor.embeddingContext();
+                    if (ex.getSourceOffset() == null) {
+                        ex.setSourceOffset(embeddingContext != null ? embeddingContext.sourceOffset() : new Location(0, 0));
+                    }
+
+                    if (ex.getSourceFile() == null) {
+                        ex.setSourceFile(descriptor.absoluteSourceFile().toFile());
+                    }
+
                     throw ex;
                 }
             }
@@ -178,25 +200,16 @@ public final class ClassGenerator extends AbstractCompiler {
         }
     }
 
-    private ClassInfo processSingleFile(CompilationUnitInfo compilationUnit, Transformer transformer) {
+    private String processSingleFile(CompilationUnitInfo compilationUnit, Transformer transformer) {
         DocumentNode document = compilationUnit.document();
         StringBuilder stringBuilder = new StringBuilder();
         JavaEmitContext context = new JavaEmitContext(stringBuilder);
 
-        try {
-            document = (DocumentNode)transformer.transform(document, null, null);
-            context.emit(document);
-        } catch (MarkupException ex) {
-            EmbeddingContext embeddingContext = compilationUnit.descriptor().embeddingContext();
-            ex.setSourceOffset(embeddingContext != null ? embeddingContext.sourceOffset() : new Location(0, 0));
-            ex.setSourceFile(compilationUnit.descriptor().absoluteSourceFile().toFile());
-            throw ex;
-        }
+        document = (DocumentNode)transformer.transform(document, null, null);
+        context.emit(document);
 
-        return new ClassInfo(compilationUnit.descriptor().markupClass(), stringBuilder.toString());
+        return stringBuilder.toString();
     }
-
-    private record ClassInfo(QualifiedName markupBaseClass, String sourceText) {}
 
     private record CompilationUnitInfo(CompilationUnitDescriptor descriptor, DocumentNode document) {}
 }

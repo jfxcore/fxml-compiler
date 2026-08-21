@@ -3,14 +3,22 @@
 
 package org.jfxcore.compiler;
 
+import com.google.devtools.ksp.processing.CodeGenerator;
+import com.google.devtools.ksp.processing.Dependencies;
 import com.google.devtools.ksp.processing.Resolver;
 import com.google.devtools.ksp.symbol.KSClassDeclaration;
 import com.google.devtools.ksp.symbol.KSDeclaration;
+import com.google.devtools.ksp.symbol.KSFile;
 import com.google.devtools.ksp.symbol.KSName;
 import kotlin.sequences.Sequence;
+import org.jfxcore.compiler.diagnostic.SourceInfo;
+import org.jfxcore.compiler.resource.EmbeddedResource;
 import org.junit.jupiter.api.Test;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.lang.reflect.Proxy;
+import java.nio.file.Path;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -36,6 +44,42 @@ public class MarkupSymbolProcessorTest {
         assertTrue(MarkupSymbolProcessor.resolvesToClass(resolver, "javafx.scene.control.TableView.TableViewSelectionModel"));
         assertFalse(MarkupSymbolProcessor.resolvesToClass(resolver, "sample.extensions.bindText"));
         assertFalse(MarkupSymbolProcessor.resolvesToClass(resolver, "sample.ViewModel.Companion.create"));
+    }
+
+    @Test
+    public void Embedded_Resource_Uses_An_Exact_Path_And_The_Source_Dependencies() throws IOException {
+        byte[] content = {1, 2, 3};
+        EmbeddedResource resource = new EmbeddedResource(
+            content,
+            "dark theme.txt",
+            Path.of("sample", "View.kt"),
+            SourceInfo.none(),
+            SourceInfo.none());
+        KSFile sourceFile = proxy(KSFile.class);
+        Dependencies dependencies = new Dependencies(false, sourceFile);
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        Object[] invocation = new Object[3];
+        CodeGenerator codeGenerator = (CodeGenerator)Proxy.newProxyInstance(
+            MarkupSymbolProcessorTest.class.getClassLoader(),
+            new Class<?>[] {CodeGenerator.class},
+            (proxy, method, args) -> switch (method.getName()) {
+                case "createNewFileByPath" -> {
+                    System.arraycopy(args, 0, invocation, 0, args.length);
+                    yield output;
+                }
+                case "toString" -> "CodeGeneratorProxy";
+                case "hashCode" -> System.identityHashCode(proxy);
+                case "equals" -> proxy == args[0];
+                default -> throw new UnsupportedOperationException(method.getName());
+            });
+
+        MarkupSymbolProcessor.writeEmbeddedResource(codeGenerator, dependencies, resource);
+
+        assertSame(dependencies, invocation[0]);
+        assertEquals(List.of(sourceFile), ((Dependencies)invocation[0]).getOriginatingFiles());
+        assertEquals("sample/View$dark theme.txt", invocation[1]);
+        assertEquals("", invocation[2]);
+        assertArrayEquals(content, output.toByteArray());
     }
 
     private static Resolver createResolver(Map<String, KSClassDeclaration> declarations) {
@@ -88,6 +132,18 @@ public class MarkupSymbolProcessorTest {
                 return (Iterator<KSDeclaration>)declarations.iterator();
             }
         };
+    }
+
+    private static <T> T proxy(Class<T> type) {
+        return type.cast(Proxy.newProxyInstance(
+            MarkupSymbolProcessorTest.class.getClassLoader(),
+            new Class<?>[] {type},
+            (proxy, method, args) -> switch (method.getName()) {
+                case "toString" -> type.getSimpleName() + "Proxy";
+                case "hashCode" -> System.identityHashCode(proxy);
+                case "equals" -> proxy == args[0];
+                default -> throw new UnsupportedOperationException(method.getName());
+            }));
     }
 }
 

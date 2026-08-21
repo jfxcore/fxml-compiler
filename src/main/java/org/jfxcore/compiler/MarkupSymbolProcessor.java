@@ -26,10 +26,12 @@ import org.jetbrains.annotations.NotNull;
 import org.jfxcore.compiler.diagnostic.Location;
 import org.jfxcore.compiler.diagnostic.Logger;
 import org.jfxcore.compiler.diagnostic.MarkupException;
+import org.jfxcore.compiler.resource.EmbeddedResource;
 import org.jfxcore.compiler.util.CompilationUnit;
 import org.jfxcore.compiler.util.CompilationUnitDescriptor;
 import org.jfxcore.compiler.util.QualifiedName;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.nio.charset.StandardCharsets;
@@ -110,6 +112,10 @@ final class MarkupSymbolProcessor implements SymbolProcessor {
                     writer.write(compilationUnit.generatedSourceText());
                 }
 
+                for (EmbeddedResource resource : compilationUnit.embeddedResources()) {
+                    writeEmbeddedResource(codeGenerator, dependencies, resource);
+                }
+
                 descriptor.writeTo(options.intermediateBuildDir());
             }
         } catch (MarkupException ex) {
@@ -121,6 +127,15 @@ final class MarkupSymbolProcessor implements SymbolProcessor {
             }
         } catch (IOException ex) {
             error(null, null, null, ex.getMessage());
+        }
+    }
+
+    static void writeEmbeddedResource(
+            CodeGenerator codeGenerator,
+            Dependencies dependencies,
+            EmbeddedResource resource) throws IOException {
+        try (OutputStream output = codeGenerator.createNewFileByPath(dependencies, resource.logicalPath(), "")) {
+            output.write(resource.content());
         }
     }
 

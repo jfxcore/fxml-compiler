@@ -26,9 +26,8 @@ import org.jfxcore.compiler.util.Bytecode;
 import org.jfxcore.compiler.util.CompilationContext;
 import org.jfxcore.compiler.util.CompilationScope;
 import org.jfxcore.compiler.util.CompilationSource;
-import org.jfxcore.compiler.util.CompilationResult;
 import org.jfxcore.compiler.util.CompilationUnitDescriptor;
-import org.jfxcore.compiler.util.CompilerOutputRegistry;
+import org.jfxcore.compiler.util.CompilerOutputTracker;
 import org.jfxcore.compiler.util.FileUtil;
 import java.io.IOException;
 import java.net.URISyntaxException;
@@ -64,44 +63,43 @@ public final class MarkupCompiler extends AbstractCompiler {
     /**
      * Compiles the content of the FXML compilation units.
      *
-     * @return the compilation result
      * @throws IOException if an I/O error occurs
      * @throws MarkupException if a markup error occurs
      */
-    public CompilationResult compile(Set<CompilationUnitDescriptor> descriptors) throws IOException {
+    public void compile(Set<CompilationUnitDescriptor> descriptors) throws IOException {
         if (descriptors.isEmpty()) {
-            return new CompilationResult(List.of());
+            return;
         }
 
         var classPool = newClassPool();
         var codeTransformer = Transformer.getCodeTransformer(classPool);
         var bytecodeTransformer = Transformer.getBytecodeTransformer(classPool);
-        var outputRegistry = new CompilerOutputRegistry();
+        var tracker = new CompilerOutputTracker();
 
         List<CompilationUnitDescriptor> orderedDescriptors = descriptors.stream()
             .sorted(Comparator
                 .comparing((CompilationUnitDescriptor d) -> FileUtil.getPortablePath(d.sourceFile()))
-                .thenComparing(descriptor -> descriptor.markupClass().fullName()))
+                .thenComparing(descriptor -> descriptor.markupClass().fullName())
+                .thenComparing(descriptor -> descriptor.absoluteSourceFile().toAbsolutePath().normalize().toString()))
             .toList();
 
         for (CompilationUnitDescriptor descriptor : orderedDescriptors) {
-            compileSingleFile(descriptor, codeTransformer, bytecodeTransformer, outputRegistry);
+            compileSingleFile(descriptor, codeTransformer, bytecodeTransformer, tracker);
         }
 
-        return new CompilationResult(outputRegistry.getEmbeddedResources());
     }
 
     private void compileSingleFile(CompilationUnitDescriptor descriptor,
                                    Transformer codeTransformer,
                                    Transformer bytecodeTransformer,
-                                   CompilerOutputRegistry outputRegistry) throws IOException {
+                                   CompilerOutputTracker outputTracker) throws IOException {
         CompilationContext context = new CompilationContext(new CompilationSource.InMemory(descriptor.sourceText()));
 
         try (var ignored = new CompilationScope(context)) {
             var parser = new FxmlParser(descriptor.sourceFile(), descriptor.sourceText(), descriptor.embeddingContext());
             var document = parser.parseDocument();
 
-            document.getResources().forEach(outputRegistry::registerResource);
+            document.getResources().forEach(resource -> outputTracker.registerResource(resource, descriptor));
 
             var codeDocument = (DocumentNode)codeTransformer.transform(document, null, null);
             ClassNode classNode = (ClassNode)codeDocument.getRoot();
@@ -154,17 +152,23 @@ public final class MarkupCompiler extends AbstractCompiler {
             context.addModifiedClass(markupClass, outDir);
             emitContext.getNestedClasses().forEach(c -> context.addModifiedClass(c, outDir));
 
-            outputRegistry.registerClass(markupClass);
+            outputTracker.registerClass(markupClass);
 
             for (TypeDeclaration nestedClass : emitContext.getNestedClasses()) {
-                outputRegistry.registerClass(nestedClass);
+                outputTracker.registerClass(nestedClass);
             }
 
             flushModifiedClasses(context);
         } catch (MarkupException ex) {
             EmbeddingContext embeddingContext = descriptor.embeddingContext();
-            ex.setSourceOffset(embeddingContext != null ? embeddingContext.sourceOffset() : null);
-            ex.setSourceFile(descriptor.absoluteSourceFile().toFile());
+            if (ex.getSourceOffset() == null && embeddingContext != null) {
+                ex.setSourceOffset(embeddingContext.sourceOffset());
+            }
+
+            if (ex.getSourceFile() == null) {
+                ex.setSourceFile(descriptor.absoluteSourceFile().toFile());
+            }
+
             throw ex;
         } catch (BadBytecode | URISyntaxException | CannotCompileException ex) {
             MarkupException m = GeneralErrors.internalError(ex.getMessage());

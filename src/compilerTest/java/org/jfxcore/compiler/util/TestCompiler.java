@@ -68,9 +68,10 @@ public class TestCompiler extends AbstractCompiler {
         ClassNode classNode;
         StringBuilder codeBehind = new StringBuilder();
         DocumentNode document;
+        List<EmbeddedResource> embeddedResources;
         String simpleClassName;
         Path fxmlTestSourcePath = Path.of("org/jfxcore/compiler/" + fileName + ".fxml");
-        var registry = new CompilerOutputRegistry();
+        var tracker = new CompilerOutputTracker();
 
         CompilationContext context = new CompilationContext(new CompilationSource.InMemory(source));
         if (configure != null) {
@@ -79,7 +80,8 @@ public class TestCompiler extends AbstractCompiler {
 
         try (CompilationScope ignored = new CompilationScope(context)) {
             document = new FxmlParser(fxmlTestSourcePath, source, null).parseDocument();
-            document.getResources().forEach(registry::registerResource);
+            embeddedResources = document.getResources();
+            embeddedResources.forEach(tracker::registerResource);
 
             DocumentNode codeDocument = (DocumentNode)Transformer.getCodeTransformer(classPool)
                 .transform(document, null, null);
@@ -172,10 +174,10 @@ public class TestCompiler extends AbstractCompiler {
             Path classFile = Paths.get(classUrl.toURI());
             Path outDir = FileUtil.removeLastN(classFile, packages + 1);
 
-            registry.registerClass(generatedClass);
+            tracker.registerClass(generatedClass);
 
             for (TypeDeclaration nestedClass : bytecodeContext.getNestedClasses()) {
-                registry.registerClass(nestedClass);
+                tracker.registerClass(nestedClass);
             }
 
             generatedClass.jvmType().writeFile(outDir.toString());
@@ -184,7 +186,7 @@ public class TestCompiler extends AbstractCompiler {
                 nestedClass.jvmType().writeFile(outDir.toString());
             }
 
-            materializeResource(outDir, registry.getEmbeddedResources());
+            materializeResource(outDir, embeddedResources);
 
             return (Class<T>)Class.forName(generatedClass.name());
         } catch (RuntimeException ex) {

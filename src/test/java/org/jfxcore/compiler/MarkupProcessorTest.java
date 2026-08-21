@@ -14,6 +14,7 @@ import javax.tools.StandardJavaFileManager;
 import javax.tools.ToolProvider;
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
@@ -94,6 +95,36 @@ public class MarkupProcessorTest {
         assertTrue(
             Files.exists(result.classesDir().resolve(Path.of("sample", "SampleControlBase.class"))),
             result.formatDiagnostics());
+    }
+
+    @Test
+    public void Embedded_Resource_Is_Written_To_Class_Output_Path() throws IOException {
+        CompilationResult result = compile("SampleControl", """
+            package sample;
+
+            import javafx.scene.layout.Pane;
+            import org.jfxcore.markup.ComponentView;
+
+            @ComponentView(""\"
+                <?resource dark-theme.txt:hello?>
+                <Pane/>
+            ""\")
+            public class SampleControl extends SampleControlBase {
+            }
+            """);
+
+        assertTrue(result.success(), result.formatDiagnostics());
+        assertArrayEquals(
+            "hello".getBytes(StandardCharsets.UTF_8),
+            Files.readAllBytes(result.classesDir().resolve(Path.of("sample", "SampleControl$dark-theme.txt"))));
+    }
+
+    @Test
+    public void Resource_Path_Splitting_Covers_Default_Package_And_Preserves_Spaces() {
+        assertEquals("", MarkupProcessor.getResourcePackageName("View$dark theme.txt"));
+        assertEquals("View$dark theme.txt", MarkupProcessor.getResourceFileName("View$dark theme.txt"));
+        assertEquals("sample.views", MarkupProcessor.getResourcePackageName("sample/views/View$value.txt"));
+        assertEquals("View$value.txt", MarkupProcessor.getResourceFileName("sample/views/View$value.txt"));
     }
 
     @Test
@@ -236,11 +267,19 @@ public class MarkupProcessorTest {
     }
 
     private CompilationResult compile(String simpleClassName, String source, Path configuredSourceDir) throws IOException {
+        return compileInPackage(Path.of("sample"), simpleClassName, source, configuredSourceDir);
+    }
+
+    private CompilationResult compileInPackage(
+            Path packagePath,
+            String simpleClassName,
+            String source,
+            Path configuredSourceDir) throws IOException {
         Path sourceDir = tempDir.resolve("src");
         Path generatedSourcesDir = tempDir.resolve("generated");
         Path classesDir = tempDir.resolve("classes");
         Path intermediateDir = tempDir.resolve("fxml");
-        Path sourceFile = sourceDir.resolve(Path.of("sample", simpleClassName + ".java"));
+        Path sourceFile = sourceDir.resolve(packagePath).resolve(simpleClassName + ".java");
         String classPath = System.getProperty("java.class.path");
 
         Files.createDirectories(sourceFile.getParent());

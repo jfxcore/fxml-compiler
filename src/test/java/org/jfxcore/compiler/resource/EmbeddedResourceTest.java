@@ -7,11 +7,14 @@ import org.jfxcore.compiler.diagnostic.ErrorCode;
 import org.jfxcore.compiler.diagnostic.MarkupException;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.parse.ResourceInstructionParser;
-import org.jfxcore.compiler.runner.CompilationResultWrapper;
-import org.jfxcore.compiler.util.CompilationResult;
-import org.jfxcore.compiler.util.CompilerOutputRegistry;
+import org.jfxcore.compiler.runner.CompilationUnitWrapper;
+import org.jfxcore.compiler.util.CompilationUnit;
+import org.jfxcore.compiler.util.CompilationUnitDescriptor;
+import org.jfxcore.compiler.util.CompilerOutputTracker;
+import org.jfxcore.compiler.util.QualifiedName;
 import org.junit.jupiter.api.Test;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -19,57 +22,64 @@ import static org.junit.jupiter.api.Assertions.*;
 public class EmbeddedResourceTest {
 
     @Test
-    public void CompilationResult_Is_Sorted_And_Passes_Content_Through() {
+    public void CompilationUnit_Is_Sorted_Snapshot_And_Passes_Content_Through() {
         byte[] firstBytes = {1, 2};
         EmbeddedResource second = new EmbeddedResource(
             new byte[] {3}, "second.txt", Path.of("z", "View.fxml"), SourceInfo.none(), SourceInfo.none());
         EmbeddedResource first = new EmbeddedResource(
             firstBytes, "first.txt", Path.of("a", "View.fxml"), SourceInfo.none(), SourceInfo.none());
+        List<EmbeddedResource> sourceResources = new ArrayList<>(List.of(second, first));
 
-        CompilationResult result = new CompilationResult(List.of(second, first));
-        List<String> actual = result.getEmbeddedResources().stream()
+        CompilationUnit unit = new CompilationUnit(descriptor(), "source", sourceResources);
+        sourceResources.clear();
+
+        List<String> actual = unit.embeddedResources().stream()
             .map(EmbeddedResource::logicalPath)
             .toList();
         assertEquals(List.of("a/View$first.txt", "z/View$second.txt"), actual);
-        assertSame(first, result.getEmbeddedResources().get(0));
-        assertSame(firstBytes, result.getEmbeddedResources().get(0).content());
+        assertSame(first, unit.embeddedResources().get(0));
+        assertSame(firstBytes, unit.embeddedResources().get(0).content());
 
-        byte[] returned = result.getEmbeddedResources().get(0).content();
+        byte[] returned = unit.embeddedResources().get(0).content();
         returned[0] = 8;
         assertEquals(8, firstBytes[0]);
-        assertSame(returned, result.getEmbeddedResources().get(0).content());
-        assertThrows(UnsupportedOperationException.class, () -> result.getEmbeddedResources().clear());
+        assertSame(returned, unit.embeddedResources().get(0).content());
+        assertThrows(UnsupportedOperationException.class, () -> unit.embeddedResources().clear());
 
-        CompilationResultWrapper wrapper = new CompilationResultWrapper(result);
-        assertSame(firstBytes, wrapper.getEmbeddedResources().get(0).content());
-        assertThrows(UnsupportedOperationException.class, () -> wrapper.getEmbeddedResources().clear());
+        CompilationUnitWrapper wrapper = new CompilationUnitWrapper(unit);
+        assertSame(firstBytes, wrapper.embeddedResources().get(0).content());
+        assertThrows(UnsupportedOperationException.class, () -> wrapper.embeddedResources().clear());
     }
 
     @Test
-    public void Collector_Deduplicates_One_Declaration() {
+    public void CompilationUnit_Without_Resources_Uses_An_Immutable_Empty_List() {
+        CompilationUnit unit = new CompilationUnit(descriptor(), "source", List.of());
+
+        assertTrue(unit.embeddedResources().isEmpty());
+        assertThrows(UnsupportedOperationException.class, () -> unit.embeddedResources().add(
+            resource(Path.of("sample", "View.fxml"), " item.txt:value")));
+    }
+
+    @Test
+    public void Registry_Accepts_The_Same_Declaration_Twice() {
         EmbeddedResource resource = resource(Path.of("sample", "View.fxml"), " item.txt:value");
-        CompilerOutputRegistry registry = new CompilerOutputRegistry();
+        CompilerOutputTracker tracker = new CompilerOutputTracker();
 
-        registry.registerResource(resource);
-        registry.registerResource(resource);
-
-        assertEquals(1, registry.getEmbeddedResources().size());
-        assertSame(resource, registry.getEmbeddedResources().get(0));
-        assertEquals("sample/View$item.txt", registry.getEmbeddedResources().get(0).logicalPath());
-        assertSame(resource.content(), registry.getEmbeddedResources().get(0).content());
+        tracker.registerResource(resource);
+        assertDoesNotThrow(() -> tracker.registerResource(resource));
     }
 
     @Test
     public void Collector_Rejects_CaseOnly_And_GeneratedClass_Collisions() {
-        CompilerOutputRegistry caseRegistry = new CompilerOutputRegistry();
-        caseRegistry.registerResource(resource(Path.of("sample", "View.fxml"), " Item.txt:first"));
+        CompilerOutputTracker caseTracker = new CompilerOutputTracker();
+        caseTracker.registerResource(resource(Path.of("sample", "View.fxml"), " Item.txt:first"));
         MarkupException caseCollision = assertThrows(MarkupException.class,
-            () -> caseRegistry.registerResource(resource(Path.of("sample", "View.fxml"), " item.txt:second")));
+            () -> caseTracker.registerResource(resource(Path.of("sample", "View.fxml"), " item.txt:second")));
 
-        CompilerOutputRegistry classRegistry = new CompilerOutputRegistry();
-        classRegistry.registerResource(resource(Path.of("sample", "View.fxml"), " Helper.class:value"));
+        CompilerOutputTracker classTracker = new CompilerOutputTracker();
+        classTracker.registerResource(resource(Path.of("sample", "View.fxml"), " Helper.class:value"));
         MarkupException classCollision = assertThrows(MarkupException.class,
-            () -> classRegistry.registerClass("sample/View$Helper.class", "sample.View$Helper"));
+            () -> classTracker.registerClass(QualifiedName.of("sample.View$Helper")));
 
         assertEquals(ErrorCode.RESOURCE_FILE_COLLISION, caseCollision.getDiagnostic().getCode());
         assertEquals(ErrorCode.RESOURCE_FILE_COLLISION, classCollision.getDiagnostic().getCode());
@@ -77,11 +87,11 @@ public class EmbeddedResourceTest {
 
     @Test
     public void Collector_Rejects_Distinct_Declarations_From_The_Same_Reported_Owner() {
-        CompilerOutputRegistry registry = new CompilerOutputRegistry();
-        registry.registerResource(resource(Path.of("sample", "View.fxml"), " item.txt:first"));
+        CompilerOutputTracker tracker = new CompilerOutputTracker();
+        tracker.registerResource(resource(Path.of("sample", "View.fxml"), " item.txt:first"));
 
         MarkupException collision = assertThrows(MarkupException.class,
-            () -> registry.registerResource(resource(Path.of("sample", "View.fxml"), " item.txt:second")));
+            () -> tracker.registerResource(resource(Path.of("sample", "View.fxml"), " item.txt:second")));
 
         assertEquals(ErrorCode.RESOURCE_FILE_COLLISION, collision.getDiagnostic().getCode());
     }
@@ -96,10 +106,10 @@ public class EmbeddedResourceTest {
 
     @Test
     public void Collector_Rejects_NonPortable_Logical_Paths() {
-        CompilerOutputRegistry registry = new CompilerOutputRegistry();
+        CompilerOutputTracker tracker = new CompilerOutputTracker();
 
         for (String path : List.of("", "/root.txt", "a\\b.txt", "a/../b.txt", "a//b.txt")) {
-            assertThrows(IllegalArgumentException.class, () -> registry.registerClass(path, "sample.View"));
+            assertThrows(IllegalArgumentException.class, () -> tracker.registerClass(path, "sample.View"));
         }
     }
 
@@ -107,9 +117,18 @@ public class EmbeddedResourceTest {
         return new ResourceInstructionParser(data, sourceFile).parse();
     }
 
+    private CompilationUnitDescriptor descriptor() {
+        return new CompilationUnitDescriptor(
+            null,
+            QualifiedName.of("sample.View"),
+            Path.of("").toAbsolutePath(),
+            Path.of("sample", "View.fxml"),
+            "");
+    }
+
     private String collisionMessage(EmbeddedResource first, EmbeddedResource second) {
-        CompilerOutputRegistry registry = new CompilerOutputRegistry();
-        registry.registerResource(first);
-        return assertThrows(MarkupException.class, () -> registry.registerResource(second)).getMessage();
+        CompilerOutputTracker tracker = new CompilerOutputTracker();
+        tracker.registerResource(first);
+        return assertThrows(MarkupException.class, () -> tracker.registerResource(second)).getMessage();
     }
 }
