@@ -45,8 +45,7 @@ public final class MarkupCompilerRunner extends AbstractCompilerRunner {
                 .map(CompilationUnitDescriptorWrapper::getTarget)
                 .collect(Collectors.toUnmodifiableSet());
 
-            compileMethod.invoke(instance, targetDescriptors);
-            return null;
+            return compileMethod.invoke(instance, targetDescriptors);
         });
     }
 }
