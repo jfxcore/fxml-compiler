@@ -18,7 +18,6 @@ import org.jfxcore.compiler.util.CompilationScope;
 import org.jfxcore.compiler.util.CompilationSource;
 import org.jfxcore.compiler.util.CompilationUnit;
 import org.jfxcore.compiler.util.CompilationUnitDescriptor;
-import org.jfxcore.compiler.util.CompilerOutputTracker;
 import org.jfxcore.compiler.util.FileUtil;
 import org.jfxcore.compiler.util.QualifiedName;
 import org.jfxcore.compiler.util.XmlSourceDecoder;
@@ -138,7 +137,6 @@ public final class ClassGenerator extends AbstractCompiler {
         try {
             var transformer = Transformer.getCodeTransformer(newClassPool());
             var result = new ArrayList<CompilationUnit>();
-            var tracker = new CompilerOutputTracker();
 
             for (CompilationUnitInfo compilationUnit : compilationUnits.values().stream()
                     .sorted(Comparator
@@ -151,12 +149,6 @@ public final class ClassGenerator extends AbstractCompiler {
 
                 try (var ignored = new CompilationScope(context)) {
                     String sourceText = processSingleFile(compilationUnit, transformer);
-
-                    tracker.registerClass(descriptor.markupClass());
-
-                    compilationUnit.document().getResources().forEach(resource ->
-                        tracker.registerResource(resource, descriptor));
-
                     result.add(new CompilationUnit(descriptor, compilationUnit.document().getResources(), sourceText));
                 } catch (MarkupException ex) {
                     EmbeddingContext embeddingContext = descriptor.embeddingContext();

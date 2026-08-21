@@ -9,6 +9,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
 import java.util.zip.CRC32;
 
@@ -17,20 +18,13 @@ public final class EmbeddedResource {
     private final byte[] content;
     private final String logicalName;
     private final Path declaringSource;
-    private final SourceInfo declarationSourceInfo;
     private final SourceInfo nameSourceInfo;
     private final String logicalPath;
 
-    public EmbeddedResource(
-            byte[] content,
-            String logicalName,
-            Path declaringSource,
-            SourceInfo declarationSourceInfo,
-            SourceInfo nameSourceInfo) {
+    public EmbeddedResource(byte[] content, String logicalName, Path declaringSource, SourceInfo nameSourceInfo) {
         this.logicalName = Objects.requireNonNull(logicalName);
         this.content = Objects.requireNonNull(content);
         this.declaringSource = Objects.requireNonNull(declaringSource);
-        this.declarationSourceInfo = Objects.requireNonNull(declarationSourceInfo);
         this.nameSourceInfo = Objects.requireNonNull(nameSourceInfo);
         this.logicalPath = deriveLogicalPath(declaringSource, logicalName);
     }
@@ -47,10 +41,6 @@ public final class EmbeddedResource {
         return declaringSource;
     }
 
-    public SourceInfo declarationSourceInfo() {
-        return declarationSourceInfo;
-    }
-
     public SourceInfo nameSourceInfo() {
         return nameSourceInfo;
     }
@@ -63,7 +53,7 @@ public final class EmbeddedResource {
         var crc = new CRC32();
         String documentName = FileUtil.getFileNameWithoutExtension(sourceFile.getFileName().toString());
         crc.update(documentName.getBytes(StandardCharsets.UTF_8));
-        crc.update(logicalName.getBytes(StandardCharsets.UTF_8));
+        crc.update(logicalName.toLowerCase(Locale.ROOT).getBytes(StandardCharsets.UTF_8));
         String hash = Long.toHexString(crc.getValue());
         String resourceFileName = documentName + "$" + hash + "$" + logicalName;
 

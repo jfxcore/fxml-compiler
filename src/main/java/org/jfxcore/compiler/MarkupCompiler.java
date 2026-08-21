@@ -27,7 +27,6 @@ import org.jfxcore.compiler.util.CompilationContext;
 import org.jfxcore.compiler.util.CompilationScope;
 import org.jfxcore.compiler.util.CompilationSource;
 import org.jfxcore.compiler.util.CompilationUnitDescriptor;
-import org.jfxcore.compiler.util.CompilerOutputTracker;
 import org.jfxcore.compiler.util.FileUtil;
 import java.io.IOException;
 import java.net.URISyntaxException;
@@ -74,7 +73,6 @@ public final class MarkupCompiler extends AbstractCompiler {
         var classPool = newClassPool();
         var codeTransformer = Transformer.getCodeTransformer(classPool);
         var bytecodeTransformer = Transformer.getBytecodeTransformer(classPool);
-        var tracker = new CompilerOutputTracker();
 
         List<CompilationUnitDescriptor> orderedDescriptors = descriptors.stream()
             .sorted(Comparator
@@ -84,22 +82,19 @@ public final class MarkupCompiler extends AbstractCompiler {
             .toList();
 
         for (CompilationUnitDescriptor descriptor : orderedDescriptors) {
-            compileSingleFile(descriptor, codeTransformer, bytecodeTransformer, tracker);
+            compileSingleFile(descriptor, codeTransformer, bytecodeTransformer);
         }
 
     }
 
     private void compileSingleFile(CompilationUnitDescriptor descriptor,
                                    Transformer codeTransformer,
-                                   Transformer bytecodeTransformer,
-                                   CompilerOutputTracker outputTracker) throws IOException {
+                                   Transformer bytecodeTransformer) throws IOException {
         CompilationContext context = new CompilationContext(new CompilationSource.InMemory(descriptor.sourceText()));
 
         try (var ignored = new CompilationScope(context)) {
             var parser = new FxmlParser(descriptor.sourceFile(), descriptor.sourceText(), descriptor.embeddingContext());
             var document = parser.parseDocument();
-
-            document.getResources().forEach(resource -> outputTracker.registerResource(resource, descriptor));
 
             var codeDocument = (DocumentNode)codeTransformer.transform(document, null, null);
             ClassNode classNode = (ClassNode)codeDocument.getRoot();
@@ -151,12 +146,6 @@ public final class MarkupCompiler extends AbstractCompiler {
             Path outDir = Paths.get(classUrl.toURI());
             context.addModifiedClass(markupClass, outDir);
             emitContext.getNestedClasses().forEach(c -> context.addModifiedClass(c, outDir));
-
-            outputTracker.registerClass(markupClass);
-
-            for (TypeDeclaration nestedClass : emitContext.getNestedClasses()) {
-                outputTracker.registerClass(nestedClass);
-            }
 
             flushModifiedClasses(context);
         } catch (MarkupException ex) {

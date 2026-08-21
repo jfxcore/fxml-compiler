@@ -71,7 +71,6 @@ public class TestCompiler extends AbstractCompiler {
         List<EmbeddedResource> embeddedResources;
         String simpleClassName;
         Path fxmlTestSourcePath = Path.of("org/jfxcore/compiler/" + fileName + ".fxml");
-        var tracker = new CompilerOutputTracker();
 
         CompilationContext context = new CompilationContext(new CompilationSource.InMemory(source));
         if (configure != null) {
@@ -81,7 +80,6 @@ public class TestCompiler extends AbstractCompiler {
         try (CompilationScope ignored = new CompilationScope(context)) {
             document = new FxmlParser(fxmlTestSourcePath, source, null).parseDocument();
             embeddedResources = document.getResources();
-            embeddedResources.forEach(tracker::registerResource);
 
             DocumentNode codeDocument = (DocumentNode)Transformer.getCodeTransformer(classPool)
                 .transform(document, null, null);
@@ -173,12 +171,6 @@ public class TestCompiler extends AbstractCompiler {
             int packages = packageName.length() - packageName.replace(".", "").length() + 1;
             Path classFile = Paths.get(classUrl.toURI());
             Path outDir = FileUtil.removeLastN(classFile, packages + 1);
-
-            tracker.registerClass(generatedClass);
-
-            for (TypeDeclaration nestedClass : bytecodeContext.getNestedClasses()) {
-                tracker.registerClass(nestedClass);
-            }
 
             generatedClass.jvmType().writeFile(outDir.toString());
 

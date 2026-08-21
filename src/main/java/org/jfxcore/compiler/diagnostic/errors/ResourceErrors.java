@@ -50,11 +50,6 @@ public final class ResourceErrors {
         return error(sourceInfo, ErrorCode.UNREPRESENTABLE_RESOURCE_CHARACTER, name, charset);
     }
 
-    public static MarkupException resourceFileCollision(
-            SourceInfo sourceInfo, String path, String firstOwner, String secondOwner) {
-        return error(sourceInfo, ErrorCode.RESOURCE_FILE_COLLISION, path, firstOwner, secondOwner);
-    }
-
     private static MarkupException error(SourceInfo sourceInfo, ErrorCode code, Object... arguments) {
         return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(code, arguments));
     }

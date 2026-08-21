@@ -3,13 +3,9 @@
 
 package org.jfxcore.compiler;
 
-import org.jfxcore.compiler.diagnostic.ErrorCode;
-import org.jfxcore.compiler.diagnostic.Location;
 import org.jfxcore.compiler.diagnostic.Logger;
-import org.jfxcore.compiler.diagnostic.MarkupException;
 import org.jfxcore.compiler.resource.EmbeddedResource;
 import org.jfxcore.compiler.util.CompilationUnit;
-import org.jfxcore.compiler.util.QualifiedName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import java.io.IOException;
@@ -40,7 +36,7 @@ public class ClassGeneratorTest {
 
         CompilationUnit unit = generator.process().get(0);
         assertEquals(
-            List.of("sample/View$a.txt", "sample/View$z.txt"),
+            List.of("sample/View$e085c95e$a.txt", "sample/View$f7b56fcd$z.txt"),
             unit.embeddedResources().stream().map(EmbeddedResource::logicalPath).toList());
         assertArrayEquals("first".getBytes(StandardCharsets.UTF_8), unit.embeddedResources().get(0).content());
         assertArrayEquals("last".getBytes(StandardCharsets.UTF_8), unit.embeddedResources().get(1).content());
@@ -64,56 +60,6 @@ public class ClassGeneratorTest {
     }
 
     @Test
-    public void Process_Rejects_Case_Only_Collision_Deterministically() throws IOException {
-        CollisionResult forward = generateCollidingRoots(false);
-        CollisionResult reverse = generateCollidingRoots(true);
-
-        assertEquals(ErrorCode.RESOURCE_FILE_COLLISION, forward.exception().getDiagnostic().getCode());
-        assertEquals(forward.exception().getMessage(), reverse.exception().getMessage());
-        assertEquals(forward.sourceFile(), forward.exception().getSourceFile().toPath());
-        assertEquals(reverse.sourceFile(), reverse.exception().getSourceFile().toPath());
-    }
-
-    @Test
-    public void Process_Rejects_Resource_That_Matches_Known_Top_Level_Class() throws IOException {
-        Path sourceRoot = tempDir.resolve("src");
-        Path resourceOwner = Path.of("sample", "View.fxml");
-        Path classOwner = Path.of("sample", "Z.fxml");
-        writeSource(sourceRoot, resourceOwner, fxml("<?resource Helper.class:value?>"));
-        writeSource(sourceRoot, classOwner, fxmlWithClassName("View$Helper"));
-
-        ClassGenerator generator = new ClassGenerator(Set.of(), new SilentLogger());
-        assertTrue(generator.addFileSource(sourceRoot, resourceOwner));
-        assertTrue(generator.addFileSource(sourceRoot, classOwner));
-
-        MarkupException exception = assertThrows(MarkupException.class, generator::process);
-        assertEquals(ErrorCode.RESOURCE_FILE_COLLISION, exception.getDiagnostic().getCode());
-        assertEquals(sourceRoot.resolve(resourceOwner), exception.getSourceFile().toPath());
-        assertTrue(exception.getMessage().contains("sample/View$Helper.class"));
-    }
-
-    @Test
-    public void Embedded_Source_Collision_Uses_The_Selected_Source_And_Offset() {
-        Path firstRoot = tempDir.resolve("root-a");
-        Path secondRoot = tempDir.resolve("root-z");
-        Path sourceFile = Path.of("sample", "View.java");
-        Location firstOffset = new Location(4, 2);
-        Location secondOffset = new Location(9, 3);
-
-        ClassGenerator generator = new ClassGenerator(Set.of(), new SilentLogger());
-        generator.addEmbeddedSource(
-            firstRoot, sourceFile, fxml("<?resource Item.txt:first?>"), List.of(),
-            QualifiedName.of("sample.View"), firstOffset);
-        generator.addEmbeddedSource(
-            secondRoot, sourceFile, fxml("<?resource item.txt:second?>"), List.of(),
-            QualifiedName.of("sample.View"), secondOffset);
-
-        MarkupException exception = assertThrows(MarkupException.class, generator::process);
-        assertEquals(firstRoot.resolve(sourceFile), exception.getSourceFile().toPath());
-        assertEquals(firstOffset, exception.getSourceOffset());
-    }
-
-    @Test
     public void Skipped_Document_Contributes_No_Unit_Or_Resource() throws IOException {
         Path sourceRoot = tempDir.resolve("src");
         Path sourceFile = Path.of("sample", "Skipped.fxml");
@@ -125,26 +71,6 @@ public class ClassGeneratorTest {
         ClassGenerator generator = new ClassGenerator(Set.of(), new SilentLogger());
         assertFalse(generator.addFileSource(sourceRoot, sourceFile));
         assertTrue(generator.process().isEmpty());
-    }
-
-    private CollisionResult generateCollidingRoots(boolean reverse) throws IOException {
-        Path firstRoot = tempDir.resolve(reverse ? "reverse-root-a" : "forward-root-a");
-        Path secondRoot = tempDir.resolve(reverse ? "reverse-root-z" : "forward-root-z");
-        Path sourceFile = Path.of("sample", "View.fxml");
-        writeSource(firstRoot, sourceFile, fxml("<?resource Item.txt:first?>"));
-        writeSource(secondRoot, sourceFile, fxml("<?resource item.txt:second?>"));
-
-        ClassGenerator generator = new ClassGenerator(Set.of(), new SilentLogger());
-        if (reverse) {
-            assertTrue(generator.addFileSource(secondRoot, sourceFile));
-            assertTrue(generator.addFileSource(firstRoot, sourceFile));
-        } else {
-            assertTrue(generator.addFileSource(firstRoot, sourceFile));
-            assertTrue(generator.addFileSource(secondRoot, sourceFile));
-        }
-
-        MarkupException exception = assertThrows(MarkupException.class, generator::process);
-        return new CollisionResult(exception, firstRoot.resolve(sourceFile));
     }
 
     private void writeSource(Path sourceRoot, Path sourceFile, String source) throws IOException {
@@ -160,13 +86,6 @@ public class ClassGeneratorTest {
             <Label xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"/>
             """.formatted(declarations);
     }
-
-    private String fxmlWithClassName(String className) {
-        return fxml("").replace(
-            "/>", " fx:subclass=\"sample.Z\" fx:className=\"" + className + "\"/>");
-    }
-
-    private record CollisionResult(MarkupException exception, Path sourceFile) {}
 
     private static final class SilentLogger implements Logger {
         @Override public void fine(String message) {}

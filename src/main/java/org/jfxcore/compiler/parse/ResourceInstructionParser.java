@@ -32,17 +32,14 @@ public final class ResourceInstructionParser {
 
     private final SourceMappedText input;
     private final Path declaringSource;
-    private final SourceInfo declarationSourceInfo;
 
     public ResourceInstructionParser(String data, Path declaringSource) {
-        this(SourceMappedText.identity(data, new Location(0, 0)),
-             declaringSource, new SourceInfo(0, 0, 0, data.length()));
+        this(SourceMappedText.identity(data, new Location(0, 0)), declaringSource);
     }
 
-    ResourceInstructionParser(SourceMappedText input, Path declaringSource, SourceInfo declarationSourceInfo) {
+    ResourceInstructionParser(SourceMappedText input, Path declaringSource) {
         this.input = normalizeXmlLineEndings(input);
         this.declaringSource = declaringSource;
-        this.declarationSourceInfo = declarationSourceInfo;
     }
 
     public EmbeddedResource parse() {
@@ -127,7 +124,6 @@ public final class ResourceInstructionParser {
             encoded,
             logicalName,
             declaringSource,
-            declarationSourceInfo,
             nameSourceInfo);
     }
 

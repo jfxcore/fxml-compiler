@@ -38,10 +38,7 @@ public class XmlReaderTest {
             assertEquals(data, mapped.getText());
             assertEquals(source.indexOf(data), mapped.getSourceInfo(0, 0).getStart().getColumn());
 
-            var resource = new ResourceInstructionParser(
-                mapped,
-                Path.of("Root.fxml"),
-                (SourceInfo)instruction.getUserData(XmlReader.SOURCE_INFO_KEY)).parse();
+            var resource = new ResourceInstructionParser(mapped, Path.of("Root.fxml")).parse();
 
             assertEquals("value", new String(resource.content(), StandardCharsets.UTF_8));
             assertEquals("foo.txt", resource.nameSourceInfo().toOriginal().getText());

@@ -116,7 +116,8 @@ public class MarkupProcessorTest {
         assertTrue(result.success(), result.formatDiagnostics());
         assertArrayEquals(
             "hello".getBytes(StandardCharsets.UTF_8),
-            Files.readAllBytes(result.classesDir().resolve(Path.of("sample", "SampleControl$dark-theme.txt"))));
+            Files.readAllBytes(result.classesDir().resolve(
+                Path.of("sample", "SampleControl$be84f555$dark-theme.txt"))));
     }
 
     @Test

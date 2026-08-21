@@ -53,7 +53,6 @@ public class MarkupSymbolProcessorTest {
             content,
             "dark theme.txt",
             Path.of("sample", "View.kt"),
-            SourceInfo.none(),
             SourceInfo.none());
         KSFile sourceFile = proxy(KSFile.class);
         Dependencies dependencies = new Dependencies(false, sourceFile);
@@ -77,7 +76,7 @@ public class MarkupSymbolProcessorTest {
 
         assertSame(dependencies, invocation[0]);
         assertEquals(List.of(sourceFile), ((Dependencies)invocation[0]).getOriginatingFiles());
-        assertEquals("sample/View$dark theme.txt", invocation[1]);
+        assertEquals("sample/View$b27ef71c$dark theme.txt", invocation[1]);
         assertEquals("", invocation[2]);
         assertArrayEquals(content, output.toByteArray());
     }

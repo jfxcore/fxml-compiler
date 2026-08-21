@@ -101,7 +101,7 @@ public class FxmlParser {
                 data = SourceMappedText.identity(pi.getData(), getSourceInfo(pi));
             }
 
-            EmbeddedResource resource = new ResourceInstructionParser(data, documentFile, getSourceInfo(pi)).parse();
+            EmbeddedResource resource = new ResourceInstructionParser(data, documentFile).parse();
             resources.register(resource);
         }
 

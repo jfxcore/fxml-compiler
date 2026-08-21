@@ -17,9 +17,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
-import org.jfxcore.compiler.diagnostic.ErrorCode;
 import org.jfxcore.compiler.diagnostic.Logger;
-import org.jfxcore.compiler.diagnostic.MarkupException;
 import org.jfxcore.compiler.resource.EmbeddedResource;
 import org.jfxcore.compiler.util.CompilationUnit;
 import org.junit.jupiter.api.Test;
@@ -55,57 +53,32 @@ public class MarkupCompilerTest {
         ClassGenerator generator = new ClassGenerator(Set.of(), new SilentLogger());
         assertTrue(generator.addFileSource(sourceRoot.toAbsolutePath(), sourceFile));
         CompilationUnit unit = generator.process().get(0);
-        EmbeddedResource resource = unit.embeddedResources().get(0);
+        EmbeddedResource greeting = unit.embeddedResources().stream()
+            .filter(resource -> resource.logicalName().equals("greeting.txt"))
+            .findFirst()
+            .orElseThrow();
+        EmbeddedResource unused = unit.embeddedResources().stream()
+            .filter(resource -> resource.logicalName().equals("unused.txt"))
+            .findFirst()
+            .orElseThrow();
 
         assertEquals(2, unit.embeddedResources().size());
-        assertEquals("sample/View$greeting.txt", resource.logicalPath());
-        assertEquals(sourceFile, resource.declaringSource());
-        assertEquals("greeting.txt", resource.logicalName());
-        assertArrayEquals("Gr\u00fc\u00dfe".getBytes(StandardCharsets.UTF_8), resource.content());
-        assertEquals("sample/View$unused.txt", unit.embeddedResources().get(1).logicalPath());
+        assertEquals("sample/View$db3b4bda$greeting.txt", greeting.logicalPath());
+        assertEquals(sourceFile, greeting.declaringSource());
+        assertArrayEquals("Gr\u00fc\u00dfe".getBytes(StandardCharsets.UTF_8), greeting.content());
+        assertEquals("sample/View$ca1d25a4$unused.txt", unused.logicalPath());
 
         Path classesDir = tempDir.resolve("classes");
         compileGeneratedSource(unit, classesDir);
         new MarkupCompiler(Set.of(classesDir), new SilentLogger()).compile(Set.of(unit.descriptor()));
 
-        assertFalse(Files.exists(classesDir.resolve(Path.of("sample", "View$greeting.txt"))));
-        assertFalse(Files.exists(classesDir.resolve(Path.of("sample", "View$unused.txt"))));
+        assertFalse(Files.exists(classesDir.resolve(greeting.logicalPath())));
+        assertFalse(Files.exists(classesDir.resolve(unused.logicalPath())));
     }
 
     @Test
     public void Empty_Descriptor_Set_Compiles_Without_Output() {
         assertDoesNotThrow(() -> new MarkupCompiler(Set.of(), new SilentLogger()).compile(Set.of()));
-    }
-
-    @Test
-    public void Compiler_Rejects_Resource_That_Matches_An_Emitted_Nested_Class() throws IOException {
-        Path sourceRoot = tempDir.resolve("src");
-        Path sourceFile = Path.of("sample", "View.fxml");
-        Path absoluteSourceFile = sourceRoot.resolve(sourceFile);
-        String source = """
-            <?import javafx.scene.control.*?>
-            <?resource __FX$RuntimeContext.class:value?>
-            <Label xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
-                   stylesheets="@__FX$RuntimeContext.class"/>
-            """;
-
-        Files.createDirectories(absoluteSourceFile.getParent());
-        Files.writeString(absoluteSourceFile, source);
-
-        ClassGenerator generator = new ClassGenerator(Set.of(), new SilentLogger());
-        assertTrue(generator.addFileSource(sourceRoot, sourceFile));
-        CompilationUnit unit = generator.process().get(0);
-        assertEquals("sample/View$__FX$RuntimeContext.class", unit.embeddedResources().get(0).logicalPath());
-
-        Path classesDir = tempDir.resolve("classes");
-        compileGeneratedSource(unit, classesDir);
-
-        MarkupException exception = assertThrows(MarkupException.class, () ->
-            new MarkupCompiler(Set.of(classesDir), new SilentLogger()).compile(Set.of(unit.descriptor())));
-
-        assertEquals(ErrorCode.RESOURCE_FILE_COLLISION, exception.getDiagnostic().getCode());
-        assertEquals(absoluteSourceFile, exception.getSourceFile().toPath());
-        assertFalse(Files.exists(classesDir.resolve(Path.of("sample", "View$__FX$RuntimeContext.class"))));
     }
 
     private void compileGeneratedSource(CompilationUnit unit, Path classesDir) throws IOException {

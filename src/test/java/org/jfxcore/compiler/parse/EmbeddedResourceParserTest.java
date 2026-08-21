@@ -41,9 +41,9 @@ public class EmbeddedResourceParserTest {
             "<?resource item.txt:value?><Test xmlns=\"http://javafx.com/javafx\"/>");
 
         assertEquals("My.View", fxml.getDocumentName());
-        assertEquals("views/My.View$item.txt", fxml.getResources().get(0).logicalPath());
+        assertEquals("views/My.View$fad70b48$item.txt", fxml.getResources().get(0).logicalPath());
         assertEquals("MyView", embeddedJava.getDocumentName());
-        assertEquals("views/MyView$item.txt", embeddedJava.getResources().get(0).logicalPath());
+        assertEquals("views/MyView$cc9829f$item.txt", embeddedJava.getResources().get(0).logicalPath());
     }
 
     @Test

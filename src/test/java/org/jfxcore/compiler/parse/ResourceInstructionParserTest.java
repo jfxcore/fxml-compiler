@@ -26,7 +26,7 @@ public class ResourceInstructionParserTest {
         assertEquals("styles.css", resource.logicalName());
         assertArrayEquals("Grüße".getBytes(StandardCharsets.UTF_8), resource.content());
         assertSame(resource.content(), resource.content());
-        assertEquals("sample/View$styles.css", resource.logicalPath());
+        assertEquals("sample/View$8eedd66b$styles.css", resource.logicalPath());
     }
 
     @Test
@@ -45,7 +45,7 @@ public class ResourceInstructionParserTest {
 
         assertEquals(bare.logicalName(), quoted.logicalName());
         assertEquals("dark theme.css", spaced.logicalName());
-        assertEquals("sample/View$dark theme.css", spaced.logicalPath());
+        assertEquals("sample/View$d6870e81$dark theme.css", spaced.logicalPath());
     }
 
     @ParameterizedTest
