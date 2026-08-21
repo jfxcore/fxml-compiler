@@ -17,6 +17,8 @@ import java.net.URI;
 import java.net.URL;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.util.Locale;
+import java.util.zip.CRC32;
 
 import static org.jfxcore.compiler.util.MoreAssertions.*;
 import static org.junit.jupiter.api.Assertions.*;
@@ -51,7 +53,7 @@ public class EmbeddedResourceTest extends CompilerTestBase {
             <TestLabel xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"/>
         """);
 
-        URL resource = compiledClass.getResource(compiledClass.getSimpleName() + "$unused.txt");
+        URL resource = getMaterializedResource(compiledClass, "unused.txt");
         assertNotNull(resource);
         assertEquals("unused", read(resource));
     }
@@ -66,7 +68,7 @@ public class EmbeddedResourceTest extends CompilerTestBase {
         """);
 
         for (String name : new String[] {"first.txt", "second.txt", "third.txt"}) {
-            URL resource = compiledClass.getResource(compiledClass.getSimpleName() + "$" + name);
+            URL resource = getMaterializedResource(compiledClass, name);
             assertNotNull(resource);
             assertEquals(name.substring(0, name.indexOf('.')), read(resource));
         }
@@ -158,6 +160,15 @@ public class EmbeddedResourceTest extends CompilerTestBase {
         assertEquals(ErrorCode.DUPLICATE_RESOURCE_DECLARATION, exception.getDiagnostic().getCode());
         assertEquals("Resource 'Value.txt' conflicts with declaration at 2:16", exception.getMessage());
         assertCodeHighlight("Value.txt", exception);
+    }
+
+    private URL getMaterializedResource(Class<?> compiledClass, String logicalName) {
+        String documentName = compiledClass.getSimpleName();
+        var crc = new CRC32();
+        crc.update(documentName.getBytes(StandardCharsets.UTF_8));
+        crc.update(logicalName.toLowerCase(Locale.ROOT).getBytes(StandardCharsets.UTF_8));
+        String resourceName = documentName + "$" + Long.toHexString(crc.getValue()) + "$" + logicalName;
+        return compiledClass.getResource(resourceName);
     }
 
     private String read(URL resource) throws Exception {
