@@ -99,8 +99,8 @@ public final class CompilerOutputTracker {
             firstArtifact.description(),
             secondArtifact.description());
 
-        if (resourceArtifact.owner() != null) {
-            CompilationUnitDescriptor owner = resourceArtifact.owner();
+        CompilationUnitDescriptor owner = resourceArtifact.owner();
+        if (owner != null) {
             exception.setSourceFile(owner.absoluteSourceFile().toAbsolutePath().normalize().toFile());
             exception.setSourceOffset(owner.embeddingContext() != null
                 ? owner.embeddingContext().sourceOffset()
@@ -117,7 +117,7 @@ public final class CompilerOutputTracker {
             CompilationUnitDescriptor owner) {
 
         private static Artifact resource(String path, EmbeddedResource resource, CompilationUnitDescriptor owner) {
-            SourceInfo declaration = resource.declarationSourceInfo().toOriginal();
+            SourceInfo declaration = resource.declarationSourceInfo().toOriginal().toOneBased();
             String description = "%s resource '%s' declared at %s".formatted(
                 resource.declaringSource(), resource.logicalName(), declaration.getStart());
 
