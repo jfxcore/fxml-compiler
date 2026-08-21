@@ -5,10 +5,12 @@ package org.jfxcore.compiler.resource;
 
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.util.FileUtil;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.zip.CRC32;
 
 public final class EmbeddedResource {
 
@@ -58,8 +60,12 @@ public final class EmbeddedResource {
     }
 
     private static String deriveLogicalPath(Path sourceFile, String logicalName) {
-        String resourceFileName = FileUtil.getFileNameWithoutExtension(
-            sourceFile.getFileName().toString()) + "$" + logicalName;
+        var crc = new CRC32();
+        String documentName = FileUtil.getFileNameWithoutExtension(sourceFile.getFileName().toString());
+        crc.update(documentName.getBytes(StandardCharsets.UTF_8));
+        crc.update(logicalName.getBytes(StandardCharsets.UTF_8));
+        String hash = Long.toHexString(crc.getValue());
+        String resourceFileName = documentName + "$" + hash + "$" + logicalName;
 
         Path parent = sourceFile.getParent();
         if (parent == null) {
