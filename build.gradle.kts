@@ -97,6 +97,7 @@ java {
 }
 
 val copyVersionInfo = tasks.register<Copy>("copyVersionInfo") {
+    inputs.property("org.jfxcore.compiler.version", project.version)
     from("$projectDir/src/main/version-info/VersionInfo.java")
     into("${layout.buildDirectory.get()}/generated/java/main/org/jfxcore/compiler")
     filter { it
