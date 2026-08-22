@@ -113,6 +113,28 @@ public class EmbeddedResourceTest extends CompilerTestBase {
     }
 
     @Test
+    public void Shorthand_ClassPathResource_Matches_Exact_Interior_Whitespace() throws Exception {
+        TestLabel root = compileAndRun("""
+            <?resource "my    styles . css":resource content?>
+            <TestLabel xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                       text="@    my    styles . css  "/>
+        """);
+
+        assertEquals("resource content", read(URI.create(root.getText()).toURL()));
+    }
+
+    @Test
+    public void Shorthand_ClassPathResource_Rejects_Differently_Spaced_Embedded_Name() {
+        RuntimeException exception = assertThrows(RuntimeException.class, () -> compileAndRun("""
+            <?resource "my    styles . css":resource content?>
+            <TestLabel xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                       text="@my styles . css"/>
+        """));
+
+        assertTrue(exception.getMessage().startsWith("Resource not found"));
+    }
+
+    @Test
     public void Embedded_Resource_Wins_Over_An_Ordinary_Package_Resource() throws Exception {
         TestLabel root = compileAndRun("""
             <?resource image.jpg:embedded?>

@@ -46,9 +46,6 @@ public final class LiteralValueNode extends AbstractNode implements ValueNode {
         return text;
     }
 
-    /**
-     * Returns the compatibility coercion parts. An empty list means that this is a scalar literal.
-     */
     public List<LiteralValueNode> getCoercionParts() {
         return coercionParts;
     }

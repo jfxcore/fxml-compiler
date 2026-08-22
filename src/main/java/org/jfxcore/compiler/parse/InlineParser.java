@@ -375,10 +375,9 @@ public class InlineParser {
             return new LiteralValueNode(string.getValue(), string.getSourceInfo());
         }
 
-        List<String> fragments = new ArrayList<>();
         List<CurlyTokenType> delimiters = new ArrayList<>();
-        SourceInfo start = tokenizer.peekNotNull().getSourceInfo();
-        SourceInfo end = start;
+        InlineToken firstToken = tokenizer.peekNotNull();
+        InlineToken lastToken = null;
 
         while (!tokenizer.isEmpty()) {
             InlineToken token = tokenizer.peekNotNull();
@@ -391,7 +390,7 @@ public class InlineParser {
                 break;
             }
 
-            if (atTopLevel && !fragments.isEmpty()
+            if (atTopLevel && lastToken != null
                     && (type == OPEN_CURLY || tryGetSyntaxMapping(tokenizer) != null)) {
                 throw ParserErrors.unexpectedToken(token);
             }
@@ -406,11 +405,7 @@ public class InlineParser {
             }
 
             tokenizer.remove();
-            end = token.getSourceInfo();
-
-            if (type != NEWLINE) {
-                fragments.add(type == STRING ? token.getLexeme() : token.getValue());
-            }
+            lastToken = token;
 
             switch (type) {
                 case OPEN_PAREN -> delimiters.add(CLOSE_PAREN);
@@ -421,7 +416,7 @@ public class InlineParser {
             }
         }
 
-        if (fragments.isEmpty()) {
+        if (lastToken == null) {
             throw ParserErrors.unexpectedToken(tokenizer.peekNotNull());
         }
 
@@ -430,7 +425,9 @@ public class InlineParser {
             throw ParserErrors.expectedToken(input.getEndOfInput(), expected.getSymbol());
         }
 
-        return new LiteralValueNode(StringHelper.concatValues(fragments), SourceInfo.span(start, end));
+        return new LiteralValueNode(
+            tokenizer.getLiteralSourceText(firstToken, lastToken),
+            SourceInfo.span(firstToken.getSourceInfo(), lastToken.getSourceInfo()));
     }
 
     private boolean isClosingDelimiter(CurlyTokenType type) {
