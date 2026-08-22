@@ -10,9 +10,6 @@ import java.util.regex.Pattern;
 
 /**
  * Represents a version that follows Semantic Versioning.
- * <p>
- * Version text may omit trailing numeric components. For example, {@code 2} and {@code 1.0} are normalized to
- * {@code 2.0.0} and {@code 1.0.0}, respectively.
  *
  * @param major the major version
  * @param minor the minor version
