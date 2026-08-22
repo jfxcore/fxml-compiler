@@ -20,6 +20,7 @@ import org.jfxcore.compiler.diagnostic.errors.SymbolResolutionErrors;
 import org.jfxcore.compiler.parse.EmbeddingContext;
 import org.jfxcore.compiler.parse.FxmlParser;
 import org.jfxcore.compiler.transform.Transformer;
+import org.jfxcore.compiler.type.KnownSymbols;
 import org.jfxcore.compiler.type.TypeDeclaration;
 import org.jfxcore.compiler.util.AbstractCompiler;
 import org.jfxcore.compiler.util.Bytecode;
@@ -28,6 +29,7 @@ import org.jfxcore.compiler.util.CompilationScope;
 import org.jfxcore.compiler.util.CompilationSource;
 import org.jfxcore.compiler.util.CompilationUnitDescriptor;
 import org.jfxcore.compiler.util.FileUtil;
+import org.jfxcore.compiler.util.SemanticVersion;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.net.URL;
@@ -41,7 +43,10 @@ import java.util.Set;
 @SuppressWarnings("unused")
 public final class MarkupCompiler extends AbstractCompiler {
 
+    private static final SemanticVersion RUNTIME_LIBRARY_MIN_VERSION = new SemanticVersion(0, 4, 0);
+
     private final Logger logger;
+    private boolean runtimeLibraryChecked;
 
     public MarkupCompiler(Set<Path> searchPath, Logger logger) {
         super(searchPath);
@@ -111,6 +116,8 @@ public final class MarkupCompiler extends AbstractCompiler {
                 throw GeneralErrors.internalError(String.format("%s cannot be found", markupClassName));
             }
 
+            checkRuntimeLibraryVersion();
+
             var codeBehindClass = TypeDeclaration.of(bytecodeTransformer.getClassPool().get(codeBehindClassName));
             var markupClass = TypeDeclaration.of(bytecodeTransformer.getClassPool().get(markupClassName));
 
@@ -171,6 +178,33 @@ public final class MarkupCompiler extends AbstractCompiler {
             m.setSourceOffset(embeddingContext != null ? embeddingContext.sourceOffset() : null);
             m.setSourceFile(descriptor.absoluteSourceFile().toFile());
             throw m;
+        }
+    }
+
+    private void checkRuntimeLibraryVersion() {
+        if (runtimeLibraryChecked) {
+            return;
+        }
+
+        runtimeLibraryChecked = true;
+
+        if (KnownSymbols.Markup.isAvailable()) {
+            SemanticVersion version;
+            String versionString;
+
+            try {
+                version = KnownSymbols.Markup.getVersion();
+                versionString = version != null ? version.toString() : "<unknown>";
+            } catch (IllegalArgumentException ignored) {
+                version = null;
+                versionString = "<invalid>";
+            }
+
+            if (version == null || version.compareTo(RUNTIME_LIBRARY_MIN_VERSION) < 0) {
+                logger.warn(
+                    "jfxcore.markup version not supported (found = %s, required = %s or higher)"
+                        .formatted(versionString, RUNTIME_LIBRARY_MIN_VERSION));
+            }
         }
     }
 }

@@ -5,6 +5,7 @@ package org.jfxcore.compiler.runner;
 
 public interface RunnerLogger {
     void error(String message);
+    void warn(String message);
     void info(String message);
     void fine(String message);
 }

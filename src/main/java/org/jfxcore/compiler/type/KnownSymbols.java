@@ -6,6 +6,8 @@ package org.jfxcore.compiler.type;
 import javassist.CtClass;
 import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.util.CompilationContext;
+import org.jfxcore.compiler.util.SemanticVersion;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -196,6 +198,16 @@ public final class KnownSymbols {
         public static final String InverseMethodAnnotationName = "org.jfxcore.markup.InverseMethod";
         public static final String MarkupExtensionReturnTypeAnnotationName = "org.jfxcore.markup.MarkupExtension$Supplier$ReturnType";
 
+        public static SemanticVersion getVersion() {
+            TypeDeclaration decl = getOptional("org.jfxcore.markup.MarkupExtension");
+            if (decl == null) {
+                return null;
+            }
+
+            byte[] value = decl.jvmType().getAttribute("org.jfxcore.markup.version");
+            return value != null ? SemanticVersion.parse(new String(value, StandardCharsets.UTF_8)) : null;
+        }
+
         public static boolean isAvailable() { return getOptional("org.jfxcore.markup.MarkupExtension") != null; }
         public static TypeDeclaration MarkupExtensionDecl() { return get("org.jfxcore.markup.MarkupExtension"); }
         public static TypeDeclaration MarkupContextDecl() { return get("org.jfxcore.markup.MarkupContext"); }
@@ -217,7 +229,7 @@ public final class KnownSymbols {
             public static TypeDeclaration BooleanBindingsDecl() { return get("org.jfxcore.markup.runtime.BooleanBindings"); }
         }
     }
-    
+
     private static TypeDeclaration getOptional(String name) {
         Map<String, TypeDeclaration> cache = getClassCache();
         TypeDeclaration declaration = cache.get(name);

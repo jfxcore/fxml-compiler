@@ -417,6 +417,11 @@ final class MarkupSymbolProcessor implements SymbolProcessor {
         public void info(String message) {
             logger.info(message, null);
         }
+
+        @Override
+        public void warn(String message) {
+            logger.warn(message, null);
+        }
     }
 
     private record AnnotationInfo(KSClassDeclaration element, KSAnnotation annotation, KSValueArgument value) {}

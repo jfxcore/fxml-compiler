@@ -61,6 +61,7 @@ abstract class AbstractCompilerRunner implements AutoCloseable {
             (proxy, method, args) -> switch (method.getName()) {
                 case "fine" -> { logger.fine((String) args[0]); yield null; }
                 case "info" -> { logger.info((String) args[0]); yield null; }
+                case "warn" -> { logger.warn((String) args[0]); yield null; }
                 default -> method.invoke(proxy, args);
             });
     }
