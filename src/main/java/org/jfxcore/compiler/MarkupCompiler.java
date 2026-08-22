@@ -39,6 +39,9 @@ import java.util.Objects;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
+import java.util.function.Consumer;
+import java.util.function.Predicate;
+import java.util.function.Supplier;
 
 @SuppressWarnings("unused")
 public final class MarkupCompiler extends AbstractCompiler {
@@ -188,23 +191,48 @@ public final class MarkupCompiler extends AbstractCompiler {
 
         runtimeLibraryChecked = true;
 
-        if (KnownSymbols.Markup.isAvailable()) {
-            SemanticVersion version;
-            String versionString;
-
-            try {
-                version = KnownSymbols.Markup.getVersion();
-                versionString = version != null ? version.toString() : "<unknown>";
-            } catch (IllegalArgumentException ignored) {
-                version = null;
-                versionString = "<invalid>";
-            }
-
-            if (version == null || version.compareTo(RUNTIME_LIBRARY_MIN_VERSION) < 0) {
-                logger.warn(
-                    "jfxcore.markup version not supported (found = %s, required = %s or higher)"
-                        .formatted(versionString, RUNTIME_LIBRARY_MIN_VERSION));
-            }
+        var versionInfo = KnownSymbols.Markup.getVersionInfo();
+        if (versionInfo == null) {
+            return;
         }
+
+        String libraryVersion = checkVersion(
+            () -> SemanticVersion.parse(versionInfo.libraryVersion()),
+            v -> v.compareTo(RUNTIME_LIBRARY_MIN_VERSION) < 0,
+            s -> logger.warn(
+                "Unsupported jfxcore.markup library version %s (required %s or later)"
+                    .formatted(s, RUNTIME_LIBRARY_MIN_VERSION)));
+
+        if (libraryVersion != null) {
+            checkVersion(
+                () -> SemanticVersion.parse(versionInfo.minCompilerVersion()),
+                v -> v.compareTo(SemanticVersion.parse(VersionInfo.getVersion())) > 0,
+                s -> logger.warn("""
+                    jfxcore.markup library version %s requires FXML/2 compiler version %s or higher,
+                    current FXML/2 compiler version is %s. Downgrade the jfxcore.markup library or
+                    upgrade the FXML/2 compiler to prevent this warning.
+                    """.formatted(libraryVersion, s, VersionInfo.getVersion())));
+        }
+    }
+
+    private String checkVersion(Supplier<SemanticVersion> versionInfo,
+                                Predicate<SemanticVersion> test,
+                                Consumer<String> warn) {
+        SemanticVersion version;
+        String versionString;
+
+        try {
+            version = versionInfo.get();
+            versionString = version != null ? version.toString() : "<unknown>";
+        } catch (IllegalArgumentException ignored) {
+            version = null;
+            versionString = "<invalid>";
+        }
+
+        if (version == null || test.test(version)) {
+            warn.accept(versionString);
+        }
+
+        return version != null ? versionString : null;
     }
 }
