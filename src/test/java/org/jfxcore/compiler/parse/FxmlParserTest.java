@@ -365,6 +365,23 @@ public class FxmlParserTest extends TestBase {
     }
 
     @Test
+    public void Inline_Literal_Uses_Decoded_Interior_Text_And_Projects_Its_Complete_Raw_Span() {
+        String source = "<Label xmlns=\"http://javafx.com/javafx\" "
+            + "xmlns:fx=\"http://jfxcore.org/fxml/2.0\" "
+            + "text=\"@   foo  &#32;&#32;bar . css   \"/>";
+        DocumentNode document = new FxmlParser(source).parseDocument();
+        ObjectNode extension = assertInstanceOf(
+            ObjectNode.class, getSingleAttributeItem(((ObjectNode)document.getRoot()).findProperty("text")));
+        LiteralValueNode literal = assertInstanceOf(LiteralValueNode.class, extension.getChildren().get(0));
+        int start = source.indexOf("foo");
+        int end = source.indexOf("css", start) + 3;
+
+        assertEquals("foo    bar . css", literal.getText());
+        assertEquals(new SourceInfo(0, start, 0, start + literal.getText().length()), literal.getSourceInfo());
+        assertEquals(new SourceInfo(0, start, 0, end), literal.getSourceInfo().toOriginal());
+    }
+
+    @Test
     public void Encoded_Atomic_Operators_Use_Logical_Spans_With_Raw_Projection() {
         assertEncodedAtomicOperatorSpan("&lt;=", "<=");
         assertEncodedAtomicOperatorSpan("&amp;&amp;", "&&");

@@ -122,12 +122,18 @@ public class InlineTokenizer extends CurlyTokenizer<InlineToken> {
         return tokenStream.removeSkipWS(expected);
     }
 
-    /** Token stream that lexes and normalizes only as much input as lookahead requests. */
+    String getLiteralSourceText(InlineToken first, InlineToken last) {
+        return tokenStream.getLiteralSourceText(first, last);
+    }
+
     private final class LazyTokenStream {
+
+        private record IgnoredRange(int start, int end) {}
 
         private final SourceMappedText source;
         private final String text;
         private final List<InlineToken> tokens = new ArrayList<>();
+        private final List<IgnoredRange> ignoredRanges = new ArrayList<>();
         private final Deque<Integer> marks = new java.util.ArrayDeque<>();
         private int tokenIndex;
         private int rawOffset;
@@ -255,6 +261,47 @@ public class InlineTokenizer extends CurlyTokenizer<InlineToken> {
             return token != null ? token.getDecodedStart() : text.length();
         }
 
+        private String getLiteralSourceText(InlineToken first, InlineToken last) {
+            if (first.getDecodedStart() < 0 || first.getDecodedEnd() < 0
+                    || last.getDecodedStart() < 0 || last.getDecodedEnd() < 0) {
+                throw new IllegalArgumentException("Tokens must have decoded source ranges");
+            }
+
+            int start = first.getDecodedStart();
+            int end = last.getDecodedEnd();
+            if (start > end) {
+                throw new IllegalArgumentException("First token must not follow last token");
+            }
+
+            StringBuilder builder = null;
+            int segmentStart = start;
+
+            for (IgnoredRange range : ignoredRanges) {
+                if (range.end() <= start) {
+                    continue;
+                }
+
+                if (range.start() >= end) {
+                    break;
+                }
+
+                if (builder == null) {
+                    builder = new StringBuilder(end - start);
+                }
+
+                int ignoredStart = Math.max(range.start(), start);
+                int ignoredEnd = Math.min(range.end(), end);
+                builder.append(text, segmentStart, ignoredStart);
+                segmentStart = ignoredEnd;
+            }
+
+            if (builder == null) {
+                return text.substring(start, end);
+            }
+
+            return builder.append(text, segmentStart, end).toString();
+        }
+
         private boolean ensureFinalToken(int index) {
             while (tokens.size() <= index && !finalEnd) {
                 InlineToken token = readFinalToken();
@@ -345,13 +392,18 @@ public class InlineTokenizer extends CurlyTokenizer<InlineToken> {
                     return newNewlineToken(value, start, rawOffset);
                 }
 
-                if (value.isBlank() || value.startsWith("/*")) {
+                if (value.isBlank()) {
+                    continue;
+                }
+
+                if (value.startsWith("/*")) {
+                    ignoredRanges.add(new IgnoredRange(start, rawOffset));
                     continue;
                 }
 
                 if (value.startsWith("//")) {
                     skipLineComment();
-
+                    ignoredRanges.add(new IgnoredRange(start, rawOffset));
                     continue;
                 }
 

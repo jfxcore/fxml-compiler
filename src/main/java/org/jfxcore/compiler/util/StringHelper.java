@@ -4,8 +4,6 @@
 package org.jfxcore.compiler.util;
 
 import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Iterator;
 import java.util.List;
 import java.util.WeakHashMap;
 import java.util.regex.Matcher;
@@ -118,30 +116,6 @@ public class StringHelper {
         }
 
         return line.length();
-    }
-
-    public static String concatValues(Collection<String> values) {
-        Iterator<String> it = values.stream().filter(v -> !v.isEmpty()).iterator();
-        if (!it.hasNext()) {
-            return "";
-        }
-
-        StringBuilder builder = new StringBuilder(it.next());
-
-        while (it.hasNext()) {
-            String value = it.next();
-            char last = builder.charAt(builder.length() - 1);
-            char next = value.charAt(0);
-
-            if ((Character.isLetterOrDigit(last) || last == '%')
-                    && (Character.isLetterOrDigit(next) || last == '%')) {
-                builder.append(' ');
-            }
-
-            builder.append(value);
-        }
-
-        return builder.toString();
     }
 
     public static String[] splitLines(String text, boolean includeNewlineChars) {

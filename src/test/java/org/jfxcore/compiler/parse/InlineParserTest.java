@@ -131,14 +131,14 @@ public class InlineParserTest extends TestBase {
         LiteralValueNode node = ((LiteralValueNode)root.getProperties().get(1).getValues().get(0));
         assertEquals("list", root.getProperties().get(1).getName());
         assertEquals(1, root.getProperties().get(1).getValues().size());
-        assertEquals("1 2 3 4", node.getText());
+        assertEquals("1 2   3    4", node.getText());
 
         InlineArgumentSequenceNode list = ((InlineArgumentSequenceNode)root.getProperties().get(2).getValues().get(0));
         assertEquals("composite", root.getProperties().get(2).getName());
         assertEquals(1, root.getProperties().get(2).getValues().size());
         assertEquals(2, list.getValues().size());
         assertEquals("foo bar", ((LiteralValueNode)(list.getValues().get(0))).getText());
-        assertEquals("baz(123,5.0,\"qux quux\")", ((LiteralValueNode)(list.getValues().get(1))).getText());
+        assertEquals("baz(123, 5.0, \"qux quux\")", ((LiteralValueNode)(list.getValues().get(1))).getText());
 
         assertEquals("text", root.getProperties().get(3).getName());
         assertEquals(1, root.getProperties().get(3).getValues().size());
@@ -214,7 +214,70 @@ public class InlineParserTest extends TestBase {
         var objectNode = new InlineParser(markup, "fx").parseObjectStrict();
         assertEquals(1, objectNode.getChildren().size());
         var literal = assertInstanceOf(LiteralValueNode.class, objectNode.getChildren().get(0));
-        assertEquals("bar(baz,qux)", literal.getText());
+        assertEquals("bar(\n        baz , qux\n    )", literal.getText());
+    }
+
+    @Test
+    public void Prefix_Literal_Preserves_Interior_Source_Text_And_Excludes_Outer_Whitespace() {
+        String source = "@    my    styles . css  ";
+        ObjectNode object = new InlineParser(
+            source, "fx", Map.of('@', "ClassPathResource")).parseObjectStrict();
+        LiteralValueNode literal = assertInstanceOf(LiteralValueNode.class, object.getChildren().get(0));
+
+        assertEquals("my    styles . css", literal.getText());
+        assertEquals(
+            new SourceInfo(0, source.indexOf("my"), 0, source.indexOf("css") + 3),
+            literal.getSourceInfo());
+    }
+
+    @Test
+    public void Brace_Style_Literal_Preserves_Interior_Source_Text() {
+        ObjectNode object = new InlineParser(
+            "{ClassPathResource    my    styles . css  }", "fx").parseObjectStrict();
+        LiteralValueNode literal = assertInstanceOf(LiteralValueNode.class, object.getChildren().get(0));
+
+        assertEquals("my    styles . css", literal.getText());
+    }
+
+    @Test
+    public void Named_Property_Literal_Preserves_Interior_Source_Text() {
+        ObjectNode object = new InlineParser(
+            "{Extension value =   my    value  }", "fx").parseObjectStrict();
+        LiteralValueNode literal = assertInstanceOf(
+            LiteralValueNode.class, object.getProperty("value").getValues().get(0));
+
+        assertEquals("my    value", literal.getText());
+    }
+
+    @Test
+    public void Standalone_Quoted_Literal_Still_Unquotes_And_Unescapes_Its_Value() {
+        ObjectNode object = new InlineParser(
+            "{Extension 'my\\tvalue'}", "fx").parseObjectStrict();
+        LiteralValueNode literal = assertInstanceOf(LiteralValueNode.class, object.getChildren().get(0));
+
+        assertEquals("my\tvalue", literal.getText());
+    }
+
+    @Test
+    public void Inline_Literal_Omits_Block_Comments_And_Preserves_Surrounding_Whitespace() {
+        ObjectNode object = new InlineParser(
+            "{Extension foo /* explanation */ bar}", "fx").parseObjectStrict();
+        LiteralValueNode literal = assertInstanceOf(LiteralValueNode.class, object.getChildren().get(0));
+
+        assertEquals("foo  bar", literal.getText());
+    }
+
+    @Test
+    public void Top_Level_Separator_And_Its_Layout_Remain_Outside_Literal_Values() {
+        ObjectNode object = new InlineParser("{Extension foo   , bar}", "fx").parseObjectStrict();
+        InlineArgumentSequenceNode sequence = assertInstanceOf(
+            InlineArgumentSequenceNode.class, object.getChildren().get(0));
+        LiteralValueNode first = assertInstanceOf(LiteralValueNode.class, sequence.getValues().get(0));
+        LiteralValueNode second = assertInstanceOf(LiteralValueNode.class, sequence.getValues().get(1));
+
+        assertEquals("foo", first.getText());
+        assertEquals("bar", second.getText());
+        assertEquals(new SourceInfo(0, 11, 0, 14), first.getSourceInfo());
     }
 
     @Test
@@ -946,7 +1009,7 @@ public class InlineParserTest extends TestBase {
         assertEquals("qux", property.getName());
         assertEquals(1, property.getValues().size());
         LiteralValueNode literal = assertInstanceOf(LiteralValueNode.class, property.getValues().get(0));
-        assertEquals("func(" + compactIntrinsic + ",'quux')", literal.getText());
+        assertEquals("func(" + compactIntrinsic + ", 'quux')", literal.getText());
     }
 
     @ParameterizedTest
@@ -962,7 +1025,7 @@ public class InlineParserTest extends TestBase {
         assertEquals("qux", property.getName());
         assertEquals(1, property.getValues().size());
         LiteralValueNode literal = assertInstanceOf(LiteralValueNode.class, property.getValues().get(0));
-        assertEquals("func(" + compactIntrinsic + ",'quux')", literal.getText());
+        assertEquals("func(" + compactIntrinsic + ", 'quux')", literal.getText());
     }
 
     @Test

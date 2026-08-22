@@ -478,6 +478,104 @@ public class InlineTokenizerTest {
     }
 
     @Test
+    public void Literal_Source_Text_Preserves_Interior_Whitespace_And_Uses_Token_Bounds() {
+        var tokenizer = new InlineTokenizer("\t  my    styles . css  \t", new Location(0, 0));
+        InlineToken first = tokenizer.remove(CurlyTokenType.IDENTIFIER);
+        tokenizer.remove(CurlyTokenType.IDENTIFIER);
+        tokenizer.remove(CurlyTokenType.DOT);
+        InlineToken last = tokenizer.remove(CurlyTokenType.IDENTIFIER);
+
+        assertEquals("my    styles . css", tokenizer.getLiteralSourceText(first, last));
+    }
+
+    @Test
+    public void Literal_Source_Text_Omits_Block_Comments_And_Keeps_Adjacent_Whitespace() {
+        var tokenizer = new InlineTokenizer("foo /* explanation */ bar", new Location(0, 0));
+        InlineToken first = tokenizer.remove(CurlyTokenType.IDENTIFIER);
+        InlineToken last = tokenizer.remove(CurlyTokenType.IDENTIFIER);
+
+        assertEquals("foo  bar", tokenizer.getLiteralSourceText(first, last));
+    }
+
+    @Test
+    public void Literal_Source_Text_Omits_Line_Comments_And_Keeps_Line_Break() {
+        var tokenizer = new InlineTokenizer(
+            "call(foo // explanation\r\n    , bar)", new Location(0, 0));
+        InlineToken first = tokenizer.remove(CurlyTokenType.IDENTIFIER);
+        InlineToken last = first;
+
+        while (!tokenizer.isEmpty()) {
+            last = tokenizer.remove();
+        }
+
+        assertEquals("call(foo \r\n    , bar)", tokenizer.getLiteralSourceText(first, last));
+    }
+
+    @Test
+    public void Literal_Source_Text_Keeps_Comment_Like_Text_Inside_Quoted_Tokens() {
+        var tokenizer = new InlineTokenizer(
+            "  call('/* literal */ // text')  ", new Location(0, 0));
+        InlineToken first = tokenizer.remove(CurlyTokenType.IDENTIFIER);
+        InlineToken last = first;
+
+        while (!tokenizer.isEmpty()) {
+            last = tokenizer.remove();
+        }
+
+        assertEquals("call('/* literal */ // text')", tokenizer.getLiteralSourceText(first, last));
+    }
+
+    @Test
+    public void Literal_Source_Text_Is_Stable_Across_Mark_And_Reset() {
+        var tokenizer = new InlineTokenizer("  foo /* comment */  bar  ", new Location(0, 0));
+        tokenizer.mark();
+        InlineToken first = tokenizer.remove(CurlyTokenType.IDENTIFIER);
+        InlineToken last = tokenizer.remove(CurlyTokenType.IDENTIFIER);
+        String beforeReset = tokenizer.getLiteralSourceText(first, last);
+        tokenizer.resetToMark();
+
+        first = tokenizer.remove(CurlyTokenType.IDENTIFIER);
+        last = tokenizer.remove(CurlyTokenType.IDENTIFIER);
+
+        assertEquals("foo   bar", beforeReset);
+        assertEquals(beforeReset, tokenizer.getLiteralSourceText(first, last));
+    }
+
+    @Test
+    public void Cursor_Backed_Literal_Source_Text_Uses_Slice_Relative_Token_Offsets() {
+        String text = "prefix:  foo   . bar  ";
+        var cursor = new SourceCursor(SourceMappedText.identity(text, new Location(2, 5)));
+        cursor.setOffset("prefix:".length());
+        var tokenizer = new InlineTokenizer(cursor);
+        InlineToken first = tokenizer.remove(CurlyTokenType.IDENTIFIER);
+        tokenizer.remove(CurlyTokenType.DOT);
+        InlineToken last = tokenizer.remove(CurlyTokenType.IDENTIFIER);
+
+        assertEquals("foo   . bar", tokenizer.getLiteralSourceText(first, last));
+
+        tokenizer.commit();
+        assertEquals(text.length(), cursor.getOffset());
+    }
+
+    @Test
+    public void Decoded_Xml_Literal_Source_Text_Is_Logical_And_Token_Spans_Project_To_Raw_Source() {
+        String raw = "  foo&#32;&#32;bar . css  ";
+        var input = SourceMappedText.decodedXml(raw, new Location(2, 4), XmlEntityDecoder.decode(raw));
+        var tokenizer = new InlineTokenizer(input);
+        InlineToken first = tokenizer.remove(CurlyTokenType.IDENTIFIER);
+        tokenizer.remove(CurlyTokenType.IDENTIFIER);
+        tokenizer.remove(CurlyTokenType.DOT);
+        InlineToken last = tokenizer.remove(CurlyTokenType.IDENTIFIER);
+        SourceInfo span = SourceInfo.span(first.getSourceInfo(), last.getSourceInfo());
+
+        assertEquals("foo  bar . css", tokenizer.getLiteralSourceText(first, last));
+        assertEquals(new SourceInfo(2, 6, 2, 20), span);
+        assertEquals(
+            new SourceInfo(2, 4 + raw.indexOf("foo"), 2, 4 + raw.indexOf("css") + 3),
+            span.toOriginal());
+    }
+
+    @Test
     public void Tokenize_Adjacent_Number_And_Identifier_Separately() {
         var tokenizer = new InlineTokenizer("123value", new Location(-1, -1));
 
