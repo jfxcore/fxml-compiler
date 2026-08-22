@@ -197,7 +197,7 @@ public final class MarkupCompiler extends AbstractCompiler {
         }
 
         String libraryVersion = checkVersion(
-            () -> SemanticVersion.parse(versionInfo.libraryVersion()),
+            versionInfo::libraryVersion,
             v -> v.compareTo(RUNTIME_LIBRARY_MIN_VERSION) < 0,
             s -> logger.warn(
                 "Unsupported jfxcore.markup library version %s (required %s or later)"
@@ -205,7 +205,7 @@ public final class MarkupCompiler extends AbstractCompiler {
 
         if (libraryVersion != null) {
             checkVersion(
-                () -> SemanticVersion.parse(versionInfo.minCompilerVersion()),
+                versionInfo::minCompilerVersion,
                 v -> v.compareTo(SemanticVersion.parse(VersionInfo.getVersion())) > 0,
                 s -> logger.warn("""
                     jfxcore.markup library version %s requires FXML/2 compiler version %s or higher,
@@ -215,14 +215,15 @@ public final class MarkupCompiler extends AbstractCompiler {
         }
     }
 
-    private String checkVersion(Supplier<SemanticVersion> versionInfo,
+    private String checkVersion(Supplier<String> versionInfo,
                                 Predicate<SemanticVersion> test,
                                 Consumer<String> warn) {
         SemanticVersion version;
         String versionString;
 
         try {
-            version = versionInfo.get();
+            String v = versionInfo.get();
+            version = v != null ? SemanticVersion.parse(v) : null;
             versionString = version != null ? version.toString() : "<unknown>";
         } catch (IllegalArgumentException ignored) {
             version = null;
