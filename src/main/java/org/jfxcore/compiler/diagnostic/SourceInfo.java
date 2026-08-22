@@ -418,6 +418,10 @@ public final class SourceInfo {
         return source != null ? source.toOriginal(start, end) : this;
     }
 
+    public SourceInfo toOneBased() {
+        return new SourceInfo(start.getLine() + 1, start.getColumn() + 1, end.getLine() + 1, end.getColumn() + 1);
+    }
+
     @Override
     public String toString() {
         if (start.equals(end)) {

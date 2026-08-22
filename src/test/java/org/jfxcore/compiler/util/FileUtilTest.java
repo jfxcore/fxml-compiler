@@ -22,7 +22,7 @@ public class FileUtilTest {
     @Test
     public void JavaStubFile_For_Single_Document() {
         var document = new DocumentNode(
-            Path.of("foo", "bar", "MyCustomNode"), List.of(),
+            Path.of("foo", "bar", "MyCustomNode"), List.of(), List.of(),
             new ObjectNode(
                 new TypeNode("TestNode", SourceInfo.none()),
                 List.of(), List.of(), false, SourceInfo.none()));
@@ -33,7 +33,7 @@ public class FileUtilTest {
     @Test
     public void JavaStubFile_For_Document_With_CodeBehind() {
         var document = new DocumentNode(
-            Path.of("foo", "bar", "MyCustomNode"), List.of(),
+            Path.of("foo", "bar", "MyCustomNode"), List.of(), List.of(),
             new ObjectNode(
                 new TypeNode("TestNode", SourceInfo.none()),
                 List.of(new PropertyNode(
@@ -48,7 +48,7 @@ public class FileUtilTest {
     @Test
     public void JavaStubFile_For_Document_With_CodeBehind_Must_Match_MarkupFileName() {
         var document = new DocumentNode(
-            Path.of("foo", "bar", "MyCustomNode"), List.of(),
+            Path.of("foo", "bar", "MyCustomNode"), List.of(), List.of(),
             new ObjectNode(
                 new TypeNode("TestNode", SourceInfo.none()),
                 List.of(new PropertyNode(
@@ -64,7 +64,7 @@ public class FileUtilTest {
     @Test
     public void JavaStubFile_For_Document_With_CodeBehind_Must_Contain_Fully_Qualified_ClassName() {
         var document = new DocumentNode(
-            Path.of("foo", "bar", "MyCustomNode"), List.of(),
+            Path.of("foo", "bar", "MyCustomNode"), List.of(), List.of(),
             new ObjectNode(
                 new TypeNode("TestNode", SourceInfo.none()),
                 List.of(new PropertyNode(
@@ -80,7 +80,7 @@ public class FileUtilTest {
     @Test
     public void JavaStubFile_For_Document_With_CustomStubFile() {
         var document = new DocumentNode(
-            Path.of("foo", "bar", "MyCustomNode"), List.of(),
+            Path.of("foo", "bar", "MyCustomNode"), List.of(), List.of(),
             new ObjectNode(
                 new TypeNode("TestNode", SourceInfo.none()),
                 List.of(new PropertyNode(
@@ -95,7 +95,7 @@ public class FileUtilTest {
     @Test
     public void JavaStubFile_For_Document_With_CustomStubFile_Must_Not_Contain_Fully_Qualified_ClassName() {
         var document = new DocumentNode(
-            Path.of("foo", "bar", "MyCustomNode"), List.of(),
+            Path.of("foo", "bar", "MyCustomNode"), List.of(), List.of(),
             new ObjectNode(
                 new TypeNode("TestNode", SourceInfo.none()),
                 List.of(new PropertyNode(

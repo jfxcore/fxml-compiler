@@ -246,4 +246,17 @@ public class FileUtil {
 
         return path;
     }
+
+    public static String getPortablePath(Path path) {
+        StringBuilder result = new StringBuilder();
+        for (Path element : path) {
+            if (!result.isEmpty()) {
+                result.append('/');
+            }
+
+            result.append(element);
+        }
+
+        return result.toString();
+    }
 }

@@ -34,6 +34,8 @@ import java.net.URL;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Objects;
+import java.util.Comparator;
+import java.util.List;
 import java.util.Set;
 
 @SuppressWarnings("unused")
@@ -72,9 +74,17 @@ public final class MarkupCompiler extends AbstractCompiler {
         var codeTransformer = Transformer.getCodeTransformer(classPool);
         var bytecodeTransformer = Transformer.getBytecodeTransformer(classPool);
 
-        for (CompilationUnitDescriptor descriptor : descriptors) {
+        List<CompilationUnitDescriptor> orderedDescriptors = descriptors.stream()
+            .sorted(Comparator
+                .comparing((CompilationUnitDescriptor d) -> FileUtil.getPortablePath(d.sourceFile()))
+                .thenComparing(descriptor -> descriptor.markupClass().fullName())
+                .thenComparing(descriptor -> descriptor.absoluteSourceFile().toAbsolutePath().normalize().toString()))
+            .toList();
+
+        for (CompilationUnitDescriptor descriptor : orderedDescriptors) {
             compileSingleFile(descriptor, codeTransformer, bytecodeTransformer);
         }
+
     }
 
     private void compileSingleFile(CompilationUnitDescriptor descriptor,
@@ -85,6 +95,7 @@ public final class MarkupCompiler extends AbstractCompiler {
         try (var ignored = new CompilationScope(context)) {
             var parser = new FxmlParser(descriptor.sourceFile(), descriptor.sourceText(), descriptor.embeddingContext());
             var document = parser.parseDocument();
+
             var codeDocument = (DocumentNode)codeTransformer.transform(document, null, null);
             ClassNode classNode = (ClassNode)codeDocument.getRoot();
 
@@ -116,7 +127,7 @@ public final class MarkupCompiler extends AbstractCompiler {
                 document, codeBehindClass, markupClass);
 
             BytecodeEmitContext emitContext = new BytecodeEmitContext(
-                codeBehindClass, markupClass, rootNode, document.getImports(), bytecode);
+                document.getDocumentName(), codeBehindClass, markupClass, rootNode, document.getImports(), bytecode);
 
             emitContext.emitRootNode();
 
@@ -139,8 +150,14 @@ public final class MarkupCompiler extends AbstractCompiler {
             flushModifiedClasses(context);
         } catch (MarkupException ex) {
             EmbeddingContext embeddingContext = descriptor.embeddingContext();
-            ex.setSourceOffset(embeddingContext != null ? embeddingContext.sourceOffset() : null);
-            ex.setSourceFile(descriptor.absoluteSourceFile().toFile());
+            if (ex.getSourceOffset() == null && embeddingContext != null) {
+                ex.setSourceOffset(embeddingContext.sourceOffset());
+            }
+
+            if (ex.getSourceFile() == null) {
+                ex.setSourceFile(descriptor.absoluteSourceFile().toFile());
+            }
+
             throw ex;
         } catch (BadBytecode | URISyntaxException | CannotCompileException ex) {
             MarkupException m = GeneralErrors.internalError(ex.getMessage());

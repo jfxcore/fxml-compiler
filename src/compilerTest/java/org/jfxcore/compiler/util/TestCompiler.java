@@ -10,6 +10,7 @@ import org.jfxcore.compiler.ast.codebehind.JavaEmitContext;
 import org.jfxcore.compiler.ast.emit.BytecodeEmitContext;
 import org.jfxcore.compiler.ast.emit.EmitInitializeRootNode;
 import org.jfxcore.compiler.parse.FxmlParser;
+import org.jfxcore.compiler.resource.EmbeddedResource;
 import org.jfxcore.compiler.transform.Transformer;
 import org.jfxcore.compiler.type.TypeDeclaration;
 import javax.tools.Diagnostic;
@@ -67,6 +68,7 @@ public class TestCompiler extends AbstractCompiler {
         ClassNode classNode;
         StringBuilder codeBehind = new StringBuilder();
         DocumentNode document;
+        List<EmbeddedResource> embeddedResources;
         String simpleClassName;
         Path fxmlTestSourcePath = Path.of("org/jfxcore/compiler/" + fileName + ".fxml");
 
@@ -77,6 +79,7 @@ public class TestCompiler extends AbstractCompiler {
 
         try (CompilationScope ignored = new CompilationScope(context)) {
             document = new FxmlParser(fxmlTestSourcePath, source, null).parseDocument();
+            embeddedResources = document.getResources();
 
             DocumentNode codeDocument = (DocumentNode)Transformer.getCodeTransformer(classPool)
                 .transform(document, null, null);
@@ -155,7 +158,8 @@ public class TestCompiler extends AbstractCompiler {
 
             Bytecode bytecode = new Bytecode(generatedClass, 1);
             BytecodeEmitContext bytecodeContext = new BytecodeEmitContext(
-                generatedClass, generatedClass, transformedNode, document.getImports(), bytecode);
+                document.getDocumentName(), generatedClass, generatedClass,
+                transformedNode, document.getImports(), bytecode);
             bytecodeContext.emitRootNode();
 
             MethodInfo methodInfo = generatedClass.jvmType().getClassFile().getMethod("initializeComponent");
@@ -174,11 +178,37 @@ public class TestCompiler extends AbstractCompiler {
                 nestedClass.jvmType().writeFile(outDir.toString());
             }
 
+            materializeResource(outDir, embeddedResources);
+
             return (Class<T>)Class.forName(generatedClass.name());
         } catch (RuntimeException ex) {
             throw ex;
         } catch (Throwable ex) {
             throw new RuntimeException(ex);
+        }
+    }
+
+    private void materializeResource(Path outDir, List<EmbeddedResource> resources) throws IOException {
+        Path normalizedOutDir = outDir.toAbsolutePath().normalize();
+
+        for (EmbeddedResource resource : resources) {
+            Path outputFile = normalizedOutDir;
+            for (String component : resource.logicalPath().split("/")) {
+                outputFile = outputFile.resolve(component);
+            }
+
+            outputFile = outputFile.normalize();
+            if (!outputFile.startsWith(normalizedOutDir)) {
+                throw new IOException(
+                    "Generated resource escapes the class output directory: " + resource.logicalPath());
+            }
+
+            Files.createDirectories(outputFile.getParent());
+            Files.write(
+                outputFile,
+                resource.content(),
+                StandardOpenOption.CREATE,
+                StandardOpenOption.TRUNCATE_EXISTING);
         }
     }
 }

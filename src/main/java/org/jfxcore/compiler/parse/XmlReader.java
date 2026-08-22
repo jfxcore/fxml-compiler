@@ -36,6 +36,7 @@ public class XmlReader {
     public final static String ELEMENT_NAME_SOURCE_INFO_KEY = XmlReader.class.getName() + "$elemNameSourceInfo";
     public final static String ATTR_VALUE_SOURCE_INFO_KEY = XmlReader.class.getName() + "$attrValueSourceInfo";
     public final static String ATTR_VALUE_SOURCE_MAPPED_TEXT_KEY = XmlReader.class.getName() + "$attrValueSourceMappedText";
+    public final static String PI_DATA_SOURCE_MAPPED_TEXT_KEY = XmlReader.class.getName() + "$piDataSourceMappedText";
     public final static String NAMESPACE_TO_PREFIX_MAP_KEY = XmlReader.class.getName() + "$namespaceToPrefix";
 
     private final static String XML_RESERVED_NAMESPACE = "http://www.w3.org/XML/1998/namespace";
@@ -102,21 +103,23 @@ public class XmlReader {
         }
 
         var builder = new StringBuilder();
+        var dataStart = SourceInfo.after(token.getSourceInfo());
 
         while (tokenizer.peekNotNull().getType() != CLOSE_PROCESSING_INSTRUCTION) {
             builder.append(tokenizer.remove().getValue());
         }
 
-        String data = builder.toString().trim();
+        String data = builder.toString();
         SourceInfo end = tokenizer.remove(CLOSE_PROCESSING_INSTRUCTION).getSourceInfo();
         ProcessingInstruction pi = document.createProcessingInstruction(token.getValue(), data);
         pi.setUserData(SOURCE_INFO_KEY, SourceInfo.span(start, end), null);
+        pi.setUserData(PI_DATA_SOURCE_MAPPED_TEXT_KEY, SourceMappedText.identity(data, dataStart.getStart()), null);
         return pi;
     }
 
     private Node readText(boolean preserveWhitespace) {
         XmlToken nextToken = tokenizer.peekNotNull();
-        if (nextToken.getType() == OPEN_BRACKET || nextToken.getType() == COMMENT_START) {
+        if (isMarkupStart(nextToken.getType())) {
             return null;
         }
 
@@ -140,7 +143,7 @@ public class XmlReader {
             end = token.getSourceInfo();
             builder.append(token.getValue());
             nextToken = tokenizer.peekNotNull();
-        } while (characterData || nextToken.getType() != OPEN_BRACKET && nextToken.getType() != COMMENT_START);
+        } while (characterData || !isMarkupStart(nextToken.getType()));
 
         String value;
 
@@ -234,14 +237,30 @@ public class XmlReader {
             tokenizer.removeSkipWS(CLOSE_BRACKET);
 
             while (!tokenizer.containsAheadSkipWS(OPEN_BRACKET, SLASH)) {
-                Node text = readText(preserveWhitespace);
-                if (text != null) {
-                    element.appendChild(text);
-                } else {
-                    eatComment();
-                    Element child = readElement();
-                    if (child != null) {
-                        element.appendChild(child);
+                XmlToken next = tokenizer.peekNotNull();
+
+                switch (next.getType()) {
+                    case COMMENT_START -> eatComment();
+
+                    case OPEN_PROCESSING_INSTRUCTION -> {
+                        ProcessingInstruction pi = readProcessingInstruction(false);
+                        if (pi != null) {
+                            element.appendChild(pi);
+                        }
+                    }
+
+                    case OPEN_BRACKET -> {
+                        Element child = readElement();
+                        if (child != null) {
+                            element.appendChild(child);
+                        }
+                    }
+
+                    default -> {
+                        Node text = readText(preserveWhitespace);
+                        if (text != null) {
+                            element.appendChild(text);
+                        }
                     }
                 }
             }
@@ -273,6 +292,12 @@ public class XmlReader {
         }
 
         tokenizer.remove(COMMENT_END);
+    }
+
+    private boolean isMarkupStart(XmlTokenType type) {
+        return type == OPEN_BRACKET
+            || type == COMMENT_START
+            || type == OPEN_PROCESSING_INSTRUCTION;
     }
 
     private void processNamespaces(List<Attribute> attributes) {

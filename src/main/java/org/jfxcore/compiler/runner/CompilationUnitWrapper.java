@@ -3,11 +3,14 @@
 
 package org.jfxcore.compiler.runner;
 
+import java.util.List;
+
 public final class CompilationUnitWrapper extends ReflectiveWrapper {
 
     private static final MethodRequirement[] REQUIRED_METHODS = {
         new MethodRequirement("descriptor", Object.class),
-        new MethodRequirement("generatedSourceText", String.class)
+        new MethodRequirement("generatedSourceText", String.class),
+        new MethodRequirement("embeddedResources", List.class)
     };
 
     public CompilationUnitWrapper(Object target) {
@@ -20,5 +23,11 @@ public final class CompilationUnitWrapper extends ReflectiveWrapper {
 
     public String generatedSourceText() {
         return (String)invoke("generatedSourceText");
+    }
+
+    public List<EmbeddedResourceWrapper> embeddedResources() {
+        @SuppressWarnings("unchecked")
+        List<Object> resources = (List<Object>)invoke("embeddedResources");
+        return resources.stream().map(EmbeddedResourceWrapper::new).toList();
     }
 }

@@ -8,6 +8,8 @@ import org.jfxcore.compiler.diagnostic.SourceInfo;
 import org.jfxcore.compiler.ast.codebehind.ClassNode;
 import org.jfxcore.compiler.ast.codebehind.JavaEmitContext;
 import org.jfxcore.compiler.ast.codebehind.JavaEmitterNode;
+import org.jfxcore.compiler.resource.EmbeddedResource;
+import org.jfxcore.compiler.util.FileUtil;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -16,13 +18,21 @@ import java.util.List;
 public class DocumentNode extends AbstractNode implements JavaEmitterNode {
 
     private final Path sourceFile;
+    private final String documentName;
     private final List<String> imports;
+    private final List<EmbeddedResource> resources;
     private Node root;
 
-    public DocumentNode(Path sourceFile, Collection<String> imports, Node root) {
+    public DocumentNode(
+            Path sourceFile,
+            Collection<String> imports,
+            Collection<EmbeddedResource> resources,
+            Node root) {
         super(SourceInfo.none());
         this.sourceFile = checkNotNull(sourceFile);
+        this.documentName = FileUtil.getFileNameWithoutExtension(sourceFile.getFileName().toString());
         this.imports = new ArrayList<>(checkNotNull(imports));
+        this.resources = List.copyOf(checkNotNull(resources));
         this.root = checkNotNull(root);
     }
 
@@ -30,8 +40,16 @@ public class DocumentNode extends AbstractNode implements JavaEmitterNode {
         return sourceFile;
     }
 
+    public String getDocumentName() {
+        return documentName;
+    }
+
     public List<String> getImports() {
         return imports;
+    }
+
+    public List<EmbeddedResource> getResources() {
+        return resources;
     }
 
     public Node getRoot() {
@@ -71,6 +89,6 @@ public class DocumentNode extends AbstractNode implements JavaEmitterNode {
 
     @Override
     public DocumentNode deepClone() {
-        return new DocumentNode(sourceFile, imports, root.deepClone()).copy(this);
+        return new DocumentNode(sourceFile, imports, resources, root.deepClone()).copy(this);
     }
 }

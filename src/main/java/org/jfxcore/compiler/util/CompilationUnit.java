@@ -3,12 +3,22 @@
 
 package org.jfxcore.compiler.util;
 
+import org.jfxcore.compiler.resource.EmbeddedResource;
+import java.util.Comparator;
+import java.util.List;
 import java.util.Objects;
 
-public record CompilationUnit(CompilationUnitDescriptor descriptor, String generatedSourceText) {
+public record CompilationUnit(
+        CompilationUnitDescriptor descriptor,
+        List<EmbeddedResource> embeddedResources,
+        String generatedSourceText) {
 
     public CompilationUnit {
         Objects.requireNonNull(descriptor, "descriptor");
         Objects.requireNonNull(generatedSourceText, "generatedSourceText");
+
+        embeddedResources = embeddedResources.stream()
+            .sorted(Comparator.comparing(EmbeddedResource::logicalPath))
+            .toList();
     }
 }

@@ -50,6 +50,29 @@ public class ClassPathResourceExtensionTest extends CompilerTestBase {
     }
 
     @Test
+    public void Embedded_Resource_Takes_Precedence_Over_Relative_Fallback() {
+        TestLabel root = compileAndRun("""
+            <?resource image.jpg:embedded?>
+            <TestLabel xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                       text="@image.jpg"/>
+        """);
+
+        assertTrue(root.getText().endsWith("$image.jpg"));
+    }
+
+    @Test
+    public void Absolute_Resource_Name_Skips_Embedded_Lookup() {
+        TestLabel root = compileAndRun("""
+            <?resource image.jpg:embedded?>
+            <TestLabel xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                       text="@/org/jfxcore/compiler/image.jpg"/>
+        """);
+
+        assertTrue(root.getText().endsWith("org/jfxcore/compiler/image.jpg"));
+        assertFalse(root.getText().endsWith("$image.jpg"));
+    }
+
+    @Test
     public void Prefix_Syntax_With_Relative_Location_Is_Evaluated_Correctly() throws Exception {
         TestLabel root = compileAndRun("""
             <?import org.jfxcore.markup.resource.*?>

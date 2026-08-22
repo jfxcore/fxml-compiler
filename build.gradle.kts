@@ -106,8 +106,15 @@ val copyVersionInfo = tasks.register<Copy>("copyVersionInfo") {
     }
 }
 
+val copyResourceNameEncoder = tasks.register<Copy>("copyResourceNameEncoder") {
+    from("${gradle.includedBuild("markup").projectDir}/src/main/java/org/jfxcore/markup/resource/ResourceNameEncoder.java")
+    into("${layout.buildDirectory.get()}/generated/java/main/org/jfxcore/compiler/resource")
+    filter { it.replace("org.jfxcore.markup.resource", "org.jfxcore.compiler.resource") }
+}
+
 tasks.compileJava {
     dependsOn(copyVersionInfo)
+    dependsOn(copyResourceNameEncoder)
     dependsOn(gradle.includedBuild("jfx").task(":sdk"))
     dependsOn(gradle.includedBuild("markup").task(":jar"))
     options.release = 17
@@ -115,6 +122,7 @@ tasks.compileJava {
 
 tasks.named<Jar>("sourcesJar") {
     dependsOn(copyVersionInfo)
+    dependsOn(copyResourceNameEncoder)
     duplicatesStrategy = DuplicatesStrategy.INCLUDE
 }
 
