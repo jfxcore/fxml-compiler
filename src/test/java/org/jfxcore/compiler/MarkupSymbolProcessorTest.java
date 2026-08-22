@@ -76,7 +76,7 @@ public class MarkupSymbolProcessorTest {
 
         assertSame(dependencies, invocation[0]);
         assertEquals(List.of(sourceFile), ((Dependencies)invocation[0]).getOriginatingFiles());
-        assertEquals("sample/View$b27ef71c$dark theme.txt", invocation[1]);
+        assertEquals("sample/View$b27ef71c$dark+theme.txt", invocation[1]);
         assertEquals("", invocation[2]);
         assertArrayEquals(content, output.toByteArray());
     }

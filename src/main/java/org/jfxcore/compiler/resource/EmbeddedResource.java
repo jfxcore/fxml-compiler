@@ -55,7 +55,7 @@ public final class EmbeddedResource {
         crc.update(documentName.getBytes(StandardCharsets.UTF_8));
         crc.update(logicalName.toLowerCase(Locale.ROOT).getBytes(StandardCharsets.UTF_8));
         String hash = Long.toHexString(crc.getValue());
-        String resourceFileName = documentName + "$" + hash + "$" + logicalName;
+        String resourceFileName = documentName + "$" + hash + "$" + ResourceNameEncoder.encode(logicalName);
 
         Path parent = sourceFile.getParent();
         if (parent == null) {

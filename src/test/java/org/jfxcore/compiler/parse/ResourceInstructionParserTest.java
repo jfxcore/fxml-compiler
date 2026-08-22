@@ -45,7 +45,7 @@ public class ResourceInstructionParserTest {
 
         assertEquals(bare.logicalName(), quoted.logicalName());
         assertEquals("dark theme.css", spaced.logicalName());
-        assertEquals("sample/View$d6870e81$dark theme.css", spaced.logicalPath());
+        assertEquals("sample/View$d6870e81$dark+theme.css", spaced.logicalPath());
     }
 
     @ParameterizedTest

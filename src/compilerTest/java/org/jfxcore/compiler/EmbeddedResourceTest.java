@@ -125,7 +125,7 @@ public class EmbeddedResourceTest extends CompilerTestBase {
     }
 
     @Test
-    public void Resource_With_Spaces_Uses_Normal_Url_Encoding() throws Exception {
+    public void Resource_With_Spaces_Uses_Safe_Encoding() throws Exception {
         TestLabel root = compileAndRun("""
             <?import org.jfxcore.markup.resource.*?>
             <?resource "dark theme.xyz" text/css:.root {}?>
@@ -133,7 +133,7 @@ public class EmbeddedResourceTest extends CompilerTestBase {
                        text="{ClassPathResource 'dark theme.xyz'}"/>
         """);
 
-        assertTrue(root.getText().endsWith("$dark%20theme.xyz"));
+        assertTrue(root.getText().endsWith("$dark+theme.xyz"));
         assertEquals(".root {}", read(URI.create(root.getText()).toURL()));
     }
 
