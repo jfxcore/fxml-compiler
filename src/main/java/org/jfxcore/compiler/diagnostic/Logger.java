@@ -6,4 +6,5 @@ package org.jfxcore.compiler.diagnostic;
 public interface Logger {
     void fine(String message);
     void info(String message);
+    void warn(String message);
 }

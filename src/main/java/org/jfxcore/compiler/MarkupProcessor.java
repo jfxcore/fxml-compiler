@@ -362,6 +362,11 @@ public final class MarkupProcessor extends AbstractProcessor {
         public void info(String message) {
             messager.printMessage(Diagnostic.Kind.NOTE, message);
         }
+
+        @Override
+        public void warn(String message) {
+            messager.printMessage(Diagnostic.Kind.MANDATORY_WARNING, message);
+        }
     }
 
     private record AnnotationInfo(TypeElement element, AnnotationMirror annotation, AnnotationValue value) {}

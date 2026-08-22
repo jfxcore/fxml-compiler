@@ -90,5 +90,6 @@ public class ClassGeneratorTest {
     private static final class SilentLogger implements Logger {
         @Override public void fine(String message) {}
         @Override public void info(String message) {}
+        @Override public void warn(String message) {}
     }
 }
