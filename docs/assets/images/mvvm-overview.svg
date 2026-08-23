@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg"
+     width="1200"
+     height="360"
+     viewBox="0 0 1200 360"
+     role="img"
+     aria-labelledby="title description">
+    <title id="title">MVVM communication flow</title>
+    <desc id="description">
+        The View sends bindings and commands to the ViewModel. The ViewModel updates the Model. Model updates flow
+        back to the ViewModel, and ViewModel updates flow back to the View. The ViewModel can also request an
+        interaction from the View. The View is paired with a code-behind class.
+    </desc>
+
+    <defs>
+        <filter id="shadow" x="-20%" y="-20%" width="140%" height="160%">
+            <feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#182230" flood-opacity="0.14"/>
+        </filter>
+
+        <marker id="arrow-forward"
+                viewBox="0 0 10 10"
+                refX="9"
+                refY="5"
+                markerWidth="8"
+                markerHeight="8"
+                orient="auto">
+            <path d="M 0 0 L 10 5 L 0 10 Z" fill="#2f67b2"/>
+        </marker>
+
+        <marker id="arrow-update"
+                viewBox="0 0 10 10"
+                refX="9"
+                refY="5"
+                markerWidth="8"
+                markerHeight="8"
+                orient="auto">
+            <path d="M 0 0 L 10 5 L 0 10 Z" fill="#278064"/>
+        </marker>
+
+        <marker id="arrow-request"
+                viewBox="0 0 10 10"
+                refX="9"
+                refY="5"
+                markerWidth="8"
+                markerHeight="8"
+                orient="auto">
+            <path d="M 0 0 L 10 5 L 0 10 Z" fill="#c45f1a"/>
+        </marker>
+
+        <style>
+            .diagram-text {
+                fill: #182230;
+                font-family: Inter, "Segoe UI", Arial, sans-serif;
+            }
+
+            .box-title {
+                font-size: 25px;
+                font-weight: 650;
+                text-anchor: middle;
+            }
+
+            .arrow-label {
+                font-size: 20px;
+                font-weight: 600;
+                text-anchor: middle;
+            }
+
+            .code-behind-label {
+                font-size: 20px;
+                font-weight: 600;
+                text-anchor: middle;
+            }
+
+            .forward {
+                fill: none;
+                stroke: #2f67b2;
+                stroke-linecap: round;
+                stroke-width: 3;
+                marker-end: url(#arrow-forward);
+            }
+
+            .update {
+                fill: none;
+                stroke: #278064;
+                stroke-linecap: round;
+                stroke-width: 3;
+                marker-end: url(#arrow-update);
+            }
+
+            .request {
+                fill: none;
+                stroke: #c45f1a;
+                stroke-dasharray: 8 7;
+                stroke-linecap: round;
+                stroke-width: 3;
+                marker-end: url(#arrow-request);
+            }
+        </style>
+    </defs>
+
+    <rect x="1" y="1" width="1198" height="358" rx="18" fill="#ffffff" stroke="#d9e0ea" stroke-width="2"/>
+
+    <path class="request" d="M 555 150 C 555 46, 160 46, 160 150"/>
+    <text class="diagram-text arrow-label" x="357.5" y="55" fill="#9d4811">Interaction requests</text>
+
+    <path class="forward" d="M 275 178 H 485"/>
+    <text class="diagram-text arrow-label" x="380" y="140" fill="#254f86">Bindings /</text>
+    <text class="diagram-text arrow-label" x="380" y="165" fill="#254f86">Commands</text>
+
+    <path class="forward" d="M 715 178 H 925"/>
+    <text class="diagram-text arrow-label" x="820" y="155" fill="#254f86">Updates</text>
+
+    <path class="update" d="M 485 214 H 275"/>
+    <text class="diagram-text arrow-label" x="380" y="250" fill="#1f654f">Notifications</text>
+
+    <path class="update" d="M 925 214 H 715"/>
+    <text class="diagram-text arrow-label" x="820" y="250" fill="#1f654f">Notifications</text>
+
+    <g filter="url(#shadow)">
+        <rect x="30" y="165" width="230" height="90" rx="14" fill="#f4f7fc" stroke="#8aa0bd" stroke-width="2"/>
+        <rect x="45" y="150" width="230" height="90" rx="14" fill="#eaf2ff" stroke="#5c7fae" stroke-width="2"/>
+        <rect x="485" y="150" width="230" height="90" rx="14" fill="#f0ecff" stroke="#7565ad" stroke-width="2"/>
+        <rect x="925" y="150" width="230" height="90" rx="14" fill="#ecf8f1" stroke="#568a6d" stroke-width="2"/>
+    </g>
+
+    <text class="diagram-text box-title" x="160" y="203">View</text>
+    <text class="diagram-text box-title" x="600" y="203">ViewModel</text>
+    <text class="diagram-text box-title" x="1040" y="203">Model</text>
+    <text class="diagram-text code-behind-label" x="142" y="283">Code-behind class</text>
+</svg>
