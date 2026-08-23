@@ -52,7 +52,7 @@ instead of JavaFX properties.
 ## Example: build a sign-in dialog
 
 {: .note }
-The Command API used in this section is available in [JFXcore.interactivity](https://github.com/jfxcore/interactivity) library.
+The Command API used in this section is available in the [interactivity](https://github.com/jfxcore/interactivity) library.
 
 The sign-in view needs four members from its view model:
 
@@ -342,7 +342,7 @@ A command represents a user action independently of the control or event that in
 the action and its availability; the view chooses how user input is translated into that action.
 
 {: .note }
-The Command API is available in [JFXcore.interactivity](https://github.com/jfxcore/interactivity) library.
+The Command API is available in the [interactivity](https://github.com/jfxcore/interactivity) library.
 
 ### Use `Command.onAction` for the common case
 
