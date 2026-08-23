@@ -150,7 +150,7 @@ authoritatively derived from view-model state, it is not implemented in the view
     <Label text="Password"/>
     <PasswordField text="#{password}" promptText="Password"/>
 
-    <Button text="Sign in" defaultButton="true" Command.onAction="$signInCommand"/>
+    <Button text="Sign in" Command.onAction="$signInCommand"/>
     <Label text="${statusMessage}"/>
 </VBox>
 ```
