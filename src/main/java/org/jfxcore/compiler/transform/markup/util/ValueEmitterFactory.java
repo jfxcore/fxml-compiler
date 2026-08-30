@@ -29,7 +29,6 @@ import org.jfxcore.compiler.type.ConstructorDeclaration;
 import org.jfxcore.compiler.type.TypeHelper;
 import org.jfxcore.compiler.type.TypeInstance;
 import org.jfxcore.compiler.util.NameHelper;
-import org.jfxcore.compiler.util.PropertyHelper;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -143,7 +142,6 @@ public final class ValueEmitterFactory {
                 // Commit only after every semantic argument plan has been selected.
                 List<ValueNode> arguments = argumentPlans.stream()
                     .map(TargetValueResolver.ValuePlan::lowerValue)
-                    .map(value -> (ValueNode)value)
                     .toList();
 
                 objectNode.getProperties().removeIf(property -> candidate.parameters().stream()
@@ -252,7 +250,7 @@ public final class ValueEmitterFactory {
             .constructor(
                 TypeHelper.getTypeInstance(objectNode), constructor,
                 List.copyOf(arguments), objectNode.getSourceInfo())
-            .children(PropertyHelper.getSorted(objectNode, objectNode.getProperties()))
+            .children(new PropertyAssignmentSorter(objectNode, objectNode.getProperties()).sort())
             .backingField(findAndRemoveId(objectNode))
             .create();
     }

@@ -175,8 +175,8 @@ public class StringConversionBindingTest extends CompilerTestBase {
     }
 
     @Test
-    public void StringConverter_On_Parent_Pane_Is_Null_At_Time_Of_Binding() {
-        NullPointerException ex = assertThrows(NullPointerException.class, () -> compileAndRun("""
+    public void StringConverter_On_Parent_Pane_Is_Initialized_Before_Binding() {
+        TestPane root = compileAndRun("""
             <?import javafx.util.converter.*?>
             <?import javafx.scene.control.*?>
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0" prefWidth="10">
@@ -185,9 +185,10 @@ public class StringConversionBindingTest extends CompilerTestBase {
                 </myConverter>
                 <Label text="#{prefWidth; converter=myConverter}"/>
             </TestPane>
-        """));
+        """);
 
-        assertEquals("Converter cannot be null", ex.getMessage());
+        assertInstanceOf(DoubleStringConverter.class, root.myConverterProperty().get());
+        assertEquals("10.0", ((Label)root.getChildren().get(0)).getText());
     }
 
     @Test

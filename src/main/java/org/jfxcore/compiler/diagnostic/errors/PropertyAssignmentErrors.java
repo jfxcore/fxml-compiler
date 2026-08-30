@@ -156,6 +156,15 @@ public class PropertyAssignmentErrors {
             ErrorCode.DUPLICATE_PROPERTY, formatPropertyName(declaringType, propertyName)));
     }
 
+    public static MarkupException cyclicPropertyAssignment(SourceInfo sourceInfo, List<PropertyInfo> properties) {
+        String path = properties.stream()
+            .map(PropertyInfo::getName)
+            .collect(Collectors.joining(" -> "));
+
+        return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(
+            ErrorCode.CYCLIC_PROPERTY_ASSIGNMENT, path));
+    }
+
     public static MarkupException unsuitableEventHandler(
             SourceInfo sourceInfo, TypeDeclaration eventType, String methodName) {
         return new MarkupException(sourceInfo, Diagnostic.newDiagnostic(

@@ -502,7 +502,7 @@ public class FunctionBindingTest extends CompilerTestBase {
     }
 
     @Test
-    public void Bind_Once_With_ParentScope_Function_And_Argument_Does_Not_Apply_Latest_Value() {
+    public void Bind_Once_With_ParentScope_Function_And_Argument_Applies_Assigned_Values() {
         TestPane root = compileAndRun("""
             <?import javafx.scene.layout.*?>
             <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
@@ -515,7 +515,7 @@ public class FunctionBindingTest extends CompilerTestBase {
 
         assertNewFunctionExpr(root, 0);
         Pane pane = (Pane)((Pane)root.getChildren().get(0)).getChildren().get(0);
-        assertEquals(-2, pane.getPrefWidth(), 0.001);
+        assertEquals(3, pane.getPrefWidth(), 0.001);
     }
 
     @Test
