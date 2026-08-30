@@ -398,7 +398,7 @@ public class BindingSourceTest extends CompilerTestBase {
     public class ContextSelector extends CompilerTestBase {
 
         @Test
-        public void Bind_Once_To_Parent_Property_With_Indexed_Parent_Selector_Does_Not_Apply_Latest_Value() {
+        public void Bind_Once_To_Parent_Property_With_Indexed_Parent_Selector_Applies_Assigned_Value() {
             Pane root = compileAndRun("""
                 <?import javafx.scene.layout.*?>
                 <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
@@ -414,12 +414,12 @@ public class BindingSourceTest extends CompilerTestBase {
             var pane2 = (Pane)((Pane)root.getChildren().get(0)).getChildren().get(0);
             assertEquals(123, root.getPrefHeight(), 0.001);
             assertEquals(234, pane.getPrefWidth(), 0.001);
-            assertEquals(-1, pane2.getPrefHeight(), 0.001);
-            assertEquals(-1, pane2.getPrefWidth(), 0.001);
+            assertEquals(123, pane2.getPrefHeight(), 0.001);
+            assertEquals(234, pane2.getPrefWidth(), 0.001);
         }
 
         @Test
-        public void Bind_Once_To_Parent_Property_With_Typed_Parent_Selector_Does_Not_Apply_Latest_Value() {
+        public void Bind_Once_To_Parent_Property_With_Typed_Parent_Selector_Applies_Assigned_Value() {
             Pane root = compileAndRun("""
                 <?import javafx.scene.layout.*?>
                 <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
@@ -429,7 +429,7 @@ public class BindingSourceTest extends CompilerTestBase {
             """);
 
             Pane pane = (Pane)root.getChildren().get(0);
-            assertEquals(-1, pane.getPrefWidth(), 0.001);
+            assertEquals(123, pane.getPrefWidth(), 0.001);
         }
 
         @Test

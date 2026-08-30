@@ -36,6 +36,7 @@ import org.jfxcore.compiler.transform.Transform;
 import org.jfxcore.compiler.transform.TransformContext;
 import org.jfxcore.compiler.transform.markup.util.AdderFactory;
 import org.jfxcore.compiler.transform.markup.util.MarkupExtensionInfo;
+import org.jfxcore.compiler.transform.markup.util.PropertyAssignmentSorter;
 import org.jfxcore.compiler.transform.markup.util.TargetValueResolver;
 import org.jfxcore.compiler.transform.markup.util.ValueEmitterFactory;
 import org.jfxcore.compiler.type.MethodDeclaration;
@@ -46,11 +47,9 @@ import org.jfxcore.compiler.type.TypeInstance;
 import org.jfxcore.compiler.type.TypeInvoker;
 import org.jfxcore.compiler.util.AccessVerifier;
 import org.jfxcore.compiler.util.MethodFinder;
-import org.jfxcore.compiler.util.PropertyHelper;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.ListIterator;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static org.jfxcore.compiler.type.KnownSymbols.*;
@@ -88,7 +87,7 @@ public class ObjectTransform implements Transform {
 
             return EmitObjectNode
                 .loadRoot(TypeHelper.getTypeInstance(objectNode), objectNode.getSourceInfo())
-                .children(PropertyHelper.getSorted(objectNode, objectNode.getProperties()))
+                .children(new PropertyAssignmentSorter(objectNode, objectNode.getProperties()).sort())
                 .create();
         }
 
@@ -226,12 +225,9 @@ public class ObjectTransform implements Transform {
 
         PropertyNode idProperty = node.findIntrinsicProperty(Intrinsics.ID);
         String backingField = idProperty != null ? idProperty.getTrimmedTextNotEmpty(context) : null;
-
-        List<Node> children = PropertyHelper.getSorted(
-            node,
-            node.getProperties().stream()
-                .filter(property -> property != idProperty)
-                .toList())
+        List<PropertyNode> properties = node.getProperties().stream().filter(property -> property != idProperty).toList();
+        List<Node> children = new PropertyAssignmentSorter(node, properties)
+            .sort()
             .stream()
             .map(property -> (Node)property)
             .toList();
@@ -339,13 +335,16 @@ public class ObjectTransform implements Transform {
             throw ObjectInitializationErrors.invalidMarkupExtensionUsage(argumentValue.getSourceInfo());
         }
 
+        List<PropertyNode> properties = objectNode.getProperties().stream()
+            .filter(property -> !property.isIntrinsic(Intrinsics.VALUE))
+            .toList();
+
         return EmitObjectNode
             .valueOf(nodeType, valueOfMethod, propertyNode.getSourceInfo())
             .value(argumentValue)
-            .children(
-                Stream.concat(objectNode.getChildren().stream(),
-                              objectNode.getProperties().stream().filter(n -> !n.isIntrinsic(Intrinsics.VALUE)))
-                      .collect(Collectors.toList()))
+            .children(Stream.concat(
+                objectNode.getChildren().stream(),
+                new PropertyAssignmentSorter(objectNode, properties).sort().stream()).toList())
             .backingField(findAndRemoveId(context, objectNode))
             .create();
     }
@@ -389,12 +388,16 @@ public class ObjectTransform implements Transform {
 
         AccessVerifier.verifyAccessible(factoryMethod, context.getMarkupClass(), methodInfo.sourceInfo());
 
+        List<PropertyNode> properties = objectNode.getProperties().stream()
+            .filter(property -> !property.isIntrinsic(Intrinsics.FACTORY))
+            .toList();
+
         return EmitObjectNode
             .factory(
                 TypeHelper.getTypeInstance(objectNode),
                 factoryMethod,
                 methodInfo.sourceInfo())
-            .children(objectNode.getProperties().stream().filter(p -> !p.isIntrinsic(Intrinsics.FACTORY)).toList())
+            .children(new PropertyAssignmentSorter(objectNode, properties).sort())
             .backingField(findAndRemoveId(context, objectNode))
             .create();
     }

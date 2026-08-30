@@ -57,6 +57,18 @@ public class BindingNode extends AbstractNode {
         return mode;
     }
 
+    public ExpressionNode getPath() {
+        return path;
+    }
+
+    public @Nullable ExpressionNode getConverter() {
+        return converter;
+    }
+
+    public @Nullable ExpressionNode getFormat() {
+        return format;
+    }
+
     public BindingEmitterInfo toPathEmitter(TypeInstance invokingType, @Nullable TypeInstance targetType) {
         return path.resolve(mode, invokingType, targetType).toEmitter();
     }

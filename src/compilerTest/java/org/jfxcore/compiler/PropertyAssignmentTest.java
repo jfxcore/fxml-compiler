@@ -4,7 +4,9 @@
 package org.jfxcore.compiler;
 
 import javafx.beans.property.DoubleProperty;
+import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.SimpleDoubleProperty;
+import javafx.beans.property.SimpleIntegerProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 import javafx.geometry.Pos;
@@ -1181,6 +1183,147 @@ public class PropertyAssignmentTest {
 
             assertEquals(ErrorCode.MEMBER_NOT_FOUND, ex.getDiagnostic().getCode());
             assertCodeHighlight("String", ex);
+        }
+    }
+
+    @Nested
+    public class OrderingTest extends CompilerTestBase {
+
+        @SuppressWarnings("unused")
+        public static class TestPane extends Pane {
+            private final IntegerProperty propA = new SimpleIntegerProperty(this, "propA", -1);
+            private final IntegerProperty propB = new SimpleIntegerProperty(this, "propB");
+            private final IntegerProperty propC = new SimpleIntegerProperty(this, "propC");
+            private int propAChanges;
+
+            public TestPane() {
+                propA.addListener((observable, oldValue, newValue) -> ++propAChanges);
+            }
+
+            public final IntegerProperty propAProperty() { return propA; }
+            public final int getPropA() { return propA.get(); }
+            public final void setPropA(int value) { propA.set(value); }
+            public final IntegerProperty propBProperty() { return propB; }
+            public final int getPropB() { return propB.get(); }
+            public final void setPropB(int value) { propB.set(value); }
+            public final IntegerProperty propCProperty() { return propC; }
+            public final int getPropC() { return propC.get(); }
+            public final void setPropC(int value) { propC.set(value); }
+            public final int getPropAChanges() { return propAChanges; }
+        }
+
+        @Test
+        public void Evaluate_Assignment_Is_Ordered_After_Its_Source_Property() {
+            TestPane root = compileAndRun("""
+                <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                          propA="$propB" propB="123"/>
+            """);
+
+            assertEquals(123, root.getPropA());
+        }
+
+        @Test
+        public void Evaluate_Assignment_Dependencies_Are_Transitive() {
+            TestPane root = compileAndRun("""
+                <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                          propA="$propB" propB="$propC" propC="123"/>
+            """);
+
+            assertEquals(123, root.getPropA());
+            assertEquals(123, root.getPropB());
+        }
+
+        @Test
+        public void Evaluate_Compiled_Expression_Is_Ordered_After_All_Source_Properties() {
+            TestPane root = compileAndRun("""
+                <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
+                    <propA><fx:Evaluate source="propB + propC"/></propA>
+                    <propB>100</propB>
+                    <propC>23</propC>
+                </TestPane>
+            """);
+
+            assertEquals(123, root.getPropA());
+        }
+
+        @Test
+        public void Evaluate_Element_Selector_Orders_Properties_On_Nested_Object() {
+            Pane root = compileAndRun("""
+                <?import javafx.scene.layout.*?>
+                <Pane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0">
+                    <TestPane propA="$:element.propB" propB="123"/>
+                </Pane>
+            """);
+
+            TestPane child = (TestPane)root.getChildren().get(0);
+            assertEquals(123, child.getPropA());
+        }
+
+        @Test
+        public void Evaluate_Parent_Selector_Orders_Containing_Property_After_Parent_Property() {
+            TestPane root = compileAndRun("""
+                <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                          propB="123">
+                    <TestPane propA="$:parent.propB"/>
+                </TestPane>
+            """);
+
+            TestPane child = (TestPane)root.getChildren().get(0);
+            assertEquals(123, child.getPropA());
+        }
+
+        @Test
+        public void Observable_Assignment_Is_Ordered_After_Its_Source_Property() {
+            TestPane root = compileAndRun("""
+                <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                          propA="${propB}" propB="123"/>
+            """);
+
+            assertEquals(123, root.getPropA());
+            assertEquals(1, root.getPropAChanges());
+        }
+
+        @Test
+        public void Observable_Parent_Selector_Orders_Containing_Property_After_Parent_Property() {
+            TestPane root = compileAndRun("""
+                <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                          propB="123">
+                    <TestPane propA="${:parent.propB}"/>
+                </TestPane>
+            """);
+
+            TestPane child = (TestPane)root.getChildren().get(0);
+            assertEquals(123, child.getPropA());
+            assertEquals(1, child.getPropAChanges());
+        }
+
+        @Test
+        public void Evaluate_Assignment_Cycle_Is_Invalid() {
+            MarkupException ex = assertThrows(MarkupException.class, () -> compile("""
+                <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                          propA="$propB" propB="$propA"/>
+            """));
+
+            assertEquals(ErrorCode.CYCLIC_PROPERTY_ASSIGNMENT, ex.getDiagnostic().getCode());
+            assertEquals(
+                "Cyclic property assignment: propA -> propB -> propA",
+                ex.getDiagnostic().getMessage());
+        }
+
+        @Test
+        public void Observable_Assignment_Cycle_Is_Allowed() {
+            assertDoesNotThrow(() -> compile("""
+                <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                          propA="${propB}" propB="${propA}"/>
+            """));
+        }
+
+        @Test
+        public void Cycle_With_Observable_Dependency_Is_Allowed() {
+            assertDoesNotThrow(() -> compile("""
+                <TestPane xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                          propA="$propB" propB="${propA}"/>
+            """));
         }
     }
 }

@@ -34,7 +34,6 @@ import org.jfxcore.compiler.type.TypeHelper;
 import org.jfxcore.compiler.type.TypeInstance;
 import org.jfxcore.compiler.util.NameHelper;
 import org.jfxcore.compiler.util.PropertyInfo;
-import org.jfxcore.compiler.util.PropertyHelper;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -978,11 +977,13 @@ public final class TargetValueResolver {
         if (copy.getChildren().size() == 1 && copy.getChildren().get(0) instanceof LiteralValueNode literal) {
             PropertyNode idProperty = copy.findIntrinsicProperty(Intrinsics.ID);
             String backingField = readId(copy, idProperty);
-            List<Node> children = PropertyHelper.getSorted(
-                copy,
-                copy.getProperties().stream()
-                    .filter(property -> property != idProperty)
-                    .toList())
+
+            List<PropertyNode> properties = copy.getProperties().stream()
+                .filter(property -> property != idProperty)
+                .toList();
+
+            List<Node> children = new PropertyAssignmentSorter(copy, properties)
+                .sort()
                 .stream()
                 .map(property -> (Node)property)
                 .toList();
