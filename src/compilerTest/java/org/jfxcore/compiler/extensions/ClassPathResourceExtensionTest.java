@@ -14,16 +14,25 @@ import javafx.beans.property.SimpleObjectProperty;
 import javafx.scene.control.Label;
 import java.net.URI;
 import java.net.URL;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 
 import static org.jfxcore.compiler.util.MoreAssertions.*;
 import static org.junit.jupiter.api.Assertions.*;
 
+@SuppressWarnings("HttpUrlsUsage")
 @ExtendWith(TestExtension.class)
 public class ClassPathResourceExtensionTest extends CompilerTestBase {
 
+    private static final URL CUSTOM_RESOURCE = Objects.requireNonNull(
+        ClassPathResourceExtensionTest.class.getResource("/org/jfxcore/compiler/image with   spaces.jpg"));
+
     @SuppressWarnings("unused")
     public static class TestLabel extends Label {
+        public final ResourceClassLoader resourceLoader = new ResourceClassLoader();
+        public final ClassLoader nullClassLoader = null;
+
         private final ObjectProperty<URL> url = new SimpleObjectProperty<>();
         public final ObjectProperty<URL> urlProperty() { return url; }
         public final URL getUrl() { return url.get(); }
@@ -31,6 +40,23 @@ public class ClassPathResourceExtensionTest extends CompilerTestBase {
         private final ObjectProperty<URI> uri = new SimpleObjectProperty<>();
         public final ObjectProperty<URI> uriProperty() { return uri; }
         public final URI getUri() { return uri.get(); }
+    }
+
+    public static class ResourceClassLoader extends ClassLoader {
+        private final List<String> requestedNames = new ArrayList<>();
+
+        public ResourceClassLoader() {
+            super(null);
+        }
+
+        @Override
+        public URL getResource(String name) {
+            requestedNames.add(name);
+            return switch (name) {
+                case "custom/image.jpg", "image.jpg" -> CUSTOM_RESOURCE;
+                default -> null;
+            };
+        }
     }
 
     @Test
@@ -118,6 +144,144 @@ public class ClassPathResourceExtensionTest extends CompilerTestBase {
         assertTrue(root.getText().endsWith("org/jfxcore/compiler/image.jpg"));
         assertEquals(url, root.getUrl());
         assertEquals(url.toURI(), root.getUri());
+    }
+
+    @Test
+    public void Explicit_ClassLoader_Resolves_All_Supported_Targets() throws Exception {
+        TestLabel root = compileAndRun("""
+            <?import org.jfxcore.markup.resource.*?>
+            <TestLabel xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                       text="{ClassPathResource custom/image.jpg; classLoader=$resourceLoader}"
+                       url="{ClassPathResource custom/image.jpg; classLoader=$resourceLoader}"
+                       uri="{ClassPathResource custom/image.jpg; classLoader=$resourceLoader}"/>
+        """);
+
+        assertEquals(CUSTOM_RESOURCE.toExternalForm(), root.getText());
+        assertEquals(CUSTOM_RESOURCE, root.getUrl());
+        assertEquals(CUSTOM_RESOURCE.toURI(), root.getUri());
+        assertEquals(List.of("custom/image.jpg", "custom/image.jpg", "custom/image.jpg"),
+            root.resourceLoader.requestedNames);
+    }
+
+    @Test
+    public void Explicit_ClassLoader_Accepts_Leading_Slash() {
+        TestLabel root = compileAndRun("""
+            <?import org.jfxcore.markup.resource.*?>
+            <TestLabel xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                       url="{ClassPathResource /custom/image.jpg; classLoader=$resourceLoader}"/>
+        """);
+
+        assertEquals(CUSTOM_RESOURCE, root.getUrl());
+        assertEquals(List.of("custom/image.jpg"), root.resourceLoader.requestedNames);
+    }
+
+    @Test
+    public void Explicit_ClassLoader_Takes_Precedence_Over_Embedded_And_Root_Resources() {
+        TestLabel root = compileAndRun("""
+            <?import org.jfxcore.markup.resource.*?>
+            <?resource image.jpg:embedded?>
+            <TestLabel xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                       url="{ClassPathResource image.jpg; classLoader=$resourceLoader}"/>
+        """);
+
+        assertNotNull(root.getClass().getResource("image.jpg"));
+        assertEquals(CUSTOM_RESOURCE, root.getUrl());
+        assertEquals(List.of("image.jpg"), root.resourceLoader.requestedNames);
+    }
+
+    @Test
+    public void Explicit_ClassLoader_Does_Not_Fall_Back_To_Default_Lookup() {
+        assertNotNull(ClassPathResourceExtensionTest.class.getResource("/org/jfxcore/compiler/bundle.properties"));
+
+        RuntimeException ex = assertThrows(RuntimeException.class, () -> compileAndRun("""
+            <?import org.jfxcore.markup.resource.*?>
+            <?resource bundle.properties:embedded?>
+            <TestLabel xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                       url="{ClassPathResource bundle.properties; classLoader=$resourceLoader}"/>
+        """));
+
+        assertEquals("Resource not found: bundle.properties", ex.getMessage());
+    }
+
+    @Test
+    public void Null_ClassLoader_Resolves_Relative_And_Absolute_Root_Resources() {
+        TestLabel root = compileAndRun("""
+            <?import org.jfxcore.markup.resource.*?>
+            <TestLabel xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                       text="{ClassPathResource image.jpg; classLoader=$nullClassLoader}"
+                       url="{ClassPathResource /org/jfxcore/compiler/image.jpg; classLoader=$nullClassLoader}"/>
+        """);
+
+        URL expected = Objects.requireNonNull(root.getClass().getResource("image.jpg"));
+        assertEquals(expected.toExternalForm(), root.getText());
+        assertEquals(expected, root.getUrl());
+    }
+
+    @Test
+    public void Null_ClassLoader_Preserves_Embedded_Resource_Precedence() {
+        TestLabel root = compileAndRun("""
+            <?import org.jfxcore.markup.resource.*?>
+            <?resource image.jpg:embedded?>
+            <TestLabel xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                       url="{ClassPathResource image.jpg; classLoader=$nullClassLoader}"/>
+        """);
+
+        assertNotNull(root.getUrl());
+        assertTrue(root.getUrl().getPath().endsWith("$image.jpg"));
+        assertNotEquals(root.getClass().getResource("image.jpg"), root.getUrl());
+    }
+
+    @Test
+    public void Absolute_Resource_Uses_Root_Class_With_Different_Thread_Context_ClassLoader() throws Exception {
+        Class<TestLabel> markupClass = compile("""
+            <?import org.jfxcore.markup.resource.*?>
+            <TestLabel xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                       url="{ClassPathResource /org/jfxcore/compiler/image.jpg}"/>
+        """);
+
+        var constructor = markupClass.getDeclaredConstructor();
+        constructor.setAccessible(true);
+        var contextLoader = new ResourceClassLoader();
+        Thread thread = Thread.currentThread();
+        ClassLoader previousLoader = thread.getContextClassLoader();
+
+        try {
+            thread.setContextClassLoader(contextLoader);
+            TestLabel root = constructor.newInstance();
+
+            URL expected = Objects.requireNonNull(markupClass.getResource("image.jpg"));
+            assertEquals(expected, root.getUrl());
+            assertTrue(contextLoader.requestedNames.isEmpty());
+        } finally {
+            thread.setContextClassLoader(previousLoader);
+        }
+    }
+
+    @Test
+    public void Thread_Context_ClassLoader_Can_Be_Passed_Explicitly() throws Exception {
+        Class<TestLabel> markupClass = compile("""
+            <?import org.jfxcore.markup.resource.*?>
+            <TestLabel xmlns="http://javafx.com/javafx" xmlns:fx="http://jfxcore.org/fxml/2.0"
+                       url="{ClassPathResource /custom/image.jpg;
+                             classLoader=$Thread.currentThread.contextClassLoader}"/>
+        """);
+
+        var constructor = markupClass.getDeclaredConstructor();
+        constructor.setAccessible(true);
+        var contextLoader = new ResourceClassLoader();
+        Thread thread = Thread.currentThread();
+        ClassLoader previousLoader = thread.getContextClassLoader();
+
+        try {
+            thread.setContextClassLoader(contextLoader);
+            TestLabel root = constructor.newInstance();
+
+            assertEquals(CUSTOM_RESOURCE, root.getUrl());
+            assertEquals(List.of("custom/image.jpg"), contextLoader.requestedNames);
+            assertTrue(root.resourceLoader.requestedNames.isEmpty());
+        } finally {
+            thread.setContextClassLoader(previousLoader);
+        }
     }
 
     @Test

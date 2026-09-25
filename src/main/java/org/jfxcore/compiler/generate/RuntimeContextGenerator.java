@@ -26,6 +26,7 @@ public class RuntimeContextGenerator extends ClassGenerator {
     public static final String GET_DOCUMENT_NAME_METHOD = "getDocumentName";
     public static final String GET_ANCESTOR_METHOD = "getAncestor";
     public static final String GET_ANCESTOR_COUNT_METHOD = "getAncestorCount";
+    public static final String GET_RESOURCE_METHOD = "getResource";
 
     private static final String ANCESTORS_FIELD = "ancestors";
     private static final String INDEX_FIELD = "index";
@@ -47,6 +48,7 @@ public class RuntimeContextGenerator extends ClassGenerator {
     private MethodDeclaration popParentMethod;
     private MethodDeclaration getAncestorMethod;
     private MethodDeclaration getAncestorCountMethod;
+    private MethodDeclaration getResourceMethod;
     private MethodDeclaration setTargetInfoMethod;
 
     public RuntimeContextGenerator(String documentName, boolean markupContextSupport) {
@@ -126,6 +128,9 @@ public class RuntimeContextGenerator extends ClassGenerator {
 
             getAncestorCountMethod = createMethod(GET_ANCESTOR_COUNT_METHOD, intDecl())
                 .setModifiers(Modifier.PUBLIC | Modifier.FINAL);
+
+            getResourceMethod = createMethod(GET_RESOURCE_METHOD, URLDecl(), StringDecl())
+                .setModifiers(Modifier.PUBLIC | Modifier.FINAL);
         }
     }
 
@@ -144,6 +149,7 @@ public class RuntimeContextGenerator extends ClassGenerator {
             emitGetTargetBeanMethod();
             emitGetDocumentNameMethod();
             emitGetParentCountMethod();
+            emitGetResourceMethod(context);
         }
     }
 
@@ -295,5 +301,16 @@ public class RuntimeContextGenerator extends ClassGenerator {
             .areturn();
 
         getRootMethod.setCode(code);
+    }
+
+    private void emitGetResourceMethod(BytecodeEmitContext context) {
+        Bytecode code = new Bytecode(getResourceMethod);
+
+        code.ldc(context.getCodeBehindClass())
+            .aload(1)
+            .invoke(ClassDecl().requireDeclaredMethod("getResource", StringDecl()))
+            .areturn();
+
+        getResourceMethod.setCode(code);
     }
 }

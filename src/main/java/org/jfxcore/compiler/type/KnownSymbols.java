@@ -101,6 +101,9 @@ public final class KnownSymbols {
     public static TypeDeclaration WeakReferenceDecl() { return get("java.lang.ref.WeakReference"); }
     public static TypeDeclaration ReferenceQueueDecl() { return get("java.lang.ref.ReferenceQueue"); }
 
+    // java.net
+    public static TypeDeclaration URLDecl() { return get("java.net.URL"); }
+
     // java.text
     public static TypeDeclaration FormatDecl() { return get("java.text.Format"); }
 
