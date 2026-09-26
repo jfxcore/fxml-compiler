@@ -46,7 +46,7 @@ import java.util.function.Supplier;
 @SuppressWarnings("unused")
 public final class MarkupCompiler extends AbstractCompiler {
 
-    private static final SemanticVersion RUNTIME_LIBRARY_MIN_VERSION = new SemanticVersion(0, 4, 0);
+    private static final SemanticVersion RUNTIME_LIBRARY_MIN_VERSION = new SemanticVersion(0, 5, 0);
 
     private final Logger logger;
     private boolean runtimeLibraryChecked;
@@ -209,7 +209,7 @@ public final class MarkupCompiler extends AbstractCompiler {
                 v -> v.compareTo(SemanticVersion.parse(VersionInfo.getVersion())) > 0,
                 s -> logger.warn("""
                     jfxcore.markup library version %s requires FXML/2 compiler version %s or higher,
-                    current FXML/2 compiler version is %s. Downgrade the jfxcore.markup library or
+                    the current FXML/2 compiler version is %s. Downgrade the jfxcore.markup library or
                     upgrade the FXML/2 compiler to prevent this warning.
                     """.formatted(libraryVersion, s, VersionInfo.getVersion())));
         }

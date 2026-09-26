@@ -189,32 +189,29 @@ public final class MyExtension implements MarkupExtension.PropertyConsumer<Strin
 ```
 
 ## Implementing a markup extension
-The following example implements a markup extension that converts the name of an application resource to a
-`String`, `URL`, or `URI` representation, depending on the target type:
+The following example implements a simple markup extension that converts the name of an application
+resource to a `String`, `URL`, or `URI` representation, depending on the target type:
 
 <div class="filename">FXML</div>
 ```xml
-<Image url="{ClassPathResource /path/to/image.jpg}"/>
+<Image url="{SimpleResource /path/to/image.jpg}"/>
 ```
 
 <div class="filename">Java code</div>
 ```java
 @DefaultProperty("value")
-public final class ClassPathResource implements MarkupExtension.Supplier<Object> {
+public final class SimpleResource implements MarkupExtension.Supplier<Object> {
 
     private final String value;
 
-    public ClassPathResource(@NamedArg("value") String value) {
+    public SimpleResource(@NamedArg("value") String value) {
         this.value = Objects.requireNonNull(value, "value cannot be null").trim();
     }
 
     @Override
     @ReturnType({String.class, URI.class, URL.class})
     public Object get(MarkupContext context) throws Exception {
-        URL url = value.startsWith("/") ?
-            Thread.currentThread().getContextClassLoader().getResource(value.substring(1)) :
-            context.getRoot().getClass().getResource(value);
-
+        URL url = context.getResource(value);
         if (url == null) {
             throw new RuntimeException("Resource not found: " + value);
         }
@@ -237,7 +234,7 @@ public final class ClassPathResource implements MarkupExtension.Supplier<Object>
 The markup extension in this example uses several FXML features:
 1. It defines a `@DefaultProperty`, which allows users to omit the `value` property in the markup extension invocation.
    If not for the default property, users would have to explicitly spell out the name of the constructor parameter:
-   `{ClassPathResource value=/path/to/image.jpg}`.
+   `{SimpleResource value=/path/to/image.jpg}`.
 2. It implements `MarkupExtension.Supplier<Object>` to make the extension compatible with `String`, `URL`, and `URI`
    target types, as there is no other common base class other than `Object`. However, it restricts the set of target
    types with the `@ReturnType` annotation. This allows the FXML compiler to type-check the markup extension usage
